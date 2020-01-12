@@ -74,7 +74,12 @@ var AppHelpFlagGroups = []flagGroup{
 			utils.NetworkIdFlag,
 			utils.TestnetFlag,
 			utils.RinkebyFlag,
+<<<<<<<
 			utils.GoerliFlag,
+|||||||
+=======
+			utils.OttomanFlag,
+>>>>>>>
 			utils.SyncModeFlag,
 			utils.ExitWhenSyncedFlag,
 			utils.GCModeFlag,
@@ -131,6 +136,17 @@ var AppHelpFlagGroups = []flagGroup{
 		},
 	},
 	{
+		Name: "ETHASH",
+		Flags: []cli.Flag{
+			utils.EthashCacheDirFlag,
+			utils.EthashCachesInMemoryFlag,
+			utils.EthashCachesOnDiskFlag,
+			utils.EthashDatasetDirFlag,
+			utils.EthashDatasetsInMemoryFlag,
+			utils.EthashDatasetsOnDiskFlag,
+		},
+	},
+	{
 		Name: "PERFORMANCE TUNING",
 		Flags: []cli.Flag{
 			utils.CacheFlag,
@@ -138,6 +154,22 @@ var AppHelpFlagGroups = []flagGroup{
 			utils.CacheTrieFlag,
 			utils.CacheGCFlag,
 			utils.CacheNoPrefetchFlag,
+		},
+	},
+	{
+		Name: "QUORUM",
+		Flags: []cli.Flag{
+			utils.EnableNodePermissionFlag,
+		},
+	},
+	{
+		Name: "RAFT",
+		Flags: []cli.Flag{
+			utils.RaftModeFlag,
+			utils.RaftBlockTimeFlag,
+			utils.RaftJoinExistingFlag,
+			utils.RaftPortFlag,
+			utils.RaftDNSEnabledFlag,
 		},
 	},
 	{
@@ -248,6 +280,12 @@ var AppHelpFlagGroups = []flagGroup{
 			utils.MinerLegacyGasPriceFlag,
 			utils.MinerLegacyEtherbaseFlag,
 			utils.MinerLegacyExtraDataFlag,
+		},
+	}, {
+		Name: "ISTANBUL",
+		Flags: []cli.Flag{
+			utils.IstanbulRequestTimeoutFlag,
+			utils.IstanbulBlockPeriodFlag,
 		},
 	},
 	{

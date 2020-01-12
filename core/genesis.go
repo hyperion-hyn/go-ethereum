@@ -168,6 +168,22 @@ func SetupGenesisBlockWithOverride(db ethdb.Database, genesis *Genesis, override
 		} else {
 			log.Info("Writing custom genesis block")
 		}
+
+		// Set default transaction size limit if not set in genesis
+		if genesis.Config.TransactionSizeLimit == 0 {
+			genesis.Config.TransactionSizeLimit = DefaultTxPoolConfig.TransactionSizeLimit
+		}
+		// Set default contract size limit that can be deployed if not set in genesis
+		if genesis.Config.MaxCodeSize == 0 {
+			genesis.Config.MaxCodeSize = DefaultTxPoolConfig.MaxCodeSize
+		}
+
+		// Check transaction size limit and max contract code size
+		err := genesis.Config.IsValid()
+		if err != nil {
+			return genesis.Config, common.Hash{}, err
+		}
+
 		block, err := genesis.Commit(db)
 		if err != nil {
 			return genesis.Config, common.Hash{}, err
@@ -232,7 +248,7 @@ func SetupGenesisBlockWithOverride(db ethdb.Database, genesis *Genesis, override
 	if height == nil {
 		return newcfg, stored, fmt.Errorf("missing block number for head header hash")
 	}
-	compatErr := storedcfg.CheckCompatible(newcfg, *height)
+	compatErr := storedcfg.CheckCompatible(newcfg, *height, GetIsQuorumEIP155Activated(db))
 	if compatErr != nil && *height != 0 && compatErr.RewindTo != 0 {
 		return newcfg, stored, compatErr
 	}
@@ -383,7 +399,28 @@ func DefaultGoerliGenesisBlock() *Genesis {
 	}
 }
 
+<<<<<<<
 // DeveloperGenesisBlock returns the 'geth --dev' genesis block.
+|||||||
+// DeveloperGenesisBlock returns the 'geth --dev' genesis block. Note, this must
+// be seeded with the
+=======
+// DefaultOttomanGenesisBlock returns the Ottoman network genesis block.
+func DefaultOttomanGenesisBlock() *Genesis {
+	return &Genesis{
+		Config:     params.OttomanChainConfig,
+		Timestamp:  1496993285,
+		ExtraData:  hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000000f89af85494475cc98b5521ab2a1335683e7567c8048bfe79ed9407d8299de61faed3686ba4c4e6c3b9083d7e2371944fe035ce99af680d89e2c4d73aca01dbfc1bd2fd94dc421209441a754f79c4a4ecd2b49c935aad0312b8410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0"),
+		GasLimit:   4700000,
+		Difficulty: big.NewInt(1),
+		Mixhash:    common.HexToHash("0x63746963616c2062797a616e74696e65206661756c7420746f6c6572616e6365"),
+		Alloc:      decodePrealloc(ottomanAllocData),
+	}
+}
+
+// DeveloperGenesisBlock returns the 'geth --dev' genesis block. Note, this must
+// be seeded with the
+>>>>>>>
 func DeveloperGenesisBlock(period uint64, faucet common.Address) *Genesis {
 	// Override the default period to the user requested one
 	config := *params.AllCliqueProtocolChanges

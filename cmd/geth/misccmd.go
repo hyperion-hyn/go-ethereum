@@ -112,9 +112,14 @@ func version(ctx *cli.Context) error {
 	if gitCommit != "" {
 		fmt.Println("Git Commit:", gitCommit)
 	}
+<<<<<<<
 	if gitDate != "" {
 		fmt.Println("Git Commit Date:", gitDate)
 	}
+|||||||
+=======
+	fmt.Println("Quorum Version:", params.QuorumVersion)
+>>>>>>>
 	fmt.Println("Architecture:", runtime.GOARCH)
 	fmt.Println("Protocol Versions:", eth.ProtocolVersions)
 	fmt.Println("Go Version:", runtime.Version())

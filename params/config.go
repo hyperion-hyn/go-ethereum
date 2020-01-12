@@ -17,8 +17,14 @@
 package params
 
 import (
+<<<<<<<
 	"encoding/binary"
+|||||||
+=======
+	"errors"
+>>>>>>>
 	"fmt"
+	"math"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -197,6 +203,7 @@ var (
 		BloomRoot:    common.HexToHash("0xb2ceb966b499dd9e6e5bf6adbf35440a0e15cbccc0f527f89a1c522a9f36250a"),
 	}
 
+<<<<<<<
 	// GoerliCheckpointOracle contains a set of configs for the Goerli test network oracle.
 	GoerliCheckpointOracle = &CheckpointOracleConfig{
 		Address: common.HexToAddress("0x18CA0E045F0D772a851BC7e48357Bcaab0a0795D"),
@@ -210,22 +217,65 @@ var (
 		Threshold: 2,
 	}
 
+|||||||
+=======
+	// OttomanChainConfig contains the chain parameters to run a node on the Ottoman test network.
+	OttomanChainConfig = &ChainConfig{
+		ChainID:             big.NewInt(5),
+		HomesteadBlock:      big.NewInt(1),
+		DAOForkBlock:        nil,
+		DAOForkSupport:      true,
+		EIP150Block:         big.NewInt(2),
+		EIP150Hash:          common.HexToHash("0x9b095b36c15eaf13044373aef8ee0bd3a382a5abb92e402afa44b8249c3a90e9"),
+		EIP155Block:         big.NewInt(3),
+		EIP158Block:         big.NewInt(3),
+		ByzantiumBlock:      big.NewInt(math.MaxInt64), // Don't enable yet
+		ConstantinopleBlock: nil,
+
+		Istanbul: &IstanbulConfig{
+			Epoch:          30000,
+			ProposerPolicy: 0,
+			Ceil2Nby3Block: big.NewInt(0),
+		},
+	}
+
+>>>>>>>
 	// AllEthashProtocolChanges contains every protocol change (EIPs) introduced
 	// and accepted by the Ethereum core developers into the Ethash consensus.
 	//
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
+<<<<<<<
 	AllEthashProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, new(EthashConfig), nil}
+|||||||
+	AllEthashProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, new(EthashConfig), nil}
+=======
+	AllEthashProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, new(EthashConfig), nil, nil, false, 32, 50, big.NewInt(0)}
+>>>>>>>
 
 	// AllCliqueProtocolChanges contains every protocol change (EIPs) introduced
 	// and accepted by the Ethereum core developers into the Clique consensus.
 	//
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
+<<<<<<<
 	AllCliqueProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, nil, &CliqueConfig{Period: 0, Epoch: 30000}}
+|||||||
+	AllCliqueProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, nil, &CliqueConfig{Period: 0, Epoch: 30000}}
+=======
+	AllCliqueProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, &CliqueConfig{Period: 0, Epoch: 30000}, nil, false, 32, 32, big.NewInt(0)}
+>>>>>>>
 
+<<<<<<<
 	TestChainConfig = &ChainConfig{big.NewInt(1), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, new(EthashConfig), nil}
+|||||||
+	TestChainConfig = &ChainConfig{big.NewInt(1), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, new(EthashConfig), nil}
+=======
+	TestChainConfig = &ChainConfig{big.NewInt(10), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, new(EthashConfig), nil, nil, false, 32, 32, big.NewInt(0)}
+>>>>>>>
 	TestRules       = TestChainConfig.Rules(new(big.Int))
+
+	QuorumTestChainConfig = &ChainConfig{big.NewInt(10), big.NewInt(0), nil, false, nil, common.Hash{}, nil, nil, nil, nil, nil, new(EthashConfig), nil, nil, true, 64, 32, big.NewInt(0)}
 )
 
 // TrustedCheckpoint represents a set of post-processed trie roots (CHT and
@@ -298,8 +348,17 @@ type ChainConfig struct {
 	EWASMBlock          *big.Int `json:"ewasmBlock,omitempty"`          // EWASM switch block (nil = no fork, 0 = already activated)
 
 	// Various consensus engines
-	Ethash *EthashConfig `json:"ethash,omitempty"`
-	Clique *CliqueConfig `json:"clique,omitempty"`
+	Ethash   *EthashConfig   `json:"ethash,omitempty"`
+	Clique   *CliqueConfig   `json:"clique,omitempty"`
+	Istanbul *IstanbulConfig `json:"istanbul,omitempty"`
+
+	IsQuorum             bool   `json:"isQuorum"`
+	TransactionSizeLimit uint64 `json:"txnSizeLimit"`
+	MaxCodeSize          uint64 `json:"maxCodeSize"`
+	// Quorum
+	//
+	// QIP714Block implements the permissions related changes
+	QIP714Block *big.Int `json:"qip714Block,omitempty"`
 }
 
 // EthashConfig is the consensus engine configs for proof-of-work based sealing.
@@ -321,6 +380,18 @@ func (c *CliqueConfig) String() string {
 	return "clique"
 }
 
+// IstanbulConfig is the consensus engine configs for Istanbul based sealing.
+type IstanbulConfig struct {
+	Epoch          uint64   `json:"epoch"`                    // Epoch length to reset votes and checkpoint
+	ProposerPolicy uint64   `json:"policy"`                   // The policy for proposer selection
+	Ceil2Nby3Block *big.Int `json:"ceil2Nby3Block,omitempty"` // Number of confirmations required to move from one state to next [2F + 1 to Ceil(2N/3)]
+}
+
+// String implements the stringer interface, returning the consensus engine details.
+func (c *IstanbulConfig) String() string {
+	return "istanbul"
+}
+
 // String implements the fmt.Stringer interface.
 func (c *ChainConfig) String() string {
 	var engine interface{}
@@ -329,10 +400,18 @@ func (c *ChainConfig) String() string {
 		engine = c.Ethash
 	case c.Clique != nil:
 		engine = c.Clique
+	case c.Istanbul != nil:
+		engine = c.Istanbul
 	default:
 		engine = "unknown"
 	}
+<<<<<<<
 	return fmt.Sprintf("{ChainID: %v Homestead: %v DAO: %v DAOSupport: %v EIP150: %v EIP155: %v EIP158: %v Byzantium: %v Constantinople: %v Petersburg: %v Istanbul: %v, Muir Glacier: %v, Engine: %v}",
+|||||||
+	return fmt.Sprintf("{ChainID: %v Homestead: %v DAO: %v DAOSupport: %v EIP150: %v EIP155: %v EIP158: %v Byzantium: %v Constantinople: %v Engine: %v}",
+=======
+	return fmt.Sprintf("{ChainID: %v Homestead: %v DAO: %v DAOSupport: %v EIP150: %v EIP155: %v EIP158: %v Byzantium: %v IsQuorum: %v Constantinople: %v TransactionSizeLimit: %v MaxCodeSize: %v Engine: %v}",
+>>>>>>>
 		c.ChainID,
 		c.HomesteadBlock,
 		c.DAOForkBlock,
@@ -341,12 +420,32 @@ func (c *ChainConfig) String() string {
 		c.EIP155Block,
 		c.EIP158Block,
 		c.ByzantiumBlock,
+		c.IsQuorum,
 		c.ConstantinopleBlock,
+<<<<<<<
 		c.PetersburgBlock,
 		c.IstanbulBlock,
 		c.MuirGlacierBlock,
+|||||||
+=======
+		c.TransactionSizeLimit,
+		c.MaxCodeSize,
+>>>>>>>
 		engine,
 	)
+}
+
+func (c *ChainConfig) IsValid() error {
+
+	if c.TransactionSizeLimit < 32 || c.TransactionSizeLimit > 128 {
+		return errors.New("Genesis transaction size limit must be between 32 and 128")
+	}
+
+	if c.MaxCodeSize < 24 || c.MaxCodeSize > 128 {
+		return errors.New("Genesis max code size must be between 24 and 128")
+	}
+
+	return nil
 }
 
 // IsHomestead returns whether num is either equal to the homestead block or greater.
@@ -406,15 +505,46 @@ func (c *ChainConfig) IsEWASM(num *big.Int) bool {
 	return isForked(c.EWASMBlock, num)
 }
 
+<<<<<<<
+|||||||
+// GasTable returns the gas table corresponding to the current phase (homestead or homestead reprice).
+//
+// The returned GasTable's fields shouldn't, under any circumstances, be changed.
+func (c *ChainConfig) GasTable(num *big.Int) GasTable {
+	if num == nil {
+		return GasTableHomestead
+	}
+	switch {
+	case c.IsConstantinople(num):
+		return GasTableConstantinople
+=======
+// Quorum
+//
+// IsQIP714 returns whether num represents a block number where permissions is enabled
+func (c *ChainConfig) IsQIP714(num *big.Int) bool {
+	return isForked(c.QIP714Block, num)
+}
+
+// GasTable returns the gas table corresponding to the current phase (homestead or homestead reprice).
+//
+// The returned GasTable's fields shouldn't, under any circumstances, be changed.
+func (c *ChainConfig) GasTable(num *big.Int) GasTable {
+	if num == nil {
+		return GasTableHomestead
+	}
+	switch {
+	case c.IsConstantinople(num):
+		return GasTableConstantinople
+>>>>>>>
 // CheckCompatible checks whether scheduled fork transitions have been imported
 // with a mismatching chain configuration.
-func (c *ChainConfig) CheckCompatible(newcfg *ChainConfig, height uint64) *ConfigCompatError {
+func (c *ChainConfig) CheckCompatible(newcfg *ChainConfig, height uint64, isQuorumEIP155Activated bool) *ConfigCompatError {
 	bhead := new(big.Int).SetUint64(height)
 
 	// Iterate checkCompatible to find the lowest conflict.
 	var lasterr *ConfigCompatError
 	for {
-		err := c.checkCompatible(newcfg, bhead)
+		err := c.checkCompatible(newcfg, bhead, isQuorumEIP155Activated)
 		if err == nil || (lasterr != nil && err.RewindTo == lasterr.RewindTo) {
 			break
 		}
@@ -461,7 +591,7 @@ func (c *ChainConfig) CheckConfigForkOrder() error {
 	return nil
 }
 
-func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *ConfigCompatError {
+func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int, isQuorumEIP155Activated bool) *ConfigCompatError {
 	if isForkIncompatible(c.HomesteadBlock, newcfg.HomesteadBlock, head) {
 		return newCompatError("Homestead fork block", c.HomesteadBlock, newcfg.HomesteadBlock)
 	}
@@ -474,8 +604,11 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 	if isForkIncompatible(c.EIP150Block, newcfg.EIP150Block, head) {
 		return newCompatError("EIP150 fork block", c.EIP150Block, newcfg.EIP150Block)
 	}
-	if isForkIncompatible(c.EIP155Block, newcfg.EIP155Block, head) {
+	if isQuorumEIP155Activated && c.ChainID != nil && isForkIncompatible(c.EIP155Block, newcfg.EIP155Block, head) {
 		return newCompatError("EIP155 fork block", c.EIP155Block, newcfg.EIP155Block)
+	}
+	if isQuorumEIP155Activated && c.ChainID != nil && c.IsEIP155(head) && !configNumEqual(c.ChainID, newcfg.ChainID) {
+		return newCompatError("EIP155 chain ID", c.ChainID, newcfg.ChainID)
 	}
 	if isForkIncompatible(c.EIP158Block, newcfg.EIP158Block, head) {
 		return newCompatError("EIP158 fork block", c.EIP158Block, newcfg.EIP158Block)
@@ -500,6 +633,12 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 	}
 	if isForkIncompatible(c.EWASMBlock, newcfg.EWASMBlock, head) {
 		return newCompatError("ewasm fork block", c.EWASMBlock, newcfg.EWASMBlock)
+	}
+	if c.Istanbul != nil && newcfg.Istanbul != nil && isForkIncompatible(c.Istanbul.Ceil2Nby3Block, newcfg.Istanbul.Ceil2Nby3Block, head) {
+		return newCompatError("Ceil 2N/3 fork block", c.Istanbul.Ceil2Nby3Block, newcfg.Istanbul.Ceil2Nby3Block)
+	}
+	if isForkIncompatible(c.QIP714Block, newcfg.QIP714Block, head) {
+		return newCompatError("permissions fork block", c.QIP714Block, newcfg.QIP714Block)
 	}
 	return nil
 }

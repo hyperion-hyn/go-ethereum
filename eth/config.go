@@ -26,6 +26,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
+	"github.com/ethereum/go-ethereum/consensus/istanbul"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/eth/gasprice"
@@ -43,6 +44,7 @@ var DefaultConfig = Config{
 		DatasetsInMem:  1,
 		DatasetsOnDisk: 2,
 	},
+<<<<<<<
 	NetworkId:          1,
 	LightPeers:         100,
 	UltraLightFraction: 75,
@@ -56,11 +58,36 @@ var DefaultConfig = Config{
 		GasPrice: big.NewInt(params.GWei),
 		Recommit: 3 * time.Second,
 	},
+|||||||
+	NetworkId:     1,
+	LightPeers:    100,
+	DatabaseCache: 768,
+	TrieCache:     256,
+	TrieTimeout:   60 * time.Minute,
+	MinerGasFloor: 8000000,
+	MinerGasCeil:  8000000,
+	MinerGasPrice: big.NewInt(params.GWei),
+	MinerRecommit: 3 * time.Second,
+
+=======
+	NetworkId:     1337,
+	LightPeers:    100,
+	DatabaseCache: 768,
+	TrieCache:     256,
+	TrieTimeout:   60 * time.Minute,
+	MinerGasFloor: params.MinGasLimit,
+	MinerGasCeil:  params.GenesisGasLimit,
+	MinerGasPrice: big.NewInt(params.GWei),
+	MinerRecommit: 3 * time.Second,
+
+>>>>>>>
 	TxPool: core.DefaultTxPoolConfig,
 	GPO: gasprice.Config{
 		Blocks:     20,
 		Percentile: 60,
 	},
+
+	Istanbul: *istanbul.DefaultConfig,
 }
 
 func init() {
@@ -137,6 +164,11 @@ type Config struct {
 	// Enables tracking of SHA3 preimages in the VM
 	EnablePreimageRecording bool
 
+	RaftMode             bool
+	EnableNodePermission bool
+	// Istanbul options
+	Istanbul istanbul.Config
+
 	// Miscellaneous options
 	DocRoot string `toml:"-"`
 
@@ -146,6 +178,7 @@ type Config struct {
 	// Type of the EVM interpreter ("" for default)
 	EVMInterpreter string
 
+<<<<<<<
 	// RPCGasCap is the global gas cap for eth-call variants.
 	RPCGasCap *big.Int `toml:",omitempty"`
 
@@ -160,4 +193,21 @@ type Config struct {
 
 	// MuirGlacier block override (TODO: remove after the fork)
 	OverrideMuirGlacier *big.Int
+|||||||
+type configMarshaling struct {
+	MinerExtraData hexutil.Bytes
+=======
+type Mode uint
+
+const (
+	ModeNormal Mode = iota
+	ModeShared
+	ModeTest
+	ModeFake
+	ModeFullFake
+)
+
+type configMarshaling struct {
+	MinerExtraData hexutil.Bytes
+>>>>>>>
 }

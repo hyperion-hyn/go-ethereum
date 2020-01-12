@@ -28,8 +28,15 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+<<<<<<<
 	"text/tabwriter"
 	"text/template"
+|||||||
+=======
+
+	"github.com/ethereum/go-ethereum/permission"
+
+>>>>>>>
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts"
@@ -162,7 +169,7 @@ var (
 	}
 	NetworkIdFlag = cli.Uint64Flag{
 		Name:  "networkid",
-		Usage: "Network identifier (integer, 1=Frontier, 2=Morden (disused), 3=Ropsten, 4=Rinkeby)",
+		Usage: "Network identifier (integer, 1=Frontier, 2=Morden (disused), 3=Ropsten, 4=Rinkeby, 5=Ottoman)",
 		Value: eth.DefaultConfig.NetworkId,
 	}
 	TestnetFlag = cli.BoolFlag{
@@ -176,6 +183,10 @@ var (
 	GoerliFlag = cli.BoolFlag{
 		Name:  "goerli",
 		Usage: "Görli network: pre-configured proof-of-authority test network",
+	}
+	OttomanFlag = cli.BoolFlag{
+		Name:  "ottoman",
+		Usage: "Ottoman network: pre-configured istanbul bft test network",
 	}
 	DeveloperFlag = cli.BoolFlag{
 		Name:  "dev",
@@ -696,6 +707,54 @@ var (
 		Usage: "Restrict connection between two whisper light clients",
 	}
 
+	// Raft flags
+	RaftModeFlag = cli.BoolFlag{
+		Name:  "raft",
+		Usage: "If enabled, uses Raft instead of Quorum Chain for consensus",
+	}
+	RaftBlockTimeFlag = cli.IntFlag{
+		Name:  "raftblocktime",
+		Usage: "Amount of time between raft block creations in milliseconds",
+		Value: 50,
+	}
+	RaftJoinExistingFlag = cli.IntFlag{
+		Name:  "raftjoinexisting",
+		Usage: "The raft ID to assume when joining an pre-existing cluster",
+		Value: 0,
+	}
+
+	EmitCheckpointsFlag = cli.BoolFlag{
+		Name:  "emitcheckpoints",
+		Usage: "If enabled, emit specially formatted logging checkpoints",
+	}
+	RaftPortFlag = cli.IntFlag{
+		Name:  "raftport",
+		Usage: "The port to bind for the raft transport",
+		Value: 50400,
+	}
+	RaftDNSEnabledFlag = cli.BoolFlag{
+		Name: "raftdnsenable",
+		Usage: "Enable DNS resolution of peers",
+	}
+
+	// Quorum
+	EnableNodePermissionFlag = cli.BoolFlag{
+		Name:  "permissioned",
+		Usage: "If enabled, the node will allow only a defined list of nodes to connect",
+	}
+
+	// Istanbul settings
+	IstanbulRequestTimeoutFlag = cli.Uint64Flag{
+		Name:  "istanbul.requesttimeout",
+		Usage: "Timeout for each Istanbul round in milliseconds",
+		Value: eth.DefaultConfig.Istanbul.RequestTimeout,
+	}
+	IstanbulBlockPeriodFlag = cli.Uint64Flag{
+		Name:  "istanbul.blockperiod",
+		Usage: "Default minimum difference between two consecutive block's timestamps in seconds",
+		Value: eth.DefaultConfig.Istanbul.BlockPeriod,
+	}
+
 	// Metrics flags
 	MetricsEnabledFlag = cli.BoolFlag{
 		Name:  "metrics",
@@ -765,6 +824,9 @@ func MakeDataDir(ctx *cli.Context) string {
 		if ctx.GlobalBool(GoerliFlag.Name) {
 			return filepath.Join(path, "goerli")
 		}
+		if ctx.GlobalBool(OttomanFlag.Name) {
+			return filepath.Join(path, "ottoman")
+		}
 		return path
 	}
 	Fatalf("Cannot determine default data directory, please set manually (--datadir)")
@@ -819,8 +881,14 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 		urls = params.TestnetBootnodes
 	case ctx.GlobalBool(RinkebyFlag.Name):
 		urls = params.RinkebyBootnodes
+<<<<<<<
 	case ctx.GlobalBool(GoerliFlag.Name):
 		urls = params.GoerliBootnodes
+|||||||
+=======
+	case ctx.GlobalBool(OttomanFlag.Name):
+		urls = params.OttomanBootnodes
+>>>>>>>
 	case cfg.BootstrapNodes != nil:
 		return // already set, don't apply defaults.
 	}
@@ -1012,12 +1080,34 @@ func setLes(ctx *cli.Context, cfg *eth.Config) {
 func makeDatabaseHandles() int {
 	limit, err := fdlimit.Maximum()
 	if err != nil {
+<<<<<<<
 		Fatalf("Failed to retrieve file descriptor allowance: %v", err)
 	}
 	raised, err := fdlimit.Raise(uint64(limit))
 	if err != nil {
-		Fatalf("Failed to raise file descriptor allowance: %v", err)
+|||||||
 	}
+	if limit < 2048 {
+		if err := fdlimit.Raise(2048); err != nil {
+			Fatalf("Failed to raise file descriptor allowance: %v", err)
+		}
+	}
+	if limit > 2048 { // cap database file descriptors even if more is available
+		limit = 2048
+=======
+	}
+	raised, err := fdlimit.Raise(uint64(limit))
+	if err != nil {
+		Fatalf("Failed to raise file descriptor allowance: %v", err)
+>>>>>>>
+		Fatalf("Failed to raise file descriptor allowance: %v", err)
+<<<<<<<
+	}
+|||||||
+	return limit / 2 // Leave half for networking and other stuff
+=======
+	return int(raised / 2) // Leave half for networking and other stuff
+>>>>>>>
 	return int(raised / 2) // Leave half for networking and other stuff
 }
 
@@ -1175,8 +1265,34 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	setDataDir(ctx, cfg)
 	setSmartCard(ctx, cfg)
 
+<<<<<<<
 	if ctx.GlobalIsSet(ExternalSignerFlag.Name) {
 		cfg.ExternalSigner = ctx.GlobalString(ExternalSignerFlag.Name)
+|||||||
+	switch {
+	case ctx.GlobalIsSet(DataDirFlag.Name):
+		cfg.DataDir = ctx.GlobalString(DataDirFlag.Name)
+	case ctx.GlobalBool(DeveloperFlag.Name):
+		cfg.DataDir = "" // unless explicitly requested, use memory databases
+	case ctx.GlobalBool(TestnetFlag.Name):
+		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "testnet")
+	case ctx.GlobalBool(RinkebyFlag.Name):
+		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "rinkeby")
+=======
+	cfg.EnableNodePermission = ctx.GlobalBool(EnableNodePermissionFlag.Name)
+
+	switch {
+	case ctx.GlobalIsSet(DataDirFlag.Name):
+		cfg.DataDir = ctx.GlobalString(DataDirFlag.Name)
+	case ctx.GlobalBool(DeveloperFlag.Name):
+		cfg.DataDir = "" // unless explicitly requested, use memory databases
+	case ctx.GlobalBool(TestnetFlag.Name):
+		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "testnet")
+	case ctx.GlobalBool(RinkebyFlag.Name):
+		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "rinkeby")
+	case ctx.GlobalBool(OttomanFlag.Name):
+		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "ottoman")
+>>>>>>>
 	}
 
 	if ctx.GlobalIsSet(KeyStoreDirFlag.Name) {
@@ -1357,7 +1473,22 @@ func setWhitelist(ctx *cli.Context, cfg *eth.Config) {
 	}
 }
 
+<<<<<<<
 // CheckExclusive verifies that only a single instance of the provided flags was
+|||||||
+// checkExclusive verifies that only a single instance of the provided flags was
+=======
+func setIstanbul(ctx *cli.Context, cfg *eth.Config) {
+	if ctx.GlobalIsSet(IstanbulRequestTimeoutFlag.Name) {
+		cfg.Istanbul.RequestTimeout = ctx.GlobalUint64(IstanbulRequestTimeoutFlag.Name)
+	}
+	if ctx.GlobalIsSet(IstanbulBlockPeriodFlag.Name) {
+		cfg.Istanbul.BlockPeriod = ctx.GlobalUint64(IstanbulBlockPeriodFlag.Name)
+	}
+}
+
+// checkExclusive verifies that only a single instance of the provided flags was
+>>>>>>>
 // set by the user. Each flag might optionally be followed by a string type to
 // specialize it further.
 func CheckExclusive(ctx *cli.Context, args ...interface{}) {
@@ -1426,9 +1557,14 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 	setGPO(ctx, &cfg.GPO)
 	setTxPool(ctx, &cfg.TxPool)
 	setEthash(ctx, cfg)
+<<<<<<<
 	setMiner(ctx, &cfg.Miner)
 	setWhitelist(ctx, cfg)
 	setLes(ctx, cfg)
+|||||||
+=======
+	setIstanbul(ctx, cfg)
+>>>>>>>
 
 	if ctx.GlobalIsSet(SyncModeFlag.Name) {
 		cfg.SyncMode = *GlobalTextMarshaler(ctx, SyncModeFlag.Name).(*downloader.SyncMode)
@@ -1446,6 +1582,21 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 
 	if gcmode := ctx.GlobalString(GCModeFlag.Name); gcmode != "full" && gcmode != "archive" {
 		Fatalf("--%s must be either 'full' or 'archive'", GCModeFlag.Name)
+<<<<<<<
+|||||||
+	}
+	cfg.NoPruning = ctx.GlobalString(GCModeFlag.Name) == "archive"
+
+	if ctx.GlobalIsSet(CacheFlag.Name) || ctx.GlobalIsSet(CacheGCFlag.Name) {
+		cfg.TrieCache = ctx.GlobalInt(CacheFlag.Name) * ctx.GlobalInt(CacheGCFlag.Name) / 100
+=======
+	}
+	cfg.NoPruning = ctx.GlobalString(GCModeFlag.Name) == "archive"
+
+
+	if ctx.GlobalIsSet(CacheFlag.Name) || ctx.GlobalIsSet(CacheGCFlag.Name) {
+		cfg.TrieCache = ctx.GlobalInt(CacheFlag.Name) * ctx.GlobalInt(CacheGCFlag.Name) / 100
+>>>>>>>
 	}
 	if ctx.GlobalIsSet(GCModeFlag.Name) {
 		cfg.NoPruning = ctx.GlobalString(GCModeFlag.Name) == "archive"
@@ -1490,11 +1641,20 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 			cfg.NetworkId = 4
 		}
 		cfg.Genesis = core.DefaultRinkebyGenesisBlock()
+<<<<<<<
 	case ctx.GlobalBool(GoerliFlag.Name):
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
 			cfg.NetworkId = 5
 		}
 		cfg.Genesis = core.DefaultGoerliGenesisBlock()
+|||||||
+=======
+	case ctx.GlobalBool(OttomanFlag.Name):
+		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
+			cfg.NetworkId = 5
+		}
+		cfg.Genesis = core.DefaultOttomanGenesisBlock()
+>>>>>>>
 	case ctx.GlobalBool(DeveloperFlag.Name):
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
 			cfg.NetworkId = 1337
@@ -1525,7 +1685,8 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 }
 
 // RegisterEthService adds an Ethereum client to the stack.
-func RegisterEthService(stack *node.Node, cfg *eth.Config) {
+func RegisterEthService(stack *node.Node, cfg *eth.Config) <-chan *eth.Ethereum {
+	nodeChan := make(chan *eth.Ethereum, 1)
 	var err error
 	if cfg.SyncMode == downloader.LightSync {
 		err = stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
@@ -1538,12 +1699,15 @@ func RegisterEthService(stack *node.Node, cfg *eth.Config) {
 				ls, _ := les.NewLesServer(fullNode, cfg)
 				fullNode.AddLesServer(ls)
 			}
+			nodeChan <- fullNode
 			return fullNode, err
 		})
 	}
 	if err != nil {
 		Fatalf("Failed to register the Ethereum service: %v", err)
 	}
+
+	return nodeChan
 }
 
 // RegisterShhService configures Whisper and adds it to the given node.
@@ -1591,6 +1755,27 @@ func RegisterGraphQLService(stack *node.Node, endpoint string, cors, vhosts []st
 	}); err != nil {
 		Fatalf("Failed to register the GraphQL service: %v", err)
 	}
+}
+
+// Quorum
+//
+// Configure smart-contract-based permissioning service
+func RegisterPermissionService(ctx *cli.Context, stack *node.Node) {
+	if err := stack.Register(func(sctx *node.ServiceContext) (node.Service, error) {
+		permissionConfig, err := permission.ParsePermissionConfig(stack.DataDir())
+		if err != nil {
+			return nil, fmt.Errorf("loading of %s failed due to %v", params.PERMISSION_MODEL_CONFIG, err)
+		}
+		// start the permissions management service
+		pc, err := permission.NewQuorumPermissionCtrl(stack, &permissionConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load the permission contracts as given in %s due to %v", params.PERMISSION_MODEL_CONFIG, err)
+		}
+		return pc, nil
+	}); err != nil {
+		Fatalf("Failed to register the permission service: %v", err)
+	}
+	log.Info("permission service registered")
 }
 
 func SetupMetrics(ctx *cli.Context) {
@@ -1655,8 +1840,14 @@ func MakeGenesis(ctx *cli.Context) *core.Genesis {
 		genesis = core.DefaultTestnetGenesisBlock()
 	case ctx.GlobalBool(RinkebyFlag.Name):
 		genesis = core.DefaultRinkebyGenesisBlock()
+<<<<<<<
 	case ctx.GlobalBool(GoerliFlag.Name):
 		genesis = core.DefaultGoerliGenesisBlock()
+|||||||
+=======
+	case ctx.GlobalBool(OttomanFlag.Name):
+		genesis = core.DefaultOttomanGenesisBlock()
+>>>>>>>
 	case ctx.GlobalBool(DeveloperFlag.Name):
 		Fatalf("Developer chains are ephemeral")
 	}
@@ -1690,6 +1881,7 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chai
 	if gcmode := ctx.GlobalString(GCModeFlag.Name); gcmode != "full" && gcmode != "archive" {
 		Fatalf("--%s must be either 'full' or 'archive'", GCModeFlag.Name)
 	}
+
 	cache := &core.CacheConfig{
 		TrieCleanLimit:      eth.DefaultConfig.TrieCleanCache,
 		TrieCleanNoPrefetch: ctx.GlobalBool(CacheNoPrefetchFlag.Name),

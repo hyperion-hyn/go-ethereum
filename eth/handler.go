@@ -28,9 +28,18 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
+<<<<<<<
+|||||||
+	"github.com/ethereum/go-ethereum/consensus/misc"
+=======
+	"github.com/ethereum/go-ethereum/consensus/clique"
+	"github.com/ethereum/go-ethereum/consensus/ethash"
+	"github.com/ethereum/go-ethereum/consensus/misc"
+>>>>>>>
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/forkid"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/eth/fetcher"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -97,11 +106,20 @@ type ProtocolManager struct {
 	// wait group is used for graceful shutdowns during downloading
 	// and processing
 	wg sync.WaitGroup
+
+	raftMode bool
+	engine   consensus.Engine
 }
 
 // NewProtocolManager returns a new Ethereum sub protocol manager. The Ethereum sub protocol manages peers capable
 // with the Ethereum network.
+<<<<<<<
 func NewProtocolManager(config *params.ChainConfig, checkpoint *params.TrustedCheckpoint, mode downloader.SyncMode, networkID uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb ethdb.Database, cacheLimit int, whitelist map[uint64]common.Hash) (*ProtocolManager, error) {
+|||||||
+func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkID uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb ethdb.Database) (*ProtocolManager, error) {
+=======
+func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkID uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb ethdb.Database, raftMode bool) (*ProtocolManager, error) {
+>>>>>>>
 	// Create the protocol manager with the base fields
 	manager := &ProtocolManager{
 		networkID:   networkID,
@@ -115,7 +133,85 @@ func NewProtocolManager(config *params.ChainConfig, checkpoint *params.TrustedCh
 		noMorePeers: make(chan struct{}),
 		txsyncCh:    make(chan *txsync),
 		quitSync:    make(chan struct{}),
+<<<<<<<
+|||||||
 	}
+	// Figure out whether to allow fast sync or not
+	if mode == downloader.FastSync && blockchain.CurrentBlock().NumberU64() > 0 {
+		log.Warn("Blockchain not empty, fast sync disabled")
+		mode = downloader.FullSync
+=======
+		raftMode:    raftMode,
+		engine:      engine,
+	}
+
+	if handler, ok := manager.engine.(consensus.Handler); ok {
+		handler.SetBroadcaster(manager)
+	}
+
+	// Figure out whether to allow fast sync or not
+	if mode == downloader.FastSync && blockchain.CurrentBlock().NumberU64() > 0 {
+		log.Warn("Blockchain not empty, fast sync disabled")
+		mode = downloader.FullSync
+>>>>>>>
+	}
+<<<<<<<
+|||||||
+	if mode == downloader.FastSync {
+		manager.fastSync = uint32(1)
+	}
+	// Initiate a sub-protocol for every implemented version we can handle
+	manager.SubProtocols = make([]p2p.Protocol, 0, len(ProtocolVersions))
+	for i, version := range ProtocolVersions {
+		// Skip protocol version if incompatible with the mode of operation
+		if mode == downloader.FastSync && version < eth63 {
+			continue
+		}
+		// Compatible; initialise the sub-protocol
+		version := version // Closure for the run
+		manager.SubProtocols = append(manager.SubProtocols, p2p.Protocol{
+			Name:    ProtocolName,
+			Version: version,
+			Length:  ProtocolLengths[i],
+			Run: func(p *p2p.Peer, rw p2p.MsgReadWriter) error {
+				peer := manager.newPeer(int(version), p, rw)
+				select {
+				case manager.newPeerCh <- peer:
+					manager.wg.Add(1)
+					defer manager.wg.Done()
+					return manager.handle(peer)
+				case <-manager.quitSync:
+					return p2p.DiscQuitting
+				}
+=======
+	if mode == downloader.FastSync {
+		manager.fastSync = uint32(1)
+	}
+	protocol := engine.Protocol()
+	// Initiate a sub-protocol for every implemented version we can handle
+	manager.SubProtocols = make([]p2p.Protocol, 0, len(protocol.Versions))
+	for i, version := range protocol.Versions {
+		// Skip protocol version if incompatible with the mode of operation
+		if mode == downloader.FastSync && version < eth63 {
+			continue
+		}
+		// Compatible; initialise the sub-protocol
+		version := version // Closure for the run
+		manager.SubProtocols = append(manager.SubProtocols, p2p.Protocol{
+			Name:    protocol.Name,
+			Version: version,
+			Length:  protocol.Lengths[i],
+			Run: func(p *p2p.Peer, rw p2p.MsgReadWriter) error {
+				peer := manager.newPeer(int(version), p, rw)
+				select {
+				case manager.newPeerCh <- peer:
+					manager.wg.Add(1)
+					defer manager.wg.Done()
+					return manager.handle(peer)
+				case <-manager.quitSync:
+					return p2p.DiscQuitting
+				}
+>>>>>>>
 	if mode == downloader.FullSync {
 		// The database seems empty as the current block is the genesis. Yet the fast
 		// block is ahead, so fast sync was enabled for this node at a certain point.
@@ -252,9 +348,16 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 	pm.txsSub = pm.txpool.SubscribeNewTxsEvent(pm.txsCh)
 	go pm.txBroadcastLoop()
 
-	// broadcast mined blocks
-	pm.minedBlockSub = pm.eventMux.Subscribe(core.NewMinedBlockEvent{})
-	go pm.minedBroadcastLoop()
+	if !pm.raftMode {
+		// broadcast mined blocks
+		pm.minedBlockSub = pm.eventMux.Subscribe(core.NewMinedBlockEvent{})
+		go pm.minedBroadcastLoop()
+	} else {
+		// We set this immediately in raft mode to make sure the miner never drops
+		// incoming txes. Raft mode doesn't use the fetcher or downloader, and so
+		// this would never be set otherwise.
+		atomic.StoreUint32(&pm.acceptTxs, 1)
+	}
 
 	// start sync handlers
 	go pm.syncer()
@@ -264,8 +367,10 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 func (pm *ProtocolManager) Stop() {
 	log.Info("Stopping Ethereum protocol")
 
-	pm.txsSub.Unsubscribe()        // quits txBroadcastLoop
-	pm.minedBlockSub.Unsubscribe() // quits blockBroadcastLoop
+	pm.txsSub.Unsubscribe() // quits txBroadcastLoop
+	if !pm.raftMode {
+		pm.minedBlockSub.Unsubscribe() // quits blockBroadcastLoop
+	}
 
 	// Quit the sync loop.
 	// After this send has completed, no new peers will be accepted.
@@ -375,6 +480,24 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		return errResp(ErrMsgTooLarge, "%v > %v", msg.Size, protocolMaxMsgSize)
 	}
 	defer msg.Discard()
+
+	if pm.raftMode {
+		if msg.Code != TxMsg &&
+			msg.Code != GetBlockHeadersMsg && msg.Code != BlockHeadersMsg &&
+			msg.Code != GetBlockBodiesMsg && msg.Code != BlockBodiesMsg {
+
+			log.Info("raft: ignoring message", "code", msg.Code)
+
+			return nil
+		}
+	} else if handler, ok := pm.engine.(consensus.Handler); ok {
+		pubKey := p.Node().Pubkey()
+		addr := crypto.PubkeyToAddress(*pubKey)
+		handled, err := handler.HandleMsg(addr, msg)
+		if handled {
+			return err
+		}
+	}
 
 	// Handle the message depending on its contents
 	switch {
@@ -741,6 +864,10 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 	return nil
 }
 
+func (pm *ProtocolManager) Enqueue(id string, block *types.Block) {
+	pm.fetcher.Enqueue(id, block)
+}
+
 // BroadcastBlock will either propagate a block to a subset of it's peers, or
 // will only announce it's availability (depending what's requested).
 func (pm *ProtocolManager) BroadcastBlock(block *types.Block, propagate bool) {
@@ -787,6 +914,12 @@ func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
 	var txset = make(map[*peer]types.Transactions)
 
 	// Broadcast transactions to a batch of peers not knowing about it
+	// NOTE: Raft-based consensus currently assumes that geth broadcasts
+	// transactions to all peers in the network. A previous comment here
+	// indicated that this logic might change in the future to only send to a
+	// subset of peers. If this change occurs upstream, a merge conflict should
+	// arise here, and we should add logic to send to *all* peers in raft mode.
+
 	for _, tx := range txs {
 		peers := pm.peers.PeersWithoutTx(tx.Hash())
 		for _, peer := range peers {
@@ -832,16 +965,50 @@ type NodeInfo struct {
 	Genesis    common.Hash         `json:"genesis"`    // SHA3 hash of the host's genesis block
 	Config     *params.ChainConfig `json:"config"`     // Chain configuration for the fork rules
 	Head       common.Hash         `json:"head"`       // SHA3 hash of the host's best owned block
+	Consensus  string              `json:"consensus"`  // Consensus mechanism in use
 }
 
 // NodeInfo retrieves some protocol metadata about the running host node.
 func (pm *ProtocolManager) NodeInfo() *NodeInfo {
 	currentBlock := pm.blockchain.CurrentBlock()
+
 	return &NodeInfo{
 		Network:    pm.networkID,
 		Difficulty: pm.blockchain.GetTd(currentBlock.Hash(), currentBlock.NumberU64()),
 		Genesis:    pm.blockchain.Genesis().Hash(),
 		Config:     pm.blockchain.Config(),
 		Head:       currentBlock.Hash(),
+		Consensus:  pm.getConsensusAlgorithm(),
 	}
+}
+
+func (pm *ProtocolManager) getConsensusAlgorithm() string {
+	var consensusAlgo string
+	if pm.raftMode { // raft does not use consensus interface
+		consensusAlgo = "raft"
+	} else {
+		switch pm.engine.(type) {
+		case consensus.Istanbul:
+			consensusAlgo = "istanbul"
+		case *clique.Clique:
+			consensusAlgo = "clique"
+		case *ethash.Ethash:
+			consensusAlgo = "ethash"
+		default:
+			consensusAlgo = "unknown"
+		}
+	}
+	return consensusAlgo
+}
+
+func (self *ProtocolManager) FindPeers(targets map[common.Address]bool) map[common.Address]consensus.Peer {
+	m := make(map[common.Address]consensus.Peer)
+	for _, p := range self.peers.Peers() {
+		pubKey := p.Node().Pubkey()
+		addr := crypto.PubkeyToAddress(*pubKey)
+		if targets[addr] {
+			m[addr] = p
+		}
+	}
+	return m
 }

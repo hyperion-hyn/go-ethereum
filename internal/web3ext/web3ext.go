@@ -18,9 +18,62 @@
 package web3ext
 
 var Modules = map[string]string{
+<<<<<<<
 	"accounting": AccountingJs,
 	"admin":      AdminJs,
 	"chequebook": ChequebookJs,
+|||||||
+	"admin":      Admin_JS,
+	"chequebook": Chequebook_JS,
+	"clique":     Clique_JS,
+	"ethash":     Ethash_JS,
+	"debug":      Debug_JS,
+	"eth":        Eth_JS,
+	"miner":      Miner_JS,
+	"net":        Net_JS,
+	"personal":   Personal_JS,
+	"rpc":        RPC_JS,
+	"shh":        Shh_JS,
+	"swarmfs":    SWARMFS_JS,
+	"txpool":     TxPool_JS,
+}
+
+const Chequebook_JS = `
+web3._extend({
+	property: 'chequebook',
+	methods: [
+		new web3._extend.Method({
+			name: 'deposit',
+			call: 'chequebook_deposit',
+			params: 1,
+=======
+	"admin":            Admin_JS,
+	"chequebook":       Chequebook_JS,
+	"clique":           Clique_JS,
+	"ethash":           Ethash_JS,
+	"debug":            Debug_JS,
+	"eth":              Eth_JS,
+	"miner":            Miner_JS,
+	"net":              Net_JS,
+	"personal":         Personal_JS,
+	"rpc":              RPC_JS,
+	"shh":              Shh_JS,
+	"swarmfs":          SWARMFS_JS,
+	"txpool":           TxPool_JS,
+	"raft":             Raft_JS,
+	"istanbul":         Istanbul_JS,
+	"quorumPermission": QUORUM_NODE_JS,
+}
+
+const Chequebook_JS = `
+web3._extend({
+	property: 'chequebook',
+	methods: [
+		new web3._extend.Method({
+			name: 'deposit',
+			call: 'chequebook_deposit',
+			params: 1,
+>>>>>>>
 	"clique":     CliqueJs,
 	"ethash":     EthashJs,
 	"debug":      DebugJs,
@@ -470,6 +523,12 @@ web3._extend({
 	property: 'eth',
 	methods: [
 		new web3._extend.Method({
+			name: 'sendRawPrivateTransaction',
+			call: 'eth_sendRawPrivateTransaction',
+			params: 2,
+			inputFormatter: [null, null]
+		}),
+		new web3._extend.Method({
 			name: 'chainId',
 			call: 'eth_chainId',
 			params: 0
@@ -543,6 +602,12 @@ web3._extend({
 			params: 3,
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter, null, web3._extend.formatters.inputBlockNumberFormatter]
 		}),
+		new web3._extend.Method({
+			name: 'storageRoot',
+			call: 'eth_storageRoot',
+			params: 2,
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter, null]
+		})
 	],
 	properties: [
 		new web3._extend.Property({
@@ -852,6 +917,257 @@ web3._extend({
 		new web3._extend.Property({
 			name: 'serverInfo',
 			getter: 'les_serverInfo'
+		}),
+	]
+});
+`
+
+const Raft_JS = `
+web3._extend({
+       property: 'raft',
+       methods:
+       [
+       ],
+       properties:
+       [
+               new web3._extend.Property({
+                       name: 'role',
+                       getter: 'raft_role'
+               }),
+               new web3._extend.Method({
+                       name: 'addPeer',
+                       call: 'raft_addPeer',
+                       params: 1
+               }),
+               new web3._extend.Method({
+                       name: 'addLearner',
+                       call: 'raft_addLearner',
+                       params: 1
+               }),
+               new web3._extend.Method({
+                       name: 'promoteToPeer',
+                       call: 'raft_promoteToPeer',
+                       params: 1
+               }),
+               new web3._extend.Method({
+                       name: 'removePeer',
+                       call: 'raft_removePeer',
+                       params: 1
+               }),
+               new web3._extend.Property({
+                       name: 'leader',
+                       getter: 'raft_leader'
+               }),
+               new web3._extend.Property({
+                       name: 'cluster',
+                       getter: 'raft_cluster'
+               }),
+       ]
+})
+`
+
+const QUORUM_NODE_JS = `
+web3._extend({
+       property: 'quorumPermission',
+       methods:
+       [
+				new web3._extend.Method({
+                       name: 'addOrg',
+                       call: 'quorumPermission_addOrg',
+                       params: 4,
+                       inputFormatter: [null,null,web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputTransactionFormatter]
+               }),
+			   new web3._extend.Method({
+                       name: 'approveOrg',
+                       call: 'quorumPermission_approveOrg',
+                       params: 4,
+                       inputFormatter: [null,null,web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputTransactionFormatter]
+               }),
+				new web3._extend.Method({
+                       name: 'addSubOrg',
+                       call: 'quorumPermission_addSubOrg',
+                       params: 4,
+                       inputFormatter: [null,null,null,web3._extend.formatters.inputTransactionFormatter]
+               }),
+               new web3._extend.Method({
+                       name: 'updateOrgStatus',
+                       call: 'quorumPermission_updateOrgStatus',
+                       params: 3,
+                       inputFormatter: [null,null,web3._extend.formatters.inputTransactionFormatter]
+               }),
+               new web3._extend.Method({
+                       name: 'approveOrgStatus',
+                       call: 'quorumPermission_approveOrgStatus',
+                       params: 3,
+                       inputFormatter: [null,null,web3._extend.formatters.inputTransactionFormatter]
+               }),
+               new web3._extend.Method({
+                       name: 'addNode',
+                       call: 'quorumPermission_addNode',
+                       params: 3,
+                       inputFormatter: [null,null,web3._extend.formatters.inputTransactionFormatter]
+               }),
+               new web3._extend.Method({
+                       name: 'updateNodeStatus',
+                       call: 'quorumPermission_updateNodeStatus',
+                       params: 4,
+                       inputFormatter: [null,null,null,web3._extend.formatters.inputTransactionFormatter]
+               }),
+               new web3._extend.Method({
+                       name: 'assignAdminRole',
+                       call: 'quorumPermission_assignAdminRole',
+                       params: 4,
+                       inputFormatter: [null,web3._extend.formatters.inputAddressFormatter,null, web3._extend.formatters.inputTransactionFormatter]
+               }),
+               new web3._extend.Method({
+                       name: 'approveAdminRole',
+                       call: 'quorumPermission_approveAdminRole',
+                       params: 3,
+                       inputFormatter: [null, web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputTransactionFormatter]
+               }),
+               new web3._extend.Method({
+                       name: 'addNewRole',
+                       call: 'quorumPermission_addNewRole',
+                       params: 6,
+                       inputFormatter: [null,null,null,null,null,web3._extend.formatters.inputTransactionFormatter]
+               }),
+               new web3._extend.Method({
+                       name: 'removeRole',
+                       call: 'quorumPermission_removeRole',
+                       params: 3,
+                       inputFormatter: [null,null,web3._extend.formatters.inputTransactionFormatter]
+               }),
+               new web3._extend.Method({
+                       name: 'addAccountToOrg',
+                       call: 'quorumPermission_addAccountToOrg',
+                       params: 4,
+                       inputFormatter: [web3._extend.formatters.inputAddressFormatter,null,null,web3._extend.formatters.inputTransactionFormatter]
+               }),
+               new web3._extend.Method({
+                       name: 'changeAccountRole',
+                       call: 'quorumPermission_changeAccountRole',
+                       params: 4,
+                       inputFormatter: [web3._extend.formatters.inputAddressFormatter,null,null,web3._extend.formatters.inputTransactionFormatter]
+               }),	
+			   new web3._extend.Method({
+                       name: 'updateAccountStatus',
+                       call: 'quorumPermission_updateAccountStatus',
+                       params: 4,
+                       inputFormatter: [null, web3._extend.formatters.inputAddressFormatter,null,web3._extend.formatters.inputTransactionFormatter]
+               }),
+			   new web3._extend.Method({
+                       name: 'recoverBlackListedNode',
+                       call: 'quorumPermission_recoverBlackListedNode',
+                       params: 3,
+                       inputFormatter: [null, null, web3._extend.formatters.inputTransactionFormatter]
+               }),
+			   new web3._extend.Method({
+                       name: 'approveBlackListedNodeRecovery',
+                       call: 'quorumPermission_approveBlackListedNodeRecovery',
+                       params: 3,
+                       inputFormatter: [null, null, web3._extend.formatters.inputTransactionFormatter]
+               }),
+			   new web3._extend.Method({
+                       name: 'recoverBlackListedAccount',
+                       call: 'quorumPermission_recoverBlackListedAccount',
+                       params: 3,
+                       inputFormatter: [null, web3._extend.formatters.inputAddressFormatter, web3._extend.formatters.inputTransactionFormatter]
+               }),
+			   new web3._extend.Method({
+                       name: 'approveBlackListedAccountRecovery',
+                       call: 'quorumPermission_approveBlackListedAccountRecovery',
+                       params: 3,
+                       inputFormatter: [null, web3._extend.formatters.inputAddressFormatter, web3._extend.formatters.inputTransactionFormatter]
+               }),
+               new web3._extend.Method({
+                       name: 'getOrgDetails',
+                       call: 'quorumPermission_getOrgDetails',
+                       params: 1,
+                       inputFormatter: [null]
+               }),
+
+       ],
+       properties:
+       [
+			  new web3._extend.Property({
+					   name: 'orgList',
+				       getter: 'quorumPermission_orgList'
+			  }), 
+              new web3._extend.Property({
+					   name: 'nodeList',
+				       getter: 'quorumPermission_nodeList'
+			  }), 
+              new web3._extend.Property({
+					   name: 'roleList',
+				       getter: 'quorumPermission_roleList'
+			  }),
+              new web3._extend.Property({
+					   name: 'acctList',
+				       getter: 'quorumPermission_acctList'
+			  }), 
+       ]
+})
+`
+
+const Istanbul_JS = `
+web3._extend({
+	property: 'istanbul',
+	methods:
+	[
+		new web3._extend.Method({
+			name: 'getSnapshot',
+			call: 'istanbul_getSnapshot',
+			params: 1,
+			inputFormatter: [null]
+		}),
+		new web3._extend.Method({
+			name: 'getSnapshotAtHash',
+			call: 'istanbul_getSnapshotAtHash',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getValidators',
+			call: 'istanbul_getValidators',
+			params: 1,
+			inputFormatter: [null]
+		}),
+		new web3._extend.Method({
+			name: 'getValidatorsAtHash',
+			call: 'istanbul_getValidatorsAtHash',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'propose',
+			call: 'istanbul_propose',
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'discard',
+			call: 'istanbul_discard',
+			params: 1
+		}),
+
+		new web3._extend.Method({
+			name: 'getSignersFromBlock',
+			call: 'istanbul_getSignersFromBlock',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
+			name: 'getSignersFromBlockByHash',
+			call: 'istanbul_getSignersFromBlockByHash',
+			params: 1
+		}),
+	],
+	properties:
+	[
+		new web3._extend.Property({
+			name: 'candidates',
+			getter: 'istanbul_candidates'
+		}),
+		new web3._extend.Property({
+			name: 'nodeAddress',
+			getter: 'istanbul_nodeAddress'
 		}),
 	]
 });
