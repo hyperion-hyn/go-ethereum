@@ -18,62 +18,9 @@
 package web3ext
 
 var Modules = map[string]string{
-<<<<<<<
 	"accounting": AccountingJs,
 	"admin":      AdminJs,
 	"chequebook": ChequebookJs,
-|||||||
-	"admin":      Admin_JS,
-	"chequebook": Chequebook_JS,
-	"clique":     Clique_JS,
-	"ethash":     Ethash_JS,
-	"debug":      Debug_JS,
-	"eth":        Eth_JS,
-	"miner":      Miner_JS,
-	"net":        Net_JS,
-	"personal":   Personal_JS,
-	"rpc":        RPC_JS,
-	"shh":        Shh_JS,
-	"swarmfs":    SWARMFS_JS,
-	"txpool":     TxPool_JS,
-}
-
-const Chequebook_JS = `
-web3._extend({
-	property: 'chequebook',
-	methods: [
-		new web3._extend.Method({
-			name: 'deposit',
-			call: 'chequebook_deposit',
-			params: 1,
-=======
-	"admin":            Admin_JS,
-	"chequebook":       Chequebook_JS,
-	"clique":           Clique_JS,
-	"ethash":           Ethash_JS,
-	"debug":            Debug_JS,
-	"eth":              Eth_JS,
-	"miner":            Miner_JS,
-	"net":              Net_JS,
-	"personal":         Personal_JS,
-	"rpc":              RPC_JS,
-	"shh":              Shh_JS,
-	"swarmfs":          SWARMFS_JS,
-	"txpool":           TxPool_JS,
-	"raft":             Raft_JS,
-	"istanbul":         Istanbul_JS,
-	"quorumPermission": QUORUM_NODE_JS,
-}
-
-const Chequebook_JS = `
-web3._extend({
-	property: 'chequebook',
-	methods: [
-		new web3._extend.Method({
-			name: 'deposit',
-			call: 'chequebook_deposit',
-			params: 1,
->>>>>>>
 	"clique":     CliqueJs,
 	"ethash":     EthashJs,
 	"debug":      DebugJs,
@@ -86,6 +33,9 @@ web3._extend({
 	"swarmfs":    SwarmfsJs,
 	"txpool":     TxpoolJs,
 	"les":        LESJs,
+	"raft":             Raft_JS,
+	"istanbul":         Istanbul_JS,
+	"quorumPermission": QUORUM_NODE_JS,
 }
 
 const ChequebookJs = `

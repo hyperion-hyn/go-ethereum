@@ -211,7 +211,6 @@ func newWorker(config *Config, chainConfig *params.ChainConfig, engine consensus
 		resubmitIntervalCh: make(chan time.Duration),
 		resubmitAdjustCh:   make(chan *intervalAdjust, resubmitAdjustChanSize),
 	}
-<<<<<<<
 	// Subscribe NewTxsEvent for tx pool
 	worker.txsSub = eth.TxPool().SubscribeNewTxsEvent(worker.txsCh)
 	// Subscribe events for blockchain
@@ -229,58 +228,11 @@ func newWorker(config *Config, chainConfig *params.ChainConfig, engine consensus
 	go worker.newWorkLoop(recommit)
 	go worker.resultLoop()
 	go worker.taskLoop()
-|||||||
-	// Subscribe NewTxsEvent for tx pool
-	worker.txsSub = eth.TxPool().SubscribeNewTxsEvent(worker.txsCh)
-	// Subscribe events for blockchain
-	worker.chainHeadSub = eth.BlockChain().SubscribeChainHeadEvent(worker.chainHeadCh)
-	worker.chainSideSub = eth.BlockChain().SubscribeChainSideEvent(worker.chainSideCh)
 
-	// Sanitize recommit interval if the user-specified one is too short.
-	if recommit < minRecommitInterval {
-		log.Warn("Sanitizing miner recommit interval", "provided", recommit, "updated", minRecommitInterval)
-		recommit = minRecommitInterval
-	}
-
-	go worker.mainLoop()
-	go worker.newWorkLoop(recommit)
-	go worker.resultLoop()
-	go worker.taskLoop()
-=======
-	if _, ok := engine.(consensus.Istanbul); ok || !config.IsQuorum || config.Clique != nil {
-		// Subscribe NewTxsEvent for tx pool
-		worker.txsSub = eth.TxPool().SubscribeNewTxsEvent(worker.txsCh)
-		// Subscribe events for blockchain
-		worker.chainHeadSub = eth.BlockChain().SubscribeChainHeadEvent(worker.chainHeadCh)
-		worker.chainSideSub = eth.BlockChain().SubscribeChainSideEvent(worker.chainSideCh)
-
-		// Sanitize recommit interval if the user-specified one is too short.
-		if recommit < minRecommitInterval {
-			log.Warn("Sanitizing miner recommit interval", "provided", recommit, "updated", minRecommitInterval)
-			recommit = minRecommitInterval
-		}
-
-		go worker.mainLoop()
-		go worker.newWorkLoop(recommit)
-		go worker.resultLoop()
-		go worker.taskLoop()
->>>>>>>
-
-<<<<<<<
 	// Submit first work to initialize pending state.
 	if init {
 		worker.startCh <- struct{}{}
 	}
-|||||||
-	// Submit first work to initialize pending state.
-	worker.startCh <- struct{}{}
-
-=======
-		// Submit first work to initialize pending state.
-		worker.startCh <- struct{}{}
-	}
-
->>>>>>>
 	return worker
 }
 
@@ -638,7 +590,6 @@ func (w *worker) resultLoop() {
 				continue
 			}
 			// Different block could share same sealhash, deep copy here to prevent write-write conflict.
-<<<<<<<
 			var (
 				receipts = make([]*types.Receipt, len(task.receipts))
 				logs     []*types.Log
@@ -651,19 +602,6 @@ func (w *worker) resultLoop() {
 
 				receipts[i] = new(types.Receipt)
 				*receipts[i] = *receipt
-|||||||
-			var (
-				receipts = make([]*types.Receipt, len(task.receipts))
-				logs     []*types.Log
-			)
-			for i, receipt := range task.receipts {
-				receipts[i] = new(types.Receipt)
-				*receipts[i] = *receipt
-=======
-			var logs []*types.Log
-
-			for _, receipt := range append(task.receipts, task.privateReceipts...) {
->>>>>>>
 				// Update the block hash in all logs since it is now available and not when the
 				// receipt/log of individual transactions were created.
 				for _, log := range receipt.Logs {
@@ -685,13 +623,7 @@ func (w *worker) resultLoop() {
 			allReceipts := mergeReceipts(task.receipts, task.privateReceipts)
 
 			// Commit block and state to database.
-<<<<<<<
 			_, err := w.chain.WriteBlockWithState(block, receipts, logs, task.state, true)
-|||||||
-			stat, err := w.chain.WriteBlockWithState(block, receipts, task.state)
-=======
-			stat, err := w.chain.WriteBlockWithState(block, allReceipts, task.state, nil)
->>>>>>>
 			if err != nil {
 				log.Error("Failed writing block to chain", "err", err)
 				continue
@@ -743,29 +675,12 @@ func (w *worker) makeCurrent(parent *types.Block, header *types.Header) error {
 		return err
 	}
 	env := &environment{
-<<<<<<<
 		signer:    types.NewEIP155Signer(w.chainConfig.ChainID),
 		state:     state,
 		ancestors: mapset.NewSet(),
 		family:    mapset.NewSet(),
 		uncles:    mapset.NewSet(),
 		header:    header,
-|||||||
-		signer:    types.NewEIP155Signer(w.config.ChainID),
-		state:     state,
-		ancestors: mapset.NewSet(),
-		family:    mapset.NewSet(),
-		uncles:    mapset.NewSet(),
-		header:    header,
-=======
-		signer:       types.MakeSigner(w.config, header.Number),
-		state:        publicState,
-		ancestors:    mapset.NewSet(),
-		family:       mapset.NewSet(),
-		uncles:       mapset.NewSet(),
-		header:       header,
-		privateState: privateState,
->>>>>>>
 	}
 
 	// when 08 is processed ancestors contain 07 (quick block)
@@ -839,13 +754,7 @@ func (w *worker) commitTransaction(tx *types.Transaction, coinbase common.Addres
 	snap := w.current.state.Snapshot()
 	privateSnap := w.current.privateState.Snapshot()
 
-<<<<<<<
 	receipt, err := core.ApplyTransaction(w.chainConfig, w.chain, &coinbase, w.current.gasPool, w.current.state, w.current.header, tx, &w.current.header.GasUsed, *w.chain.GetVMConfig())
-|||||||
-	receipt, _, err := core.ApplyTransaction(w.config, w.chain, &coinbase, w.current.gasPool, w.current.state, w.current.header, tx, &w.current.header.GasUsed, vm.Config{})
-=======
-	receipt, privateReceipt, _, err := core.ApplyTransaction(w.config, w.chain, &coinbase, w.current.gasPool, w.current.state, w.current.privateState, w.current.header, tx, &w.current.header.GasUsed, vm.Config{})
->>>>>>>
 	if err != nil {
 		w.current.state.RevertToSnapshot(snap)
 		w.current.privateState.RevertToSnapshot(privateSnap)
@@ -912,16 +821,8 @@ func (w *worker) commitTransactions(txs *types.TransactionsByPriceAndNonce, coin
 		from, _ := types.Sender(w.current.signer, tx)
 		// Check whether the tx is replay protected. If we're not in the EIP155 hf
 		// phase, start ignoring the sender until we do.
-<<<<<<<
 		if tx.Protected() && !w.chainConfig.IsEIP155(w.current.header.Number) {
 			log.Trace("Ignoring reply protected transaction", "hash", tx.Hash(), "eip155", w.chainConfig.EIP155Block)
-|||||||
-		if tx.Protected() && !w.config.IsEIP155(w.current.header.Number) {
-			log.Trace("Ignoring reply protected transaction", "hash", tx.Hash(), "eip155", w.config.EIP155Block)
-=======
-		if tx.Protected() && !w.config.IsEIP155(w.current.header.Number) && !tx.IsPrivate() {
-			log.Trace("Ignoring reply protected transaction", "hash", tx.Hash(), "eip155", w.config.EIP155Block)
->>>>>>>
 
 			txs.Pop()
 			continue
@@ -1128,14 +1029,7 @@ func (w *worker) commit(uncles []*types.Header, interval func(), update bool, st
 	}
 
 	s := w.current.state.Copy()
-<<<<<<<
 	block, err := w.engine.FinalizeAndAssemble(w.chain, w.current.header, s, w.current.txs, uncles, w.current.receipts)
-|||||||
-	block, err := w.engine.Finalize(w.chain, w.current.header, s, w.current.txs, uncles, w.current.receipts)
-=======
-	ps := w.current.privateState.Copy()
-	block, err := w.engine.Finalize(w.chain, w.current.header, s, w.current.txs, uncles, w.current.receipts)
->>>>>>>
 	if err != nil {
 		return err
 	}

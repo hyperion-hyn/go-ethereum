@@ -28,15 +28,11 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-<<<<<<<
 	"text/tabwriter"
 	"text/template"
-|||||||
-=======
 
 	"github.com/ethereum/go-ethereum/permission"
 
->>>>>>>
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts"
@@ -881,14 +877,10 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 		urls = params.TestnetBootnodes
 	case ctx.GlobalBool(RinkebyFlag.Name):
 		urls = params.RinkebyBootnodes
-<<<<<<<
 	case ctx.GlobalBool(GoerliFlag.Name):
 		urls = params.GoerliBootnodes
-|||||||
-=======
 	case ctx.GlobalBool(OttomanFlag.Name):
 		urls = params.OttomanBootnodes
->>>>>>>
 	case cfg.BootstrapNodes != nil:
 		return // already set, don't apply defaults.
 	}
@@ -1080,34 +1072,12 @@ func setLes(ctx *cli.Context, cfg *eth.Config) {
 func makeDatabaseHandles() int {
 	limit, err := fdlimit.Maximum()
 	if err != nil {
-<<<<<<<
 		Fatalf("Failed to retrieve file descriptor allowance: %v", err)
 	}
 	raised, err := fdlimit.Raise(uint64(limit))
 	if err != nil {
-|||||||
-	}
-	if limit < 2048 {
-		if err := fdlimit.Raise(2048); err != nil {
-			Fatalf("Failed to raise file descriptor allowance: %v", err)
-		}
-	}
-	if limit > 2048 { // cap database file descriptors even if more is available
-		limit = 2048
-=======
-	}
-	raised, err := fdlimit.Raise(uint64(limit))
-	if err != nil {
 		Fatalf("Failed to raise file descriptor allowance: %v", err)
->>>>>>>
-		Fatalf("Failed to raise file descriptor allowance: %v", err)
-<<<<<<<
 	}
-|||||||
-	return limit / 2 // Leave half for networking and other stuff
-=======
-	return int(raised / 2) // Leave half for networking and other stuff
->>>>>>>
 	return int(raised / 2) // Leave half for networking and other stuff
 }
 
@@ -1265,20 +1235,9 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	setDataDir(ctx, cfg)
 	setSmartCard(ctx, cfg)
 
-<<<<<<<
 	if ctx.GlobalIsSet(ExternalSignerFlag.Name) {
 		cfg.ExternalSigner = ctx.GlobalString(ExternalSignerFlag.Name)
-|||||||
-	switch {
-	case ctx.GlobalIsSet(DataDirFlag.Name):
-		cfg.DataDir = ctx.GlobalString(DataDirFlag.Name)
-	case ctx.GlobalBool(DeveloperFlag.Name):
-		cfg.DataDir = "" // unless explicitly requested, use memory databases
-	case ctx.GlobalBool(TestnetFlag.Name):
-		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "testnet")
-	case ctx.GlobalBool(RinkebyFlag.Name):
-		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "rinkeby")
-=======
+
 	cfg.EnableNodePermission = ctx.GlobalBool(EnableNodePermissionFlag.Name)
 
 	switch {
@@ -1292,7 +1251,6 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "rinkeby")
 	case ctx.GlobalBool(OttomanFlag.Name):
 		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "ottoman")
->>>>>>>
 	}
 
 	if ctx.GlobalIsSet(KeyStoreDirFlag.Name) {
@@ -1473,11 +1431,6 @@ func setWhitelist(ctx *cli.Context, cfg *eth.Config) {
 	}
 }
 
-<<<<<<<
-// CheckExclusive verifies that only a single instance of the provided flags was
-|||||||
-// checkExclusive verifies that only a single instance of the provided flags was
-=======
 func setIstanbul(ctx *cli.Context, cfg *eth.Config) {
 	if ctx.GlobalIsSet(IstanbulRequestTimeoutFlag.Name) {
 		cfg.Istanbul.RequestTimeout = ctx.GlobalUint64(IstanbulRequestTimeoutFlag.Name)
@@ -1487,8 +1440,7 @@ func setIstanbul(ctx *cli.Context, cfg *eth.Config) {
 	}
 }
 
-// checkExclusive verifies that only a single instance of the provided flags was
->>>>>>>
+// CheckExclusive verifies that only a single instance of the provided flags was
 // set by the user. Each flag might optionally be followed by a string type to
 // specialize it further.
 func CheckExclusive(ctx *cli.Context, args ...interface{}) {
@@ -1557,14 +1509,10 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 	setGPO(ctx, &cfg.GPO)
 	setTxPool(ctx, &cfg.TxPool)
 	setEthash(ctx, cfg)
-<<<<<<<
 	setMiner(ctx, &cfg.Miner)
 	setWhitelist(ctx, cfg)
 	setLes(ctx, cfg)
-|||||||
-=======
 	setIstanbul(ctx, cfg)
->>>>>>>
 
 	if ctx.GlobalIsSet(SyncModeFlag.Name) {
 		cfg.SyncMode = *GlobalTextMarshaler(ctx, SyncModeFlag.Name).(*downloader.SyncMode)
@@ -1582,21 +1530,11 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 
 	if gcmode := ctx.GlobalString(GCModeFlag.Name); gcmode != "full" && gcmode != "archive" {
 		Fatalf("--%s must be either 'full' or 'archive'", GCModeFlag.Name)
-<<<<<<<
-|||||||
 	}
 	cfg.NoPruning = ctx.GlobalString(GCModeFlag.Name) == "archive"
 
 	if ctx.GlobalIsSet(CacheFlag.Name) || ctx.GlobalIsSet(CacheGCFlag.Name) {
 		cfg.TrieCache = ctx.GlobalInt(CacheFlag.Name) * ctx.GlobalInt(CacheGCFlag.Name) / 100
-=======
-	}
-	cfg.NoPruning = ctx.GlobalString(GCModeFlag.Name) == "archive"
-
-
-	if ctx.GlobalIsSet(CacheFlag.Name) || ctx.GlobalIsSet(CacheGCFlag.Name) {
-		cfg.TrieCache = ctx.GlobalInt(CacheFlag.Name) * ctx.GlobalInt(CacheGCFlag.Name) / 100
->>>>>>>
 	}
 	if ctx.GlobalIsSet(GCModeFlag.Name) {
 		cfg.NoPruning = ctx.GlobalString(GCModeFlag.Name) == "archive"
@@ -1641,20 +1579,16 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 			cfg.NetworkId = 4
 		}
 		cfg.Genesis = core.DefaultRinkebyGenesisBlock()
-<<<<<<<
 	case ctx.GlobalBool(GoerliFlag.Name):
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
 			cfg.NetworkId = 5
 		}
 		cfg.Genesis = core.DefaultGoerliGenesisBlock()
-|||||||
-=======
 	case ctx.GlobalBool(OttomanFlag.Name):
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
-			cfg.NetworkId = 5
+			cfg.NetworkId = 6
 		}
 		cfg.Genesis = core.DefaultOttomanGenesisBlock()
->>>>>>>
 	case ctx.GlobalBool(DeveloperFlag.Name):
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
 			cfg.NetworkId = 1337
@@ -1840,14 +1774,10 @@ func MakeGenesis(ctx *cli.Context) *core.Genesis {
 		genesis = core.DefaultTestnetGenesisBlock()
 	case ctx.GlobalBool(RinkebyFlag.Name):
 		genesis = core.DefaultRinkebyGenesisBlock()
-<<<<<<<
 	case ctx.GlobalBool(GoerliFlag.Name):
 		genesis = core.DefaultGoerliGenesisBlock()
-|||||||
-=======
 	case ctx.GlobalBool(OttomanFlag.Name):
 		genesis = core.DefaultOttomanGenesisBlock()
->>>>>>>
 	case ctx.GlobalBool(DeveloperFlag.Name):
 		Fatalf("Developer chains are ephemeral")
 	}

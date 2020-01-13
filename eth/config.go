@@ -44,7 +44,6 @@ var DefaultConfig = Config{
 		DatasetsInMem:  1,
 		DatasetsOnDisk: 2,
 	},
-<<<<<<<
 	NetworkId:          1,
 	LightPeers:         100,
 	UltraLightFraction: 75,
@@ -58,29 +57,6 @@ var DefaultConfig = Config{
 		GasPrice: big.NewInt(params.GWei),
 		Recommit: 3 * time.Second,
 	},
-|||||||
-	NetworkId:     1,
-	LightPeers:    100,
-	DatabaseCache: 768,
-	TrieCache:     256,
-	TrieTimeout:   60 * time.Minute,
-	MinerGasFloor: 8000000,
-	MinerGasCeil:  8000000,
-	MinerGasPrice: big.NewInt(params.GWei),
-	MinerRecommit: 3 * time.Second,
-
-=======
-	NetworkId:     1337,
-	LightPeers:    100,
-	DatabaseCache: 768,
-	TrieCache:     256,
-	TrieTimeout:   60 * time.Minute,
-	MinerGasFloor: params.MinGasLimit,
-	MinerGasCeil:  params.GenesisGasLimit,
-	MinerGasPrice: big.NewInt(params.GWei),
-	MinerRecommit: 3 * time.Second,
-
->>>>>>>
 	TxPool: core.DefaultTxPoolConfig,
 	GPO: gasprice.Config{
 		Blocks:     20,
@@ -178,7 +154,6 @@ type Config struct {
 	// Type of the EVM interpreter ("" for default)
 	EVMInterpreter string
 
-<<<<<<<
 	// RPCGasCap is the global gas cap for eth-call variants.
 	RPCGasCap *big.Int `toml:",omitempty"`
 
@@ -193,10 +168,8 @@ type Config struct {
 
 	// MuirGlacier block override (TODO: remove after the fork)
 	OverrideMuirGlacier *big.Int
-|||||||
-type configMarshaling struct {
-	MinerExtraData hexutil.Bytes
-=======
+}
+
 type Mode uint
 
 const (
@@ -209,5 +182,4 @@ const (
 
 type configMarshaling struct {
 	MinerExtraData hexutil.Bytes
->>>>>>>
 }

@@ -43,14 +43,7 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/node"
-<<<<<<<
 	cli "gopkg.in/urfave/cli.v1"
-|||||||
-	"gopkg.in/urfave/cli.v1"
-=======
-	"github.com/ethereum/go-ethereum/permission"
-	"gopkg.in/urfave/cli.v1"
->>>>>>>
 )
 
 const (
@@ -143,12 +136,8 @@ var (
 		utils.DeveloperPeriodFlag,
 		utils.TestnetFlag,
 		utils.RinkebyFlag,
-<<<<<<<
 		utils.GoerliFlag,
-|||||||
-=======
 		utils.OttomanFlag,
->>>>>>>
 		utils.VMEnableDebugFlag,
 		utils.NetworkIdFlag,
 		utils.EthStatsURLFlag,
@@ -324,16 +313,12 @@ func geth(ctx *cli.Context) error {
 	if args := ctx.Args(); len(args) > 0 {
 		return fmt.Errorf("invalid command: %q", args[0])
 	}
-<<<<<<<
 	prepare(ctx)
-|||||||
-=======
 
 	if !quorumValidatePrivateTransactionManager() {
 		return errors.New("the PRIVATE_CONFIG environment variable must be specified for Quorum")
 	}
 
->>>>>>>
 	node := makeFullNode(ctx)
 	defer node.Close()
 	startNode(ctx, node)
@@ -442,16 +427,8 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 					stack.Stop()
 				}
 			}
-<<<<<<<
 		}()
 	}
-
-|||||||
-		}
-	}()
-=======
-		}
-	}()
 
 	// Quorum
 	//
@@ -466,7 +443,6 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		}
 	}
 
->>>>>>>
 	// Start auxiliary services if enabled
 	if ctx.GlobalBool(utils.MiningEnabledFlag.Name) || ctx.GlobalBool(utils.DeveloperFlag.Name) {
 		// Mining only makes sense if a full Ethereum node is running

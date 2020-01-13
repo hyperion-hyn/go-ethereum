@@ -175,19 +175,11 @@ type BlockChain struct {
 	processor  Processor  // Block transaction processor interface
 	vmConfig   vm.Config
 
-<<<<<<<
 	badBlocks       *lru.Cache                     // Bad block cache
 	shouldPreserve  func(*types.Block) bool        // Function used to determine whether should preserve the given block.
 	terminateInsert func(common.Hash, uint64) bool // Testing hook used to terminate ancient receipt chain insertion.
-|||||||
-	badBlocks      *lru.Cache              // Bad block cache
-	shouldPreserve func(*types.Block) bool // Function used to determine whether should preserve the given block.
-=======
-	badBlocks      *lru.Cache              // Bad block cache
-	shouldPreserve func(*types.Block) bool // Function used to determine whether should preserve the given block.
 
 	privateStateCache state.Database // Private state database to reuse between imports (contains state cache)
->>>>>>>
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -210,7 +202,6 @@ func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *par
 	badBlocks, _ := lru.New(badBlockLimit)
 
 	bc := &BlockChain{
-<<<<<<<
 		chainConfig:    chainConfig,
 		cacheConfig:    cacheConfig,
 		db:             db,
@@ -227,40 +218,7 @@ func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *par
 		engine:         engine,
 		vmConfig:       vmConfig,
 		badBlocks:      badBlocks,
-|||||||
-		chainConfig:    chainConfig,
-		cacheConfig:    cacheConfig,
-		db:             db,
-		triegc:         prque.New(nil),
-		stateCache:     state.NewDatabase(db),
-		quit:           make(chan struct{}),
-		shouldPreserve: shouldPreserve,
-		bodyCache:      bodyCache,
-		bodyRLPCache:   bodyRLPCache,
-		receiptsCache:  receiptsCache,
-		blockCache:     blockCache,
-		futureBlocks:   futureBlocks,
-		engine:         engine,
-		vmConfig:       vmConfig,
-		badBlocks:      badBlocks,
-=======
-		chainConfig:       chainConfig,
-		cacheConfig:       cacheConfig,
-		db:                db,
-		triegc:            prque.New(nil),
-		stateCache:        state.NewDatabase(db),
-		quit:              make(chan struct{}),
-		shouldPreserve:    shouldPreserve,
-		bodyCache:         bodyCache,
-		bodyRLPCache:      bodyRLPCache,
-		receiptsCache:     receiptsCache,
-		blockCache:        blockCache,
-		futureBlocks:      futureBlocks,
-		engine:            engine,
-		vmConfig:          vmConfig,
-		badBlocks:         badBlocks,
 		privateStateCache: state.NewDatabase(db),
->>>>>>>
 	}
 	bc.validator = NewBlockValidator(chainConfig, bc, engine)
 	bc.prefetcher = newStatePrefetcher(chainConfig, bc, engine)
@@ -574,7 +532,6 @@ func (bc *BlockChain) State() (*state.StateDB, *state.StateDB, error) {
 }
 
 // StateAt returns a new mutable state based on a particular point in time.
-<<<<<<<
 func (bc *BlockChain) StateAt(root common.Hash) (*state.StateDB, error) {
 	return state.New(root, bc.stateCache)
 }
@@ -582,22 +539,6 @@ func (bc *BlockChain) StateAt(root common.Hash) (*state.StateDB, error) {
 // StateCache returns the caching database underpinning the blockchain instance.
 func (bc *BlockChain) StateCache() state.Database {
 	return bc.stateCache
-|||||||
-func (bc *BlockChain) StateAt(root common.Hash) (*state.StateDB, error) {
-	return state.New(root, bc.stateCache)
-=======
-func (bc *BlockChain) StateAt(root common.Hash) (*state.StateDB, *state.StateDB, error) {
-	publicStateDb, publicStateDbErr := state.New(root, bc.stateCache)
-	if publicStateDbErr != nil {
-		return nil, nil, publicStateDbErr
-	}
-	privateStateDb, privateStateDbErr := state.New(GetPrivateStateRoot(bc.db, root), bc.privateStateCache)
-	if privateStateDbErr != nil {
-		return nil, nil, privateStateDbErr
-	}
-
-	return publicStateDb, privateStateDb, nil
->>>>>>>
 }
 
 // Reset purges the entire blockchain, restoring it to its genesis state.
@@ -1317,17 +1258,9 @@ func (bc *BlockChain) writeBlockWithoutState(block *types.Block, td *big.Int) (e
 	return nil
 }
 
-<<<<<<<
 // writeKnownBlock updates the head block flag with a known block
 // and introduces chain reorg if necessary.
 func (bc *BlockChain) writeKnownBlock(block *types.Block) error {
-|||||||
-// WriteBlockWithState writes the block and all associated state to the database.
-func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.Receipt, state *state.StateDB) (status WriteStatus, err error) {
-=======
-// WriteBlockWithState writes the block and all associated state to the database.
-func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.Receipt, state, privateState *state.StateDB) (status WriteStatus, err error) {
->>>>>>>
 	bc.wg.Add(1)
 	defer bc.wg.Done()
 
@@ -1533,49 +1466,6 @@ func (bc *BlockChain) addFutureBlock(block *types.Block) error {
 //
 // After insertion is done, all accumulated events will be fired.
 func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
-<<<<<<<
-|||||||
-	n, events, logs, err := bc.insertChain(chain)
-	bc.PostChainEvents(events, logs)
-	return n, err
-}
-
-// insertChain will execute the actual chain insertion and event aggregation. The
-// only reason this method exists as a separate one is to make locking cleaner
-// with deferred statements.
-func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*types.Log, error) {
-=======
-	n, events, logs, err := bc.insertChain(chain)
-	bc.PostChainEvents(events, logs)
-	return n, err
-}
-
-// Given a slice of public receipts and an overlapping (smaller) slice of
-// private receipts, return a new slice where the default for each location is
-// the public receipt but we take the private receipt in each place we have
-// one.
-func mergeReceipts(pub, priv types.Receipts) types.Receipts {
-	m := make(map[common.Hash]*types.Receipt)
-	for _, receipt := range pub {
-		m[receipt.TxHash] = receipt
-	}
-	for _, receipt := range priv {
-		m[receipt.TxHash] = receipt
-	}
-
-	ret := make(types.Receipts, 0, len(pub))
-	for _, pubReceipt := range pub {
-		ret = append(ret, m[pubReceipt.TxHash])
-	}
-
-	return ret
-}
-
-// insertChain will execute the actual chain insertion and event aggregation. The
-// only reason this method exists as a separate one is to make locking cleaner
-// with deferred statements.
-func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*types.Log, error) {
->>>>>>>
 	// Sanity check that we have something meaningful to import
 	if len(chain) == 0 {
 		return 0, nil
@@ -1740,58 +1630,12 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, er
 			bc.reportBlock(block, nil, ErrBlacklistedHash)
 			return it.index, ErrBlacklistedHash
 		}
-<<<<<<<
 		// If the block is known (in the middle of the chain), it's a special case for
 		// Clique blocks where they can share state among each other, so importing an
 		// older block might complete the state of the subsequent one. In this case,
 		// just skip the block (we already validated it once fully (and crashed), since
 		// its header and body was already in the database).
 		if err == ErrKnownBlock {
-|||||||
-			// this number we did a rollback and we should reimport it nonetheless.
-			if bc.CurrentBlock().NumberU64() >= block.NumberU64() {
-				stats.ignored++
-				continue
-			}
-
-		case err == consensus.ErrFutureBlock:
-			// Allow up to MaxFuture second in the future blocks. If this limit is exceeded
-			// the chain is discarded and processed at a later time if given.
-			max := big.NewInt(time.Now().Unix() + maxTimeFutureBlocks)
-			if block.Time().Cmp(max) > 0 {
-				return i, events, coalescedLogs, fmt.Errorf("future block: %v > %v", block.Time(), max)
-			}
-			bc.futureBlocks.Add(block.Hash(), block)
-			stats.queued++
-			continue
-
-		case err == consensus.ErrUnknownAncestor && bc.futureBlocks.Contains(block.ParentHash()):
-			bc.futureBlocks.Add(block.Hash(), block)
-			stats.queued++
-			continue
-=======
-			// this number we did a rollback and we should reimport it nonetheless.
-			if bc.CurrentBlock().NumberU64() >= block.NumberU64() {
-				stats.ignored++
-				continue
-			}
-
-		case err == consensus.ErrFutureBlock:
-			// Allow up to MaxFuture second in the future blocks. If this limit is exceeded
-			// the chain is discarded and processed at a later time if given.
-			max := big.NewInt(time.Now().Unix() + maxTimeFutureBlocks)
-			if block.Time().Cmp(max) > 0 && !bc.chainConfig.IsQuorum {
-				return i, events, coalescedLogs, fmt.Errorf("future block: %v > %v", block.Time(), max)
-			}
-			bc.futureBlocks.Add(block.Hash(), block)
-			stats.queued++
-			continue
-
-		case err == consensus.ErrUnknownAncestor && bc.futureBlocks.Contains(block.ParentHash()):
-			bc.futureBlocks.Add(block.Hash(), block)
-			stats.queued++
-			continue
->>>>>>>
 			logger := log.Debug
 			if bc.chainConfig.Clique == nil {
 				logger = log.Warn
@@ -1888,107 +1732,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, er
 
 		blockWriteTimer.Update(time.Since(substart) - statedb.AccountCommits - statedb.StorageCommits)
 		blockInsertTimer.UpdateSince(start)
-<<<<<<<
-|||||||
-			return i, events, coalescedLogs, err
-		}
-		// Create a new statedb using the parent block and report an
-		// error if it fails.
-		var parent *types.Block
-		if i == 0 {
-			parent = bc.GetBlock(block.ParentHash(), block.NumberU64()-1)
-		} else {
-			parent = chain[i-1]
-		}
-		state, err := state.New(parent.Root(), bc.stateCache)
-		if err != nil {
-			return i, events, coalescedLogs, err
-		}
-		// Process block using the parent state as reference point.
-		receipts, logs, usedGas, err := bc.processor.Process(block, state, bc.vmConfig)
-		if err != nil {
-			bc.reportBlock(block, receipts, err)
-			return i, events, coalescedLogs, err
-		}
-		// Validate the state using the default validator
-		err = bc.Validator().ValidateState(block, parent, state, receipts, usedGas)
-		if err != nil {
-			bc.reportBlock(block, receipts, err)
-			return i, events, coalescedLogs, err
-		}
-		proctime := time.Since(bstart)
-=======
-			return i, events, coalescedLogs, err
-		}
-		// Create a new statedb using the parent block and report an
-		// error if it fails.
-		var parent *types.Block
-		if i == 0 {
-			parent = bc.GetBlock(block.ParentHash(), block.NumberU64()-1)
-		} else {
-			parent = chain[i-1]
-		}
 
-		// alias state.New because we introduce a variable named state on the next line
-		stateNew := state.New
-
-		state, err := state.New(parent.Root(), bc.stateCache)
-		if err != nil {
-			return i, events, coalescedLogs, err
-		}
-
-		// Quorum
-		privateStateRoot := GetPrivateStateRoot(bc.db, parent.Root())
-		privateState, err := stateNew(privateStateRoot, bc.privateStateCache)
-		if err != nil {
-			return i, events, coalescedLogs, err
-		}
-		// /Quorum
-
-		// Process block using the parent state as reference point.
-		receipts, privateReceipts, logs, usedGas, err := bc.processor.Process(block, state, privateState, bc.vmConfig)
-		if err != nil {
-			bc.reportBlock(block, receipts, err)
-			return i, events, coalescedLogs, err
-		}
-		// Validate the state using the default validator
-		err = bc.Validator().ValidateState(block, parent, state, receipts, usedGas)
-		if err != nil {
-			bc.reportBlock(block, receipts, err)
-			return i, events, coalescedLogs, err
-		}
-
-		// Quorum
-		// Write private state changes to database
-		if privateStateRoot, err = privateState.Commit(bc.Config().IsEIP158(block.Number())); err != nil {
-			return i, events, coalescedLogs, err
-		}
-		if err := WritePrivateStateRoot(bc.db, block.Root(), privateStateRoot); err != nil {
-			return i, events, coalescedLogs, err
-		}
-		allReceipts := mergeReceipts(receipts, privateReceipts)
-		// /Quorum
-
-		proctime := time.Since(bstart)
->>>>>>>
-
-<<<<<<<
-|||||||
-		// Write the block to the chain and get the status.
-		status, err := bc.WriteBlockWithState(block, receipts, state)
-		if err != nil {
-			return i, events, coalescedLogs, err
-		}
-=======
-		// Write the block to the chain and get the status.
-		status, err := bc.WriteBlockWithState(block, allReceipts, state, privateState)
-		if err != nil {
-			return i, events, coalescedLogs, err
-		}
-		if err := WritePrivateBlockBloom(bc.db, block.NumberU64(), privateReceipts); err != nil {
-			return i, events, coalescedLogs, err
-		}
->>>>>>>
 		switch status {
 		case CanonStatTy:
 			log.Debug("Inserted new block", "number", block.Number(), "hash", block.Hash(),

@@ -38,24 +38,6 @@ import (
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/params"
 )
-<<<<<<<
-|||||||
-
-// Tests that protocol versions and modes of operations are matched up properly.
-func TestProtocolCompatibility(t *testing.T) {
-	// Define the compatibility chart
-	tests := []struct {
-		version    uint
-		mode       downloader.SyncMode
-		compatible bool
-	}{
-		{61, downloader.FullSync, true}, {62, downloader.FullSync, true}, {63, downloader.FullSync, true},
-		{61, downloader.FastSync, false}, {62, downloader.FastSync, false}, {63, downloader.FastSync, true},
-	}
-	// Make sure anything we screw up is restored
-	backup := ProtocolVersions
-	defer func() { ProtocolVersions = backup }()
-=======
 
 var bigTxGas = new(big.Int).SetUint64(params.TxGas)
 
@@ -73,25 +55,7 @@ func TestProtocolCompatibility(t *testing.T) {
 	// Make sure anything we screw up is restored
 	backup := consensus.EthProtocol.Versions
 	defer func() { consensus.EthProtocol.Versions = backup }()
->>>>>>>
 
-<<<<<<<
-|||||||
-	// Try all available compatibility configs and check for errors
-	for i, tt := range tests {
-		ProtocolVersions = []uint{tt.version}
-
-		pm, _, err := newTestProtocolManager(tt.mode, 0, nil, nil)
-		if pm != nil {
-			defer pm.Stop()
-		}
-		if (err == nil && !tt.compatible) || (err != nil && tt.compatible) {
-			t.Errorf("test %d: compatibility mismatch: have error %v, want compatibility %v", i, err, tt.compatible)
-		}
-	}
-}
-
-=======
 	// Try all available compatibility configs and check for errors
 	for i, tt := range tests {
 		consensus.EthProtocol.Versions = []uint{tt.version}
@@ -145,7 +109,6 @@ func TestNodeInfo(t *testing.T) {
 	}
 }
 
->>>>>>>
 // Tests that block headers can be retrieved from a remote chain based on user queries.
 func TestGetBlockHeaders63(t *testing.T) { testGetBlockHeaders(t, 63) }
 func TestGetBlockHeaders64(t *testing.T) { testGetBlockHeaders(t, 64) }
@@ -690,47 +653,17 @@ func testBroadcastBlock(t *testing.T, totalPeers, broadcastExpected int) {
 	if err != nil {
 		t.Fatalf("failed to create new blockchain: %v", err)
 	}
-<<<<<<<
 	pm, err := NewProtocolManager(config, nil, downloader.FullSync, DefaultConfig.NetworkId, evmux, new(testTxPool), pow, blockchain, db, 1, nil)
-|||||||
-	pm, err := NewProtocolManager(config, downloader.FullSync, DefaultConfig.NetworkId, evmux, new(testTxPool), pow, blockchain, db)
-=======
-	pm, err := NewProtocolManager(config, downloader.FullSync, DefaultConfig.NetworkId, evmux, new(testTxPool), pow, blockchain, db, false)
->>>>>>>
 	if err != nil {
 		t.Fatalf("failed to start test protocol manager: %v", err)
 	}
 	pm.Start(1000)
 	defer pm.Stop()
-<<<<<<<
 	var peers []*testPeer
 	for i := 0; i < totalPeers; i++ {
 		peer, _ := newTestPeer(fmt.Sprintf("peer %d", i), eth63, pm, true)
 		defer peer.close()
 		peers = append(peers, peer)
-|||||||
-
-	// Connect a new peer and check that we receive the DAO challenge
-	peer, _ := newTestPeer("peer", eth63, pm, true)
-	defer peer.close()
-
-	challenge := &getBlockHeadersData{
-		Origin:  hashOrNumber{Number: config.DAOForkBlock.Uint64()},
-		Amount:  1,
-		Skip:    0,
-		Reverse: false,
-=======
-
-	// Connect a new peer and check that we receive the DAO challenge
-	peer, _ := newTestPeer("peer", consensus.Eth63, pm, true)
-	defer peer.close()
-
-	challenge := &getBlockHeadersData{
-		Origin:  hashOrNumber{Number: config.DAOForkBlock.Uint64()},
-		Amount:  1,
-		Skip:    0,
-		Reverse: false,
->>>>>>>
 	}
 	chain, _ := core.GenerateChain(gspec.Config, genesis, ethash.NewFaker(), db, 1, func(i int, gen *core.BlockGen) {})
 	pm.BroadcastBlock(chain[0], true /*propagate*/)
@@ -746,7 +679,6 @@ func testBroadcastBlock(t *testing.T, totalPeers, broadcastExpected int) {
 			}
 		}(peer)
 	}
-<<<<<<<
 	timeout := time.After(time.Second)
 	var receivedCount int
 outer:
@@ -766,11 +698,6 @@ outer:
 	for _, peer := range peers {
 		peer.app.Close()
 	}
-|||||||
-	pm, err := NewProtocolManager(config, downloader.FullSync, DefaultConfig.NetworkId, evmux, new(testTxPool), pow, blockchain, db)
-=======
-	pm, err := NewProtocolManager(config, downloader.FullSync, DefaultConfig.NetworkId, evmux, new(testTxPool), pow, blockchain, db, false)
->>>>>>>
 	if err != nil {
 		t.Errorf("error matching block by peer: %v", err)
 	}
