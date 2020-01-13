@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
@@ -37,6 +38,43 @@ import (
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/params"
 )
+
+// Tests that correct consensus mechanism details are returned in NodeInfo.
+func TestNodeInfo(t *testing.T) {
+
+	// Define the tests to be run
+	tests := []struct {
+		consensus      string
+		cliqueConfig   *params.CliqueConfig
+		istanbulConfig *params.IstanbulConfig
+	}{
+		{"ethash", nil, nil},
+		{"istanbul", nil, &params.IstanbulConfig{1, 1, big.NewInt(0)}},
+		{"clique", &params.CliqueConfig{1, 1}, nil},
+	}
+
+	// Make sure anything we screw up is restored
+	backup := consensus.EthProtocol.Versions
+	defer func() { consensus.EthProtocol.Versions = backup }()
+
+	// Try all available consensus mechanisms and check for errors
+	for i, tt := range tests {
+
+		pm, _, err := newTestProtocolManagerConsensus(tt.consensus, tt.cliqueConfig, tt.istanbulConfig)
+
+		if pm != nil {
+			defer pm.Stop()
+		}
+		if err == nil {
+			pmConsensus := pm.getConsensusAlgorithm()
+			if tt.consensus != pmConsensus {
+				t.Errorf("test %d: consensus type error, wanted %v but got %v", i, tt.consensus, pmConsensus)
+			}
+		} else {
+			t.Errorf("test %d: consensus type error %v", i, err)
+		}
+	}
+}
 
 // Tests that block headers can be retrieved from a remote chain based on user queries.
 func TestGetBlockHeaders63(t *testing.T) { testGetBlockHeaders(t, 63) }

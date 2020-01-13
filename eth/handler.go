@@ -20,6 +20,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/consensus/clique"
+	"github.com/ethereum/go-ethereum/consensus/ethash"
+	"github.com/ethereum/go-ethereum/crypto"
 	"math"
 	"math/big"
 	"sync"
@@ -97,11 +100,15 @@ type ProtocolManager struct {
 	// wait group is used for graceful shutdowns during downloading
 	// and processing
 	wg sync.WaitGroup
+
+	engine   consensus.Engine
 }
 
 // NewProtocolManager returns a new Ethereum sub protocol manager. The Ethereum sub protocol manages peers capable
 // with the Ethereum network.
-func NewProtocolManager(config *params.ChainConfig, checkpoint *params.TrustedCheckpoint, mode downloader.SyncMode, networkID uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb ethdb.Database, cacheLimit int, whitelist map[uint64]common.Hash) (*ProtocolManager, error) {
+func NewProtocolManager(config *params.ChainConfig, checkpoint *params.TrustedCheckpoint, mode downloader.SyncMode, networkID uint64,
+	mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb ethdb.Database, cacheLimit int,
+	whitelist map[uint64]common.Hash) (*ProtocolManager, error) {
 	// Create the protocol manager with the base fields
 	manager := &ProtocolManager{
 		networkID:   networkID,
@@ -115,7 +122,13 @@ func NewProtocolManager(config *params.ChainConfig, checkpoint *params.TrustedCh
 		noMorePeers: make(chan struct{}),
 		txsyncCh:    make(chan *txsync),
 		quitSync:    make(chan struct{}),
+		engine:      engine,
 	}
+
+	if handler, ok := manager.engine.(consensus.Handler); ok {
+		handler.SetBroadcaster(manager)
+	}
+
 	if mode == downloader.FullSync {
 		// The database seems empty as the current block is the genesis. Yet the fast
 		// block is ahead, so fast sync was enabled for this node at a certain point.
@@ -375,6 +388,15 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		return errResp(ErrMsgTooLarge, "%v > %v", msg.Size, protocolMaxMsgSize)
 	}
 	defer msg.Discard()
+
+	if handler, ok := pm.engine.(consensus.Handler); ok {
+		pubKey := p.Node().Pubkey()
+		addr := crypto.PubkeyToAddress(*pubKey)
+		handled, err := handler.HandleMsg(addr, msg)
+		if handled {
+			return err
+		}
+	}
 
 	// Handle the message depending on its contents
 	switch {
@@ -741,6 +763,10 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 	return nil
 }
 
+func (pm *ProtocolManager) Enqueue(id string, block *types.Block) {
+	pm.fetcher.Enqueue(id, block)
+}
+
 // BroadcastBlock will either propagate a block to a subset of it's peers, or
 // will only announce it's availability (depending what's requested).
 func (pm *ProtocolManager) BroadcastBlock(block *types.Block, propagate bool) {
@@ -832,6 +858,7 @@ type NodeInfo struct {
 	Genesis    common.Hash         `json:"genesis"`    // SHA3 hash of the host's genesis block
 	Config     *params.ChainConfig `json:"config"`     // Chain configuration for the fork rules
 	Head       common.Hash         `json:"head"`       // SHA3 hash of the host's best owned block
+	Consensus  string              `json:"consensus"`  // Consensus mechanism in use
 }
 
 // NodeInfo retrieves some protocol metadata about the running host node.
@@ -843,5 +870,35 @@ func (pm *ProtocolManager) NodeInfo() *NodeInfo {
 		Genesis:    pm.blockchain.Genesis().Hash(),
 		Config:     pm.blockchain.Config(),
 		Head:       currentBlock.Hash(),
+		Consensus:  pm.getConsensusAlgorithm(),
 	}
 }
+
+// Quorum
+func (pm *ProtocolManager) getConsensusAlgorithm() string {
+	var consensusAlgo string
+	switch pm.engine.(type) {
+		case consensus.Istanbul:
+			consensusAlgo = "istanbul"
+		case *clique.Clique:
+			consensusAlgo = "clique"
+		case *ethash.Ethash:
+			consensusAlgo = "ethash"
+		default:
+			consensusAlgo = "unknown"
+	}
+	return consensusAlgo
+}
+
+func (self *ProtocolManager) FindPeers(targets map[common.Address]bool) map[common.Address]consensus.Peer {
+	m := make(map[common.Address]consensus.Peer)
+	for _, p := range self.peers.Peers() {
+		pubKey := p.Node().Pubkey()
+		addr := crypto.PubkeyToAddress(*pubKey)
+		if targets[addr] {
+			m[addr] = p
+		}
+	}
+	return m
+}
+// Quorum

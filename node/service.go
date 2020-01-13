@@ -17,6 +17,7 @@
 package node
 
 import (
+	"crypto/ecdsa"
 	"path/filepath"
 	"reflect"
 
@@ -73,6 +74,11 @@ func (ctx *ServiceContext) OpenDatabaseWithFreezer(name string, cache int, handl
 // for emphemeral storage and the user's own input for absolute paths.
 func (ctx *ServiceContext) ResolvePath(path string) string {
 	return ctx.config.ResolvePath(path)
+}
+
+// NodeKey returns node key from config
+func (ctx *ServiceContext) NodeKey() *ecdsa.PrivateKey {
+	return ctx.config.NodeKey()
 }
 
 // Service retrieves a currently running service registered of a specific type.

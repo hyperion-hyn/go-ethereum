@@ -20,6 +20,7 @@ package eth
 import (
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/crypto"
 	"math/big"
 	"runtime"
 	"sync"
@@ -97,6 +98,11 @@ type Ethereum struct {
 	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and etherbase)
 }
 
+// HACK(joel) this was added just to make the eth chain config visible to RegisterRaftService
+func (s *Ethereum) ChainConfig() *params.ChainConfig {
+	return s.chainConfig
+}
+
 func (s *Ethereum) AddLesServer(ls LesServer) {
 	s.lesServer = ls
 	ls.SetBloomBitsIndexer(s.bloomIndexer)
@@ -155,6 +161,11 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 		bloomIndexer:   NewBloomIndexer(chainDb, params.BloomBitsBlocks, params.BloomConfirms),
 	}
 
+	// force to set the istanbul etherbase to node key address
+	if chainConfig.Istanbul != nil {
+		eth.etherbase = crypto.PubkeyToAddress(ctx.NodeKey().PublicKey)
+	}
+
 	bcVersion := rawdb.ReadDatabaseVersion(chainDb)
 	var dbVer = "<nil>"
 	if bcVersion != nil {
@@ -211,7 +222,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 		return nil, err
 	}
 	eth.miner = miner.New(eth, &config.Miner, chainConfig, eth.EventMux(), eth.engine, eth.isLocalBlock)
-	eth.miner.SetExtra(makeExtraData(config.Miner.ExtraData))
+	eth.miner.SetExtra(makeExtraData(config.Miner.ExtraData, eth.chainConfig.IsQuorum))
 
 	eth.APIBackend = &EthAPIBackend{ctx.ExtRPCEnabled(), eth, nil}
 	gpoParams := config.GPO
@@ -223,7 +234,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	return eth, nil
 }
 
-func makeExtraData(extra []byte) []byte {
+func makeExtraData(extra []byte, isQuorum bool) []byte {
 	if len(extra) == 0 {
 		// create default extradata
 		extra, _ = rlp.EncodeToBytes([]interface{}{
@@ -233,8 +244,8 @@ func makeExtraData(extra []byte) []byte {
 			runtime.GOOS,
 		})
 	}
-	if uint64(len(extra)) > params.MaximumExtraDataSize {
-		log.Warn("Miner extra data exceed limit", "extra", hexutil.Bytes(extra), "limit", params.MaximumExtraDataSize)
+	if uint64(len(extra)) > params.GetMaximumExtraDataSize(isQuorum) {
+		log.Warn("Miner extra data exceed limit", "extra", hexutil.Bytes(extra), "limit", params.GetMaximumExtraDataSize(isQuorum))
 		extra = nil
 	}
 	return extra
@@ -246,6 +257,18 @@ func CreateConsensusEngine(ctx *node.ServiceContext, chainConfig *params.ChainCo
 	if chainConfig.Clique != nil {
 		return clique.New(chainConfig.Clique, db)
 	}
+
+	// If Istanbul is requested, set it up
+	if chainConfig.Istanbul != nil {
+		if chainConfig.Istanbul.Epoch != 0 {
+			config.Istanbul.Epoch = chainConfig.Istanbul.Epoch
+		}
+		config.Istanbul.ProposerPolicy = istanbul.ProposerPolicy(chainConfig.Istanbul.ProposerPolicy)
+		config.Istanbul.Ceil2Nby3Block = chainConfig.Istanbul.Ceil2Nby3Block
+
+		return istanbulBackend.New(&config.Istanbul, ctx.NodeKey(), db)
+	}
+
 	// Otherwise assume proof-of-work
 	switch config.PowMode {
 	case ethash.ModeFake:
@@ -421,8 +444,12 @@ func (s *Ethereum) shouldPreserve(block *types.Block) bool {
 // SetEtherbase sets the mining reward address.
 func (s *Ethereum) SetEtherbase(etherbase common.Address) {
 	s.lock.Lock()
+	defer s.lock.Unlock()
+	if _, ok := s.engine.(consensus.Istanbul); ok {
+		log.Error("Cannot set etherbase in Istanbul consensus")
+		return
+	}
 	s.etherbase = etherbase
-	s.lock.Unlock()
 
 	s.miner.SetEtherbase(etherbase)
 }

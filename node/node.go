@@ -17,6 +17,7 @@
 package node
 
 import (
+	"crypto/ecdsa"
 	"errors"
 	"fmt"
 	"net"
@@ -553,6 +554,14 @@ func (n *Node) Service(service interface{}) error {
 	}
 	return ErrServiceUnknown
 }
+
+// Quorum
+//
+// delegate call to node.Config
+func (n *Node) GetNodeKey() *ecdsa.PrivateKey {
+	return n.config.NodeKey()
+}
+
 
 // DataDir retrieves the current datadir used by the protocol stack.
 // Deprecated: No files should be stored in this directory, use InstanceDir instead.
