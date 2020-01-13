@@ -18,7 +18,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"math"
 	"os"
