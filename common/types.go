@@ -55,6 +55,8 @@ func BytesToHash(b []byte) Hash {
 	return h
 }
 
+func StringToHash(s string) Hash { return BytesToHash([]byte(s)) } // dep: Istanbul
+
 // BigToHash sets byte representation of b to hash.
 // If b is larger than len(h), b will be cropped from the left.
 func BigToHash(b *big.Int) Hash { return BytesToHash(b.Bytes()) }
@@ -113,6 +115,10 @@ func (h *Hash) SetBytes(b []byte) {
 	}
 
 	copy(h[HashLength-len(b):], b)
+}
+
+func EmptyHash(h Hash) bool {
+	return h == Hash{}
 }
 
 // Generate implements testing/quick.Generator.
@@ -182,6 +188,8 @@ func BytesToAddress(b []byte) Address {
 	a.SetBytes(b)
 	return a
 }
+
+func StringToAddress(s string) Address { return BytesToAddress([]byte(s)) } // dep: Istanbul
 
 // BigToAddress returns Address with byte values of b.
 // If b is larger than len(h), b will be cropped from the left.
