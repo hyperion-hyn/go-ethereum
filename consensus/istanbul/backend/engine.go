@@ -145,7 +145,7 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 	}
 
 	// Don't waste time checking blocks from the future
-	if header.Time.Cmp(big.NewInt(now().Unix())) > 0 {
+	if header.Time > uint64(now().Unix()) {
 		return consensus.ErrFutureBlock
 	}
 
@@ -194,7 +194,7 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 	if parent == nil || parent.Number.Uint64() != number-1 || parent.Hash() != header.ParentHash {
 		return consensus.ErrUnknownAncestor
 	}
-	if parent.Time.Uint64()+sb.config.BlockPeriod > header.Time.Uint64() {
+	if parent.Time+sb.config.BlockPeriod > header.Time {
 		return errInvalidTimestamp
 	}
 	// Verify validators in extraData. Validators in snapshot and extraData should be the same.
@@ -387,9 +387,9 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	header.Extra = extra
 
 	// set header's timestamp
-	header.Time = new(big.Int).Add(parent.Time, new(big.Int).SetUint64(sb.config.BlockPeriod))
-	if header.Time.Int64() < time.Now().Unix() {
-		header.Time = big.NewInt(time.Now().Unix())
+	header.Time = parent.Time + sb.config.BlockPeriod
+	if header.Time < uint64(time.Now().Unix()) {
+		header.Time = uint64(time.Now().Unix())
 	}
 	return nil
 }
@@ -400,6 +400,18 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 // Note, the block header and state database might be updated to reflect any
 // consensus rules that happen at finalization (e.g. block rewards).
 func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
+	uncles []*types.Header) {
+	// No block rewards in Istanbul, so the state remains as is and uncles are dropped
+	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
+	header.UncleHash = nilUncleHash
+}
+
+// Finalize runs any post-transaction state modifications (e.g. block rewards)
+// and assembles the final block.
+//
+// Note, the block header and state database might be updated to reflect any
+// consensus rules that happen at finalization (e.g. block rewards).
+func (sb *backend) FinalizeAndAssemble(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 	// No block rewards in Istanbul, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
@@ -435,7 +447,7 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 		return err
 	}
 
-	delay := time.Unix(header.Time.Int64(), 0).Sub(now())
+	delay := time.Unix(int64(header.Time), 0).Sub(now())
 
 	go func() {
 		// wait for the timestamp of header, use this to adjust the block period
