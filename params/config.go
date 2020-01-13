@@ -18,7 +18,6 @@ package params
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -249,7 +248,7 @@ var (
 	TestChainConfig = &ChainConfig{big.NewInt(1), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, new(EthashConfig), nil, nil, false}
 	TestRules       = TestChainConfig.Rules(new(big.Int))
 
-	QuorumTestChainConfig = &ChainConfig{big.NewInt(10), big.NewInt(0), nil, false, nil, common.Hash{}, nil, nil, nil, nil, nil, new(EthashConfig), nil, nil, true, 64, 32, big.NewInt(0), nil, true}
+	QuorumTestChainConfig = &ChainConfig{big.NewInt(10), big.NewInt(0), nil, false, nil, common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, new(EthashConfig), nil, nil, true}
 )
 
 // TrustedCheckpoint represents a set of post-processed trie roots (CHT and
@@ -389,19 +388,6 @@ func (c *ChainConfig) String() string {
 		engine,
 		c.IsQuorum,
 	)
-}
-
-func (c *ChainConfig) IsValid() error {
-
-	if c.TransactionSizeLimit < 32 || c.TransactionSizeLimit > 128 {
-		return errors.New("Genesis transaction size limit must be between 32 and 128")
-	}
-
-	if c.MaxCodeSize < 24 || c.MaxCodeSize > 128 {
-		return errors.New("Genesis max code size must be between 24 and 128")
-	}
-
-	return nil
 }
 
 // IsHomestead returns whether num is either equal to the homestead block or greater.
