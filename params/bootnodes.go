@@ -64,13 +64,6 @@ var GoerliBootnodes = []string{
 	"enode://573b6607cd59f241e30e4c4943fd50e99e2b6f42f9bd5ca111659d309c06741247f4f1e93843ad3e8c8c18b6e2d94c161b7ef67479b3938780a97134b618b5ce@52.56.136.200:30303",
 }
 
-// RinkebyV5Bootnodes are the enode URLs of the P2P bootstrap nodes running on the
-// Rinkeby test network for the experimental RLPx v5 topic-discovery network.
-var RinkebyV5Bootnodes = []string{
-	"enode://a24ac7c5484ef4ed0c5eb2d36620ba4e4aa13b8c84684e1b4aab0cebea2ae45cb4d375b77eab56516d34bfbd3c1a833fc51296ff084b770b94fb9028c4d25ccf@52.169.42.101:30303?discport=30304", // IE
-	"enode://343149e4feefa15d882d9fe4ac7d88f885bd05ebb735e547f12e12080a9fa07c8014ca6fd7f373123488102fe5e34111f8509cf0b7de3f5b44339c9f25e87cb8@52.3.158.184:30303?discport=30304",  // INFURA
-}
-
 // Ottoman are the enode URLs of the P2P bootstrap nodes running on the
 // Ottoman test network.
 var OttomanBootnodes = []string{

@@ -149,12 +149,6 @@ var (
 		utils.EVMInterpreterFlag,
 		configFileFlag,
 		// Quorum
-		utils.EnableNodePermissionFlag,
-		utils.RaftModeFlag,
-		utils.RaftBlockTimeFlag,
-		utils.RaftJoinExistingFlag,
-		utils.RaftPortFlag,
-		utils.RaftDNSEnabledFlag,
 		utils.EmitCheckpointsFlag,
 		utils.IstanbulRequestTimeoutFlag,
 		utils.IstanbulBlockPeriodFlag,
@@ -314,18 +308,9 @@ func geth(ctx *cli.Context) error {
 		return fmt.Errorf("invalid command: %q", args[0])
 	}
 	prepare(ctx)
-
-	if !quorumValidatePrivateTransactionManager() {
-		return errors.New("the PRIVATE_CONFIG environment variable must be specified for Quorum")
-	}
-
 	node := makeFullNode(ctx)
 	defer node.Close()
 	startNode(ctx, node)
-
-	// Check if a valid consensus is used
-	quorumValidateConsensus(node, ctx.GlobalBool(utils.RaftModeFlag.Name))
-
 	node.Wait()
 	return nil
 }
@@ -334,7 +319,6 @@ func geth(ctx *cli.Context) error {
 // it unlocks any requested accounts, and starts the RPC/IPC interfaces and the
 // miner.
 func startNode(ctx *cli.Context, stack *node.Node) {
-	log.DoEmitCheckpoints = ctx.GlobalBool(utils.EmitCheckpointsFlag.Name)
 	debug.Memsize.Add("node", stack)
 
 	// Start up the node itself
@@ -430,19 +414,6 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		}()
 	}
 
-	// Quorum
-	//
-	// checking if permissions is enabled and staring the permissions service
-	if stack.IsPermissionEnabled() {
-		var permissionService *permission.PermissionCtrl
-		if err := stack.Service(&permissionService); err != nil {
-			utils.Fatalf("Permission service not runnning: %v", err)
-		}
-		if err := permissionService.AfterStart(); err != nil {
-			utils.Fatalf("Permission service post construct failure: %v", err)
-		}
-	}
-
 	// Start auxiliary services if enabled
 	if ctx.GlobalBool(utils.MiningEnabledFlag.Name) || ctx.GlobalBool(utils.DeveloperFlag.Name) {
 		// Mining only makes sense if a full Ethereum node is running
@@ -493,5 +464,4 @@ func unlockAccounts(ctx *cli.Context, stack *node.Node) {
 	for i, account := range unlocks {
 		unlockAccount(ks, account, i, passwords)
 	}
-
 }

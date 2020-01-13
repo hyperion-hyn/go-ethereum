@@ -102,7 +102,6 @@ type ProtocolManager struct {
 	// and processing
 	wg sync.WaitGroup
 
-	raftMode bool
 	engine   consensus.Engine
 }
 
@@ -122,7 +121,13 @@ func NewProtocolManager(config *params.ChainConfig, checkpoint *params.TrustedCh
 		noMorePeers: make(chan struct{}),
 		txsyncCh:    make(chan *txsync),
 		quitSync:    make(chan struct{}),
+		engine:      engine,
 	}
+	
+	if handler, ok := manager.engine.(consensus.Handler); ok {
+		handler.SetBroadcaster(manager)
+	}
+
 	if mode == downloader.FullSync {
 		// The database seems empty as the current block is the genesis. Yet the fast
 		// block is ahead, so fast sync was enabled for this node at a certain point.
@@ -259,16 +264,9 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 	pm.txsSub = pm.txpool.SubscribeNewTxsEvent(pm.txsCh)
 	go pm.txBroadcastLoop()
 
-	if !pm.raftMode {
-		// broadcast mined blocks
-		pm.minedBlockSub = pm.eventMux.Subscribe(core.NewMinedBlockEvent{})
-		go pm.minedBroadcastLoop()
-	} else {
-		// We set this immediately in raft mode to make sure the miner never drops
-		// incoming txes. Raft mode doesn't use the fetcher or downloader, and so
-		// this would never be set otherwise.
-		atomic.StoreUint32(&pm.acceptTxs, 1)
-	}
+	// broadcast mined blocks
+	pm.minedBlockSub = pm.eventMux.Subscribe(core.NewMinedBlockEvent{})
+	go pm.minedBroadcastLoop()
 
 	// start sync handlers
 	go pm.syncer()
@@ -278,10 +276,8 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 func (pm *ProtocolManager) Stop() {
 	log.Info("Stopping Ethereum protocol")
 
-	pm.txsSub.Unsubscribe() // quits txBroadcastLoop
-	if !pm.raftMode {
-		pm.minedBlockSub.Unsubscribe() // quits blockBroadcastLoop
-	}
+	pm.txsSub.Unsubscribe()        // quits txBroadcastLoop
+	pm.minedBlockSub.Unsubscribe() // quits blockBroadcastLoop
 
 	// Quit the sync loop.
 	// After this send has completed, no new peers will be accepted.
@@ -392,16 +388,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 	}
 	defer msg.Discard()
 
-	if pm.raftMode {
-		if msg.Code != TxMsg &&
-			msg.Code != GetBlockHeadersMsg && msg.Code != BlockHeadersMsg &&
-			msg.Code != GetBlockBodiesMsg && msg.Code != BlockBodiesMsg {
-
-			log.Info("raft: ignoring message", "code", msg.Code)
-
-			return nil
-		}
-	} else if handler, ok := pm.engine.(consensus.Handler); ok {
+	if handler, ok := pm.engine.(consensus.Handler); ok {
 		pubKey := p.Node().Pubkey()
 		addr := crypto.PubkeyToAddress(*pubKey)
 		handled, err := handler.HandleMsg(addr, msg)
@@ -825,12 +812,6 @@ func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
 	var txset = make(map[*peer]types.Transactions)
 
 	// Broadcast transactions to a batch of peers not knowing about it
-	// NOTE: Raft-based consensus currently assumes that geth broadcasts
-	// transactions to all peers in the network. A previous comment here
-	// indicated that this logic might change in the future to only send to a
-	// subset of peers. If this change occurs upstream, a merge conflict should
-	// arise here, and we should add logic to send to *all* peers in raft mode.
-
 	for _, tx := range txs {
 		peers := pm.peers.PeersWithoutTx(tx.Hash())
 		for _, peer := range peers {
@@ -876,40 +857,18 @@ type NodeInfo struct {
 	Genesis    common.Hash         `json:"genesis"`    // SHA3 hash of the host's genesis block
 	Config     *params.ChainConfig `json:"config"`     // Chain configuration for the fork rules
 	Head       common.Hash         `json:"head"`       // SHA3 hash of the host's best owned block
-	Consensus  string              `json:"consensus"`  // Consensus mechanism in use
 }
 
 // NodeInfo retrieves some protocol metadata about the running host node.
 func (pm *ProtocolManager) NodeInfo() *NodeInfo {
 	currentBlock := pm.blockchain.CurrentBlock()
-
 	return &NodeInfo{
 		Network:    pm.networkID,
 		Difficulty: pm.blockchain.GetTd(currentBlock.Hash(), currentBlock.NumberU64()),
 		Genesis:    pm.blockchain.Genesis().Hash(),
 		Config:     pm.blockchain.Config(),
 		Head:       currentBlock.Hash(),
-		Consensus:  pm.getConsensusAlgorithm(),
 	}
-}
-
-func (pm *ProtocolManager) getConsensusAlgorithm() string {
-	var consensusAlgo string
-	if pm.raftMode { // raft does not use consensus interface
-		consensusAlgo = "raft"
-	} else {
-		switch pm.engine.(type) {
-		case consensus.Istanbul:
-			consensusAlgo = "istanbul"
-		case *clique.Clique:
-			consensusAlgo = "clique"
-		case *ethash.Ethash:
-			consensusAlgo = "ethash"
-		default:
-			consensusAlgo = "unknown"
-		}
-	}
-	return consensusAlgo
 }
 
 func (self *ProtocolManager) FindPeers(targets map[common.Address]bool) map[common.Address]consensus.Peer {

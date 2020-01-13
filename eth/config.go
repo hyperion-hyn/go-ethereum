@@ -140,8 +140,6 @@ type Config struct {
 	// Enables tracking of SHA3 preimages in the VM
 	EnablePreimageRecording bool
 
-	RaftMode             bool
-	EnableNodePermission bool
 	// Istanbul options
 	Istanbul istanbul.Config
 
@@ -168,18 +166,4 @@ type Config struct {
 
 	// MuirGlacier block override (TODO: remove after the fork)
 	OverrideMuirGlacier *big.Int
-}
-
-type Mode uint
-
-const (
-	ModeNormal Mode = iota
-	ModeShared
-	ModeTest
-	ModeFake
-	ModeFullFake
-)
-
-type configMarshaling struct {
-	MinerExtraData hexutil.Bytes
 }

@@ -30,9 +30,6 @@ import (
 	"strings"
 	"text/tabwriter"
 	"text/template"
-
-	"github.com/ethereum/go-ethereum/permission"
-
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts"
@@ -165,7 +162,7 @@ var (
 	}
 	NetworkIdFlag = cli.Uint64Flag{
 		Name:  "networkid",
-		Usage: "Network identifier (integer, 1=Frontier, 2=Morden (disused), 3=Ropsten, 4=Rinkeby, 5=Ottoman)",
+		Usage: "Network identifier (integer, 1=Frontier, 2=Morden (disused), 3=Ropsten, 4=Rinkeby, 5=Goerli, 1024=Ottoman)",
 		Value: eth.DefaultConfig.NetworkId,
 	}
 	TestnetFlag = cli.BoolFlag{
@@ -703,40 +700,9 @@ var (
 		Usage: "Restrict connection between two whisper light clients",
 	}
 
-	// Raft flags
-	RaftModeFlag = cli.BoolFlag{
-		Name:  "raft",
-		Usage: "If enabled, uses Raft instead of Quorum Chain for consensus",
-	}
-	RaftBlockTimeFlag = cli.IntFlag{
-		Name:  "raftblocktime",
-		Usage: "Amount of time between raft block creations in milliseconds",
-		Value: 50,
-	}
-	RaftJoinExistingFlag = cli.IntFlag{
-		Name:  "raftjoinexisting",
-		Usage: "The raft ID to assume when joining an pre-existing cluster",
-		Value: 0,
-	}
-
 	EmitCheckpointsFlag = cli.BoolFlag{
 		Name:  "emitcheckpoints",
 		Usage: "If enabled, emit specially formatted logging checkpoints",
-	}
-	RaftPortFlag = cli.IntFlag{
-		Name:  "raftport",
-		Usage: "The port to bind for the raft transport",
-		Value: 50400,
-	}
-	RaftDNSEnabledFlag = cli.BoolFlag{
-		Name: "raftdnsenable",
-		Usage: "Enable DNS resolution of peers",
-	}
-
-	// Quorum
-	EnableNodePermissionFlag = cli.BoolFlag{
-		Name:  "permissioned",
-		Usage: "If enabled, the node will allow only a defined list of nodes to connect",
 	}
 
 	// Istanbul settings
@@ -1237,20 +1203,6 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 
 	if ctx.GlobalIsSet(ExternalSignerFlag.Name) {
 		cfg.ExternalSigner = ctx.GlobalString(ExternalSignerFlag.Name)
-
-	cfg.EnableNodePermission = ctx.GlobalBool(EnableNodePermissionFlag.Name)
-
-	switch {
-	case ctx.GlobalIsSet(DataDirFlag.Name):
-		cfg.DataDir = ctx.GlobalString(DataDirFlag.Name)
-	case ctx.GlobalBool(DeveloperFlag.Name):
-		cfg.DataDir = "" // unless explicitly requested, use memory databases
-	case ctx.GlobalBool(TestnetFlag.Name):
-		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "testnet")
-	case ctx.GlobalBool(RinkebyFlag.Name):
-		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "rinkeby")
-	case ctx.GlobalBool(OttomanFlag.Name):
-		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "ottoman")
 	}
 
 	if ctx.GlobalIsSet(KeyStoreDirFlag.Name) {
@@ -1299,6 +1251,8 @@ func setDataDir(ctx *cli.Context, cfg *node.Config) {
 		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "rinkeby")
 	case ctx.GlobalBool(GoerliFlag.Name) && cfg.DataDir == node.DefaultDataDir():
 		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "goerli")
+	case ctx.GlobalBool(OttomanFlag.Name) && cfg.DataDir == node.DefaultDataDir():
+		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "ottoman")
 	}
 }
 
@@ -1531,11 +1485,6 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 	if gcmode := ctx.GlobalString(GCModeFlag.Name); gcmode != "full" && gcmode != "archive" {
 		Fatalf("--%s must be either 'full' or 'archive'", GCModeFlag.Name)
 	}
-	cfg.NoPruning = ctx.GlobalString(GCModeFlag.Name) == "archive"
-
-	if ctx.GlobalIsSet(CacheFlag.Name) || ctx.GlobalIsSet(CacheGCFlag.Name) {
-		cfg.TrieCache = ctx.GlobalInt(CacheFlag.Name) * ctx.GlobalInt(CacheGCFlag.Name) / 100
-	}
 	if ctx.GlobalIsSet(GCModeFlag.Name) {
 		cfg.NoPruning = ctx.GlobalString(GCModeFlag.Name) == "archive"
 	}
@@ -1586,7 +1535,7 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 		cfg.Genesis = core.DefaultGoerliGenesisBlock()
 	case ctx.GlobalBool(OttomanFlag.Name):
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
-			cfg.NetworkId = 6
+			cfg.NetworkId = 1024
 		}
 		cfg.Genesis = core.DefaultOttomanGenesisBlock()
 	case ctx.GlobalBool(DeveloperFlag.Name):
@@ -1619,8 +1568,7 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 }
 
 // RegisterEthService adds an Ethereum client to the stack.
-func RegisterEthService(stack *node.Node, cfg *eth.Config) <-chan *eth.Ethereum {
-	nodeChan := make(chan *eth.Ethereum, 1)
+func RegisterEthService(stack *node.Node, cfg *eth.Config) {
 	var err error
 	if cfg.SyncMode == downloader.LightSync {
 		err = stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
@@ -1633,15 +1581,12 @@ func RegisterEthService(stack *node.Node, cfg *eth.Config) <-chan *eth.Ethereum 
 				ls, _ := les.NewLesServer(fullNode, cfg)
 				fullNode.AddLesServer(ls)
 			}
-			nodeChan <- fullNode
 			return fullNode, err
 		})
 	}
 	if err != nil {
 		Fatalf("Failed to register the Ethereum service: %v", err)
 	}
-
-	return nodeChan
 }
 
 // RegisterShhService configures Whisper and adds it to the given node.
@@ -1689,27 +1634,6 @@ func RegisterGraphQLService(stack *node.Node, endpoint string, cors, vhosts []st
 	}); err != nil {
 		Fatalf("Failed to register the GraphQL service: %v", err)
 	}
-}
-
-// Quorum
-//
-// Configure smart-contract-based permissioning service
-func RegisterPermissionService(ctx *cli.Context, stack *node.Node) {
-	if err := stack.Register(func(sctx *node.ServiceContext) (node.Service, error) {
-		permissionConfig, err := permission.ParsePermissionConfig(stack.DataDir())
-		if err != nil {
-			return nil, fmt.Errorf("loading of %s failed due to %v", params.PERMISSION_MODEL_CONFIG, err)
-		}
-		// start the permissions management service
-		pc, err := permission.NewQuorumPermissionCtrl(stack, &permissionConfig)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load the permission contracts as given in %s due to %v", params.PERMISSION_MODEL_CONFIG, err)
-		}
-		return pc, nil
-	}); err != nil {
-		Fatalf("Failed to register the permission service: %v", err)
-	}
-	log.Info("permission service registered")
 }
 
 func SetupMetrics(ctx *cli.Context) {
@@ -1811,7 +1735,6 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chai
 	if gcmode := ctx.GlobalString(GCModeFlag.Name); gcmode != "full" && gcmode != "archive" {
 		Fatalf("--%s must be either 'full' or 'archive'", GCModeFlag.Name)
 	}
-
 	cache := &core.CacheConfig{
 		TrieCleanLimit:      eth.DefaultConfig.TrieCleanCache,
 		TrieCleanNoPrefetch: ctx.GlobalBool(CacheNoPrefetchFlag.Name),

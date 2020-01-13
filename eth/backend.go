@@ -100,11 +100,6 @@ type Ethereum struct {
 	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and etherbase)
 }
 
-// HACK(joel) this was added just to make the eth chain config visible to RegisterRaftService
-func (s *Ethereum) ChainConfig() *params.ChainConfig {
-	return s.chainConfig
-}
-
 func (s *Ethereum) AddLesServer(ls LesServer) {
 	s.lesServer = ls
 	ls.SetBloomBitsIndexer(s.bloomIndexer)
@@ -149,19 +144,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	}
 	log.Info("Initialised chain configuration", "config", chainConfig)
 
-	// changes to manipulate the chain id for migration from 2.0.2 and below version to 2.0.3
-	// version of Quorum  - this is applicable for v2.0.3 onwards
-	if chainConfig.IsQuorum {
-		if (chainConfig.ChainID != nil && chainConfig.ChainID.Int64() == 1) || config.NetworkId == 1 {
-			return nil, errors.New("Cannot have chain id or network id as 1.")
-		}
-	}
-
-	if !core.GetIsQuorumEIP155Activated(chainDb) && chainConfig.ChainID != nil {
-		//Upon starting the node, write the flag to disallow changing ChainID/EIP155 block after HF
-		core.WriteQuorumEIP155Activation(chainDb)
-	}
-
 	eth := &Ethereum{
 		config:         config,
 		chainDb:        chainDb,
@@ -182,12 +164,11 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 		dbVer = fmt.Sprintf("%d", *bcVersion)
 	}
 	log.Info("Initialising Ethereum protocol", "versions", ProtocolVersions, "network", config.NetworkId, "dbversion", dbVer)
+
 	// force to set the istanbul etherbase to node key address
 	if chainConfig.Istanbul != nil {
 		eth.etherbase = crypto.PubkeyToAddress(ctx.NodeKey().PublicKey)
 	}
-
-	log.Info("Initialising Ethereum protocol", "versions", ProtocolVersions, "network", config.NetworkId)
 
 	if !config.SkipBcVersionCheck {
 		if bcVersion != nil && *bcVersion > core.BlockChainVersion {
@@ -240,9 +221,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	eth.miner = miner.New(eth, &config.Miner, chainConfig, eth.EventMux(), eth.engine, eth.isLocalBlock)
 	eth.miner.SetExtra(makeExtraData(config.Miner.ExtraData))
 
-	hexNodeId := fmt.Sprintf("%x", crypto.FromECDSAPub(&ctx.NodeKey().PublicKey)[1:]) // Quorum
-	eth.APIBackend = &EthAPIBackend{ctx.ExtRPCEnabled(), eth, nil, hexNodeId}
-	
+	eth.APIBackend = &EthAPIBackend{ctx.ExtRPCEnabled(), eth, nil}
 	gpoParams := config.GPO
 	if gpoParams.Default == nil {
 		gpoParams.Default = config.Miner.GasPrice
@@ -252,7 +231,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	return eth, nil
 }
 
-func makeExtraData(extra []byte, isQuorum bool) []byte {
+func makeExtraData(extra []byte) []byte {
 	if len(extra) == 0 {
 		// create default extradata
 		extra, _ = rlp.EncodeToBytes([]interface{}{
@@ -262,8 +241,8 @@ func makeExtraData(extra []byte, isQuorum bool) []byte {
 			runtime.GOOS,
 		})
 	}
-	if uint64(len(extra)) > params.GetMaximumExtraDataSize(isQuorum) {
-		log.Warn("Miner extra data exceed limit", "extra", hexutil.Bytes(extra), "limit", params.GetMaximumExtraDataSize(isQuorum))
+	if uint64(len(extra)) > params.MaximumExtraDataSize {
+		log.Warn("Miner extra data exceed limit", "extra", hexutil.Bytes(extra), "limit", params.MaximumExtraDataSize)
 		extra = nil
 	}
 	return extra
@@ -298,11 +277,16 @@ func CreateConsensusEngine(ctx *node.ServiceContext, chainConfig *params.ChainCo
 		log.Warn("Ethash used in shared mode")
 		return ethash.NewShared()
 	default:
-		// For Quorum, Raft run as a separate service, so
-		// the Ethereum service still needs a consensus engine,
-		// use the consensus with the lightest overhead
-		log.Warn("Ethash used in full fake mode")
-		return ethash.NewFullFaker()
+		engine := ethash.New(ethash.Config{
+			CacheDir:       ctx.ResolvePath(config.Ethash.CacheDir),
+			CachesInMem:    config.Ethash.CachesInMem,
+			CachesOnDisk:   config.Ethash.CachesOnDisk,
+			DatasetDir:     config.Ethash.DatasetDir,
+			DatasetsInMem:  config.Ethash.DatasetsInMem,
+			DatasetsOnDisk: config.Ethash.DatasetsOnDisk,
+		}, notify, noverify)
+		engine.SetThreads(-1) // Disable CPU mining
+		return engine
 	}
 }
 
@@ -324,7 +308,7 @@ func (s *Ethereum) APIs() []rpc.API {
 	}
 
 	// Append all the local APIs and return
-	apis = append(apis, []rpc.API{
+	return append(apis, []rpc.API{
 		{
 			Namespace: "eth",
 			Version:   "1.0",
@@ -370,7 +354,6 @@ func (s *Ethereum) APIs() []rpc.API {
 			Public:    true,
 		},
 	}...)
-	return apis
 }
 
 func (s *Ethereum) ResetWithGenesisBlock(gb *types.Block) {
