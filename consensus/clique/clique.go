@@ -736,8 +736,3 @@ func encodeSigHeader(w io.Writer, header *types.Header) {
 		panic("can't encode: " + err.Error())
 	}
 }
-
-// Protocol implements consensus.Engine.Protocol
-func (c *Clique) Protocol() consensus.Protocol {
-	return consensus.EthProtocol
-}
