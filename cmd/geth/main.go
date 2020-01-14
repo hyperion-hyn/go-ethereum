@@ -148,7 +148,7 @@ var (
 		utils.EVMInterpreterFlag,
 		configFileFlag,
 		// Quorum
-		utils.IstanbulModeFlag,
+		utils.RaftModeFlag,
 		utils.EmitCheckpointsFlag,
 		utils.IstanbulRequestTimeoutFlag,
 		utils.IstanbulBlockPeriodFlag,
@@ -313,7 +313,7 @@ func geth(ctx *cli.Context) error {
 	startNode(ctx, node)
 
 	// Check if a valid consensus is used
-	quorumValidateConsensus(node, ctx.GlobalBool(utils.IstanbulModeFlag.Name))
+	quorumValidateConsensus(node, ctx.GlobalBool(utils.RaftModeFlag.Name))
 
 	node.Wait()
 	return nil

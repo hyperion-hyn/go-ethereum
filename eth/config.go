@@ -141,7 +141,7 @@ type Config struct {
 
 	// Quorum
 	// Istanbul options
-	IstanbulMode bool
+	RaftMode bool
 	Istanbul istanbul.Config
 
 	// Miscellaneous options

@@ -707,7 +707,7 @@ var (
 	}
 
 	// Istanbul settings
-	IstanbulModeFlag = cli.BoolFlag{
+	RaftModeFlag = cli.BoolFlag{
 		Name:  "istanbul",
 		Usage: "If enabled, uses Istanbul for consensus",
 	}
