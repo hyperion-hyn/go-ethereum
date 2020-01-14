@@ -20,7 +20,6 @@ package eth
 import (
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/crypto"
 	"math/big"
 	"runtime"
 	"sync"
@@ -69,6 +68,7 @@ type LesServer interface {
 // Ethereum implements the Ethereum full node service.
 type Ethereum struct {
 	config *Config
+	chainConfig *params.ChainConfig
 
 	// Channel for shutting down the service
 	shutdownChan chan bool
@@ -152,6 +152,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 
 	eth := &Ethereum{
 		config:         config,
+		chainConfig:    chainConfig,
 		chainDb:        chainDb,
 		eventMux:       ctx.EventMux,
 		accountManager: ctx.AccountManager,

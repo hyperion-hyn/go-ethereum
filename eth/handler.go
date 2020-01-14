@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/consensus/clique"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
-	"github.com/ethereum/go-ethereum/crypto"
 	"math"
 	"math/big"
 	"sync"
@@ -890,18 +889,6 @@ func (pm *ProtocolManager) getConsensusAlgorithm() string {
 	return consensusAlgo
 }
 
-func (self *ProtocolManager) FindPeers(targets map[common.Address]bool) map[common.Address]consensus.Peer {
-	m := make(map[common.Address]consensus.Peer)
-	for _, p := range self.peers.Peers() {
-		pubKey := p.Node().Pubkey()
-		addr := crypto.PubkeyToAddress(*pubKey)
-		if targets[addr] {
-			m[addr] = p
-		}
-	}
-	return m
-}
-
 // Quorum
 func (self *ProtocolManager) FindPeers(targets map[common.Address]bool) map[common.Address]consensus.Peer {
 	m := make(map[common.Address]consensus.Peer)
@@ -914,4 +901,3 @@ func (self *ProtocolManager) FindPeers(targets map[common.Address]bool) map[comm
 	}
 	return m
 }
-
