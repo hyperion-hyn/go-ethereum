@@ -706,11 +706,13 @@ var (
 		Usage: "If enabled, emit specially formatted logging checkpoints",
 	}
 
-	// Istanbul settings
+	// Raft flags
 	RaftModeFlag = cli.BoolFlag{
 		Name:  "istanbul",
 		Usage: "If enabled, uses Istanbul for consensus",
 	}
+
+	// Istanbul settings
 	IstanbulRequestTimeoutFlag = cli.Uint64Flag{
 		Name:  "istanbul.requesttimeout",
 		Usage: "Timeout for each Istanbul round in milliseconds",
