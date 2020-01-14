@@ -254,7 +254,7 @@ var AppHelpFlagGroups = []flagGroup{
 	{
 		Name: "ISTANBUL",
 		Flags: []cli.Flag{
-			utils.IstanbulModeFlag,
+			utils.RaftModeFlag,
 			utils.IstanbulRequestTimeoutFlag,
 			utils.IstanbulBlockPeriodFlag,
 		},
