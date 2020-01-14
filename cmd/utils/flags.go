@@ -700,12 +700,17 @@ var (
 		Usage: "Restrict connection between two whisper light clients",
 	}
 
+	// Quorum
 	EmitCheckpointsFlag = cli.BoolFlag{
 		Name:  "emitcheckpoints",
 		Usage: "If enabled, emit specially formatted logging checkpoints",
 	}
 
 	// Istanbul settings
+	IstanbulModeFlag = cli.BoolFlag{
+		Name:  "istanbul",
+		Usage: "If enabled, uses Istanbul for consensus",
+	}
 	IstanbulRequestTimeoutFlag = cli.Uint64Flag{
 		Name:  "istanbul.requesttimeout",
 		Usage: "Timeout for each Istanbul round in milliseconds",

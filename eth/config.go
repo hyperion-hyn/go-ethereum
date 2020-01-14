@@ -62,7 +62,6 @@ var DefaultConfig = Config{
 		Blocks:     20,
 		Percentile: 60,
 	},
-
 	Istanbul: *istanbul.DefaultConfig,
 }
 
@@ -140,7 +139,9 @@ type Config struct {
 	// Enables tracking of SHA3 preimages in the VM
 	EnablePreimageRecording bool
 
+	// Quorum
 	// Istanbul options
+	IstanbulMode bool
 	Istanbul istanbul.Config
 
 	// Miscellaneous options
@@ -167,3 +168,14 @@ type Config struct {
 	// MuirGlacier block override (TODO: remove after the fork)
 	OverrideMuirGlacier *big.Int
 }
+
+// 	Quorum
+type Mode uint
+
+const (
+	ModeNormal Mode = iota
+	ModeShared
+	ModeTest
+	ModeFake
+	ModeFullFake
+)

@@ -78,12 +78,10 @@ func TestNodeInfo(t *testing.T) {
 		consensus      string
 		cliqueConfig   *params.CliqueConfig
 		istanbulConfig *params.IstanbulConfig
-		raftMode       bool
 	}{
-		{"ethash", nil, nil, false},
-		{"raft", nil, nil, true},
-		{"istanbul", nil, &params.IstanbulConfig{1, 1, big.NewInt(0)}, false},
-		{"clique", &params.CliqueConfig{1, 1}, nil, false},
+		{"ethash", nil, nil},
+		{"istanbul", nil, &params.IstanbulConfig{1, 1, big.NewInt(0)}},
+		{"clique", &params.CliqueConfig{1, 1}, nil},
 	}
 
 	// Make sure anything we screw up is restored
@@ -93,7 +91,7 @@ func TestNodeInfo(t *testing.T) {
 	// Try all available consensus mechanisms and check for errors
 	for i, tt := range tests {
 
-		pm, _, err := newTestProtocolManagerConsensus(tt.consensus, tt.cliqueConfig, tt.istanbulConfig, tt.raftMode)
+		pm, _, err := newTestProtocolManagerConsensus(tt.consensus, tt.cliqueConfig, tt.istanbulConfig)
 
 		if pm != nil {
 			defer pm.Stop()

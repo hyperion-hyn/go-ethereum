@@ -148,6 +148,7 @@ var (
 		utils.EVMInterpreterFlag,
 		configFileFlag,
 		// Quorum
+		utils.IstanbulModeFlag,
 		utils.EmitCheckpointsFlag,
 		utils.IstanbulRequestTimeoutFlag,
 		utils.IstanbulBlockPeriodFlag,
@@ -310,6 +311,10 @@ func geth(ctx *cli.Context) error {
 	node := makeFullNode(ctx)
 	defer node.Close()
 	startNode(ctx, node)
+
+	// Check if a valid consensus is used
+	quorumValidateConsensus(node, ctx.GlobalBool(utils.IstanbulModeFlag.Name))
+
 	node.Wait()
 	return nil
 }
@@ -318,6 +323,7 @@ func geth(ctx *cli.Context) error {
 // it unlocks any requested accounts, and starts the RPC/IPC interfaces and the
 // miner.
 func startNode(ctx *cli.Context, stack *node.Node) {
+	log.DoEmitCheckpoints = ctx.GlobalBool(utils.EmitCheckpointsFlag.Name)
 	debug.Memsize.Add("node", stack)
 
 	// Start up the node itself
