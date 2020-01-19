@@ -124,6 +124,9 @@ func NewProtocolManager(config *params.ChainConfig, checkpoint *params.TrustedCh
 	}
 	if handler, ok := manager.engine.(consensus.Handler); ok {
 		handler.SetBroadcaster(manager)
+		for key, value := range protocolLengths {
+			protocolLengths[key] = value + 1
+		}
 	}
 
 	if mode == downloader.FullSync {
