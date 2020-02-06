@@ -466,6 +466,7 @@ web3._extend({
 });
 `
 
+// ATLAS: add new/delegate/undelegate/withdraw/collect methods
 const EthJs = `
 web3._extend({
 	property: 'eth',
