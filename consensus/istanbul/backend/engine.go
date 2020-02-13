@@ -584,24 +584,6 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		}
 	}
 
-	// If we're at block zero, make a snapshot
-	if number == 0 {
-		genesis := chain.GetHeaderByNumber(0)
-		if err := sb.VerifyHeader(chain, genesis, false); err != nil {
-			return nil, err
-		}
-		istanbulExtra, err := types.ExtractIstanbulExtra(genesis)
-		if err != nil {
-			return nil, err
-		}
-		snap = newSnapshot(sb.config.Epoch, 0, genesis.Hash(), validator.NewSet(istanbulExtra.Validators, sb.config.ProposerPolicy))
-		if err := snap.store(sb.db); err != nil {
-			return nil, err
-		}
-		log.Trace("Stored genesis voting snapshot to disk")
-		return snap, nil
-	}
-
 	// If no snapshot for this header, make a new snapshot with validators read from satedb.
 	s, err := chain.StateAt(chain.GetBlock(hash, number).Root())
 	if err != nil {
@@ -746,11 +728,14 @@ func writeCommittedSeals(h *types.Header, committedSeals [][]byte) error {
 
 // ATLAS
 func getLargestAmountStakingValidators(state *state.StateDB, numVal int) ([]common.Address, error) {
-	wrapper := state.GetStakingInfo(staking.StakingAddress)
-	if wrapper == nil {
+	container := state.GetStakingInfo(staking.StakingInfoAddress)
+	if container == nil {
 		return nil, errValidatorNotExist
 	}
-	amount := wrapper.Amount()
+	amount := make(map[common.Address]*big.Int)
+	for _, val := range container.Validators {
+		amount[val.Address] = val.Amount()
+	}
 
 	// sort by amount
 	type pair struct {

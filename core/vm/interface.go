@@ -67,11 +67,8 @@ type StateDB interface {
 	ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) error
 
 	// ATLAS
-	GetStakingInfo(common.Address) *staking.ValidatorWrapper
-	UpdateStakingInfo(common.Address, *staking.ValidatorWrapper) error
-	//SetValidatorFlag(common.Address)
-	//UnsetValidatorFlag(common.Address)
-	IsValidator(common.Address) bool
+	GetStakingInfo(common.Address) *staking.ValidatorContainer
+	UpdateStakingInfo(common.Address, *staking.ValidatorContainer) error
 	AddReward(*staking.ValidatorWrapper, *big.Int) error
 }
 

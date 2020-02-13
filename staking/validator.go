@@ -16,15 +16,19 @@ const (
 )
 
 var (
-	StakingAddress = common.StringToAddress("XXXXX")
+	StakingInfoAddress = common.StringToAddress("0x0000000000000000000000000000000000000000") // used to save staking state in state db
 
 	errAddressNotMatch           = errors.New("Validator key not match")
 )
 
-// ValidatorWrapper contains validator and its delegation information
+type ValidatorContainer struct {
+	Validators []ValidatorWrapper	`json:"validators"`
+}
+
+// ValidatorWrapper contains one validator and its delegation information
 type ValidatorWrapper struct {
-	Validators  map[common.Address]*Validator   `json:"validators"`
-	Delegations map[common.Address]*Delegations `json:"delegations"`
+	*Validator   `json:"validator"`
+	Delegations Delegations `json:"delegations"`
 }
 
 // Validator - data fields for a validator
@@ -33,6 +37,7 @@ type Validator struct {
 	Address common.Address
 	// description for the validator
 	Description
+	// TODO more fields
 }
 
 // Description - some possible IRL connections
@@ -65,19 +70,25 @@ func (d Description) EnsureLength() (Description, error) {
 	return d, nil
 }
 
-func NewValidatorWrapper() *ValidatorWrapper {
-	return &ValidatorWrapper{
-		Validators: make(map[common.Address]*Validator),
-		Delegations: make(map[common.Address]*Delegations),
-	}
-}
-
-func (wrapper ValidatorWrapper) Amount() map[common.Address]*big.Int {
-	amount := make(map[common.Address]*big.Int)
-	for address, delegations := range wrapper.Delegations {
-		amount[address] = delegations.Amount()
+func (wrapper ValidatorWrapper) Amount() *big.Int {
+	amount := big.NewInt(0)
+	for _, delegation := range wrapper.Delegations {
+		amount = amount.Add(amount, delegation.Amount)
 	}
 	return amount
+}
+
+func (container ValidatorContainer) IsValidator(addr common.Address) bool {
+	return container.Validator(addr) != nil
+}
+
+func (container ValidatorContainer) Validator(addr common.Address) *ValidatorWrapper {
+	for _, val := range container.Validators {
+		if addr == val.Address {
+			return &val
+		}
+	}
+	return nil
 }
 
 // UpdateDescription returns a new Description object with d1 as the base and the fields that's not empty in d2 updated

@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/staking"
 	"math/big"
 	"strings"
 
@@ -46,7 +47,6 @@ var errGenesisNoConfig = errors.New("genesis has no chain configuration")
 // Genesis specifies the header fields, state of a genesis block. It also defines hard
 // fork switch-over blocks through the chain configuration.
 type Genesis struct {
-	// ATLAS: add a field here or in Config to represent staking state
 	Config     *params.ChainConfig `json:"config"`
 	Nonce      uint64              `json:"nonce"`
 	Timestamp  uint64              `json:"timestamp"`
@@ -271,6 +271,23 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 			statedb.SetState(addr, key, value)
 		}
 	}
+
+	// ATLAS: staking state
+	validators := g.Config.Istanbul.Validators
+	container := new(staking.ValidatorContainer)
+	for addr, delegations := range validators {
+		wrapper := staking.ValidatorWrapper{
+			Validator:   &staking.Validator{Address: addr},
+			Delegations: delegations,
+		}
+		container.Validators = append(container.Validators, wrapper)
+	}
+	err := statedb.UpdateStakingInfo(staking.StakingInfoAddress, container)
+	if err != nil {
+		log.Crit("Failed to save initial staking state", err)
+	}
+	// ATLAS - END
+
 	root := statedb.IntermediateRoot(false)
 	head := &types.Header{
 		Number:     new(big.Int).SetUint64(g.Number),

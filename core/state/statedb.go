@@ -769,12 +769,12 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 
 // ATLAS
 // GetStakingInfo returns staking information of a given validator (including delegation info)
-func (s *StateDB) GetStakingInfo(addr common.Address) *staking.ValidatorWrapper {
+func (s *StateDB) GetStakingInfo(addr common.Address) *staking.ValidatorContainer {
 	by := s.GetCode(addr)
 	if len(by) == 0 {
 		return nil
 	}
-	val := staking.ValidatorWrapper{}
+	val := staking.ValidatorContainer{}
 	err := rlp.DecodeBytes(by, &val)
 	if err != nil {
 		fmt.Printf("GetStakingInfo unable to decode: %v\n", err)
@@ -784,7 +784,7 @@ func (s *StateDB) GetStakingInfo(addr common.Address) *staking.ValidatorWrapper 
 }
 
 // UpdateStakingInfo update staking information of a given validator (including delegation info)
-func (s *StateDB) UpdateStakingInfo(addr common.Address, val *staking.ValidatorWrapper) error {
+func (s *StateDB) UpdateStakingInfo(addr common.Address, val *staking.ValidatorContainer) error {
 	// TODO: check ValidatorWrapper's compliance
 
 	by, err := rlp.EncodeToBytes(val)
@@ -793,17 +793,6 @@ func (s *StateDB) UpdateStakingInfo(addr common.Address, val *staking.ValidatorW
 	}
 	s.SetCode(addr, by)
 	return nil
-}
-
-// IsValidator checks whether it is a validator object
-func (s *StateDB) IsValidator(addr common.Address) bool {
-	wrapper := s.GetStakingInfo(addr)
-	if wrapper == nil {
-		return false
-	}
-
-	_, ok := wrapper.Validators[addr]
-	return ok
 }
 
 // AddReward distributes the reward to all the delegators based on stake percentage.

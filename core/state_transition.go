@@ -367,12 +367,17 @@ func (st *StateTransition) applyCreateValidatorTx(createValidator *staking.Creat
 		return errNegativeAmount
 	}
 
-	if val := createValidator.ValidatorAddress; st.state.IsValidator(val) {
-		return errors.Wrapf(errValidatorExist, val.String())
-	}
-
 	if !CanTransfer(st.state, createValidator.ValidatorAddress, createValidator.Amount) {
 		return errInsufficientBalanceForStake
+	}
+
+	container := st.state.GetStakingInfo(staking.StakingInfoAddress)
+	if container == nil {
+		container = new(staking.ValidatorContainer)
+	} else {
+		if container.IsValidator(createValidator.ValidatorAddress) {
+			return errors.Wrapf(errValidatorExist, createValidator.ValidatorAddress.String())
+		}
 	}
 
 	v, err := staking.CreateValidatorFromNewMsg(createValidator)
@@ -380,17 +385,12 @@ func (st *StateTransition) applyCreateValidatorTx(createValidator *staking.Creat
 		return err
 	}
 
-	wrapper := st.state.GetStakingInfo(staking.StakingAddress)
-	if wrapper == nil {
-		wrapper = staking.NewValidatorWrapper()
-	}
-	wrapper.Validators[v.Address] = v
-
-	wrapper.Delegations[v.Address] = &staking.Delegations{
+	wrapper := staking.ValidatorWrapper{Validator: v}
+	wrapper.Delegations = staking.Delegations{
 		staking.NewDelegation(v.Address, createValidator.Amount),
 	}
-
-	if err := st.state.UpdateStakingInfo(v.Address, wrapper); err != nil {
+	container.Validators = append(container.Validators, wrapper)
+	if err := st.state.UpdateStakingInfo(v.Address, container); err != nil {
 		return err
 	}
 
@@ -406,15 +406,6 @@ func (st *StateTransition) applyEditValidatorTx(editValidator *staking.EditValid
 func (st *StateTransition) applyDelegateTx(delegate *staking.Delegate) error {
 	if delegate.Amount.Sign() == -1 {
 		return errNegativeAmount
-	}
-
-	if !st.state.IsValidator(delegate.ValidatorAddress) {
-		return errValidatorNotExist
-	}
-
-	wrapper := st.state.GetStakingInfo(delegate.ValidatorAddress)
-	if wrapper == nil {
-		return errValidatorNotExist
 	}
 
 	// TODO: implement
