@@ -73,6 +73,11 @@ type Backend interface {
 	Stats() (pending int, queued int)
 	TxPoolContent() (map[common.Address]types.Transactions, map[common.Address]types.Transactions)
 	SubscribeNewTxsEvent(chan<- core.NewTxsEvent) event.Subscription
+	// ATLAS: Staking transaction pool API
+	// TODO: other APIs for validator and delegations, etc.
+	SendStakingTx(ctx context.Context, newStakingTx *types.Transaction) error
+	//GetCurrentStakingErrorSink() []staking.RPCTransactionError
+
 
 	// Filter API
 	BloomStatus() (uint64, uint64)

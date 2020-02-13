@@ -19,23 +19,25 @@ package backend
 import (
 	"bytes"
 	"errors"
+	"github.com/ethereum/go-ethereum/staking"
 	"math/big"
 	"math/rand"
+	"sort"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/istanbul"
-	"github.com/ethereum/go-ethereum/consensus/istanbul/validator"
 	istanbulCore "github.com/ethereum/go-ethereum/consensus/istanbul/core"
+	"github.com/ethereum/go-ethereum/consensus/istanbul/validator"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
-	"golang.org/x/crypto/sha3"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
 	lru "github.com/hashicorp/golang-lru"
+	"golang.org/x/crypto/sha3"
 )
 
 const (
@@ -82,6 +84,8 @@ var (
 	errEmptyCommittedSeals = errors.New("zero committed seals")
 	// errMismatchTxhashes is returned if the TxHash in header is mismatch.
 	errMismatchTxhashes = errors.New("mismatch transcations hashes")
+	// errValidatorNotExist is return if no validator in statedb.
+	errValidatorNotExist = errors.New("staking validator does not exist")
 )
 var (
 	defaultDifficulty = big.NewInt(1)
@@ -563,64 +567,53 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		headers []*types.Header
 		snap    *Snapshot
 	)
-	for snap == nil {
-		// If an in-memory snapshot was found, use that
-		if s, ok := sb.recents.Get(hash); ok {
-			snap = s.(*Snapshot)
-			break
-		}
-		// If an on-disk checkpoint snapshot can be found, use that
-		if number%checkpointInterval == 0 {
-			if s, err := loadSnapshot(sb.config.Epoch, sb.db, hash); err == nil {
-				log.Trace("Loaded voting snapshot form disk", "number", number, "hash", hash)
-				snap = s
-				break
-			}
-		}
-		// If we're at block zero, make a snapshot
-		if number == 0 {
-			genesis := chain.GetHeaderByNumber(0)
-			if err := sb.VerifyHeader(chain, genesis, false); err != nil {
-				return nil, err
-			}
-			istanbulExtra, err := types.ExtractIstanbulExtra(genesis)
-			if err != nil {
-				return nil, err
-			}
-			snap = newSnapshot(sb.config.Epoch, 0, genesis.Hash(), validator.NewSet(istanbulExtra.Validators, sb.config.ProposerPolicy))
-			if err := snap.store(sb.db); err != nil {
-				return nil, err
-			}
-			log.Trace("Stored genesis voting snapshot to disk")
-			break
-		}
-		// No snapshot for this header, gather the header and move backward
-		var header *types.Header
-		if len(parents) > 0 {
-			// If we have explicit parents, pick from there (enforced)
-			header = parents[len(parents)-1]
-			if header.Hash() != hash || header.Number.Uint64() != number {
-				return nil, consensus.ErrUnknownAncestor
-			}
-			parents = parents[:len(parents)-1]
-		} else {
-			// No explicit parents (or no more left), reach out to the database
-			header = chain.GetHeader(hash, number)
-			if header == nil {
-				return nil, consensus.ErrUnknownAncestor
-			}
-		}
-		headers = append(headers, header)
-		number, hash = number-1, header.ParentHash
+
+	// ATLAS
+	// If an in-memory snapshot was found, use that
+	if s, ok := sb.recents.Get(hash); ok {
+		snap = s.(*Snapshot)
+		return snap, nil
 	}
-	// Previous snapshot found, apply any pending headers on top of it
-	for i := 0; i < len(headers)/2; i++ {
-		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
+
+	// If an on-disk checkpoint snapshot can be found, use that
+	if number%checkpointInterval == 0 {
+		if s, err := loadSnapshot(sb.config.Epoch, sb.db, hash); err == nil {
+			log.Trace("Loaded voting snapshot form disk", "number", number, "hash", hash)
+			snap = s
+			return snap, nil
+		}
 	}
-	snap, err := snap.apply(headers)
+
+	// If we're at block zero, make a snapshot
+	if number == 0 {
+		genesis := chain.GetHeaderByNumber(0)
+		if err := sb.VerifyHeader(chain, genesis, false); err != nil {
+			return nil, err
+		}
+		istanbulExtra, err := types.ExtractIstanbulExtra(genesis)
+		if err != nil {
+			return nil, err
+		}
+		snap = newSnapshot(sb.config.Epoch, 0, genesis.Hash(), validator.NewSet(istanbulExtra.Validators, sb.config.ProposerPolicy))
+		if err := snap.store(sb.db); err != nil {
+			return nil, err
+		}
+		log.Trace("Stored genesis voting snapshot to disk")
+		return snap, nil
+	}
+
+	// If no snapshot for this header, make a new snapshot with validators read from satedb.
+	s, err := chain.StateAt(chain.GetBlock(hash, number).Root())
 	if err != nil {
 		return nil, err
 	}
+	vals, err := getLargestAmountStakingValidators(s, 88)
+	if err != nil {
+		return nil, err
+	}
+	snap = newSnapshot(sb.config.Epoch, number, hash, validator.NewSet(vals, sb.config.ProposerPolicy))
+	// ATLAS - END
+
 	sb.recents.Add(snap.Hash, snap)
 
 	// If we've generated a new checkpoint snapshot, save to disk
@@ -749,4 +742,35 @@ func writeCommittedSeals(h *types.Header, committedSeals [][]byte) error {
 
 	h.Extra = append(h.Extra[:types.IstanbulExtraVanity], payload...)
 	return nil
+}
+
+// ATLAS
+func getLargestAmountStakingValidators(state *state.StateDB, numVal int) ([]common.Address, error) {
+	wrapper := state.GetStakingInfo(staking.StakingAddress)
+	if wrapper == nil {
+		return nil, errValidatorNotExist
+	}
+	amount := wrapper.Amount()
+
+	// sort by amount
+	type pair struct {
+		key   common.Address
+		value *big.Int
+	}
+	var pairs []pair
+	for k, v := range amount {
+		pairs = append(pairs, pair{k, v})
+	}
+	sort.Slice(pairs, func(i, j int) bool {
+		return pairs[i].value.Cmp(pairs[j].value) > 0
+	})
+
+	if numVal > len(pairs) {
+		numVal = len(pairs)
+	}
+	addresses := make([]common.Address, numVal)
+	for i := 0; i < numVal; i++ {
+		addresses[i] = pairs[i].key
+	}
+	return addresses, nil
 }

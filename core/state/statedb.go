@@ -20,6 +20,7 @@ package state
 import (
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/staking"
 	"math/big"
 	"sort"
 	"time"
@@ -765,3 +766,49 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 		return nil
 	})
 }
+
+// ATLAS
+// GetStakingInfo returns staking information of a given validator (including delegation info)
+func (s *StateDB) GetStakingInfo(addr common.Address) *staking.ValidatorWrapper {
+	by := s.GetCode(addr)
+	if len(by) == 0 {
+		return nil
+	}
+	val := staking.ValidatorWrapper{}
+	err := rlp.DecodeBytes(by, &val)
+	if err != nil {
+		fmt.Printf("GetStakingInfo unable to decode: %v\n", err)
+		return nil
+	}
+	return &val
+}
+
+// UpdateStakingInfo update staking information of a given validator (including delegation info)
+func (s *StateDB) UpdateStakingInfo(addr common.Address, val *staking.ValidatorWrapper) error {
+	// TODO: check ValidatorWrapper's compliance
+
+	by, err := rlp.EncodeToBytes(val)
+	if err != nil {
+		return err
+	}
+	s.SetCode(addr, by)
+	return nil
+}
+
+// IsValidator checks whether it is a validator object
+func (s *StateDB) IsValidator(addr common.Address) bool {
+	wrapper := s.GetStakingInfo(addr)
+	if wrapper == nil {
+		return false
+	}
+
+	_, ok := wrapper.Validators[addr]
+	return ok
+}
+
+// AddReward distributes the reward to all the delegators based on stake percentage.
+func (s *StateDB) AddReward(snapshot *staking.ValidatorWrapper, reward *big.Int) error {
+	return nil
+}
+
+// ATLAS - END

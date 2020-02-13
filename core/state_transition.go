@@ -17,7 +17,10 @@
 package core
 
 import (
-	"errors"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/ethereum/go-ethereum/staking"
+	"github.com/pkg/errors"
 	"math"
 	"math/big"
 
@@ -28,9 +31,18 @@ import (
 )
 
 var (
-	errInsufficientBalanceForGas = errors.New("insufficient balance to pay for gas")
-)
 
+	errInvalidSigner               = errors.New("invalid signer for staking transaction")
+	errInsufficientBalanceForGas   = errors.New("insufficient balance to pay for gas")
+	errInsufficientBalanceForStake = errors.New("insufficient balance to stake")
+	errValidatorExist              = errors.New("staking validator already exists")
+	errValidatorNotExist           = errors.New("staking validator does not exist")
+	errNoDelegationToUndelegate    = errors.New("no delegation to undelegate")
+	errCommissionRateChangeTooFast = errors.New("commission rate can not be changed more than MaxChangeRate within the same epoch")
+	errCommissionRateChangeTooHigh = errors.New("commission rate can not be higher than MaxCommissionRate")
+	errNoRewardsToCollect          = errors.New("no rewards to collect")
+	errNegativeAmount              = errors.New("amount can not be negative")
+)
 /*
 The State Transitioning Model
 
@@ -73,6 +85,7 @@ type Message interface {
 	Nonce() uint64
 	CheckNonce() bool
 	Data() []byte
+	Type() types.TransactionType
 }
 
 // IntrinsicGas computes the 'intrinsic gas' for a message with the given data.
@@ -134,6 +147,11 @@ func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition 
 // state and would never be accepted within a block.
 func ApplyMessage(evm *vm.EVM, msg Message, gp *GasPool) ([]byte, uint64, bool, error) {
 	return NewStateTransition(evm, msg, gp).TransitionDb()
+}
+
+// ATLAS: ApplyStakingMessage computes the new state for staking message
+func ApplyStakingMessage(evm *vm.EVM, msg Message, gp *GasPool) (uint64, error) {
+	return NewStateTransition(evm, msg, gp).StakingTransitionDb()
 }
 
 // to returns the recipient of the message.
@@ -253,3 +271,164 @@ func (st *StateTransition) refundGas() {
 func (st *StateTransition) gasUsed() uint64 {
 	return st.initialGas - st.gas
 }
+
+// ATLAS
+// StakingTransitionDb will transition the state by applying the staking message and
+// returning the result including the used gas. It returns an error if failed.
+// It is used for staking transaction only
+func (st *StateTransition) StakingTransitionDb() (usedGas uint64, err error) {
+	if err = st.preCheck(); err != nil {
+		return
+	}
+	msg := st.msg
+	sender := vm.AccountRef(msg.From())
+	homestead := st.evm.ChainConfig().IsHomestead(st.evm.BlockNumber)
+	istanbul := st.evm.ChainConfig().IsIstanbul(st.evm.BlockNumber)
+
+	// Pay intrinsic gas
+	gas, err := IntrinsicGas(st.data, false, homestead, istanbul)
+	if err != nil {
+		return 0, err
+	}
+	if err = st.useGas(gas); err != nil {
+		return 0, err
+	}
+
+	// Increment the nonce for the next transaction
+	st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
+
+	switch msg.Type() {
+	case types.StakeNewVal:
+		stkMsg := &staking.CreateValidator{}
+		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
+			return 0, err
+		}
+		log.Info("Staking Message", "Type", msg.Type(), "Message", stkMsg)
+		if msg.From() != stkMsg.ValidatorAddress {
+			return 0, errInvalidSigner
+		}
+		err = st.applyCreateValidatorTx(stkMsg)
+
+	case types.StakeEditVal:
+		stkMsg := &staking.EditValidator{}
+		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
+			return 0, err
+		}
+		log.Info("Staking Message", "Type", msg.Type(), "Message", stkMsg)
+		if msg.From() != stkMsg.ValidatorAddress {
+			return 0, errInvalidSigner
+		}
+		err = st.applyEditValidatorTx(stkMsg)
+
+	case types.Delegate:
+		stkMsg := &staking.Delegate{}
+		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
+			return 0, err
+		}
+		log.Info("Staking Message", "Type", msg.Type(), "Message", stkMsg)
+		if msg.From() != stkMsg.DelegatorAddress {
+			return 0, errInvalidSigner
+		}
+		err = st.applyDelegateTx(stkMsg)
+
+	case types.Undelegate:
+		stkMsg := &staking.Undelegate{}
+		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
+			return 0, err
+		}
+		log.Info("Staking Message", "Type", msg.Type(), "Message", stkMsg)
+		if msg.From() != stkMsg.DelegatorAddress {
+			return 0, errInvalidSigner
+		}
+		err = st.applyUndelegateTx(stkMsg)
+	case types.CollectRewards:
+		stkMsg := &staking.CollectRewards{}
+		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
+			return 0, err
+		}
+		log.Info("Staking Message", "Type", msg.Type(), "Message", stkMsg)
+		if msg.From() != stkMsg.DelegatorAddress {
+			return 0, errInvalidSigner
+		}
+		err = st.applyCollectRewards(stkMsg)
+	default:
+		return 0, staking.ErrInvalidStakingKind
+	}
+	st.refundGas()
+
+	txFee := new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)
+	st.state.AddBalance(st.evm.Coinbase, txFee)
+
+	return st.gasUsed(), err
+}
+
+func (st *StateTransition) applyCreateValidatorTx(createValidator *staking.CreateValidator) error {
+	if createValidator.Amount.Sign() == -1 {
+		return errNegativeAmount
+	}
+
+	if val := createValidator.ValidatorAddress; st.state.IsValidator(val) {
+		return errors.Wrapf(errValidatorExist, val.String())
+	}
+
+	if !CanTransfer(st.state, createValidator.ValidatorAddress, createValidator.Amount) {
+		return errInsufficientBalanceForStake
+	}
+
+	v, err := staking.CreateValidatorFromNewMsg(createValidator)
+	if err != nil {
+		return err
+	}
+
+	wrapper := st.state.GetStakingInfo(staking.StakingAddress)
+	if wrapper == nil {
+		wrapper = staking.NewValidatorWrapper()
+	}
+	wrapper.Validators[v.Address] = v
+
+	wrapper.Delegations[v.Address] = &staking.Delegations{
+		staking.NewDelegation(v.Address, createValidator.Amount),
+	}
+
+	if err := st.state.UpdateStakingInfo(v.Address, wrapper); err != nil {
+		return err
+	}
+
+	st.state.SubBalance(v.Address, createValidator.Amount)
+	return nil
+}
+
+func (st *StateTransition) applyEditValidatorTx(editValidator *staking.EditValidator) error {
+	// TODO: implement
+	return nil
+}
+
+func (st *StateTransition) applyDelegateTx(delegate *staking.Delegate) error {
+	if delegate.Amount.Sign() == -1 {
+		return errNegativeAmount
+	}
+
+	if !st.state.IsValidator(delegate.ValidatorAddress) {
+		return errValidatorNotExist
+	}
+
+	wrapper := st.state.GetStakingInfo(delegate.ValidatorAddress)
+	if wrapper == nil {
+		return errValidatorNotExist
+	}
+
+	// TODO: implement
+	return nil
+}
+
+func (st *StateTransition) applyUndelegateTx(undelegate *staking.Undelegate) error {
+	// TODO: implement
+	return nil
+}
+
+func (st *StateTransition) applyCollectRewards(collectRewards *staking.CollectRewards) error {
+	// TODO: implement
+	return nil
+}
+
+// ATLAS

@@ -35,6 +35,22 @@ var (
 	ErrInvalidSig = errors.New("invalid transaction v, r, s values")
 )
 
+// ATLAS
+// TransactionType different types of transactions
+type TransactionType byte
+
+// Different Transaction Types
+const (
+	Normal TransactionType = iota
+	StakeNewVal
+	StakeEditVal
+	Delegate
+	Undelegate
+	CollectRewards
+)
+// ATLAS - END
+
+// TODO: check whether Transaction's methods are compatible to staking transaction or not.
 type Transaction struct {
 	data txdata
 	// caches
@@ -49,7 +65,7 @@ type txdata struct {
 	GasLimit     uint64          `json:"gas"      gencodec:"required"`
 	Recipient    *common.Address `json:"to"       rlp:"nil"` // nil means contract creation
 	Amount       *big.Int        `json:"value"    gencodec:"required"`
-	Payload      []byte          `json:"input"    gencodec:"required"`
+	Payload      []byte          `json:"input"    gencodec:"required"`		// ATLAS: also used to be staking message
 
 	// Signature values
 	V *big.Int `json:"v" gencodec:"required"`
@@ -58,6 +74,9 @@ type txdata struct {
 
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
+
+	// ATLAS: staking tx
+	Type		 TransactionType	// Default: normal tx
 }
 
 type txdataMarshaling struct {
@@ -226,6 +245,7 @@ func (tx *Transaction) AsMessage(s Signer) (Message, error) {
 		amount:     tx.data.Amount,
 		data:       tx.data.Payload,
 		checkNonce: true,
+		txType:     tx.data.Type,
 	}
 
 	var err error
@@ -256,6 +276,10 @@ func (tx *Transaction) Cost() *big.Int {
 // The return values should not be modified by the caller.
 func (tx *Transaction) RawSignatureValues() (v, r, s *big.Int) {
 	return tx.data.V, tx.data.R, tx.data.S
+}
+
+func (tx *Transaction) Type() TransactionType {
+	return tx.data.Type
 }
 
 // Transactions is a Transaction slice type for basic sorting.
@@ -394,6 +418,7 @@ type Message struct {
 	gasPrice   *big.Int
 	data       []byte
 	checkNonce bool
+	txType     TransactionType
 }
 
 func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, checkNonce bool) Message {
@@ -409,11 +434,12 @@ func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *b
 	}
 }
 
-func (m Message) From() common.Address { return m.from }
-func (m Message) To() *common.Address  { return m.to }
-func (m Message) GasPrice() *big.Int   { return m.gasPrice }
-func (m Message) Value() *big.Int      { return m.amount }
-func (m Message) Gas() uint64          { return m.gasLimit }
-func (m Message) Nonce() uint64        { return m.nonce }
-func (m Message) Data() []byte         { return m.data }
-func (m Message) CheckNonce() bool     { return m.checkNonce }
+func (m Message) From() common.Address  { return m.from }
+func (m Message) To() *common.Address   { return m.to }
+func (m Message) GasPrice() *big.Int    { return m.gasPrice }
+func (m Message) Value() *big.Int       { return m.amount }
+func (m Message) Gas() uint64           { return m.gasLimit }
+func (m Message) Nonce() uint64         { return m.nonce }
+func (m Message) Data() []byte          { return m.data }
+func (m Message) CheckNonce() bool      { return m.checkNonce }
+func (m Message) Type() TransactionType { return m.Type() }

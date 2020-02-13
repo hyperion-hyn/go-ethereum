@@ -227,7 +227,7 @@ func (b *EthAPIBackend) SendTx(ctx context.Context, signedTx *types.Transaction)
 }
 
 func (b *EthAPIBackend) GetPoolTransactions() (types.Transactions, error) {
-	pending, err := b.eth.txPool.Pending()
+	pending, err := b.eth.txPool.Pending()		// ATLAS TODO: separate staking tx and non-staking tx?
 	if err != nil {
 		return nil, err
 	}
@@ -304,4 +304,9 @@ func (b *EthAPIBackend) ServiceFilter(ctx context.Context, session *bloombits.Ma
 	for i := 0; i < bloomFilterThreads; i++ {
 		go session.Multiplex(bloomRetrievalBatch, bloomRetrievalWait, b.eth.bloomRequests)
 	}
+}
+
+// ATLAS: SendStakingTx adds a staking transaction
+func (b *EthAPIBackend) SendStakingTx(ctx context.Context, newStakingTx *types.Transaction) error {
+	return b.eth.txPool.AddLocal(newStakingTx)
 }

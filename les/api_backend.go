@@ -277,3 +277,8 @@ func (b *LesApiBackend) ServiceFilter(ctx context.Context, session *bloombits.Ma
 		go session.Multiplex(bloomRetrievalBatch, bloomRetrievalWait, b.eth.bloomRequests)
 	}
 }
+
+func (b *LesApiBackend) SendStakingTx(ctx context.Context, newStakingTx *types.Transaction) error {
+	// TODO: implement
+	return nil
+}
