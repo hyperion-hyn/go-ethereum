@@ -6,6 +6,8 @@ import (
 	"math/big"
 )
 
+//go:generate gencodec -type Validator -field-override validatorMarshaling -out gen_validator.go
+
 // Define validator staking related const
 const (
 	MaxNameLength            = 140
@@ -18,26 +20,32 @@ const (
 var (
 	StakingInfoAddress = common.StringToAddress("0x0000000000000000000000000000000000000000") // used to save staking state in state db
 
-	errAddressNotMatch           = errors.New("Validator key not match")
+	errAddressNotMatch = errors.New("Validator key not match")
 )
 
 type ValidatorContainer struct {
-	Validators []ValidatorWrapper	`json:"validators"`
+	Validators []ValidatorWrapper `json:"validators"`
 }
 
 // ValidatorWrapper contains one validator and its delegation information
 type ValidatorWrapper struct {
-	*Validator   `json:"validator"`
+	Validator   *Validator  `json:"validator"`
 	Delegations Delegations `json:"delegations"`
 }
 
 // Validator - data fields for a validator
 type Validator struct {
 	// ECDSA address of the validator
-	Address common.Address
+	Address common.Address `json:"validator_address" gencodec:"required"`
 	// description for the validator
-	Description
+	Description Description `json:"description"`
 	// TODO more fields
+}
+
+// field type overrides for gencodec
+type validatorMarshaling struct {
+	Address common.UnprefixedAddress
+	Description Description
 }
 
 // Description - some possible IRL connections
@@ -84,7 +92,7 @@ func (container ValidatorContainer) IsValidator(addr common.Address) bool {
 
 func (container ValidatorContainer) Validator(addr common.Address) *ValidatorWrapper {
 	for _, val := range container.Validators {
-		if addr == val.Address {
+		if addr == val.Validator.Address {
 			return &val
 		}
 	}

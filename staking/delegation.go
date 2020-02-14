@@ -21,6 +21,7 @@ type Delegation struct {
 
 type Delegations []Delegation
 
+// field type overrides for gencodec
 type delegationMarshaling struct {
 	DelegatorAddress common.UnprefixedAddress
 	Amount	*math.HexOrDecimal256

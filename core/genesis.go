@@ -274,15 +274,8 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 
 	// ATLAS: staking state
 	validators := g.Config.Istanbul.Validators
-	container := new(staking.ValidatorContainer)
-	for addr, delegations := range validators {
-		wrapper := staking.ValidatorWrapper{
-			Validator:   &staking.Validator{Address: addr},
-			Delegations: delegations,
-		}
-		container.Validators = append(container.Validators, wrapper)
-	}
-	err := statedb.UpdateStakingInfo(staking.StakingInfoAddress, container)
+	container := staking.ValidatorContainer{Validators: validators}
+	err := statedb.UpdateStakingInfo(staking.StakingInfoAddress, &container)
 	if err != nil {
 		log.Crit("Failed to save initial staking state", err)
 	}

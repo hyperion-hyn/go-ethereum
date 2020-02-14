@@ -734,7 +734,7 @@ func getLargestAmountStakingValidators(state *state.StateDB, numVal int) ([]comm
 	}
 	amount := make(map[common.Address]*big.Int)
 	for _, val := range container.Validators {
-		amount[val.Address] = val.Amount()
+		amount[val.Validator.Address] = val.Amount()
 	}
 
 	// sort by amount
