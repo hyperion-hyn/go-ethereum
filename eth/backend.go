@@ -269,7 +269,11 @@ func CreateConsensusEngine(ctx *node.ServiceContext, chainConfig *params.ChainCo
 		config.Istanbul.ProposerPolicy = istanbul.ProposerPolicy(chainConfig.Istanbul.ProposerPolicy)
 		config.Istanbul.Ceil2Nby3Block = chainConfig.Istanbul.Ceil2Nby3Block
 
-		return istanbulBackend.New(&config.Istanbul, ctx.NodeKey(), db)
+		// ATLAS
+		if len(ctx.AccountManager.Wallets()) < 0 {
+			log.Crit("Need a wallet")
+		}
+		return istanbulBackend.NewWithWallet(&config.Istanbul, ctx.AccountManager.Wallets()[0], db)
 	}
 
 	// Otherwise assume proof-of-work

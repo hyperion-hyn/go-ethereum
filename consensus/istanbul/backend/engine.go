@@ -564,7 +564,6 @@ func (sb *backend) Stop() error {
 func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*Snapshot, error) {
 	// Search for a snapshot in memory or on disk for checkpoints
 	var (
-		headers []*types.Header
 		snap    *Snapshot
 	)
 
@@ -599,7 +598,7 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 	sb.recents.Add(snap.Hash, snap)
 
 	// If we've generated a new checkpoint snapshot, save to disk
-	if snap.Number%checkpointInterval == 0 && len(headers) > 0 {
+	if snap.Number%checkpointInterval == 0 {
 		if err = snap.store(sb.db); err != nil {
 			return nil, err
 		}
