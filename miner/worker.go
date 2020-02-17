@@ -994,12 +994,12 @@ func (w *worker) splitTransactionsIntoNormalAndStaking(transactions map[common.A
 		for _, tx := range txs {
 			if tx.Type() == types.Normal {
 				if _, ok := normalTxs[address]; !ok {
-					normalTxs[address] = make(types.Transactions, 1)
+					normalTxs[address] = types.Transactions{}
 				}
 				normalTxs[address] = append(normalTxs[address], tx)
 			} else {
 				if _, ok := stakingTxs[address]; !ok {
-					stakingTxs[address] = make(types.Transactions, 1)
+					stakingTxs[address] = types.Transactions{}
 				}
 				stakingTxs[address] = append(stakingTxs[address], tx)
 			}

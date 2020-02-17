@@ -104,7 +104,8 @@ var (
 // block, which may be different from the header's coinbase if a consensus
 // engine is based on signatures.
 func (sb *backend) Author(header *types.Header) (common.Address, error) {
-	return ecrecover(header)
+	//return ecrecover(header)
+	return header.Coinbase, nil		// ATLAS: it should be header's coinbase
 }
 
 // Signers extracts all the addresses who have signed the given header
@@ -340,7 +341,7 @@ func (sb *backend) VerifySeal(chain consensus.ChainReader, header *types.Header)
 // rules of a particular engine. The changes are executed inline.
 func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) error {
 	// unused fields, force to set to empty
-	header.Coinbase = common.Address{}
+	//header.Coinbase = common.Address{}	// ATLAS: header's coinbase is useful
 	header.Nonce = emptyNonce
 	header.MixDigest = types.IstanbulDigest
 
@@ -384,6 +385,11 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	}
 
 	// add validators in snapshot to extraData's validators section
+	log.Info("Preprepare valset")
+	for i, val := range snap.validators() {
+		log.Info("Valset", "index", i, "addr", val.String())
+	}
+
 	extra, err := prepareExtra(header, snap.validators())
 	if err != nil {
 		return err

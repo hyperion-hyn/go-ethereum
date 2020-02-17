@@ -24,6 +24,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 )
 
@@ -104,6 +105,7 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 	if msg.Type() == types.Normal {
 		_, gas, failed, err = ApplyMessage(vmenv, msg, gp)
 	} else {
+		log.Info("Apply staking tx")
 		gas, err = ApplyStakingMessage(vmenv, msg, gp)
 	}
 	// ATLAS - END

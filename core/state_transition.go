@@ -390,7 +390,7 @@ func (st *StateTransition) applyCreateValidatorTx(createValidator *staking.Creat
 		staking.NewDelegation(v.Address, createValidator.Amount),
 	}
 	container.Validators = append(container.Validators, wrapper)
-	if err := st.state.UpdateStakingInfo(v.Address, container); err != nil {
+	if err := st.state.UpdateStakingInfo(staking.StakingInfoAddress, container); err != nil {
 		return err
 	}
 

@@ -18,7 +18,7 @@ const (
 )
 
 var (
-	StakingInfoAddress = common.StringToAddress("0x0000000000000000000000000000000000000000") // used to save staking state in state db
+	StakingInfoAddress = common.StringToAddress("0x0000000000000000000000000000000123456789") // used to save staking state in state db
 
 	errAddressNotMatch = errors.New("Validator key not match")
 )

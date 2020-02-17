@@ -651,7 +651,7 @@ func (api *RetestethAPI) AccountRange(ctx context.Context,
 		signer := types.MakeSigner(api.blockchain.Config(), block.Number())
 		for idx, tx := range block.Transactions() {
 			// Assemble the transaction call message and return if the requested offset
-			msg, _ := tx.AsMessage(signer)
+			msg, _ := tx.AsMessage(signer)	// ATLAS: TODO: staking tx
 			context := core.NewEVMContext(msg, block.Header(), api.blockchain, nil)
 			// Not yet the searched for transaction, execute on top of the current state
 			vmenv := vm.NewEVM(context, statedb, api.blockchain.Config(), vm.Config{})
@@ -761,7 +761,7 @@ func (api *RetestethAPI) StorageRangeAt(ctx context.Context,
 		signer := types.MakeSigner(api.blockchain.Config(), block.Number())
 		for idx, tx := range block.Transactions() {
 			// Assemble the transaction call message and return if the requested offset
-			msg, _ := tx.AsMessage(signer)
+			msg, _ := tx.AsMessage(signer)		// ATLAS: TODO Staking tx
 			context := core.NewEVMContext(msg, block.Header(), api.blockchain, nil)
 			// Not yet the searched for transaction, execute on top of the current state
 			vmenv := vm.NewEVM(context, statedb, api.blockchain.Config(), vm.Config{})

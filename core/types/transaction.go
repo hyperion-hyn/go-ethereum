@@ -278,6 +278,10 @@ func (tx *Transaction) RawSignatureValues() (v, r, s *big.Int) {
 	return tx.data.V, tx.data.R, tx.data.S
 }
 
+func (tx *Transaction) SetType(txType TransactionType) {
+	tx.data.Type = txType
+}
+
 func (tx *Transaction) Type() TransactionType {
 	return tx.data.Type
 }
@@ -442,4 +446,4 @@ func (m Message) Gas() uint64           { return m.gasLimit }
 func (m Message) Nonce() uint64         { return m.nonce }
 func (m Message) Data() []byte          { return m.data }
 func (m Message) CheckNonce() bool      { return m.checkNonce }
-func (m Message) Type() TransactionType { return m.Type() }
+func (m Message) Type() TransactionType { return m.txType }

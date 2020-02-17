@@ -39,7 +39,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/eth/filters"
 	"github.com/ethereum/go-ethereum/eth/gasprice"
@@ -173,9 +172,9 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	log.Info("Initialising Ethereum protocol", "versions", ProtocolVersions, "network", config.NetworkId, "dbversion", dbVer)
 
 	// force to set the istanbul etherbase to node key address
-	if chainConfig.Istanbul != nil {
-		eth.etherbase = crypto.PubkeyToAddress(ctx.NodeKey().PublicKey)
-	}
+	//if chainConfig.Istanbul != nil {
+	//	eth.etherbase = crypto.PubkeyToAddress(ctx.NodeKey().PublicKey)
+	//}
 
 	if !config.SkipBcVersionCheck {
 		if bcVersion != nil && *bcVersion > core.BlockChainVersion {
