@@ -969,7 +969,7 @@ type RPCDelegation struct {
 	DelegatorAddress common.Address    `json:"delegator_address"`
 	Amount           *hexutil.Big      `json:"amount"`
 	Reward           *hexutil.Big      `json:"reward"`
-	Undelegations    []RPCUndelegation `json:"Undelegations"`
+	Undelegations    []RPCUndelegation `json:"undelegations"`
 }
 
 // RPCUndelegation represents one undelegation entry
