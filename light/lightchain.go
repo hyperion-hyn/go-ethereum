@@ -21,6 +21,7 @@ package light
 import (
 	"context"
 	"errors"
+	staking "github.com/ethereum/go-ethereum/staking/types"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -546,4 +547,10 @@ func (lc *LightChain) DisableCheckFreq() {
 // EnableCheckFreq enables header validation.
 func (lc *LightChain) EnableCheckFreq() {
 	atomic.StoreInt32(&lc.disableCheckFreq, 0)
+}
+
+// ATLAS
+// ReadDelegationsByDelegator reads the addresses of validators delegated by a delegator
+func (lc *LightChain) ReadDelegationsByDelegator(delegator common.Address) ([]staking.DelegationIndex, error) {
+	return nil, nil
 }

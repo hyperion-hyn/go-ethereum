@@ -20,7 +20,7 @@ package state
 import (
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/staking"
+	staking "github.com/ethereum/go-ethereum/staking/types"
 	"math/big"
 	"sort"
 	"time"

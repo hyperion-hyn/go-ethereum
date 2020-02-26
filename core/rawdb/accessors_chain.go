@@ -19,6 +19,8 @@ package rawdb
 import (
 	"bytes"
 	"encoding/binary"
+	"github.com/ethereum/go-ethereum/staking/spos"
+	staking "github.com/ethereum/go-ethereum/staking/types"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -612,4 +614,88 @@ func FindCommonAncestor(db ethdb.Reader, a, b *types.Header) *types.Header {
 		}
 	}
 	return a
+}
+
+// ATLAS
+// ReadDelegationsByDelegator retrieves the list of validators delegated by a delegator
+func ReadDelegationsByDelegator(db ethdb.KeyValueReader, delegator common.Address) ([]staking.DelegationIndex, error) {
+	data, err := db.Get(delegatorValidatorListKey(delegator))
+	if err != nil || len(data) == 0 {
+		return []staking.DelegationIndex{}, nil
+	}
+	addrs := []staking.DelegationIndex{}
+	if err := rlp.DecodeBytes(data, &addrs); err != nil {
+		log.Error("Unable to Decode delegations from database")
+		return nil, err
+	}
+	return addrs, nil
+}
+
+// WriteDelegationsByDelegator stores the list of validators delegated by a delegator
+func WriteDelegationsByDelegator(db ethdb.KeyValueWriter, delegator common.Address, indices []staking.DelegationIndex) error {
+	by, err := rlp.EncodeToBytes(indices)
+	if err != nil {
+		log.Error("[writeDelegationsByDelegator] Failed to encode")
+	}
+	if err := db.Put(delegatorValidatorListKey(delegator), by); err != nil {
+		log.Error("[writeDelegationsByDelegator] Failed to store to database")
+	}
+	return err
+}
+
+func ReadValidatorMABInfo(db ethdb.KeyValueReader, addr common.Address) (*spos.ValidatorMAB, error) {
+	data, err := db.Get(validatorMABKey(addr))
+	if err != nil {
+		log.Error("Unable to Read ValidatorMAB from database", "validator", addr.String())
+		return nil, err
+	}
+	if len(data) == 0 {
+		return nil, nil
+	}
+
+	validatorMAB := spos.ValidatorMAB{}
+	if err := rlp.DecodeBytes(data, &validatorMAB); err != nil {
+		log.Error("Unable to Decode ValidatorMAB from database", "validator", addr.String())
+		return nil, err
+	}
+	return &validatorMAB, nil
+}
+
+func WriteValidatorMABInfo(db ethdb.KeyValueWriter, validatorMAB *spos.ValidatorMAB) error {
+	by, err := rlp.EncodeToBytes(validatorMAB)
+	if err != nil {
+		log.Error("[WriteValidatorMABInfo] Failed to encode", "validator", validatorMAB.ValidatorAddress.String())
+	}
+	if err := db.Put(validatorMABKey(validatorMAB.ValidatorAddress), by); err != nil {
+		log.Error("[WriteValidatorMABInfo] Failed to store to database", "validator", validatorMAB.ValidatorAddress.String())
+	}
+	return err
+}
+
+func WriteCommitteeByBlockNum(db ethdb.KeyValueWriter, blockNum *big.Int, committee *staking.Committee) error {
+	by, err := rlp.EncodeToBytes(committee)
+	if err != nil {
+		log.Error("[WriteValidatorMABInfo] Failed to encode", "blockNum", blockNum)
+	}
+	if err := db.Put(committeeKey(blockNum), by); err != nil {
+		log.Error("[WriteValidatorMABInfo] Failed to store to database", "blockNum", blockNum)
+	}
+	return err
+}
+
+func ReadCommitteeByBlockNum(db ethdb.KeyValueReader, blockNum *big.Int) (*staking.Committee, error) {
+	data, err := db.Get(committeeKey(blockNum))
+	if err != nil {
+		log.Error("Unable to read Committee from database", "blockNum", blockNum)
+		return nil, err
+	}
+	if len(data) == 0 {
+		return nil, nil
+	}
+	committee := staking.Committee{}
+	if err := rlp.DecodeBytes(data, &committee); err != nil {
+		log.Error("Unable to Decode Committee from database", "blockNum", blockNum)
+		return nil, err
+	}
+	return &committee, nil
 }

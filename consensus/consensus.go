@@ -18,6 +18,8 @@
 package consensus
 
 import (
+	"github.com/ethereum/go-ethereum/staking/spos"
+	staking "github.com/ethereum/go-ethereum/staking/types"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -49,8 +51,10 @@ type ChainReader interface {
 	// GetBlock retrieves a block from the database by hash and number.
 	GetBlock(hash common.Hash, number uint64) *types.Block
 
-	// StateAt returns a new mutable state based on a particular point in time.
-	StateAt(root common.Hash) (*state.StateDB, error)
+	// ReadCommitteeByBlockNum returns the committee based on block number.
+	ReadCommitteeByBlockNum(blockNum *big.Int) (*staking.Committee, error)
+
+	ReadValidatorMABInfo(addr common.Address) (*spos.ValidatorMAB, error)
 }
 
 // Engine is an algorithm agnostic consensus engine.

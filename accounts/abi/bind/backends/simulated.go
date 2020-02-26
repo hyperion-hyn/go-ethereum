@@ -437,7 +437,7 @@ func (b *SimulatedBackend) callContract(ctx context.Context, call ethereum.CallM
 	vmenv := vm.NewEVM(evmContext, statedb, b.config, vm.Config{})
 	gaspool := new(core.GasPool).AddGas(math.MaxUint64)
 
-	return core.NewStateTransition(vmenv, msg, gaspool).TransitionDb()
+	return core.NewStateTransition(vmenv, msg, gaspool, nil).TransitionDb()
 }
 
 // SendTransaction updates the pending block to include the given transaction.
@@ -601,6 +601,7 @@ func (m callmsg) Gas() uint64                 { return m.CallMsg.Gas }
 func (m callmsg) Value() *big.Int             { return m.CallMsg.Value }
 func (m callmsg) Data() []byte                { return m.CallMsg.Data }
 func (m callmsg) Type() types.TransactionType { return types.Normal }
+func (m callmsg) BlockNum() *big.Int          { return nil }
 
 // filterBackend implements filters.Backend to support filtering for logs without
 // taking bloom-bits acceleration structures into account.

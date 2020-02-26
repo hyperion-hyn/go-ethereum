@@ -44,14 +44,14 @@ const (
 	estHeaderRlpSize  = 500             // Approximate size of an RLP encoded block header
 	ethVersion        = 63              // equivalent eth version for the downloader
 
-	MaxHeaderFetch           = 192 // Amount of block headers to be fetched per retrieval request
-	MaxBodyFetch             = 32  // Amount of block bodies to be fetched per retrieval request
-	MaxReceiptFetch          = 128 // Amount of transaction receipts to allow fetching per request
-	MaxCodeFetch             = 64  // Amount of contract codes to allow fetching per request
-	MaxProofsFetch           = 64  // Amount of merkle proofs to be fetched per retrieval request
-	MaxHelperTrieProofsFetch = 64  // Amount of helper tries to be fetched per retrieval request
-	MaxTxSend                = 64  // Amount of transactions to be send per request
-	MaxTxStatus              = 256 // Amount of transactions to queried per request
+	MaxHeaderFetch           = 192 // TotalDelegation of block headers to be fetched per retrieval request
+	MaxBodyFetch             = 32  // TotalDelegation of block bodies to be fetched per retrieval request
+	MaxReceiptFetch          = 128 // TotalDelegation of transaction receipts to allow fetching per request
+	MaxCodeFetch             = 64  // TotalDelegation of contract codes to allow fetching per request
+	MaxProofsFetch           = 64  // TotalDelegation of merkle proofs to be fetched per retrieval request
+	MaxHelperTrieProofsFetch = 64  // TotalDelegation of helper tries to be fetched per retrieval request
+	MaxTxSend                = 64  // TotalDelegation of transactions to be send per request
+	MaxTxStatus              = 256 // TotalDelegation of transactions to queried per request
 )
 
 var (

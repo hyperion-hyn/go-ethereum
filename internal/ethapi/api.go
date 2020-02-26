@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	staking "github.com/ethereum/go-ethereum/staking/types"
 	"math/big"
 	"strings"
 	"time"
@@ -52,8 +53,10 @@ const (
 )
 
 var (
+	// ATLAS
 	// ErrInvalidChainID when ChainID of signer does not match that of running node
 	errInvalidChainID = errors.New("invalid chain id for signer")
+	errNoValidator = errors.New("no that validator")
 )
 
 // PublicEthereumAPI provides an API to access Ethereum related information.
@@ -957,6 +960,62 @@ func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs) (h
 	blockNrOrHash := rpc.BlockNumberOrHashWithNumber(rpc.PendingBlockNumber)
 	return DoEstimateGas(ctx, s.b, args, blockNrOrHash, s.b.RPCGasCap())
 }
+
+
+// ATLAS
+// RPCDelegation represents a particular delegation to a validator
+type RPCDelegation struct {
+	ValidatorAddress common.Address    `json:"validator_address"`
+	DelegatorAddress common.Address    `json:"delegator_address"`
+	Amount           *hexutil.Big      `json:"amount"`
+	Reward           *hexutil.Big      `json:"reward"`
+	Undelegations    []RPCUndelegation `json:"Undelegations"`
+}
+
+// RPCUndelegation represents one undelegation entry
+type RPCUndelegation struct {
+	Amount      *hexutil.Big `json:"amount"`
+	UnlockBlock *hexutil.Big `json:"unlock_block"`
+}
+
+
+// GetDelegationsByValidator returns list of delegations for a validator address.
+func (s *PublicBlockChainAPI) GetDelegationsByValidator(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) ([]RPCDelegation, error) {
+	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
+	if state == nil || err != nil {
+		return nil, err
+	}
+	container := state.GetStakingInfo(staking.StakingInfoAddress)
+	if container == nil {
+		return nil, errors.Wrapf(errNoValidator, "validator address: %s", address.String())
+	}
+	wrapper := container.Validator(address)
+	if wrapper == nil {
+		return nil, errors.Wrapf(errNoValidator, "validator address: %s", address.String())
+	}
+
+	result := make([]RPCDelegation, 0)
+	for _, delegation := range wrapper.Delegations {
+		undelegations := []RPCUndelegation{}
+		for i := range delegation.Undelegations {
+			undelegations = append(undelegations, RPCUndelegation{
+				(*hexutil.Big)(delegation.Undelegations[i].Amount),
+				(*hexutil.Big)(delegation.Undelegations[i].UnlockBlock),
+			})
+		}
+		result = append(result, RPCDelegation{
+			address,
+			delegation.DelegatorAddress,
+			(*hexutil.Big)(delegation.Amount),
+			(*hexutil.Big)(delegation.Reward),
+			undelegations,
+		})
+	}
+	return result, nil
+}
+
+// ATLAS - END
+
 
 // ExecutionResult groups all structured logs emitted by the EVM
 // while replaying a transaction in debug mode as well as transaction

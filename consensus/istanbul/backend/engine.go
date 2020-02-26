@@ -19,10 +19,12 @@ package backend
 import (
 	"bytes"
 	"errors"
-	"github.com/ethereum/go-ethereum/staking"
+	"fmt"
+	"github.com/ethereum/go-ethereum/numeric"
+	"github.com/ethereum/go-ethereum/staking/reward"
+	staking "github.com/ethereum/go-ethereum/staking/types"
 	"math/big"
 	"math/rand"
-	"sort"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -385,11 +387,6 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	}
 
 	// add validators in snapshot to extraData's validators section
-	log.Info("Preprepare valset")
-	for i, val := range snap.validators() {
-		log.Info("Valset", "index", i, "addr", val.String())
-	}
-
 	extra, err := prepareExtra(header, snap.validators())
 	if err != nil {
 		return err
@@ -411,6 +408,16 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 // consensus rules that happen at finalization (e.g. block rewards).
 func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header) {
+	// process rewards
+	_, err := sb.accumulateRewards(chain, header, state)
+	if err != nil {
+		log.Error("fail to reward", "error", err)
+	}
+	err = sb.unlockUndelegations(header, state)
+	if err != nil {
+		log.Error("fail to unlock undelegations", "error", err)
+	}
+
 	// No block rewards in Istanbul, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	header.UncleHash = nilUncleHash
@@ -423,6 +430,16 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 // consensus rules that happen at finalization (e.g. block rewards).
 func (sb *backend) FinalizeAndAssemble(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
+	// process rewards
+	_, err := sb.accumulateRewards(chain, header, state)
+	if err != nil {
+		log.Error("fail to reward", "error", err)
+	}
+	err = sb.unlockUndelegations(header, state)
+	if err != nil {
+		log.Error("fail to unlock undelegations", "error", err)
+	}
+
 	// No block rewards in Istanbul, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	header.UncleHash = nilUncleHash
@@ -589,14 +606,18 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		}
 	}
 
-	// If no snapshot for this header, make a new snapshot with validators read from satedb.
-	s, err := chain.StateAt(chain.GetBlock(hash, number).Root())
+	// If no snapshot for this header, make a new snapshot with validators read from committee.
+	committee, err := chain.ReadCommitteeByBlockNum(big.NewInt(int64(number)))
 	if err != nil {
 		return nil, err
 	}
-	vals, err := getLargestAmountStakingValidators(s, 88)
-	if err != nil {
-		return nil, err
+	if committee == nil {
+		return nil, fmt.Errorf("Committee not exist in block %d ", number)
+	}
+
+	vals := []common.Address{}
+	for _, slot := range committee.Slots {
+		vals = append(vals, slot.Address)
 	}
 	snap = newSnapshot(sb.config.Epoch, number, hash, validator.NewSet(vals, sb.config.ProposerPolicy))
 	// ATLAS - END
@@ -732,35 +753,115 @@ func writeCommittedSeals(h *types.Header, committedSeals [][]byte) error {
 }
 
 // ATLAS
-func getLargestAmountStakingValidators(state *state.StateDB, numVal int) ([]common.Address, error) {
+// AccumulateRewards credits the coinbase of the given block with the mining
+// reward. The total reward consists of the static block reward
+func (sb *backend) accumulateRewards(chain consensus.ChainReader, header *types.Header, state *state.StateDB) (*big.Int, error) {
+	// TODO: need to be removed
+	if true {
+		return big.NewInt(0), nil
+	}
+
+	// don't process reward in the first non-genesis block
+	if header.Number.Cmp(big.NewInt(1)) == 0 {
+		return reward.NoReward, nil
+	}
+
+	defaultReward := reward.BaseStakedReward
+	_, payable, _, err := sb.ballotResult(chain, header)
+	if err != nil {
+		return reward.NoReward, err
+	}
+
 	container := state.GetStakingInfo(staking.StakingInfoAddress)
 	if container == nil {
-		return nil, errValidatorNotExist
-	}
-	amount := make(map[common.Address]*big.Int)
-	for _, val := range container.Validators {
-		amount[val.Validator.Address] = val.Amount()
+		return reward.NoReward, fmt.Errorf("no staking validator")
 	}
 
-	// sort by amount
-	type pair struct {
-		key   common.Address
-		value *big.Int
-	}
-	var pairs []pair
-	for k, v := range amount {
-		pairs = append(pairs, pair{k, v})
-	}
-	sort.Slice(pairs, func(i, j int) bool {
-		return pairs[i].value.Cmp(pairs[j].value) > 0
-	})
+	// TODO: update total reward
 
-	if numVal > len(pairs) {
-		numVal = len(pairs)
+	totalReward := defaultReward
+	remainder := defaultReward.RoundInt()
+	for _, member := range payable {
+		wrapper := container.Validator(member.Address)
+		if wrapper == nil {
+			return reward.NoReward, fmt.Errorf("no staking validator %v", member.Address)
+		}
+		validatorMAB, err := chain.ReadValidatorMABInfo(member.Address)
+		if err == nil {
+			return reward.NoReward, err
+		}
+		percentage := numeric.NewDec(1).Quo(numeric.NewDec(int64(len(payable))))
+		rewardInt := percentage.Mul(totalReward).RoundInt()
+		wrapper.AddReward(rewardInt, reward.DelegationDistributorBasedMAB{
+			ValidatorMAB: validatorMAB,
+			BlockNum:     header.Number.Sub(header.Number, big.NewInt(2)),
+		})
+		remainder = remainder.Sub(remainder, rewardInt)
 	}
-	addresses := make([]common.Address, numVal)
-	for i := 0; i < numVal; i++ {
-		addresses[i] = pairs[i].key
+	// The last remaining bit belongs to the first validator
+	if remainder.Cmp(big.NewInt(0)) > 0 {
+		wrapper := container.Validator(payable[0].Address)
+		validatorMAB, _ := chain.ReadValidatorMABInfo(payable[0].Address)
+		wrapper.AddReward(remainder, reward.DelegationDistributorBasedMAB{
+			ValidatorMAB: validatorMAB,
+			BlockNum:     header.Number.Sub(header.Number, big.NewInt(2)),
+		})
 	}
-	return addresses, nil
+
+	err = state.UpdateStakingInfo(staking.StakingInfoAddress, container)
+	if err != nil {
+		return reward.NoReward, err
+	}
+	log.Info("[Block Reward] Successfully paid out block reward", "NumAccounts", len(payable), "TotalAmount", totalReward.String())
+	return totalReward.RoundInt(), nil
+}
+
+// ballotResult returns (parentCommittee.Slots, payable, missing, err)
+func (sb *backend) ballotResult(chain consensus.ChainReader, header *types.Header) (staking.SlotList, staking.SlotList, staking.SlotList, error) {
+	parentHeader := chain.GetHeaderByHash(header.ParentHash)
+	signers, err := sb.Signers(parentHeader)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	num := big.NewInt(1).Set(parentHeader.Number)
+	parentCommittee, err := sb.chain.ReadCommitteeByBlockNum(num.Sub(num, big.NewInt(1)))
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if parentCommittee == nil {
+		return nil, nil, nil, fmt.Errorf("Parent committee not exist in parent block %s ", num)
+	}
+
+	payable, slash := staking.SlotList{}, staking.SlotList{}
+	for _, slot := range parentCommittee.Slots {
+		isExist := false
+		for _, signer := range signers {
+			if slot.Address == signer {
+				isExist = true
+				break
+			}
+
+			if isExist {
+				payable = append(payable, slot)
+			} else {
+			 	slash = append(slash ,slot)
+			}
+		}
+	}
+	return parentCommittee.Slots, payable, slash, nil
+}
+
+func (sb *backend) unlockUndelegations(header *types.Header, state *state.StateDB) error {
+	container := state.GetStakingInfo(staking.StakingInfoAddress)
+	if container == nil {
+		return fmt.Errorf("no staking validator")
+	}
+	for _, wrapper := range container.Validators {
+		for i := range wrapper.Delegations {
+			delegation := &wrapper.Delegations[i]
+			totalWithdraw := delegation.RemoveUnlockedUndelegations(header.Number)
+			state.AddBalance(delegation.DelegatorAddress, totalWithdraw)
+		}
+	}
+	return state.UpdateStakingInfo(staking.StakingInfoAddress, container)
 }

@@ -483,6 +483,7 @@ func (s *Ethereum) StartMining(threads int) error {
 		s.lock.RUnlock()
 		s.txPool.SetGasPrice(price)
 
+		// TODO: Coinbase should be the validator?
 		// Configure the local mining address
 		eb, err := s.Etherbase()
 		if err != nil {

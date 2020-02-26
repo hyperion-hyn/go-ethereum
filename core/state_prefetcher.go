@@ -83,7 +83,8 @@ func precacheTransaction(config *params.ChainConfig, bc ChainContext, author *co
 	if msg.Type() == types.Normal {
 		_, _, _, err = ApplyMessage(vm, msg, gaspool)
 	} else {
-		_, err = ApplyStakingMessage(vm, msg, gaspool)
+		msg.SetBlockNum(header.Number)
+		_, err = ApplyStakingMessage(vm, msg, gaspool, bc)
 	}
 
 	return err

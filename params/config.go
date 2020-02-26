@@ -20,7 +20,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/staking"
+	"github.com/ethereum/go-ethereum/staking/types"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -355,7 +355,7 @@ type IstanbulConfig struct {
 	Ceil2Nby3Block *big.Int `json:"ceil2Nby3Block,omitempty"` // Number of confirmations required to move from one state to next [2F + 1 to Ceil(2N/3)]
 
 	// ATLAS: staking state
-	Validators     []staking.ValidatorWrapper `json:"validators"`
+	Validators     []types.ValidatorWrapper `json:"validators"`
 }
 
 // String implements the stringer interface, returning the consensus engine details.

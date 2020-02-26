@@ -17,9 +17,10 @@
 package core
 
 import (
+	"bytes"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/ethereum/go-ethereum/staking"
+	staking "github.com/ethereum/go-ethereum/staking/types"
 	"github.com/pkg/errors"
 	"math"
 	"math/big"
@@ -70,6 +71,7 @@ type StateTransition struct {
 	data       []byte
 	state      vm.StateDB
 	evm        *vm.EVM
+	bc         ChainContext
 }
 
 // Message represents a message sent to a contract.
@@ -86,6 +88,7 @@ type Message interface {
 	CheckNonce() bool
 	Data() []byte
 	Type() types.TransactionType
+	BlockNum() *big.Int
 }
 
 // IntrinsicGas computes the 'intrinsic gas' for a message with the given data.
@@ -126,7 +129,7 @@ func IntrinsicGas(data []byte, contractCreation, isHomestead bool, isEIP2028 boo
 }
 
 // NewStateTransition initialises and returns a new state transition object.
-func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition {
+func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool, bc ChainContext) *StateTransition {
 	return &StateTransition{
 		gp:       gp,
 		evm:      evm,
@@ -135,6 +138,7 @@ func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition 
 		value:    msg.Value(),
 		data:     msg.Data(),
 		state:    evm.StateDB,
+		bc:       bc,
 	}
 }
 
@@ -146,12 +150,12 @@ func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition 
 // indicates a core error meaning that the message would always fail for that particular
 // state and would never be accepted within a block.
 func ApplyMessage(evm *vm.EVM, msg Message, gp *GasPool) ([]byte, uint64, bool, error) {
-	return NewStateTransition(evm, msg, gp).TransitionDb()
+	return NewStateTransition(evm, msg, gp, nil).TransitionDb()
 }
 
 // ATLAS: ApplyStakingMessage computes the new state for staking message
-func ApplyStakingMessage(evm *vm.EVM, msg Message, gp *GasPool) (uint64, error) {
-	return NewStateTransition(evm, msg, gp).StakingTransitionDb()
+func ApplyStakingMessage(evm *vm.EVM, msg Message, gp *GasPool, bc ChainContext) (uint64, error) {
+	return NewStateTransition(evm, msg, gp, bc).StakingTransitionDb()
 }
 
 // to returns the recipient of the message.
@@ -307,7 +311,7 @@ func (st *StateTransition) StakingTransitionDb() (usedGas uint64, err error) {
 		if msg.From() != stkMsg.ValidatorAddress {
 			return 0, errInvalidSigner
 		}
-		err = st.applyCreateValidatorTx(stkMsg)
+		err = st.applyCreateValidatorTx(stkMsg, msg.BlockNum())
 
 	case types.StakeEditVal:
 		stkMsg := &staking.EditValidator{}
@@ -318,7 +322,7 @@ func (st *StateTransition) StakingTransitionDb() (usedGas uint64, err error) {
 		if msg.From() != stkMsg.ValidatorAddress {
 			return 0, errInvalidSigner
 		}
-		err = st.applyEditValidatorTx(stkMsg)
+		err = st.applyEditValidatorTx(stkMsg, msg.BlockNum())
 
 	case types.Delegate:
 		stkMsg := &staking.Delegate{}
@@ -329,7 +333,7 @@ func (st *StateTransition) StakingTransitionDb() (usedGas uint64, err error) {
 		if msg.From() != stkMsg.DelegatorAddress {
 			return 0, errInvalidSigner
 		}
-		err = st.applyDelegateTx(stkMsg)
+		err = st.applyDelegateTx(stkMsg, msg.BlockNum())
 
 	case types.Undelegate:
 		stkMsg := &staking.Undelegate{}
@@ -340,7 +344,7 @@ func (st *StateTransition) StakingTransitionDb() (usedGas uint64, err error) {
 		if msg.From() != stkMsg.DelegatorAddress {
 			return 0, errInvalidSigner
 		}
-		err = st.applyUndelegateTx(stkMsg)
+		err = st.applyUndelegateTx(stkMsg, msg.BlockNum())
 	case types.CollectRewards:
 		stkMsg := &staking.CollectRewards{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
@@ -362,7 +366,7 @@ func (st *StateTransition) StakingTransitionDb() (usedGas uint64, err error) {
 	return st.gasUsed(), err
 }
 
-func (st *StateTransition) applyCreateValidatorTx(createValidator *staking.CreateValidator) error {
+func (st *StateTransition) applyCreateValidatorTx(createValidator *staking.CreateValidator, blockNum *big.Int) error {
 	if createValidator.Amount.Sign() == -1 {
 		return errNegativeAmount
 	}
@@ -380,7 +384,7 @@ func (st *StateTransition) applyCreateValidatorTx(createValidator *staking.Creat
 		}
 	}
 
-	v, err := staking.CreateValidatorFromNewMsg(createValidator)
+	v, err := staking.CreateValidatorFromNewMsg(createValidator, blockNum)
 	if err != nil {
 		return err
 	}
@@ -398,28 +402,186 @@ func (st *StateTransition) applyCreateValidatorTx(createValidator *staking.Creat
 	return nil
 }
 
-func (st *StateTransition) applyEditValidatorTx(editValidator *staking.EditValidator) error {
-	// TODO: implement
+func (st *StateTransition) applyEditValidatorTx(editValidator *staking.EditValidator, blockNum *big.Int) error {
+	container := st.state.GetStakingInfo(staking.StakingInfoAddress)
+	if container == nil {
+		return errValidatorNotExist
+	}
+
+	if !container.IsValidator(editValidator.ValidatorAddress) {
+		return errValidatorNotExist
+	}
+
+	validator := container.Validator(editValidator.ValidatorAddress).Validator
+	if err := staking.UpdateValidatorFromEditMsg(validator, editValidator); err != nil {
+		return err
+	}
+
+	if err := st.state.UpdateStakingInfo(staking.StakingInfoAddress, container); err != nil {
+		return err
+	}
 	return nil
 }
 
-func (st *StateTransition) applyDelegateTx(delegate *staking.Delegate) error {
+func (st *StateTransition) applyDelegateTx(delegate *staking.Delegate, blockNum *big.Int) error {
 	if delegate.Amount.Sign() == -1 {
 		return errNegativeAmount
 	}
 
-	// TODO: implement
+	container := st.state.GetStakingInfo(staking.StakingInfoAddress)
+	if container == nil {
+		return errValidatorNotExist
+	}
+
+	if !container.IsValidator(delegate.ValidatorAddress) {
+		return errValidatorNotExist
+	}
+
+	stateDB := st.state
+	delegatorExist := false
+	wrapper := container.Validator(delegate.ValidatorAddress)
+	for i := range wrapper.Delegations {
+		delegation := &wrapper.Delegations[i]
+		if bytes.Equal(delegation.DelegatorAddress.Bytes(), delegate.DelegatorAddress.Bytes()) {
+			delegatorExist = true
+			totalInUndelegation := delegation.TotalInUndelegation()
+			balance := stateDB.GetBalance(delegate.DelegatorAddress)
+			// If the sum of normal balance and the total amount of tokens in undelegation is greater than the amount to delegate
+			if big.NewInt(0).Add(totalInUndelegation, balance).Cmp(delegate.Amount) >= 0 {
+				// Firstly use the tokens in undelegation to delegate (redelegate)
+				delegateBalance := big.NewInt(0).Set(delegate.Amount)
+				// Use the latest undelegated token first as it has the longest remaining locking time.
+				i := len(delegation.Undelegations) - 1
+				for ; i >= 0; i-- {
+					if delegation.Undelegations[i].Amount.Cmp(delegateBalance) <= 0 {
+						delegateBalance.Sub(delegateBalance, delegation.Undelegations[i].Amount)
+					} else {
+						delegation.Undelegations[i].Amount.Sub(delegation.Undelegations[i].Amount, delegateBalance)
+						delegateBalance = big.NewInt(0)
+						break
+					}
+				}
+
+				delegation.Undelegations = delegation.Undelegations[:i+1]
+				delegation.Amount.Add(delegation.Amount, delegate.Amount)
+				err := stateDB.UpdateStakingInfo(staking.StakingInfoAddress, container)
+				if err != nil {
+					return err
+				}
+
+				if delegateBalance.Cmp(big.NewInt(0)) == 0 {
+					return nil
+				}
+
+				// Secondly, if all locked token are used, try use the balance.
+				if delegateBalance.Cmp(big.NewInt(0)) > 0 {
+					stateDB.SubBalance(delegate.DelegatorAddress, delegateBalance)
+					return nil
+				}
+				// This shouldn't really happen
+				return errInsufficientBalanceForStake
+			}
+			return errors.Wrapf(
+				errInsufficientBalanceForStake,
+				"total-delegated %s own-current-balance %s amount-to-delegate %s",
+				totalInUndelegation.String(),
+				balance.String(),
+				delegate.Amount.String(),
+			)
+		}
+	}
+
+	if !delegatorExist {
+		if CanTransfer(stateDB, delegate.DelegatorAddress, delegate.Amount) {
+			newDelegator := staking.NewDelegation(delegate.DelegatorAddress, delegate.Amount)
+			wrapper.Delegations = append(wrapper.Delegations, newDelegator)
+
+			if err := stateDB.UpdateStakingInfo(staking.StakingInfoAddress, container); err == nil {
+				stateDB.SubBalance(delegate.DelegatorAddress, delegate.Amount)
+			} else {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
 
-func (st *StateTransition) applyUndelegateTx(undelegate *staking.Undelegate) error {
-	// TODO: implement
+func (st *StateTransition) applyUndelegateTx(undelegate *staking.Undelegate, blockNum *big.Int) error {
+	if undelegate.Amount.Sign() == -1 {
+		return errNegativeAmount
+	}
+
+	container := st.state.GetStakingInfo(staking.StakingInfoAddress)
+	if container == nil {
+		return errValidatorNotExist
+	}
+
+	if !container.IsValidator(undelegate.ValidatorAddress) {
+		return errValidatorNotExist
+	}
+
+	stateDB := st.state
+	delegatorExist := false
+	wrapper := container.Validator(undelegate.ValidatorAddress)
+	for i := range wrapper.Delegations {
+		delegation := &wrapper.Delegations[i]
+		if bytes.Equal(delegation.DelegatorAddress.Bytes(), undelegate.DelegatorAddress.Bytes()) {
+			delegatorExist = true
+			err := delegation.Undelegate(blockNum, undelegate.Amount, undelegate.ValidatorAddress == undelegate.DelegatorAddress)
+			if err != nil {
+				return err
+			}
+			err = stateDB.UpdateStakingInfo(staking.StakingInfoAddress, container)
+			return err
+		}
+	}
+	if !delegatorExist {
+		return errNoDelegationToUndelegate
+	}
 	return nil
 }
 
 func (st *StateTransition) applyCollectRewards(collectRewards *staking.CollectRewards) error {
-	// TODO: implement
+	if st.bc == nil {
+		return errors.New("No chain context provided")
+	}
+	chainContext := st.bc
+
+	container := st.state.GetStakingInfo(staking.StakingInfoAddress)
+	if container == nil {
+		return errValidatorNotExist
+	}
+
+	delegations, err := chainContext.ReadDelegationsByDelegator(collectRewards.DelegatorAddress)
+	if err != nil {
+		return err
+	}
+
+	totalRewards := big.NewInt(0)
+	for i := range delegations {
+		wrapper := container.Validator(delegations[i].ValidatorAddress)
+		if wrapper == nil {
+			return errValidatorNotExist
+		}
+
+		if uint64(len(wrapper.Delegations)) > delegations[i].Index {
+			delegation := &wrapper.Delegations[delegations[i].Index]
+			if delegation.Reward.Cmp(big.NewInt(0)) > 0 {
+				totalRewards.Add(totalRewards, delegation.Reward)
+			}
+			delegation.Reward.SetUint64(0)
+		}
+	}
+	if totalRewards.Int64() == 0 {
+		return errNoRewardsToCollect
+	}
+	err = st.state.UpdateStakingInfo(staking.StakingInfoAddress, container)
+	if err != nil {
+		return err
+	}
+	st.state.AddBalance(collectRewards.DelegatorAddress, totalRewards)
 	return nil
 }
 
-// ATLAS
+// ATLAS - END

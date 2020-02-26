@@ -424,3 +424,12 @@ func TestAncientStorage(t *testing.T) {
 		t.Fatalf("invalid td returned")
 	}
 }
+
+// ATLAS
+func TestValidatorMABStorage(t *testing.T) {
+	//db := NewMemoryDatabase()
+	//validatorMAB := spos.ValidatorMAB{
+	//	ValidatorAddress: common.Address{},
+	//	DelegationMABs:   nil,
+	//}
+}

@@ -17,6 +17,7 @@
 package core
 
 import (
+	staking "github.com/ethereum/go-ethereum/staking/types"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -33,6 +34,9 @@ type ChainContext interface {
 
 	// GetHeader returns the hash corresponding to their hash.
 	GetHeader(common.Hash, uint64) *types.Header
+
+	// ReadDelegationsByDelegator returns the validators list of a delegator
+	ReadDelegationsByDelegator(common.Address) ([]staking.DelegationIndex, error)
 }
 
 // NewEVMContext creates a new context for use in the EVM.

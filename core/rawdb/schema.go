@@ -19,6 +19,7 @@ package rawdb
 
 import (
 	"encoding/binary"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/metrics"
@@ -61,6 +62,11 @@ var (
 
 	preimageCounter    = metrics.NewRegisteredCounter("db/preimage/total", nil)
 	preimageHitCounter = metrics.NewRegisteredCounter("db/preimage/hits", nil)
+
+	// ATLAS
+	delegatorValidatorListPrefix = []byte("dvl") // prefix for delegator's validator list
+	validatorMABPrefix = []byte("vm") // prefix for validator MAB
+	committeePrefix = []byte("cm") // prefix for committee
 )
 
 const (
@@ -163,4 +169,17 @@ func preimageKey(hash common.Hash) []byte {
 // configKey = configPrefix + hash
 func configKey(hash common.Hash) []byte {
 	return append(configPrefix, hash.Bytes()...)
+}
+
+// ATLAS
+func delegatorValidatorListKey(delegator common.Address) []byte {
+	return append(delegatorValidatorListPrefix, delegator.Bytes()...)
+}
+
+func validatorMABKey(validator common.Address) []byte {
+	return append(validatorMABPrefix, validator.Bytes()...)
+}
+
+func committeeKey(blockNum *big.Int) []byte {
+	return append(committeePrefix, blockNum.Bytes()...)
 }

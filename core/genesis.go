@@ -20,10 +20,12 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/staking"
+	"github.com/ethereum/go-ethereum/staking/spos"
+	staking "github.com/ethereum/go-ethereum/staking/types"
+	"github.com/pkg/errors"
 	"math/big"
+	"sort"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -329,7 +331,86 @@ func (g *Genesis) Commit(db ethdb.Database) (*types.Block, error) {
 	rawdb.WriteHeadFastBlockHash(db, block.Hash())
 	rawdb.WriteHeadHeaderHash(db, block.Hash())
 	rawdb.WriteChainConfig(db, block.Hash(), config)
+
+	if g.Config.Istanbul != nil {
+		if err := g.WriteDelegationsByDelegator(db); err != nil {
+			return nil, err
+		}
+		validatorMABs, err := g.ComputeAndWriteValidatorMABInfo(db)
+		if err != nil {
+			return nil, err
+		}
+		if err := g.ComputeAndWriteCommittee(db, validatorMABs); err != nil {
+			return nil, err
+		}
+	}
 	return block, nil
+}
+
+func (g *Genesis) ComputeAndWriteValidatorMABInfo(db ethdb.Database) ([]spos.ValidatorMAB, error) {
+	validatorMABs := []spos.ValidatorMAB{}
+	for _, wrapper := range g.Config.Istanbul.Validators {
+		validatorMAB := spos.ValidatorMAB{
+			ValidatorAddress: wrapper.Validator.Address,
+		}
+		validatorMAB.UpdateMAB(big.NewInt(0), wrapper.TotalDelegation())
+		for _, delegation := range wrapper.Delegations {
+			delegationMAB := spos.DelegationMAB{DelegatorAddress: delegation.DelegatorAddress}
+			delegationMAB.UpdateMAB(big.NewInt(0), delegation.Amount)
+			validatorMAB.DelegationMABs = append(validatorMAB.DelegationMABs, delegationMAB)
+		}
+		err := rawdb.WriteValidatorMABInfo(db, &validatorMAB)
+		if err != nil {
+			return nil, errors.Wrapf(err, "WriteValidatorMABInfo failed, validator: %v", wrapper.Validator.Address)
+		}
+
+		validatorMABs = append(validatorMABs, validatorMAB)
+	}
+	return validatorMABs, nil
+}
+
+func (g *Genesis) WriteDelegationsByDelegator(db ethdb.Database) error {
+	delegationsByDelegator := make(map[common.Address][]staking.DelegationIndex)
+	for _, wrapper := range g.Config.Istanbul.Validators {
+		for i, del := range wrapper.Delegations {
+			if _, ok := delegationsByDelegator[del.DelegatorAddress]; !ok {
+				delegationsByDelegator[del.DelegatorAddress] = []staking.DelegationIndex{}
+			}
+			delegationsByDelegator[del.DelegatorAddress] = append(delegationsByDelegator[del.DelegatorAddress],
+				staking.DelegationIndex{
+					ValidatorAddress: wrapper.Validator.Address,
+					Index:            uint64(i),
+				})
+		}
+	}
+	for delegator, delegations := range delegationsByDelegator {
+		err := rawdb.WriteDelegationsByDelegator(db, delegator, delegations)
+		if err != nil {
+			return errors.Wrapf(err, "WriteDelegationsByDelegator failed, delegator: %v", delegator)
+		}
+	}
+	return nil
+}
+
+func (g *Genesis) ComputeAndWriteCommittee(db ethdb.Database, validatorMABs []spos.ValidatorMAB) error {
+	slots := staking.SlotList{}
+	for _, mab := range validatorMABs {
+		slots = append(slots, staking.Slot{
+			Address:        mab.ValidatorAddress,
+			EffectiveStake: mab.Calc(big.NewInt(0)),
+		})
+	}
+	sort.SliceStable(slots, func(i, j int) bool {
+		return slots[i].EffectiveStake.GT(slots[j].EffectiveStake)
+	})
+	if len(slots) > staking.CommitteeSize {
+		slots = slots[:staking.CommitteeSize]
+	}
+	committee := staking.Committee{
+		BlockNum: big.NewInt(0),
+		Slots:    slots,
+	}
+	return rawdb.WriteCommitteeByBlockNum(db, committee.BlockNum, &committee)
 }
 
 // MustCommit writes the genesis block and state to db, panicking on error.

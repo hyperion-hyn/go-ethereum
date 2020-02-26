@@ -20,7 +20,8 @@ import (
 	crand "crypto/rand"
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/staking/spos"
+	staking "github.com/ethereum/go-ethereum/staking/types"
 	"math"
 	"math/big"
 	mrand "math/rand"
@@ -546,7 +547,11 @@ func (hc *HeaderChain) GetBlock(hash common.Hash, number uint64) *types.Block {
 }
 
 // ATLAS: State implements consensus.ChainReader, and return nil.
-// a header chain does not have state available for retrieval.
-func (hc *HeaderChain) StateAt(root common.Hash) (*state.StateDB, error) {
+// a header chain does not committee based on block number.
+func (hc *HeaderChain) ReadCommitteeByBlockNum(blockNum *big.Int) (*staking.Committee, error) {
+	return nil, nil
+}
+
+func (hc *HeaderChain) ReadValidatorMABInfo(addr common.Address) (*spos.ValidatorMAB, error) {
 	return nil, nil
 }

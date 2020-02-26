@@ -18,8 +18,11 @@
 package core
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/staking/spos"
+	staking "github.com/ethereum/go-ethereum/staking/types"
 	"io"
 	"math/big"
 	mrand "math/rand"
@@ -83,6 +86,9 @@ const (
 	maxTimeFutureBlocks = 30
 	badBlockLimit       = 10
 	TriesInMemory       = 128
+	validatorListByDelegatorCacheLimit = 1024
+	committeeCacheLimit                = 10
+	validatorMABCacheLimit             = 1024
 
 	// BlockChainVersion ensures that an incompatible database forces a resync from scratch.
 	//
@@ -161,6 +167,10 @@ type BlockChain struct {
 	blockCache    *lru.Cache     // Cache for the most recent entire blocks
 	txLookupCache *lru.Cache     // Cache for the most recent transaction lookup data.
 	futureBlocks  *lru.Cache     // future blocks are blocks added for later processing
+	// ATLAS
+	validatorListByDelegatorCache *lru.Cache // Cache of validator list by delegator
+	committeeCache                *lru.Cache // Cache of committee
+	validatorMABCache             *lru.Cache // Cache of validator's MAB
 
 	quit    chan struct{} // blockchain quit channel
 	running int32         // running must be called atomically
@@ -197,24 +207,30 @@ func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *par
 	txLookupCache, _ := lru.New(txLookupCacheLimit)
 	futureBlocks, _ := lru.New(maxFutureBlocks)
 	badBlocks, _ := lru.New(badBlockLimit)
+	validatorListByDelegatorCache, _ := lru.New(validatorListByDelegatorCacheLimit)
+	committeeCache, _ := lru.New(committeeCacheLimit)
+	validatorMABCache, _ := lru.New(validatorMABCacheLimit)
 
 	bc := &BlockChain{
-		chainConfig:    chainConfig,
-		cacheConfig:    cacheConfig,
-		db:             db,
-		triegc:         prque.New(nil),
-		stateCache:     state.NewDatabaseWithCache(db, cacheConfig.TrieCleanLimit),
-		quit:           make(chan struct{}),
-		shouldPreserve: shouldPreserve,
-		bodyCache:      bodyCache,
-		bodyRLPCache:   bodyRLPCache,
-		receiptsCache:  receiptsCache,
-		blockCache:     blockCache,
-		txLookupCache:  txLookupCache,
-		futureBlocks:   futureBlocks,
-		engine:         engine,
-		vmConfig:       vmConfig,
-		badBlocks:      badBlocks,
+		chainConfig:                   chainConfig,
+		cacheConfig:                   cacheConfig,
+		db:                            db,
+		triegc:                        prque.New(nil),
+		stateCache:                    state.NewDatabaseWithCache(db, cacheConfig.TrieCleanLimit),
+		quit:                          make(chan struct{}),
+		shouldPreserve:                shouldPreserve,
+		bodyCache:                     bodyCache,
+		bodyRLPCache:                  bodyRLPCache,
+		receiptsCache:                 receiptsCache,
+		blockCache:                    blockCache,
+		txLookupCache:                 txLookupCache,
+		futureBlocks:                  futureBlocks,
+		validatorListByDelegatorCache: validatorListByDelegatorCache,
+		committeeCache:                committeeCache,
+		validatorMABCache:             validatorMABCache,
+		engine:                        engine,
+		vmConfig:                      vmConfig,
+		badBlocks:                     badBlocks,
 	}
 	bc.validator = NewBlockValidator(chainConfig, bc, engine)
 	bc.prefetcher = newStatePrefetcher(chainConfig, bc, engine)
@@ -1385,8 +1401,51 @@ func (bc *BlockChain) writeBlockWithState(block *types.Block, receipts []*types.
 	} else {
 		status = SideStatTy
 	}
+
 	if err := batch.Write(); err != nil {
 		return NonStatTy, err
+	}
+
+	// TODO: Update committee
+	// newShardState, err := bc.WriteShardStateBytes(batch, epoch, header.ShardState())
+	// Update active validators
+	// Update snapshots for all validators
+	// AccuReward？
+
+	// ATLAS
+	if status == CanonStatTy {
+		err := bc.UpdateValidatorMABInfo(block.Transactions(), block.Number(), state)
+		if err != nil {
+			log.Error("UpdateValidatorMABInfo failed", "error", err)
+			return NonStatTy, err
+		}
+		newCommittee, err := bc.ComputeNextCommitteeForNextBlock(block.Number(), state)
+		if err != nil {
+			log.Error("ComputeNextCommitteeForNextBlock failed", "error", err)
+			return NonStatTy, err
+		}
+
+		err = bc.WriteCommitteeByBlockNum(block.Number(), newCommittee)
+		if err != nil {
+			log.Error("WriteCommitteeByBlockNum failed", "error", err)
+			return NonStatTy, err
+		}
+		log.Info("Update committee successfully", "blockNum", newCommittee.BlockNum, "size",
+			len(newCommittee.Slots), "member", newCommittee.Slots)
+
+		// Do bookkeeping for new staking txns
+		for _, tx := range block.Transactions() {
+			if tx.Type() == types.Normal {
+				continue
+			}
+			err = bc.UpdateStakingMetaData(tx, root)
+			// keep offchain database consistency with onchain we need revert
+			// but it should not happend unless local database corrupted
+			if err != nil {
+				log.Error("oops, UpdateStakingMetaData failed", "error", err)
+				return NonStatTy, err
+			}
+		}
 	}
 
 	// Set new head.
@@ -2233,4 +2292,293 @@ func (bc *BlockChain) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscript
 // block processing has started while false means it has stopped.
 func (bc *BlockChain) SubscribeBlockProcessingEvent(ch chan<- bool) event.Subscription {
 	return bc.scope.Track(bc.blockProcFeed.Subscribe(ch))
+}
+
+// ATLAS
+// ReadValidatorInformationAt reads staking information of given validatorWrapper at a specific state root
+func (bc *BlockChain) ReadValidatorInformationAt(addr common.Address, root common.Hash) (*staking.ValidatorWrapper, error) {
+	s, err := bc.StateAt(root)
+	if err != nil || s == nil {
+		return nil, err
+	}
+	container := s.GetStakingInfo(staking.StakingInfoAddress)
+	if container == nil {
+		return nil, fmt.Errorf(
+			"at root: %s, no validator info",
+			root.Hex(),
+		)
+	}
+	validator := container.Validator(addr)
+	if validator == nil {
+		return nil, fmt.Errorf(
+			"at root: %s, validator info not found: %s",
+			root.Hex(),
+			addr.String(),
+		)
+	}
+	return validator, nil
+}
+
+// ReadDelegationsByDelegator reads the addresses of validators delegated by a delegator
+func (bc *BlockChain) ReadDelegationsByDelegator(delegator common.Address) ([]staking.DelegationIndex, error) {
+	if cached, ok := bc.validatorListByDelegatorCache.Get(string(delegator.Bytes())); ok {
+		by := cached.([]byte)
+		m := []staking.DelegationIndex{}
+		if err := rlp.DecodeBytes(by, &m); err != nil {
+			return nil, err
+		}
+		return m, nil
+	}
+	return rawdb.ReadDelegationsByDelegator(bc.db, delegator)
+}
+
+// Note this should read from the state of current block in concern (root == newBlock.root)
+func (bc *BlockChain) addDelegationIndex(delegatorAddress, validatorAddress common.Address, root common.Hash) error {
+	// Get existing delegations
+	delegations, err := bc.ReadDelegationsByDelegator(delegatorAddress)
+	if err != nil {
+		return err
+	}
+
+	// If there is an existing delegation, just return
+	validatorAddressBytes := validatorAddress.Bytes()
+	for _, delegation := range delegations {
+		if bytes.Compare(delegation.ValidatorAddress.Bytes(), validatorAddressBytes) == 0 {
+			return nil
+		}
+	}
+
+	// Found the delegation from state and add the delegation index
+	// Note this should read from the state of current block in concern
+	wrapper, err := bc.ReadValidatorInformationAt(validatorAddress, root)
+	if err != nil {
+		return err
+	}
+	for i := range wrapper.Delegations {
+		if bytes.Compare(wrapper.Delegations[i].DelegatorAddress.Bytes(), delegatorAddress.Bytes()) == 0 {
+			delegations = append(delegations, staking.DelegationIndex{
+				validatorAddress,
+				uint64(i),
+			})
+		}
+	}
+	return bc.writeDelegationsByDelegator(delegatorAddress, delegations)
+}
+
+// writeDelegationsByDelegator writes the list of validator addresses to database
+func (bc *BlockChain) writeDelegationsByDelegator(delegator common.Address, indices []staking.DelegationIndex) error {
+	err := rawdb.WriteDelegationsByDelegator(bc.db, delegator, indices)
+	if err != nil {
+		return err
+	}
+	by, err := rlp.EncodeToBytes(indices)
+	if err == nil {
+		bc.validatorListByDelegatorCache.Add(string(delegator.Bytes()), by)
+	}
+	return nil
+}
+
+// UpdateStakingMetaData updates the validator's and the delegator's meta data according to staking transaction
+// Note: this should only be called within the blockchain insertBlock process.
+func (bc *BlockChain) UpdateStakingMetaData(tx *types.Transaction, root common.Hash) error {
+	switch tx.Type() {
+	case types.StakeNewVal:
+		createValidator := &staking.CreateValidator{}
+		if err := rlp.DecodeBytes(tx.Data(), createValidator); err != nil {
+			return err
+		}
+		// Add self delegation into the index
+		return bc.addDelegationIndex(createValidator.ValidatorAddress, createValidator.ValidatorAddress, root)
+	case types.StakeEditVal:
+	case types.Delegate:
+		delegate := &staking.Delegate{}
+		if err := rlp.DecodeBytes(tx.Data(), delegate); err != nil {
+			return err
+		}
+		return bc.addDelegationIndex(delegate.DelegatorAddress, delegate.ValidatorAddress, root)
+	case types.Undelegate:
+	case types.CollectRewards:
+	default:
+	}
+	return nil
+}
+
+func (bc *BlockChain) ComputeNextCommitteeForNextBlock(blockNum *big.Int, stateDB *state.StateDB) (*staking.Committee, error) {
+	container := stateDB.GetStakingInfo(staking.StakingInfoAddress)
+	if container == nil {
+		return nil, fmt.Errorf("no validator info")
+	}
+
+	members := staking.SlotList{}
+	for _, wrapper := range container.Validators {
+		if !wrapper.IsStakingValid() {
+			continue
+		}
+		valMAB, err := bc.ReadValidatorMABInfo(wrapper.Validator.Address)
+		if err != nil {
+			return nil, err
+		}
+		members = append(members, staking.Slot{
+			Address: wrapper.Validator.Address,
+			EffectiveStake: valMAB.Calc(blockNum),
+		})
+	}
+
+	// Sort by descending
+	sort.SliceStable(members, func(i, j int) bool {
+		return members[i].EffectiveStake.GT(members[j].EffectiveStake)
+	})
+	if len(members) > staking.CommitteeSize {
+		members = members[:staking.CommitteeSize]
+	}
+	return &staking.Committee{
+		BlockNum: blockNum,
+		Slots:    members,
+	}, nil
+}
+
+func (bc *BlockChain) WriteCommitteeByBlockNum(blockNum *big.Int, committee *staking.Committee) error {
+	err := rawdb.WriteCommitteeByBlockNum(bc.db, blockNum, committee)
+	if err != nil {
+		return err
+	}
+	by, err := rlp.EncodeToBytes(committee)
+	if err == nil {
+		bc.committeeCache.Add(blockNum.String(), by)
+	}
+	return nil
+}
+
+func (bc *BlockChain) ReadCommitteeByBlockNum(blockNum *big.Int) (*staking.Committee, error) {
+	if cached, ok := bc.committeeCache.Get(blockNum.String()); ok {
+		by := cached.([]byte)
+		cm := staking.Committee{}
+		if err := rlp.DecodeBytes(by, &cm); err != nil {
+			return nil, err
+		}
+		return &cm, nil
+	}
+	return rawdb.ReadCommitteeByBlockNum(bc.db, blockNum)
+}
+
+func (bc *BlockChain) UpdateValidatorMABInfo(transactions types.Transactions, blockNum *big.Int, stateDB *state.StateDB) error {
+	if len(transactions) == 0 {
+		return nil
+	}
+
+	// map[validator]delegations
+	// Get all updated validator and delegations
+	updatedDelegators := make(map[common.Address]map[common.Address]bool)
+	for _, tx := range transactions {
+		switch tx.Type() {
+		case types.StakeNewVal:
+			createValidator := &staking.CreateValidator{}
+			if err := rlp.DecodeBytes(tx.Data(), createValidator); err != nil {
+				return err
+			}
+			updatedDelegators[createValidator.ValidatorAddress] = make(map[common.Address]bool)
+			updatedDelegators[createValidator.ValidatorAddress][createValidator.ValidatorAddress] = true
+		case types.StakeEditVal:
+		case types.Delegate:
+			delegate := &staking.Delegate{}
+			if err := rlp.DecodeBytes(tx.Data(), delegate); err != nil {
+				return err
+			}
+			if _, ok := updatedDelegators[delegate.ValidatorAddress]; !ok {
+				updatedDelegators[delegate.ValidatorAddress] = make(map[common.Address]bool)
+			}
+			updatedDelegators[delegate.ValidatorAddress][delegate.DelegatorAddress] = true
+		case types.Undelegate:
+			undelegate := &staking.Undelegate{}
+			if err := rlp.DecodeBytes(tx.Data(), undelegate); err != nil {
+				return err
+			}
+			if _, ok := updatedDelegators[undelegate.ValidatorAddress]; !ok {
+				updatedDelegators[undelegate.ValidatorAddress] = make(map[common.Address]bool)
+			}
+			updatedDelegators[undelegate.ValidatorAddress][undelegate.DelegatorAddress] = true
+		case types.CollectRewards:
+		default:
+		}
+	}
+
+	container := stateDB.GetStakingInfo(staking.StakingInfoAddress)
+	if container == nil {
+		return fmt.Errorf("no validator info")
+	}
+
+	// Update validator MAB info
+	for val, delegators := range updatedDelegators {
+		validator := container.Validator(val)
+		if validator == nil {
+			return fmt.Errorf("validator %v not exist", val)
+		}
+		validatorMABInfo, err := bc.ReadValidatorMABInfo(val)
+		if err != nil {
+			return fmt.Errorf("ReadValidatorMABInfo failed for validator %v", val)
+		}
+		if validatorMABInfo == nil {
+			log.Debug("Create a new ValidatorMABInfo", "validator", val)
+			validatorMABInfo = &spos.ValidatorMAB{
+				ValidatorAddress: val,
+			}
+		}
+
+		for delegator := range delegators {
+			index := -1
+			for i, del := range validator.Delegations {
+				if delegator == del.DelegatorAddress {
+					index = i
+					break
+				}
+			}
+			if index == -1 {
+				return fmt.Errorf("delegator %v not exit at validator %v", delegator, val)
+			}
+
+			if index > len(validatorMABInfo.DelegationMABs) {
+				return fmt.Errorf("Length of delegations too long, validator: %v, delegator: %v ", val, delegator)
+			}
+
+			if index == len(validatorMABInfo.DelegationMABs) {
+				delegationMAB := spos.DelegationMAB{DelegatorAddress: delegator}
+				validatorMABInfo.DelegationMABs = append(validatorMABInfo.DelegationMABs, delegationMAB)
+			}
+			validatorMABInfo.DelegationMABs[index].UpdateMAB(blockNum, validator.Delegations[index].Amount)
+		}
+		validatorMABInfo.UpdateMAB(blockNum, validator.TotalDelegation())
+
+		if err = bc.WriteValidatorMABInfo(validatorMABInfo); err != nil {
+			return fmt.Errorf("WriteValidatorMABInfo failed, validator: %v", val)
+		}
+	}
+	return nil
+}
+
+func (bc *BlockChain) ReadValidatorMABInfo(addr common.Address) (*spos.ValidatorMAB, error) {
+	if cached, ok := bc.validatorMABCache.Get(addr.String()); ok {
+		by := cached.([]byte)
+		mab := spos.ValidatorMAB{}
+		if err := rlp.DecodeBytes(by, &mab); err != nil {
+			return nil, err
+		}
+		return &mab, nil
+	}
+	return rawdb.ReadValidatorMABInfo(bc.db, addr)
+}
+
+func (bc *BlockChain) WriteValidatorMABInfo(validatorMAB *spos.ValidatorMAB) error {
+	err := rawdb.WriteValidatorMABInfo(bc.db, validatorMAB)
+	if err != nil {
+		return err
+	}
+	by, err := rlp.EncodeToBytes(validatorMAB)
+	if err == nil {
+		bc.validatorMABCache.Add(validatorMAB.ValidatorAddress.String(), by)
+	}
+
+	v, err := bc.ReadValidatorMABInfo(validatorMAB.ValidatorAddress)
+	fmt.Print(len(v.Records))
+
+	return nil
 }

@@ -48,6 +48,23 @@ const (
 	Undelegate
 	CollectRewards
 )
+
+func (txType TransactionType) String() string {
+	if txType == Normal {
+		return "Normal"
+	} else if txType == StakeNewVal {
+		return "StakeNewValidator"
+	} else if txType == StakeEditVal {
+		return "StakeEditValidator"
+	} else if txType == Delegate {
+		return "Delegate"
+	} else if txType == Undelegate {
+		return "Undelegate"
+	} else if txType == CollectRewards {
+		return "CollectRewards"
+	}
+	return "Normal"
+}
 // ATLAS - END
 
 // TODO: check whether Transaction's methods are compatible to staking transaction or not.
@@ -422,6 +439,7 @@ type Message struct {
 	gasPrice   *big.Int
 	data       []byte
 	checkNonce bool
+	blockNum   *big.Int
 	txType     TransactionType
 }
 
@@ -447,3 +465,7 @@ func (m Message) Nonce() uint64         { return m.nonce }
 func (m Message) Data() []byte          { return m.data }
 func (m Message) CheckNonce() bool      { return m.checkNonce }
 func (m Message) Type() TransactionType { return m.txType }
+
+// BlockNum returns the blockNum of the tx belongs to
+func (m *Message) SetBlockNum(num *big.Int) { m.blockNum = big.NewInt(0).Set(num) }
+func (m Message) BlockNum() *big.Int        { return m.blockNum }
