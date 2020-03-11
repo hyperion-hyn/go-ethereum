@@ -12,8 +12,8 @@ import (
 
 const (
 	// ValidatorLockPeriodInBlock is the number of epochs a undelegated token needs to be before it's released to the delegator's balance
-	ValidatorLockPeriodInBlock = 100 * 5
-	DelegatorLockPeriodInBlock = 100
+	ValidatorLockPeriodInBlock = 5 * 1
+	DelegatorLockPeriodInBlock = 5
 )
 
 var (
