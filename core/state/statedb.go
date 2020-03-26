@@ -767,9 +767,10 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 	})
 }
 
-// ATLAS
+// ATLAS(yhx): this function is specific to atlas and should be moved to atlas package.
 // GetStakingInfo returns staking information of a given validator (including delegation info)
 func (s *StateDB) GetStakingInfo(addr common.Address) *staking.ValidatorContainer {
+	//ATLAS(yhx): MaxCodeSize = 24576, maybe code is not suitable to store staking information.
 	by := s.GetCode(addr)
 	if len(by) == 0 {
 		return nil
@@ -783,6 +784,7 @@ func (s *StateDB) GetStakingInfo(addr common.Address) *staking.ValidatorContaine
 	return &val
 }
 
+// ATLAS(yhx): this function is specific to atlas and should be moved to atlas package.
 // UpdateStakingInfo update staking information of a given validator (including delegation info)
 func (s *StateDB) UpdateStakingInfo(addr common.Address, val *staking.ValidatorContainer) error {
 	// TODO: check ValidatorWrapper's compliance
@@ -795,6 +797,7 @@ func (s *StateDB) UpdateStakingInfo(addr common.Address, val *staking.ValidatorC
 	return nil
 }
 
+// ATLAS(yhx): this function is specific to atlas and should be moved to atlas package.
 // AddReward distributes the reward to all the delegators based on stake percentage.
 func (s *StateDB) AddReward(snapshot *staking.ValidatorWrapper, reward *big.Int) error {
 	return nil

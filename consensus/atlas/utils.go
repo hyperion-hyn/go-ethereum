@@ -14,12 +14,14 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-package istanbul
+package atlas
 
 import (
+	"github.com/harmony-one/bls/ffi/go/bls"
+	"golang.org/x/crypto/sha3"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	"golang.org/x/crypto/sha3"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 )
@@ -43,18 +45,35 @@ func GetSignatureAddress(data []byte, sig []byte) (common.Address, error) {
 	return crypto.PubkeyToAddress(*pubkey), nil
 }
 
-func CheckValidatorSignature(valSet ValidatorSet, data []byte, sig []byte) (common.Address, error) {
-	// 1. Get signature address
-	signer, err := GetSignatureAddress(data, sig)
-	if err != nil {
-		log.Error("Failed to get signer address", "err", err)
+func CheckValidatorSignature(valSet ValidatorSet, data []byte, sig []byte, pubKey []byte) (common.Address, error) {
+	// 1. deserialize signature
+	var sign bls.Sign
+	if err := sign.Deserialize(sig); err != nil {
+		log.Debug("Failed to deserialize bls signature", "err", err)
 		return common.Address{}, err
 	}
 
-	// 2. Check validator
+	// 2. deserialize publicKey
+	var publicKey bls.PublicKey
+	if err := publicKey.Deserialize(pubKey); err != nil {
+		log.Error("Failed to deserialize publicKey", "err", err)
+		return common.Address{}, err
+	}
+
+	// 3. Keccak data
+	hashData := crypto.Keccak256([]byte(data))
+
+	// 4. verify signature
+	if !sign.VerifyHash(&publicKey, hashData) {
+		log.Error("Failed to verify data")
+		return common.Address{}, ErrInvalidSignature
+	}
+
+	// 5. Check validator
+	signer := crypto.PubkeyToSigner(&publicKey)
 	if _, val := valSet.GetByAddress(signer); val != nil {
 		return val.Address(), nil
 	}
 
-	return common.Address{}, err
+	return common.Address{}, ErrUnauthorizedAddress
 }

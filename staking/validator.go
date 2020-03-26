@@ -1,7 +1,11 @@
 package staking
 
 import (
+	"github.com/harmony-one/bls/ffi/go/bls"
+
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus/atlas"
+
 	"github.com/pkg/errors"
 	"math/big"
 )
@@ -18,6 +22,7 @@ const (
 )
 
 var (
+	// ATLAS(zgx): generate a StakingInfoAddress
 	StakingInfoAddress = common.StringToAddress("0x0000000000000000000000000000000123456789") // used to save staking state in state db
 
 	errAddressNotMatch = errors.New("Validator key not match")
@@ -35,8 +40,11 @@ type ValidatorWrapper struct {
 
 // Validator - data fields for a validator
 type Validator struct {
-	// ECDSA address of the validator
+	// ECDSA address(coinbase) of the validator
 	Address common.Address `json:"validator_address" gencodec:"required"`
+	// ATLAS(yhx): public key of validator should be stored in account state.
+	// BLS public key of the validator
+	PubKey  bls.PublicKey `json:"pubkey" gencodec:"required"`
 	// description for the validator
 	Description Description `json:"description"`
 	// TODO more fields
@@ -145,3 +153,4 @@ func UpdateValidatorFromEditMsg(validator *Validator, edit *EditValidator) error
 	validator.Description = desc
 	return nil
 }
+

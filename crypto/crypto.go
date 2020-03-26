@@ -20,6 +20,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -31,6 +32,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/harmony-one/bls/ffi/go/bls"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -219,3 +221,53 @@ func zeroBytes(bytes []byte) {
 		bytes[i] = 0
 	}
 }
+
+
+// toECDSA creates a private key with the given D value. The strict parameter
+// controls whether the key's length should be enforced at the curve size or
+// it can also accept legacy encodings (0 prefixes).
+func toBLS(d []byte, strict bool) (*bls.SecretKey, error) {
+	priv := &bls.SecretKey{}
+	err := priv.DeserializeHexStr(string(d))
+
+	return priv, err
+}
+
+// ToECDSA creates a private key with the given D value.
+func ToBLS(d []byte) (*bls.SecretKey, error) {
+	return toBLS(d, true)
+}
+
+// LoadECDSA loads a secp256k1 private key from the given file.
+func LoadBLS(file string) (*bls.SecretKey, error) {
+	buf := make([]byte, 64)
+	fd, err := os.Open(file)
+	if err != nil {
+		return nil, err
+	}
+	defer fd.Close()
+	if _, err := io.ReadFull(fd, buf); err != nil {
+		return nil, err
+	}
+
+	key, err := hex.DecodeString(string(buf))
+	if err != nil {
+		return nil, err
+	}
+	return ToBLS(key)
+}
+
+// HexToECDSA parses a secp256k1 private key.
+func HexToBLS(hexkey string) (*bls.SecretKey, error) {
+	b, err := hex.DecodeString(hexkey)
+	if err != nil {
+		return nil, errors.New("invalid hex string")
+	}
+	return ToBLS(b)
+}
+
+func PubkeyToSigner(p *bls.PublicKey) common.Address {
+	hash := sha256.Sum256(p.Serialize())
+	return common.BytesToAddress(hash[:20])
+}
+

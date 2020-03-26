@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus/atlas"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
 	"github.com/ethereum/go-ethereum/consensus/istanbul"
 	"github.com/ethereum/go-ethereum/core"
@@ -143,6 +144,9 @@ type Config struct {
 	// Istanbul options
 	RaftMode bool
 	Istanbul istanbul.Config
+
+	// Atlas
+	Atlas atlas.Config
 
 	// Miscellaneous options
 	DocRoot string `toml:"-"`

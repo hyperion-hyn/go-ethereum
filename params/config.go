@@ -232,6 +232,27 @@ var (
 		},
 	}
 
+	// ATLAS(zgx): AtlasChainConfig
+	// AtlasChainConfig contains the chain parameters to run a node on the Ottoman test network.
+	AtlasChainConfig = &ChainConfig{
+		ChainID:             big.NewInt(1024),
+		HomesteadBlock:      big.NewInt(1),
+		DAOForkBlock:        nil,
+		DAOForkSupport:      true,
+		EIP150Block:         big.NewInt(2),
+		EIP150Hash:          common.HexToHash("0x9b095b36c15eaf13044373aef8ee0bd3a382a5abb92e402afa44b8249c3a90e9"),
+		EIP155Block:         big.NewInt(3),
+		EIP158Block:         big.NewInt(3),
+		ByzantiumBlock:      big.NewInt(math.MaxInt64), // Don't enable yet
+		ConstantinopleBlock: nil,
+
+		Istanbul: &IstanbulConfig{
+			Epoch:          30000,
+			ProposerPolicy: 0,
+			Ceil2Nby3Block: big.NewInt(0),
+		},
+	}
+
 	// AllEthashProtocolChanges contains every protocol change (EIPs) introduced
 	// and accepted by the Ethereum core developers into the Ethash consensus.
 	//
@@ -325,6 +346,7 @@ type ChainConfig struct {
 	Ethash *EthashConfig `json:"ethash,omitempty"`
 	Clique *CliqueConfig `json:"clique,omitempty"`
 	Istanbul *IstanbulConfig `json:"istanbul,omitempty"`
+	Atlas *AtlasConfig `json:"atlas,omitempty"`
 
 	IsQuorum             bool   `json:"isQuorum"`
 }
@@ -361,6 +383,18 @@ type IstanbulConfig struct {
 // String implements the stringer interface, returning the consensus engine details.
 func (c *IstanbulConfig) String() string {
 	return "istanbul"
+}
+
+// AtlasConfig is the consensus engine configs for Istanbul based sealing.
+type AtlasConfig struct {
+	Epoch          uint64   `json:"epoch"`                    // Epoch length to reset votes and checkpoint
+	ProposerPolicy uint64   `json:"policy"`                   // The policy for proposer selection
+	Ceil2Nby3Block *big.Int `json:"ceil2Nby3Block,omitempty"` // Number of confirmations required to move from one state to next [2F + 1 to Ceil(2N/3)]
+}
+
+// String implements the stringer interface, returning the consensus engine details.
+func (c *AtlasConfig) String() string {
+	return "atlas"
 }
 
 // String implements the fmt.Stringer interface.

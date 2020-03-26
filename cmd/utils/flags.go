@@ -63,6 +63,7 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	whisper "github.com/ethereum/go-ethereum/whisper/whisperv6"
 	pcsclite "github.com/gballet/go-libpcsclite"
+	"github.com/harmony-one/bls/ffi/go/bls"
 	cli "gopkg.in/urfave/cli.v1"
 )
 
@@ -162,7 +163,7 @@ var (
 	}
 	NetworkIdFlag = cli.Uint64Flag{
 		Name:  "networkid",
-		Usage: "Network identifier (integer, 1=Frontier, 2=Morden (disused), 3=Ropsten, 4=Rinkeby, 5=Goerli, 1024=Ottoman)",
+		Usage: "Network identifier (integer, 1=Frontier, 2=Morden (disused), 3=Ropsten, 4=Rinkeby, 5=Goerli, 1024=Ottoman, 2048=atlas)",
 		Value: eth.DefaultConfig.NetworkId,
 	}
 	TestnetFlag = cli.BoolFlag{
@@ -180,6 +181,10 @@ var (
 	OttomanFlag = cli.BoolFlag{
 		Name:  "ottoman",
 		Usage: "Ottoman network: pre-configured istanbul bft test network",
+	}
+	AtlasFlag = cli.BoolFlag{
+		Name:  "atlas",
+		Usage: "Atlas network: pre-configured atlas test network",
 	}
 	DeveloperFlag = cli.BoolFlag{
 		Name:  "dev",
@@ -645,6 +650,14 @@ var (
 		Name:  "nodekeyhex",
 		Usage: "P2P node key as hex (for testing)",
 	}
+	SignerKeyFileFlag = cli.StringFlag{
+		Name:  "signerkey",
+		Usage: "signer key file",
+	}
+	SignerKeyHexFlag = cli.StringFlag{
+		Name:  "signerkeyhex",
+		Usage: "signer key as hex (for testing)",
+	}
 	NATFlag = cli.StringFlag{
 		Name:  "nat",
 		Usage: "NAT port mapping mechanism (any|none|upnp|pmp|extip:<IP>)",
@@ -825,6 +838,31 @@ func setNodeKey(ctx *cli.Context, cfg *p2p.Config) {
 			Fatalf("Option %q: %v", NodeKeyHexFlag.Name, err)
 		}
 		cfg.PrivateKey = key
+	}
+}
+
+// setSignerKey creates a signer key from set command line flags, either loading it
+// from a file or as a specified hex value.
+func setSignerKey(ctx *cli.Context, cfg *p2p.Config) {
+	var (
+		hex  = ctx.GlobalString(SignerKeyHexFlag.Name)
+		file = ctx.GlobalString(SignerKeyFileFlag.Name)
+		key  *bls.SecretKey
+		err  error
+	)
+	switch {
+	case file != "" && hex != "":
+		Fatalf("Options %q and %q are mutually exclusive", SignerKeyFileFlag.Name, SignerKeyHexFlag.Name)
+	case file != "":
+		if key, err = crypto.LoadBLS(file); err != nil {
+			Fatalf("Option %q: %v", SignerKeyFileFlag.Name, err)
+		}
+		cfg.SignerKey = key
+	case hex != "":
+		if key, err = crypto.HexToBLS(hex); err != nil {
+			Fatalf("Option %q: %v", SignerKeyHexFlag.Name, err)
+		}
+		cfg.SignerKey = key
 	}
 }
 
@@ -1124,6 +1162,7 @@ func MakePasswordList(ctx *cli.Context) []string {
 
 func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	setNodeKey(ctx, cfg)
+	setSignerKey(ctx, cfg)
 	setNAT(ctx, cfg)
 	setListenAddress(ctx, cfg)
 	setBootstrapNodes(ctx, cfg)
@@ -1709,6 +1748,8 @@ func MakeGenesis(ctx *cli.Context) *core.Genesis {
 		genesis = core.DefaultGoerliGenesisBlock()
 	case ctx.GlobalBool(OttomanFlag.Name):
 		genesis = core.DefaultOttomanGenesisBlock()
+	case ctx.GlobalBool(AtlasFlag.Name):
+		genesis = core.DefaultAtlasGenesisBlock()
 	case ctx.GlobalBool(DeveloperFlag.Name):
 		Fatalf("Developer chains are ephemeral")
 	}

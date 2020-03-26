@@ -33,7 +33,9 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/clique"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
 	"github.com/ethereum/go-ethereum/consensus/istanbul"
+	"github.com/ethereum/go-ethereum/consensus/atlas"
 	istanbulBackend "github.com/ethereum/go-ethereum/consensus/istanbul/backend"
+	atlasBackend "github.com/ethereum/go-ethereum/consensus/atlas/backend"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/bloombits"
 	"github.com/ethereum/go-ethereum/core/rawdb"
@@ -272,8 +274,20 @@ func CreateConsensusEngine(ctx *node.ServiceContext, chainConfig *params.ChainCo
 		if len(ctx.AccountManager.Wallets()) < 0 {
 			log.Crit("Need a wallet")
 		}
-		return istanbulBackend.NewWithWallet(&config.Istanbul, ctx.AccountManager.Wallets()[0], db)
+		return istanbulBackend.New(&config.Istanbul, ctx.NodeKey(), db)
 	}
+
+	// If Atlas is required, set it up
+	if chainConfig.Atlas != nil {
+		if chainConfig.Istanbul.Epoch != 0 {
+			config.Atlas.Epoch = chainConfig.Atlas.Epoch
+		}
+		config.Atlas.ProposerPolicy = atlas.ProposerPolicy(chainConfig.Atlas.ProposerPolicy)
+		config.Atlas.Ceil2Nby3Block = chainConfig.Atlas.Ceil2Nby3Block
+
+		return atlasBackend.New(&config.Atlas, ctx.NodeKey(), db)
+	}
+
 
 	// Otherwise assume proof-of-work
 	switch config.Ethash.PowMode {

@@ -150,3 +150,14 @@ type Istanbul interface {
 	// Stop stops the engine
 	Stop() error
 }
+
+// Atlas is a consensus engine
+type Atlas interface {
+	Engine
+
+	// Start starts the engine
+	Start(chain ChainReader, currentBlock func() *types.Block, hasBadBlock func(hash common.Hash) bool) error
+
+	// Stop stops the engine
+	Stop() error
+}
