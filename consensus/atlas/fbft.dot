@@ -12,9 +12,9 @@ digraph fbft {
     "New round" [shape="rectangle" style="rounded" ]
     "Announced" [shape="rectangle" style="rounded" xlabel="Validator wait 1 ANNOUNCE message" ]
     "Round change" [shape="rectangle" style="rounded"]
-    "Prepared" [shape="rectangle" style="rounded" xlabel="Propser wait 2F+1 PREPARE message"]
-    "Prepareded" [shape="rectangle" style="rounded" xlabel="Validator wait 1 EXPECT message" ]
-    "Confirmed" [shape="rectangle" style="rounded" xlabel="Propser wait 2F+1 CONFIRM message" ]
+    "Prepared" [shape="rectangle" style="rounded" xlabel="Proposer wait 2F+1 PREPARE message"]
+    "Expected" [shape="rectangle" style="rounded" xlabel="Validator wait 1 EXPECT message" ]
+    "Confirmed" [shape="rectangle" style="rounded" xlabel="Proposer wait 2F+1 CONFIRM message" ]
     "Committed" [shape="rectangle" style="rounded" xlabel="Validator wait 1 COMMIT message" ]
     "InsertBlock" [label="" shape="diamond" style="rounded" ]
 
@@ -22,23 +22,23 @@ digraph fbft {
     // normal
     "New round" -> "Announced" [fontcolor="blue" label="Proposer broadcasts\nANNOUNCE message" ]
     "Announced" -> "Prepared"  [fontcolor="red" label="Validator broadcasts\nPREPARE message" ]
-    "Prepared" -> "Prepareded"  [fontcolor="blue" label="Proposer broadcasts\nEXPECT message" ]
-    "Prepareded" -> "Confirmed"  [fontcolor="red" label="Validator broadcasts\nCONFIRM message" ]
+    "Prepared" -> "Expected"  [fontcolor="blue" label="Proposer broadcasts\nEXPECT message" ]
+    "Expected" -> "Confirmed"  [fontcolor="red" label="Validator broadcasts\nCONFIRM message" ]
     "Confirmed" -> "Committed"  [fontcolor="blue" label="Proposer broadcasts\nCOMMIT message" ]
     "Committed" -> "InsertBlock"  [fontcolor="blue" label="Insert block" ]
     "InsertBlock" -> "Round change" [label="insertion fails" ]
     "InsertBlock" -> "New round" [label="Insertion succeeds"]
 
     // round change
-    "Announced" -> "Round change" [label="Timeout EXPECT" style="dashed"]
+    "Announced" -> "Round change" [label="Timeout" style="dashed"]
     "Announced" -> "Round change" [label="Invalid proposal(block)" style="solid"]
 
-    "Prepared" -> "Round change" [label="Timeout PREPARE" style="dashed"]
+    "Prepared" -> "Round change" [label="Timeout" style="dashed"]
 
-    "Prepareded" -> "Round change" [label="Timeout COMMIT" style="dashed"]
-    "Prepareded" -> "Round change" [label="Invalid aggregated signatures" style="solid"]
+    "Expected" -> "Round change" [label="Timeout" style="dashed"]
+    "Expected" -> "Round change" [label="Invalid aggregated signatures" style="solid"]
 
-    "Confirmed" -> "Round change" [label="Timeout CONFIRM" style="dashed"]
+    "Confirmed" -> "Round change" [label="Timeout" style="dashed"]
 
     "Round change" -> "New round" [style="solid"]
 
@@ -61,8 +61,8 @@ digraph fbft {
     }
     {
         rank=same;
-        "Round change"[group=g2]; "Prepareded"[group=g3]
-        "Round change" -> "Prepareded"[style=invis]
+        "Round change"[group=g2]; "Expected"[group=g3]
+        "Round change" -> "Expected"[style=invis]
     }
     {
         rank=same;
@@ -78,7 +78,7 @@ digraph fbft {
         edge[style=invis]
         A->"New round"
         B->"Round change"->"InsertBlock"[weight=100]
-        C->"Announced"->"Prepareded"->"Committed" [weight=100]
+        C->"Announced"->"Expected"->"Committed" [weight=100]
         D->"Prepared" -> "Confirmed" [weight=100]
     }
 }
