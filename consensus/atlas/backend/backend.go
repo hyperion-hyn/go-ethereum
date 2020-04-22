@@ -41,29 +41,29 @@ import (
 )
 
 const (
-	// fetcherID is the ID indicates the block is from Istanbul engine
+	// fetcherID is the ID indicates the block is from Atlas engine
 	fetcherID = "atlas"
 )
 
-// New creates an Ethereum backend for Istanbul core engine.
+// New creates an Ethereum backend for Atlas core engine.
 func New(config *atlas.Config, privateKey *ecdsa.PrivateKey, signerKey *bls.SecretKey, db ethdb.Database) consensus.Atlas {
 	// Allocate the snapshot caches and create the engine
 	recents, _ := lru.NewARC(inmemorySnapshots)
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
 	knownMessages, _ := lru.NewARC(inmemoryMessages)
 	backend := &backend{
-		config:           config,
-		istanbulEventMux: new(event.TypeMux),
-		privateKey:       privateKey,
-		signerKey:        signerKey,
-		coinbase:         crypto.PubkeyToAddress(privateKey.PublicKey),
-		address:          crypto.PubkeyToSigner(signerKey.GetPublicKey()),
-		logger:           log.New(),
-		db:               db,
-		commitCh:         make(chan *types.Block, 1),
-		recents:          recents,
-		candidates:       make(map[common.Address]ValidatorProposal),
-		coreStarted:      false,
+		config:        config,
+		atlasEventMux: new(event.TypeMux),
+		privateKey:    privateKey,
+		signerKey:     signerKey,
+		coinbase:      crypto.PubkeyToAddress(privateKey.PublicKey),
+		address:       crypto.PubkeyToSigner(signerKey.GetPublicKey()),
+		logger:        log.New(),
+		db:            db,
+		commitCh:      make(chan *types.Block, 1),
+		recents:       recents,
+		candidates:    make(map[common.Address]ValidatorProposal),
+		coreStarted:   false,
 		recentMessages:   recentMessages,
 		knownMessages:    knownMessages,
 	}
@@ -79,18 +79,18 @@ type ValidatorProposal struct {
 }
 
 type backend struct {
-	config           *atlas.Config
-	istanbulEventMux *event.TypeMux
-	privateKey       *ecdsa.PrivateKey
-	coinbase         common.Address
-	signerKey        *bls.SecretKey
-	address          common.Address
-	core             kernel.Engine
-	logger           log.Logger
-	db               ethdb.Database
-	chain            consensus.ChainReader
-	currentBlock     func() *types.Block
-	hasBadBlock      func(hash common.Hash) bool
+	config        *atlas.Config
+	atlasEventMux *event.TypeMux
+	privateKey    *ecdsa.PrivateKey
+	coinbase      common.Address
+	signerKey     *bls.SecretKey
+	address       common.Address
+	core          kernel.Engine
+	logger        log.Logger
+	db            ethdb.Database
+	chain         consensus.ChainReader
+	currentBlock  func() *types.Block
+	hasBadBlock   func(hash common.Hash) bool
 
 	// the channels for atlas engine notifications
 	commitCh          chan *types.Block
@@ -142,7 +142,7 @@ func (sb *backend) Broadcast(valSet atlas.ValidatorSet, payload []byte) error {
 	msg := atlas.MessageEvent{
 		Payload: payload,
 	}
-	go sb.istanbulEventMux.Post(msg)
+	go sb.atlasEventMux.Post(msg)
 	return nil
 }
 
@@ -176,7 +176,7 @@ func (sb *backend) Gossip(valSet atlas.ValidatorSet, payload []byte) error {
 			m.Add(hash, true)
 			sb.recentMessages.Add(addr, m)
 
-			go p.Send(istanbulMsg, payload)
+			go p.Send(AtlasMsg, payload)
 		}
 	}
 	return nil
@@ -222,7 +222,7 @@ func (sb *backend) Commit(proposal atlas.Proposal, seals [][]byte) error {
 
 // EventMux implements atlas.Backend.EventMux
 func (sb *backend) EventMux() *event.TypeMux {
-	return sb.istanbulEventMux
+	return sb.atlasEventMux
 }
 
 // Verify implements atlas.Backend.Verify

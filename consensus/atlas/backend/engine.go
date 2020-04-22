@@ -29,7 +29,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
-	istanbulCore "github.com/ethereum/go-ethereum/consensus/atlas/core"
+	atlasCore "github.com/ethereum/go-ethereum/consensus/atlas/core"
 	"github.com/ethereum/go-ethereum/consensus/atlas/validator"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -63,8 +63,8 @@ var (
 	errInvalidDifficulty = errors.New("invalid difficulty")
 	// errInvalidExtraDataFormat is returned when the extra data format is incorrect
 	errInvalidExtraDataFormat = errors.New("invalid extra data format")
-	// errInvalidMixDigest is returned if a block's mix digest is not Istanbul digest.
-	errInvalidMixDigest = errors.New("invalid Istanbul mix digest")
+	// errInvalidMixDigest is returned if a block's mix digest is not Atlas digest.
+	errInvalidMixDigest = errors.New("invalid Atlas mix digest")
 	// errInvalidNonce is returned if a block's nonce is invalid
 	errInvalidNonce = errors.New("invalid nonce")
 	// errInvalidUncleHash is returned if a block contains an non-empty uncle list.
@@ -110,13 +110,13 @@ func (sb *backend) Author(header *types.Header) (common.Address, error) {
 // It will extract for each seal who signed it, regardless of if the seal is
 // repeated
 func (sb *backend) Signers(header *types.Header) ([]common.Address, error) {
-	extra, err := types.ExtractIstanbulExtra(header)
+	extra, err := types.ExtractAtlasExtra(header)
 	if err != nil {
 		return []common.Address{}, err
 	}
 
 	var addrs []common.Address
-	proposalSeal := istanbulCore.PrepareCommittedSeal(header.Hash())
+	proposalSeal := atlasCore.PrepareCommittedSeal(header.Hash())
 
 	// 1. Get committed seals from current header
 	for _, seal := range extra.CommittedSeal {
@@ -153,7 +153,7 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 	}
 
 	// Ensure that the extra data format is satisfied
-	if _, err := types.ExtractIstanbulExtra(header); err != nil {
+	if _, err := types.ExtractAtlasExtra(header); err != nil {
 		return errInvalidExtraDataFormat
 	}
 
@@ -162,10 +162,10 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 		return errInvalidNonce
 	}
 	// Ensure that the mix digest is zero as we don't have fork protection currently
-	if header.MixDigest != types.IstanbulDigest {
+	if header.MixDigest != types.AtlasDigest {
 		return errInvalidMixDigest
 	}
-	// Ensure that the block doesn't contain any uncles which are meaningless in Istanbul
+	// Ensure that the block doesn't contain any uncles which are meaningless in Atlas
 	if header.UncleHash != nilUncleHash {
 		return errInvalidUncleHash
 	}
@@ -287,7 +287,7 @@ func (sb *backend) verifyCommittedSeals(chain consensus.ChainReader, header *typ
 		return err
 	}
 
-	extra, err := types.ExtractIstanbulExtra(header)
+	extra, err := types.ExtractAtlasExtra(header)
 	if err != nil {
 		return err
 	}
@@ -341,7 +341,7 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	// unused fields, force to set to empty
 	header.Coinbase = common.Address{}
 	header.Nonce = emptyNonce
-	header.MixDigest = types.IstanbulDigest
+	header.MixDigest = types.AtlasDigest
 
 	number := header.Number.Uint64()
 	parent := chain.GetHeader(header.ParentHash, number-1)
@@ -366,7 +366,7 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 // consensus rules that happen at finalization (e.g. block rewards).
 func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header) {
-	// No block rewards in Istanbul, so the state remains as is and uncles are dropped
+	// No block rewards in Atlas, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	header.UncleHash = nilUncleHash
 }
@@ -378,7 +378,7 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 // consensus rules that happen at finalization (e.g. block rewards).
 func (sb *backend) FinalizeAndAssemble(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
-	// No block rewards in Istanbul, so the state remains as is and uncles are dropped
+	// No block rewards in Atlas, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	header.UncleHash = nilUncleHash
 
@@ -424,7 +424,7 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 			sb.proposedBlockHash = common.Hash{}
 			sb.sealMu.Unlock()
 		}()
-		// post block into Istanbul engine
+		// post block into Atlas engine
 		go sb.EventMux().Post(atlas.RequestEvent{
 			Proposal: block,
 		})
@@ -468,7 +468,7 @@ func (sb *backend) APIs(chain consensus.ChainReader) []rpc.API {
 	}}
 }
 
-// Start implements consensus.Istanbul.Start
+// Start implements consensus.Atlas.Start
 func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types.Block, hasBadBlock func(hash common.Hash) bool) error {
 	sb.coreMu.Lock()
 	defer sb.coreMu.Unlock()
@@ -495,7 +495,7 @@ func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types
 	return nil
 }
 
-// Stop implements consensus.Istanbul.Stop
+// Stop implements consensus.Atlas.Stop
 func (sb *backend) Stop() error {
 	sb.coreMu.Lock()
 	defer sb.coreMu.Unlock()
@@ -591,8 +591,8 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 	return snap, err
 }
 
-// FIXME: Need to update this for Istanbul
-// sigHash returns the hash which is used as input for the Istanbul
+// FIXME: Need to update this for Atlas
+// sigHash returns the hash which is used as input for the Atlas
 // signing. It is the hash of the entire header apart from the 65 byte signature
 // contained at the end of the extra data.
 //
@@ -603,7 +603,7 @@ func sigHash(header *types.Header) (hash common.Hash) {
 	hasher := sha3.NewLegacyKeccak256()
 
 	// Clean seal is required for calculating proposer seal.
-	rlp.Encode(hasher, types.IstanbulFilteredHeader(header, false))
+	rlp.Encode(hasher, types.AtlasFilteredHeader(header, false))
 	hasher.Sum(hash[:0])
 	return hash
 }
@@ -621,12 +621,12 @@ func ecrecover(header *types.Header) (common.Address, error) {
 	}
 
 	// Retrieve the signature from the header extra-data
-	istanbulExtra, err := types.ExtractIstanbulExtra(header)
+	atlasExtra, err := types.ExtractAtlasExtra(header)
 	if err != nil {
 		return common.Address{}, err
 	}
 
-	addr, err := atlas.GetSignatureAddress(sigHash(header).Bytes(), istanbulExtra.Seal)
+	addr, err := atlas.GetSignatureAddress(sigHash(header).Bytes(), atlasExtra.Seal)
 	if err != nil {
 		return addr, err
 	}
@@ -638,13 +638,13 @@ func ecrecover(header *types.Header) (common.Address, error) {
 func prepareExtra(header *types.Header, vals []common.Address) ([]byte, error) {
 	var buf bytes.Buffer
 
-	// compensate the lack bytes if header.Extra is not enough IstanbulExtraVanity bytes.
-	if len(header.Extra) < types.IstanbulExtraVanity {
-		header.Extra = append(header.Extra, bytes.Repeat([]byte{0x00}, types.IstanbulExtraVanity-len(header.Extra))...)
+	// compensate the lack bytes if header.Extra is not enough AtlasExtraVanity bytes.
+	if len(header.Extra) < types.AtlasExtraVanity {
+		header.Extra = append(header.Extra, bytes.Repeat([]byte{0x00}, types.AtlasExtraVanity-len(header.Extra))...)
 	}
-	buf.Write(header.Extra[:types.IstanbulExtraVanity])
+	buf.Write(header.Extra[:types.AtlasExtraVanity])
 
-	ist := &types.IstanbulExtra{
+	ist := &types.AtlasExtra{
 		Validators:    vals,
 		Seal:          []byte{},
 		CommittedSeal: [][]byte{},
@@ -661,22 +661,22 @@ func prepareExtra(header *types.Header, vals []common.Address) ([]byte, error) {
 // writeSeal writes the extra-data field of the given header with the given seals.
 // suggest to rename to writeSeal.
 func writeSeal(h *types.Header, seal []byte) error {
-	if len(seal)%types.IstanbulExtraSeal != 0 {
+	if len(seal)%types.AtlasExtraSeal != 0 {
 		return errInvalidSignature
 	}
 
-	istanbulExtra, err := types.ExtractIstanbulExtra(h)
+	atlasExtra, err := types.ExtractAtlasExtra(h)
 	if err != nil {
 		return err
 	}
 
-	istanbulExtra.Seal = seal
-	payload, err := rlp.EncodeToBytes(&istanbulExtra)
+	atlasExtra.Seal = seal
+	payload, err := rlp.EncodeToBytes(&atlasExtra)
 	if err != nil {
 		return err
 	}
 
-	h.Extra = append(h.Extra[:types.IstanbulExtraVanity], payload...)
+	h.Extra = append(h.Extra[:types.AtlasExtraVanity], payload...)
 	return nil
 }
 
@@ -687,25 +687,25 @@ func writeCommittedSeals(h *types.Header, committedSeals [][]byte) error {
 	}
 
 	for _, seal := range committedSeals {
-		if len(seal) != types.IstanbulExtraSeal {
+		if len(seal) != types.AtlasExtraSeal {
 			return errInvalidCommittedSeals
 		}
 	}
 
-	istanbulExtra, err := types.ExtractIstanbulExtra(h)
+	atlasExtra, err := types.ExtractAtlasExtra(h)
 	if err != nil {
 		return err
 	}
 
-	istanbulExtra.CommittedSeal = make([][]byte, len(committedSeals))
-	copy(istanbulExtra.CommittedSeal, committedSeals)
+	atlasExtra.CommittedSeal = make([][]byte, len(committedSeals))
+	copy(atlasExtra.CommittedSeal, committedSeals)
 
-	payload, err := rlp.EncodeToBytes(&istanbulExtra)
+	payload, err := rlp.EncodeToBytes(&atlasExtra)
 	if err != nil {
 		return err
 	}
 
-	h.Extra = append(h.Extra[:types.IstanbulExtraVanity], payload...)
+	h.Extra = append(h.Extra[:types.AtlasExtraVanity], payload...)
 	return nil
 }
 

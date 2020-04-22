@@ -37,7 +37,7 @@ func TestIstanbulMessage(t *testing.T) {
 	// generate one msg
 	data := []byte("data1")
 	hash := atlas.RLPHash(data)
-	msg := makeMsg(istanbulMsg, data)
+	msg := makeMsg(AtlasMsg, data)
 	addr := common.StringToAddress("address")
 
 	// 1. this message should not be in cache

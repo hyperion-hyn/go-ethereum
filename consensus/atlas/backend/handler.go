@@ -34,7 +34,7 @@ import (
 )
 
 const (
-	istanbulMsg = 0x11
+	AtlasMsg    = 0x11
 	NewBlockMsg = 0x07
 )
 
@@ -57,7 +57,7 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 	sb.coreMu.Lock()
 	defer sb.coreMu.Unlock()
 
-	if msg.Code == istanbulMsg {
+	if msg.Code == AtlasMsg {
 		if !sb.coreStarted {
 			return true, atlas.ErrStoppedEngine
 		}
@@ -84,7 +84,7 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 		}
 		sb.knownMessages.Add(hash, true)
 
-		go sb.istanbulEventMux.Post(atlas.MessageEvent{
+		go sb.atlasEventMux.Post(atlas.MessageEvent{
 			Payload: data,
 		})
 
@@ -110,7 +110,7 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 				return false, nil
 			}
 			newRequestedBlock := request.Block
-			if newRequestedBlock.Header().MixDigest == types.IstanbulDigest && sb.core.IsCurrentProposal(newRequestedBlock.Hash()) {
+			if newRequestedBlock.Header().MixDigest == types.AtlasDigest && sb.core.IsCurrentProposal(newRequestedBlock.Hash()) {
 				log.Debug("Proposer already proposed this block", "hash", newRequestedBlock.Hash(), "sender", addr)
 				return true, nil
 			}
@@ -130,6 +130,6 @@ func (sb *backend) NewChainHead() error {
 	if !sb.coreStarted {
 		return atlas.ErrStoppedEngine
 	}
-	go sb.istanbulEventMux.Post(atlas.FinalCommittedEvent{})
+	go sb.atlasEventMux.Post(atlas.FinalCommittedEvent{})
 	return nil
 }

@@ -82,7 +82,7 @@ func ExtractAtlasExtra(h *Header) (*IstanbulExtra, error) {
 }
 
 // IstanbulFilteredHeader returns a filtered header which some information (like seal, committed seals)
-// are clean to fulfill the Istanbul hash rules. It returns nil if the extra-data cannot be
+// are clean to fulfill the Atlas hash rules. It returns nil if the extra-data cannot be
 // decoded/encoded by rlp.
 func AtlasFilteredHeader(h *Header, keepSeal bool) *Header {
 	newHeader := CopyHeader(h)

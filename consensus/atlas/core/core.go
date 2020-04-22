@@ -34,7 +34,7 @@ import (
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )
 
-// New creates an Istanbul consensus core
+// New creates an Atlas consensus core
 func New(backend atlas.Backend, config *atlas.Config) Engine {
 	r := metrics.NewRegistry()
 	c := &core{
@@ -176,7 +176,7 @@ func (c *core) commit() {
 	if proposal != nil {
 		committedSeals := make([][]byte, c.current.Commits.Size())
 		for i, v := range c.current.Commits.Values() {
-			committedSeals[i] = make([]byte, types.IstanbulExtraSeal)
+			committedSeals[i] = make([]byte, types.AtlasExtraSeal)
 			copy(committedSeals[i][:], v.CommittedSeal[:])
 		}
 

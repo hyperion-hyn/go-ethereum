@@ -23,7 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 )
 
-// API is a user facing RPC API to dump Istanbul state
+// API is a user facing RPC API to dump Atlas state
 type API struct {
 	chain consensus.ChainReader
 	atlas *backend

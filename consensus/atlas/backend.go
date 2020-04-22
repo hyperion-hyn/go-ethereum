@@ -24,7 +24,7 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 )
 
-// Backend provides application specific functions for Istanbul core
+// Backend provides application specific functions for Atlas core
 type Backend interface {
 	// Address returns the owner's address
 	Address() common.Address
