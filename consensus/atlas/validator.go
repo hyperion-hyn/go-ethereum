@@ -66,6 +66,8 @@ type ValidatorSet interface {
 	GetByIndex(i uint64) Validator
 	// Get validator by given address
 	GetByAddress(addr common.Address) (int, Validator)
+	// Get validator by public key
+	GetByPublicKey(key bls.PublicKey) (int, Validator)
 	// Get current proposer
 	GetProposer() Validator
 	// Check whether the validator with given address is a proposer

@@ -114,6 +114,15 @@ func (valSet *defaultSet) GetByAddress(addr common.Address) (int, atlas.Validato
 	return -1, nil
 }
 
+func (valSet *defaultSet) GetByPublicKey(pubKey bls.PublicKey) (int, atlas.Validator) {
+	for i, val := range valSet.List() {
+		if pubKey == val.PublicKey() {
+			return i, val
+		}
+	}
+	return -1, nil
+}
+
 func (valSet *defaultSet) GetProposer() atlas.Validator {
 	return valSet.proposer
 }

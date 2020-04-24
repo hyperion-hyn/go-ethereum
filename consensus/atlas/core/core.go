@@ -23,15 +23,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/harmony-one/bls/ffi/go/bls"
+	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
-	"github.com/ethereum/go-ethereum/core/types"
+	bls_cosi "github.com/ethereum/go-ethereum/crypto/bls"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
-	metrics "github.com/ethereum/go-ethereum/metrics"
-	"github.com/harmony-one/bls/ffi/go/bls"
-	bls_cosi "github.com/ethereum/go-ethereum/crypto/bls"
-	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
+	"github.com/ethereum/go-ethereum/metrics"
 )
 
 // New creates an Atlas consensus core
@@ -174,13 +174,10 @@ func (c *core) commit() {
 
 	proposal := c.current.Proposal()
 	if proposal != nil {
-		committedSeals := make([][]byte, c.current.Commits.Size())
-		for i, v := range c.current.Commits.Values() {
-			committedSeals[i] = make([]byte, types.AtlasExtraSeal)
-			copy(committedSeals[i][:], v.CommittedSeal[:])
-		}
+		committedSignature := c.current.aggregatedConfirmSig.Serialize()
+		committedBitmap := c.current.confirmBitmap.Bitmap
 
-		if err := c.backend.Commit(proposal, committedSeals); err != nil {
+		if err := c.backend.Commit(proposal, committedSignature, committedBitmap); err != nil {
 			c.current.UnlockHash() //Unlock block when insertion fails
 			c.sendNextRoundChange()
 			return

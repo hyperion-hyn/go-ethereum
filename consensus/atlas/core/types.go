@@ -159,6 +159,7 @@ func (m *message) Payload() ([]byte, error) {
 }
 
 func (m *message) PayloadNoSig() ([]byte, error) {
+	// ATLAS(zgx): should remove PayloadNoSig?
 	return rlp.EncodeToBytes(&message{
 		Code:          m.Code,
 		Msg:           m.Msg,
