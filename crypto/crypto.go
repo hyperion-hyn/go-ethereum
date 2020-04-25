@@ -222,6 +222,24 @@ func zeroBytes(bytes []byte) {
 	}
 }
 
+// RandPrivateKey returns a random private key.
+func RandPrivateKey() *bls.SecretKey {
+	sec := bls.SecretKey{}
+	sec.SetByCSPRNG()
+	return &sec
+}
+
+func GenerateBLSKey() (*bls.SecretKey, error) {
+	privateKey := RandPrivateKey()
+	return privateKey, nil
+}
+
+// SaveBLS saves a BLS private key to the given file with
+// restrictive permissions. The key data is saved hex-encoded.
+func SaveBLS(file string, key *bls.SecretKey) error {
+	k := hex.EncodeToString(key.Serialize())
+	return ioutil.WriteFile(file, []byte(k), 0600)
+}
 
 // toECDSA creates a private key with the given D value. The strict parameter
 // controls whether the key's length should be enforced at the curve size or

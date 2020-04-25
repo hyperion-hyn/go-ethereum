@@ -21,6 +21,8 @@ import (
 	"crypto/ecdsa"
 	"reflect"
 
+	"github.com/harmony-one/bls/ffi/go/bls"
+
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -95,6 +97,11 @@ func (ctx *ServiceContext) ExtRPCEnabled() bool {
 // NodeKey returns node key from config
 func (ctx *ServiceContext) NodeKey() *ecdsa.PrivateKey {
 	return ctx.config.NodeKey()
+}
+
+// SignerKey returns signer key from config
+func (ctx *ServiceContext) SignerKey() *bls.SecretKey {
+	return ctx.config.SignerKey()
 }
 
 // ServiceConstructor is the function signature of the constructors needed to be
