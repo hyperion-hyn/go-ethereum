@@ -41,6 +41,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/eth/filters"
 	"github.com/ethereum/go-ethereum/eth/gasprice"
@@ -68,6 +69,7 @@ type LesServer interface {
 
 // Ethereum implements the Ethereum full node service.
 type Ethereum struct {
+	ctx *node.ServiceContext
 	config *Config
 	chainConfig *params.ChainConfig
 
@@ -152,6 +154,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	log.Info("Initialised chain configuration", "config", chainConfig)
 
 	eth := &Ethereum{
+		ctx:            ctx,
 		config:         config,
 		chainConfig:    chainConfig,
 		chainDb:        chainDb,
@@ -270,7 +273,7 @@ func CreateConsensusEngine(ctx *node.ServiceContext, chainConfig *params.ChainCo
 		config.Istanbul.ProposerPolicy = istanbul.ProposerPolicy(chainConfig.Istanbul.ProposerPolicy)
 		config.Istanbul.Ceil2Nby3Block = chainConfig.Istanbul.Ceil2Nby3Block
 
-		// ATLAS
+		// ATLAS(yhx): no need to access wallet directly.
 		if len(ctx.AccountManager.Wallets()) < 0 {
 			log.Crit("Need a wallet")
 		}
@@ -511,6 +514,25 @@ func (s *Ethereum) StartMining(threads int) error {
 			}
 			clique.Authorize(eb, wallet.SignData)
 		}
+
+		if atlas, ok := s.engine.(consensus.EngineEx); ok {
+			wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
+			if wallet == nil || err != nil {
+				log.Error("Etherbase account unavailable locally", "err", err)
+				return fmt.Errorf("signer missing: %v", err)
+			}
+
+			signer := crypto.PubkeyToSigner(s.ctx.SignerKey().GetPublicKey())
+			signFn := func(account accounts.Account, mimeType string, data []byte) ([]byte, error) {
+				secrectKey := s.ctx.SignerKey()
+				hashData := crypto.Keccak256([]byte(data))
+				sign := secrectKey.Sign(string(hashData))
+				return sign.Serialize(), nil
+			}
+
+			atlas.Authorize(signer, signFn)
+		}
+
 		// If mining is started, we can disable the transaction rejection mechanism
 		// introduced to speed sync times.
 		atomic.StoreUint32(&s.protocolManager.acceptTxs, 1)

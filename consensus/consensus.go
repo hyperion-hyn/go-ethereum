@@ -20,6 +20,7 @@ package consensus
 import (
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -118,6 +119,7 @@ type Engine interface {
 
 	// Close terminates any background threads maintained by the consensus engine.
 	Close() error
+
 }
 
 // Handler should be implemented is the consensus needs to handle and send peer's message
@@ -151,8 +153,11 @@ type Istanbul interface {
 	Stop() error
 }
 
-// Atlas is a consensus engine
-type Atlas interface {
+// SignerFn is a signer callback function to request a header to be signed by a
+// backing account.
+type SignerFn func(accounts.Account, string, []byte) ([]byte, error)
+
+type EngineEx interface {
 	Engine
 
 	// Start starts the engine
@@ -160,4 +165,11 @@ type Atlas interface {
 
 	// Stop stops the engine
 	Stop() error
+
+	Authorize(signer common.Address, signFn SignerFn)
+}
+
+// Atlas is a consensus engine
+type Atlas interface {
+	EngineEx
 }
