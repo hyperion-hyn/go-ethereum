@@ -27,6 +27,7 @@ import (
 
 	lru "github.com/hashicorp/golang-lru"
 
+	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
@@ -50,18 +51,20 @@ var (
 )
 
 // New creates an Ethereum backend for Atlas core engine.
-func New(config *atlas.Config, privateKey *ecdsa.PrivateKey, signerKey *bls.SecretKey, db ethdb.Database) consensus.Atlas {
+func New(config *atlas.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database) consensus.Atlas {
 	// Allocate the snapshot caches and create the engine
 	recents, _ := lru.NewARC(inmemorySnapshots)
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
 	knownMessages, _ := lru.NewARC(inmemoryMessages)
+
+	// , signerKey *bls.SecretKey,
+	// ATLAS(zgx): signerKey should be set by another way, only mining node need signer, like Clique
 	backend := &backend{
 		config:        config,
 		atlasEventMux: new(event.TypeMux),
 		privateKey:    privateKey,
+		address:       crypto.PubkeyToAddress(privateKey.PublicKey),
 		signerKey:     signerKey,
-		coinbase:      crypto.PubkeyToAddress(privateKey.PublicKey),
-		address:       crypto.PubkeyToSigner(signerKey.GetPublicKey()),
 		logger:        log.New(),
 		db:            db,
 		commitCh:      make(chan *types.Block, 1),
@@ -86,9 +89,13 @@ type backend struct {
 	config        *atlas.Config
 	atlasEventMux *event.TypeMux
 	privateKey    *ecdsa.PrivateKey
-	coinbase      common.Address
+	address      common.Address
+
 	signerKey     *bls.SecretKey
-	address       common.Address
+	signer       common.Address
+	signFn        consensus.SignerFn       // Signer function to authorize hashes with
+	lock   sync.RWMutex   // Protects the signer fields
+
 	core          kernel.Engine
 	logger        log.Logger
 	db            ethdb.Database
@@ -128,9 +135,9 @@ func (sb *backend) Address() common.Address {
 	return sb.address
 }
 
-// Address implements atlas.Backend.Address
-func (sb *backend) PublicKey() []byte {
-	return sb.signerKey.GetPublicKey().Serialize()
+// Signer implements atlas.Backend.Signer
+func (sb *backend) Signer() common.Address {
+	return sb.signer
 }
 
 // Validators implements atlas.Backend.Validators
@@ -273,12 +280,11 @@ func (sb *backend) Verify(proposal atlas.Proposal) (time.Duration, error) {
 // Sign implements atlas.Backend.Sign
 func (sb *backend) Sign(data []byte) ([]byte, error) {
 	// ATLAS(zgx): Sign is called by finalizeMessage and updateBlock, the former sign message, the latter sign block
-	hashData := crypto.Keccak256([]byte(data))
-	sign := sb.signerKey.Sign(string(hashData))
-	if sign == nil {
-		return nil, errFailedSignData
+	sighash, err := sb.signFn(accounts.Account{Address: sb.signer}, "", data)
+	if err != nil {
+		return nil, err
 	}
-	return sign.Serialize(), nil
+	return sighash, nil
 }
 
 // CheckSignature implements atlas.Backend.CheckSignature
@@ -351,6 +357,16 @@ func (sb *backend) HasBadProposal(hash common.Hash) bool {
 
 func (sb *backend) Close() error {
 	return nil
+}
+
+// Authorize injects a private key into the consensus engine to mint new blocks
+// with.
+func (c *backend) Authorize(signer common.Address, signFn consensus.SignerFn) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	c.signer = signer
+	c.signFn = signFn
 }
 
 func (sb *backend) WriteLastCommits(signature []byte, mask []byte) error {

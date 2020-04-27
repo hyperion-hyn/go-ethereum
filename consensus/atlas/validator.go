@@ -25,13 +25,13 @@ import (
 )
 
 type Validator interface {
-	// Address returns address
+	// Address returns validator's id (address format)
 	Address() common.Address
 
-	// Signer returns coinbase address
+	// Signer returns validator's coinbase address
 	Coinbase() common.Address
 
-	PublicKey() bls.PublicKey
+	PublicKey() *bls.PublicKey
 
 	// String representation of Validator
 	String() string
@@ -67,7 +67,7 @@ type ValidatorSet interface {
 	// Get validator by given address
 	GetByAddress(addr common.Address) (int, Validator)
 	// Get validator by public key
-	GetByPublicKey(key bls.PublicKey) (int, Validator)
+	GetByPublicKey(pubKey *bls.PublicKey) (int, Validator)
 	// Get current proposer
 	GetProposer() Validator
 	// Check whether the validator with given address is a proposer

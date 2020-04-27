@@ -27,7 +27,7 @@ import (
 type ConfirmPayload struct {
     Digest    common.Hash
     Signature []byte
-    PubKey    []byte
+    Signer    []byte
 }
 
 func (c *core) sendConfirm() {
@@ -35,16 +35,16 @@ func (c *core) sendConfirm() {
 
     hash := c.current.Preprepare.Proposal.Hash()
     sign, err := c.backend.Sign(hash.Bytes())
-    pubKey := c.backend.PublicKey()
+    signer := c.backend.Signer().Bytes()
     if err != nil {
         logger.Error("Failed to sign", "view", c.currentView())
         return
     }
 
     proposal, err := rlp.EncodeToBytes(&ConfirmPayload{
-        Digest:  hash ,
+        Digest:    hash ,
         Signature: sign,
-        PubKey: pubKey,
+        Signer:    signer,
     })
     if err != nil {
         logger.Error("Failed to encode proposal", "view", c.currentView())
@@ -150,18 +150,25 @@ func (c *core) acceptConfirm(msg *message, src atlas.Validator) error {
         return err
     }
 
-    var pubKey bls.PublicKey
-    if err := pubKey.Deserialize(proposal.PubKey); err != nil {
-        logger.Error("Failed to deserialize signer's public key", "msg", msg, "err", err)
-        return err
+    var signer common.Address
+    signer.SetBytes(proposal.Signer)
+
+    _, validator := c.valSet.GetByAddress(signer)
+    if validator == nil {
+        return errInvalidSigner
     }
 
-    if sign.Verify(&pubKey, proposal.Digest.String()) == false {
+    var pubKey *bls.PublicKey = validator.PublicKey()
+    if validator == nil {
+        return errInvalidSigner
+    }
+
+    if sign.Verify(pubKey, proposal.Digest.String()) == false {
         logger.Error("Failed to verify signature with signer's public key", "msg", msg)
         return errInvalidSignature
     }
 
-    if err := c.current.confirmBitmap.SetKey(&pubKey, true); err != nil {
+    if err := c.current.confirmBitmap.SetKey(pubKey, true); err != nil {
         c.current.aggregatedConfirmSig.Add(&sign)
     }
 

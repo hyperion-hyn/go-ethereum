@@ -17,15 +17,20 @@
 package validator
 
 import (
+	"github.com/harmony-one/bls/ffi/go/bls"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
 )
 
 func New(validator atlas.Validator) atlas.Validator {
+	var pubKey bls.PublicKey
+	if err := pubKey.Deserialize(validator.PublicKey().Serialize()); err != nil {
+		// ATLAS(zgx): what if validator's public key is invalid?
+	}
 	return &defaultValidator{
 		address:  validator.Address(),
 		coinbase: validator.Coinbase(),
-		pubKey: validator.PublicKey(),
+		pubKey: pubKey,
 	}
 }
 

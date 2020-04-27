@@ -29,10 +29,8 @@ type Backend interface {
 	// Address returns the owner's address
 	Address() common.Address
 
-	// Signer returns the owner's publicKey
-	Signer() []byte
-
-	PublicKey() []byte
+	// Signer returns the signer's id (address format)
+	Signer() common.Address
 
 	// Validators returns the validator set
 	Validators(proposal Proposal) ValidatorSet

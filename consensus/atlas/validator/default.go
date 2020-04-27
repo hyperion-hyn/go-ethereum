@@ -42,8 +42,8 @@ func (val *defaultValidator) Coinbase() common.Address {
 	return val.coinbase
 }
 
-func (val *defaultValidator) PublicKey() bls.PublicKey {
-	return val.pubKey
+func (val *defaultValidator) PublicKey() *bls.PublicKey {
+	return &val.pubKey
 }
 
 func (val *defaultValidator) String() string {
@@ -114,9 +114,9 @@ func (valSet *defaultSet) GetByAddress(addr common.Address) (int, atlas.Validato
 	return -1, nil
 }
 
-func (valSet *defaultSet) GetByPublicKey(pubKey bls.PublicKey) (int, atlas.Validator) {
+func (valSet *defaultSet) GetByPublicKey(pubKey *bls.PublicKey) (int, atlas.Validator) {
 	for i, val := range valSet.List() {
-		if pubKey == val.PublicKey() {
+		if reflect.DeepEqual(pubKey, val.PublicKey()) == true {
 			return i, val
 		}
 	}
@@ -179,6 +179,7 @@ func stickyProposer(valSet atlas.ValidatorSet, proposer common.Address, round ui
 }
 
 func (valSet *defaultSet) AddValidator(address common.Address) bool {
+	// ATLAS(zgx): should change AddValidator function signature
 	valSet.validatorMu.Lock()
 	defer valSet.validatorMu.Unlock()
 	for _, v := range valSet.validators {
@@ -189,6 +190,7 @@ func (valSet *defaultSet) AddValidator(address common.Address) bool {
 	valSet.validators = append(valSet.validators, New(address))
 	// TODO: we may not need to re-sort it again
 	// sort validator
+	// ATLAS(zgx): should implement Validator.String to make sure sort by signer's id
 	sort.Sort(valSet.validators)
 	return true
 }
@@ -221,7 +223,8 @@ func (valSet *defaultSet) F() int { return int(math.Ceil(float64(valSet.Size())/
 
 func (valSet *defaultSet) Policy() atlas.ProposerPolicy { return valSet.policy }
 
-func (valSet *defaultSet) GetPublicKeys() []bls.PublicKey {
+func (valSet *defaultSet) GetPublicKeys() []*bls.PublicKey {
 	// ATLAS(yhx): get public keys ordered by alphabet for all validators
+
 	return nil
 }
