@@ -186,7 +186,7 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 		}
 		// Resolve the authorization key and check against validators
 		// ATLAS(zgx): validator come from signature and public key instead of recovery from signature.
-		validator, err := ecrecover(header)
+		validator, err := ecrecover(s, header)
 		if err != nil {
 			return nil, err
 		}

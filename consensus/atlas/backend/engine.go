@@ -298,7 +298,7 @@ func (sb *backend) verifySigner(chain consensus.ChainReader, header *types.Heade
 	}
 
 	// resolve the authorization key and check against signers
-	signer, err := ecrecover(header)
+	signer, err := ecrecover(snap, header)
 	if err != nil {
 		return err
 	}
@@ -394,21 +394,14 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 		header.Time = uint64(time.Now().Unix())
 	}
 
-	// ATLAS(zgx): should write last commit seal into this block.
 	signature, mask, err := sb.ReadLastCommits()
 	if err != nil {
 		return err
 	}
 
-	atlasExtra, err := types.ExtractAtlasExtra(header)
-	if err != nil {
+	if err = writeCommittedSeals(header, signature, mask); err != nil {
 		return err
 	}
-
-	atlasExtra.AggSignature = signature
-	atlasExtra.AggBitmap = mask
-
-	// ATLAS(zgx): write atlasExtra back to header
 
 	return nil
 }
@@ -509,8 +502,19 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 
 // update timestamp and signature of the block based on its number of transactions
 func (sb *backend) updateBlock(parent *types.Header, block *types.Block) (*types.Block, error) {
-	// ATLAS(zgx): for ibft or some engine else, they may need to update a seal or something.
-	return block, nil
+	header := block.Header()
+	// sign the hash
+	seal, pubkey, err := sb.Sign(sigHash(header).Bytes())
+	if err != nil {
+		return nil, err
+	}
+
+	err = writeSeal(header, seal, pubkey)
+	if err != nil {
+		return nil, err
+	}
+
+	return block.WithSeal(header), nil
 }
 
 // APIs returns the RPC APIs this consensus engine provides.
@@ -693,6 +697,7 @@ func ecrecover(snap * Snapshot, header *types.Header) (common.Address, error) {
 
 	// ATLAS(zgx): should verify signature here?
 
+
 	_, validator := snap.ValSet.GetByPublicKey(pubKey)
 	if validator == nil {
 		return common.Address{}, errValidatorNotExist
@@ -729,8 +734,8 @@ func prepareExtra(header *types.Header, vals []common.Address) ([]byte, error) {
 
 // writeSeal writes the extra-data field of the given header with the given seals.
 // suggest to rename to writeSeal.
-func writeSeal(h *types.Header, seal []byte) error {
-	if len(seal)%types.AtlasExtraSeal != 0 {
+func writeSeal(h *types.Header, seal []byte, pubkey []byte) error {
+	if len(seal) != types.AtlasExtraSignature || len(pubkey) != types.AtlasExtraPublicKey {
 		return errInvalidSignature
 	}
 
@@ -739,7 +744,9 @@ func writeSeal(h *types.Header, seal []byte) error {
 		return err
 	}
 
-	atlasExtra.Bitmap = seal
+	atlasExtra.Signature = seal
+	atlasExtra.PublicKey = pubkey
+
 	payload, err := rlp.EncodeToBytes(&atlasExtra)
 	if err != nil {
 		return err
@@ -755,16 +762,15 @@ func writeCommittedSeals(h *types.Header, signature []byte, bitmap []byte) error
 		return errInvalidCommittedSeals
 	}
 
-	// ATLAS(zgx): write committedSeals
 	atlasExtra, err := types.ExtractAtlasExtra(h)
 	if err != nil {
 		return err
 	}
 
-	atlasExtra.Signature = make([]byte, len(signature))
-	copy(atlasExtra.Signature, signature)
-	atlasExtra.Bitmap = make([]byte, len(bitmap))
-	copy(atlasExtra.Bitmap, bitmap)
+	atlasExtra.AggSignature = make([]byte, len(signature))
+	copy(atlasExtra.AggSignature, signature)
+	atlasExtra.AggBitmap = make([]byte, len(bitmap))
+	copy(atlasExtra.AggBitmap, bitmap)
 
 	payload, err := rlp.EncodeToBytes(&atlasExtra)
 	if err != nil {

@@ -165,7 +165,7 @@ func (api *API) Propose(signer common.Address, coinbase common.Address, auth boo
 	api.atlas.candidatesLock.Lock()
 	defer api.atlas.candidatesLock.Unlock()
 
-	api.atlas.candidates[signer] = ValidatorProposal{signer:signer, coinbase:coinbase, vote:auth}
+	api.atlas.candidates[signer] = ValidatorProposal{Signer: signer, Coinbase:coinbase, Vote:auth}
 }
 
 // Discard drops a currently running candidate, stopping the validator from casting

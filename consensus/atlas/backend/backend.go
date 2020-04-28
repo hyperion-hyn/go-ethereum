@@ -19,8 +19,6 @@ package backend
 import (
 	"crypto/ecdsa"
 
-	"github.com/harmony-one/bls/ffi/go/bls"
-
 	"math/big"
 	"sync"
 	"time"
@@ -57,14 +55,11 @@ func New(config *atlas.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database) 
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
 	knownMessages, _ := lru.NewARC(inmemoryMessages)
 
-	// , signerKey *bls.SecretKey,
-	// ATLAS(zgx): signerKey should be set by another way, only mining node need signer, like Clique
 	backend := &backend{
 		config:        config,
 		atlasEventMux: new(event.TypeMux),
 		privateKey:    privateKey,
 		address:       crypto.PubkeyToAddress(privateKey.PublicKey),
-		signerKey:     signerKey,
 		logger:        log.New(),
 		db:            db,
 		commitCh:      make(chan *types.Block, 1),
@@ -80,21 +75,20 @@ func New(config *atlas.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database) 
 
 // ----------------------------------------------------------------------------
 type ValidatorProposal struct {
-	signer   common.Address
-	coinbase common.Address
-	vote     bool
+	Signer   common.Address
+	Coinbase common.Address
+	Vote     bool
 }
 
 type backend struct {
 	config        *atlas.Config
 	atlasEventMux *event.TypeMux
 	privateKey    *ecdsa.PrivateKey
-	address      common.Address
+	address       common.Address
 
-	signerKey     *bls.SecretKey
-	signer       common.Address
+	signer        common.Address
 	signFn        consensus.SignerFn       // Signer function to authorize hashes with
-	lock   sync.RWMutex   // Protects the signer fields
+	lock          sync.RWMutex   // Protects the signer fields
 
 	core          kernel.Engine
 	logger        log.Logger
@@ -122,7 +116,6 @@ type backend struct {
 
 	recentMessages *lru.ARCCache // the cache of peer's messages
 	knownMessages  *lru.ARCCache // the cache of self messages
-
 }
 
 // zekun: HACK
@@ -204,15 +197,6 @@ func (sb *backend) Commit(proposal atlas.Proposal, signature []byte, bitmap []by
 		return errInvalidProposal
 	}
 
-	h := block.Header()
-	// Append seals into extra-data
-	err := writeCommittedSeals(h, signature, bitmap)
-	if err != nil {
-		return err
-	}
-	// update block's header
-	block = block.WithSeal(h)
-
 	sb.logger.Info("Confirm", "address", sb.Address(), "hash", proposal.Hash(), "number", proposal.Number().Uint64())
 	if err := sb.WriteLastCommits(signature, bitmap); err != nil {
 		return err
@@ -278,13 +262,13 @@ func (sb *backend) Verify(proposal atlas.Proposal) (time.Duration, error) {
 }
 
 // Sign implements atlas.Backend.Sign
-func (sb *backend) Sign(data []byte) ([]byte, error) {
+func (sb *backend) Sign(data []byte) ([]byte, []byte, error) {
 	// ATLAS(zgx): Sign is called by finalizeMessage and updateBlock, the former sign message, the latter sign block
-	sighash, err := sb.signFn(accounts.Account{Address: sb.signer}, "", data)
+	sighash, pubkey, err := sb.signFn(accounts.Account{Address: sb.signer}, "", data)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return sighash, nil
+	return sighash, pubkey, nil
 }
 
 // CheckSignature implements atlas.Backend.CheckSignature
@@ -374,10 +358,12 @@ func (sb *backend) WriteLastCommits(signature []byte, mask []byte) error {
 		return types.ErrInvalidAtlasHeaderExtra
 	}
 	data := make([]byte, len(signature) + len(mask))
+	copy(data, signature)
+	copy(data[len(signature):], mask)
 	if err := sb.db.Put(lastCommitsKey, data); err != nil {
 		return err
 	}
-
+	return  nil
 }
 
 func (sb *backend) ReadLastCommits() (signature []byte, mask []byte, err error) {
