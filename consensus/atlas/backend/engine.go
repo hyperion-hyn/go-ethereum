@@ -85,6 +85,8 @@ var (
 	errInvalidCommittedSeals = errors.New("invalid committed seals")
 	// errEmptyCommittedSeals is returned if the field of committed seals is zero.
 	errEmptyCommittedSeals = errors.New("zero committed seals")
+	// errInvalidAggregatedSignature is returned if the field of aggregated signature is invalid.
+	errInvalidAggregatedSignature = errors.New("invalid aggregated signature")
 	// errMismatchTxhashes is returned if the TxHash in header is mismatch.
 	errMismatchTxhashes = errors.New("mismatch transcations hashes")
 	// errMismatchTxhashes is returned if the TxHash in header is mismatch.
@@ -322,6 +324,10 @@ func (sb *backend) verifyCommittedSeals(chain consensus.ChainReader, header *typ
 		return errEmptyCommittedSeals
 	}
 
+	if len(extra.AggSignature) != types.AtlasExtraSignature || len(extra.AggBitmap) != types.AtlasExtraMask {
+		return errInvalidAggregatedSignature
+	}
+
 	validators := snap.ValSet.Copy()
 
 	mask, err := bls_cosi.NewMask(snap.ValSet.GetPublicKeys(), nil)
@@ -376,6 +382,18 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	}
 	// use the same difficulty for all blocks
 	header.Difficulty = defaultDifficulty
+
+	// Assemble the voting snapshot
+	snap, err := sb.snapshot(chain, number-1, header.ParentHash, nil)
+	if err != nil {
+		return err
+	}
+
+	extra, err := prepareExtra(header, snap.validators())
+	if err != nil {
+		return err
+	}
+	header.Extra = extra
 
 	// set header's timestamp
 	header.Time = parent.Time + sb.config.BlockPeriod
@@ -707,9 +725,10 @@ func prepareExtra(header *types.Header, vals []common.Address) ([]byte, error) {
 	buf.Write(header.Extra[:types.AtlasExtraVanity])
 
 	ist := &types.AtlasExtra{
-		Signature:     vals,
-		Bitmap:        []byte{},
-		CommittedSeal: [][]byte{},
+		AggSignature: []byte{},
+		AggBitmap:    []byte{},
+		Signature:    []byte{},
+		PublicKey:    []byte{},
 	}
 
 	payload, err := rlp.EncodeToBytes(&ist)
