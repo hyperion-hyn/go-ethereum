@@ -21,13 +21,10 @@ import (
 	"errors"
 	"math"
 
-	"github.com/docker/docker/daemon/logger"
-
 	"github.com/harmony-one/bls/ffi/go/bls"
 	bls_cosi "github.com/ethereum/go-ethereum/crypto/bls"
 	"github.com/ethereum/go-ethereum/staking"
 	"math/big"
-	"math/rand"
 	"sort"
 	"time"
 
@@ -35,7 +32,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
-	atlasCore "github.com/ethereum/go-ethereum/consensus/atlas/core"
 	"github.com/ethereum/go-ethereum/consensus/atlas/validator"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -123,48 +119,41 @@ func (sb *backend) Author(header *types.Header) (common.Address, error) {
 // Signers extracts all the addresses who have signed the given header
 // It will extract for each seal who signed it, regardless of if the seal is
 // repeated
-func (sb *backend) Signers(header *types.Header) ([], error) {
-	// ATLAS(yhx): return signers who signed the given header, should return public keys
+func (sb *backend) Signers(header *types.Header) ([]atlas.Validator, error) {
 	extra, err := types.ExtractAtlasExtra(header)
 	if err != nil {
-		return []common.Address{}, err
+		return []atlas.Validator{}, err
 	}
 
 	number := header.Number.Uint64()
 	snap, err := sb.snapshot(sb.chain, number-1, header.ParentHash, nil)
 	if err != nil {
-		return []common.Address{}, err
+		return []atlas.Validator{}, err
 	}
 
 	var sign bls.Sign
 	if err := sign.Deserialize(extra.Signature); err != nil {
-		return []common.Address{}, err
+		return []atlas.Validator{}, err
 	}
 
 	var pubKey bls.PublicKey
 	if err := pubKey.Deserialize(extra.PublicKey); err != nil {
-		return []common.Address{}, err
+		return []atlas.Validator{}, err
 	}
-
-	// ATLAS(zgx): should we verify signature here?
-	// if sign.Verify(&pubKey, header.Number) == false {
-	// 	logger.Error("Failed to verify signature with signer's public key")
-	// 	return errInvalidSignature
-	// }
 
 	bitmap, _ := bls_cosi.NewMask(snap.ValSet.GetPublicKeys(), nil)
 	if err := bitmap.SetMask(extra.AggBitmap); err != nil {
-		return []common.Address{}, err
+		return []atlas.Validator{}, err
 	}
 
-	signers := make([]atlas.Validator)
+	signers := make([]atlas.Validator, bitmap.CountEnabled())
 	publicKeys := bitmap.GetPubKeyFromMask(true)
-	for i, publicKey := range(publicKeys) {
-		idx, validator := snap.ValSet.GetByPublicKey(publicKey)
+	for _, publicKey := range(publicKeys) {
+		_, validator := snap.ValSet.GetByPublicKey(publicKey)
 		signers = append(signers, validator)
 	}
 
-	// ATLAS(zgx): match return values.
+	// ATLAS(zgx): should we include block sealer into signers?
 	return signers, nil
 }
 
@@ -697,8 +686,7 @@ func ecrecover(snap * Snapshot, header *types.Header) (common.Address, error) {
 
 	// ATLAS(zgx): should verify signature here?
 
-
-	_, validator := snap.ValSet.GetByPublicKey(pubKey)
+	_, validator := snap.ValSet.GetByPublicKey(&pubKey)
 	if validator == nil {
 		return common.Address{}, errValidatorNotExist
 	}
