@@ -420,7 +420,7 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 // consensus rules that happen at finalization (e.g. block rewards).
 func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header) {
-	// ATLAS(yhx): reward
+	// ATLAS(yhx): block reward
 	// No block rewards in Atlas, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	header.UncleHash = nilUncleHash
@@ -433,6 +433,7 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 // consensus rules that happen at finalization (e.g. block rewards).
 func (sb *backend) FinalizeAndAssemble(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
+	// ATLAS(yhx): block reward
 	// No block rewards in Atlas, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	header.UncleHash = nilUncleHash
@@ -822,14 +823,4 @@ func getLargestAmountStakingValidators(state *state.StateDB, numVal int) ([]stak
 		addresses[i] = pairs[i].key
 	}
 	return addresses, nil
-}
-
-func convertValidators(vals []staking.Validator) []atlas.Validator{
-	var retval []atlas.Validator = make([]atlas.Validator, 0, len(vals))
-
-	for i, v := range vals {
-		retval = append(retval, {
-
-		})
-	}
 }
