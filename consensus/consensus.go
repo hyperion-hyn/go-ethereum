@@ -155,7 +155,7 @@ type Istanbul interface {
 
 // SignerFn is a signer callback function to request a header to be signed by a
 // backing account.
-type SignerFn func(accounts.Account, string, []byte) ([]byte, error)
+type SignerFn func(accounts.Account, string, []byte) ([]byte, []byte, error)
 
 type EngineEx interface {
 	Engine

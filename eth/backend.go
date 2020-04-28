@@ -518,11 +518,12 @@ func (s *Ethereum) StartMining(threads int) error {
 		if atlas, ok := s.engine.(consensus.EngineEx); ok {
 			// ATLAS(zgx): should put signer key into eth.Config instead of p2p.Config, because signer key can be indepent to p2p
 			signer := crypto.PubkeyToSigner(s.ctx.SignerKey().GetPublicKey())
-			signFn := func(account accounts.Account, mimeType string, data []byte) ([]byte, error) {
+			signFn := func(account accounts.Account, mimeType string, data []byte) ([]byte, []byte, error) {
 				secrectKey := s.ctx.SignerKey()
 				hashData := crypto.Keccak256([]byte(data))
 				sign := secrectKey.Sign(string(hashData))
-				return sign.Serialize(), nil
+
+				return sign.Serialize(), secrectKey.GetPublicKey().Serialize(), nil
 			}
 
 			atlas.Authorize(signer, signFn)
