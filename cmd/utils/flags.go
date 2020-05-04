@@ -37,8 +37,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/fdlimit"
 	"github.com/ethereum/go-ethereum/consensus"
+	"github.com/ethereum/go-ethereum/consensus/atlas"
+	atlasBackend "github.com/ethereum/go-ethereum/consensus/atlas/backend"
 	"github.com/ethereum/go-ethereum/consensus/clique"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
+	"github.com/ethereum/go-ethereum/consensus/istanbul"
+	istanbulBackend "github.com/ethereum/go-ethereum/consensus/istanbul/backend"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -1767,6 +1771,14 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chai
 	var engine consensus.Engine
 	if config.Clique != nil {
 		engine = clique.New(config.Clique, chainDb)
+	} else if config.Atlas != nil {
+		atlasConfig := atlas.DefaultConfig
+		if config.Atlas.Epoch != 0 {
+			atlasConfig.Epoch = config.Atlas.Epoch
+		}
+		atlasConfig.ProposerPolicy = atlas.ProposerPolicy(config.Atlas.ProposerPolicy)
+		atlasConfig.Ceil2Nby3Block = config.Atlas.Ceil2Nby3Block
+		engine = atlasBackend.New(atlasConfig, stack.GetNodeKey(), chainDb)
 	} else {
 		engine = ethash.NewFaker()
 		if !ctx.GlobalBool(FakePoWFlag.Name) {
