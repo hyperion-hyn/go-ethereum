@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/harmony-one/bls/ffi/go/bls"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
 	"github.com/ethereum/go-ethereum/consensus/atlas/validator"
@@ -34,17 +35,25 @@ import (
 func TestSign(t *testing.T) {
 	b := newBackend()
 	data := []byte("Here is a string....")
-	sig, err := b.Sign(data)
+	sig, key, err := b.Sign(data)
 	if err != nil {
 		t.Errorf("error mismatch: have %v, want nil", err)
 	}
 	//Check signature recover
 	hashData := crypto.Keccak256([]byte(data))
-	pubkey, _ := crypto.Ecrecover(hashData, sig)
-	var signer common.Address
-	copy(signer[:], crypto.Keccak256(pubkey[1:])[12:])
-	if signer != getAddress() {
-		t.Errorf("address mismatch: have %v, want %s", signer.Hex(), getAddress().Hex())
+
+	var pubKey bls.PublicKey
+	if err := pubKey.Deserialize(key); err != nil {
+		t.Errorf("failed to deserialize public key: #{key}")
+	}
+
+	var sign bls.Sign
+	if err := sign.Deserialize(sig); err != nil {
+		t.Errorf("failed to deserialize signature: #{sig}")
+	}
+
+	if sign.Verify(&pubKey, string(hashData)) == false {
+		t.Errorf("failed to verify signature: #{sig}")
 	}
 }
 
@@ -206,21 +215,21 @@ func generatePrivateKey() (*ecdsa.PrivateKey, error) {
 	return crypto.HexToECDSA(key)
 }
 
-func newTestValidatorSet(n int) (atlas.ValidatorSet, []*ecdsa.PrivateKey) {
+func newTestValidatorSet(n int) (atlas.ValidatorSet, []*bls.SecretKey) {
 	// generate validators
 	keys := make(Keys, n)
-	addrs := make([]common.Address, n)
+	addrs := make([]atlas.Validator, n)
 	for i := 0; i < n; i++ {
-		privateKey, _ := crypto.GenerateKey()
+		privateKey, _ := crypto.GenerateBLSKey()
 		keys[i] = privateKey
-		addrs[i] = crypto.PubkeyToAddress(privateKey.PublicKey)
+		addrs[i] = atlas.Validator{}
 	}
 	vset := validator.NewSet(addrs, atlas.RoundRobin)
 	sort.Sort(keys) //Keys need to be sorted by its public key address
 	return vset, keys
 }
 
-type Keys []*ecdsa.PrivateKey
+type Keys []*bls.SecretKey
 
 func (slice Keys) Len() int {
 	return len(slice)
