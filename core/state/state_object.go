@@ -27,6 +27,8 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/rlp"
+
+	"github.com/ethereum/go-ethereum/staking"
 )
 
 var emptyCodeHash = crypto.Keccak256(nil)
@@ -456,4 +458,13 @@ func (s *stateObject) Nonce() uint64 {
 // interface. Interfaces are awesome.
 func (s *stateObject) Value() *big.Int {
 	panic("Value on stateObject should never be called")
+}
+
+// IsValidator checks whether it is a validator object
+func (s *stateObject) IsValidator(db Database) bool {
+	value := s.GetState(db, staking.IsValidatorKey)
+	if value == (common.Hash{}) {
+		return false
+	}
+	return true
 }
