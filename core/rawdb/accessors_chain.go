@@ -21,13 +21,16 @@ import (
 	"encoding/binary"
 	"math/big"
 
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/ethereum/go-ethereum/internal/ctxerror"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
+	staking "github.com/ethereum/go-ethereum/staking/types"
 )
 
 // ReadCanonicalHash retrieves the hash assigned to a canonical block number.
@@ -612,4 +615,273 @@ func FindCommonAncestor(db ethdb.Reader, a, b *types.Header) *types.Header {
 		}
 	}
 	return a
+}
+
+// ReadLastCommits retrieves LastCommits.
+func ReadLastCommits(db ethdb.Reader) ([]byte, error) {
+	var data []byte
+	data, err := db.Get(lastCommitsKey)
+	if err != nil {
+		return nil, ctxerror.New("cannot read last commits from rawdb").WithCause(err)
+	}
+	return data, nil
+}
+
+// WriteLastCommits stores last commits into database.
+func WriteLastCommits(
+	db ethdb.Writer, data []byte,
+) (err error) {
+	if err = db.Put(lastCommitsKey, data); err != nil {
+		return ctxerror.New("cannot write last commits").WithCause(err)
+	}
+	log.Info("wrote last commits", "numShards", len(data))
+	return nil
+}
+
+// ReadEpochBlockNumber retrieves the epoch block number for the given epoch,
+// or nil if the given epoch is not found in the database.
+func ReadEpochBlockNumber(db ethdb.Reader, epoch *big.Int) (*big.Int, error) {
+	data, err := db.Get(epochBlockNumberKey(epoch))
+	if err != nil {
+		return nil, err
+	}
+	return new(big.Int).SetBytes(data), nil
+}
+
+// WriteEpochBlockNumber stores the given epoch-number-to-epoch-block-number in the database.
+func WriteEpochBlockNumber(db ethdb.Writer, epoch, blockNum *big.Int) error {
+	return db.Put(epochBlockNumberKey(epoch), blockNum.Bytes())
+}
+
+// ReadEpochVrfBlockNums retrieves the VRF block numbers for the given epoch
+func ReadEpochVrfBlockNums(db ethdb.Reader, epoch *big.Int) ([]byte, error) {
+	return db.Get(epochVrfBlockNumbersKey(epoch))
+}
+
+// WriteEpochVrfBlockNums stores the VRF block numbers for the given epoch
+func WriteEpochVrfBlockNums(db ethdb.Writer, epoch *big.Int, data []byte) error {
+	return db.Put(epochVrfBlockNumbersKey(epoch), data)
+}
+
+// ReadEpochVdfBlockNum retrieves the VDF block number for the given epoch
+func ReadEpochVdfBlockNum(db ethdb.Reader, epoch *big.Int) ([]byte, error) {
+	return db.Get(epochVdfBlockNumberKey(epoch))
+}
+
+// WriteEpochVdfBlockNum stores the VDF block number for the given epoch
+func WriteEpochVdfBlockNum(db ethdb.Writer, epoch *big.Int, data []byte) error {
+	return db.Put(epochVdfBlockNumberKey(epoch), data)
+}
+
+// ReadCrossLinkShardBlock retrieves the blockHash given shardID and blockNum
+func ReadCrossLinkShardBlock(db ethdb.Reader, shardID uint32, blockNum uint64) ([]byte, error) {
+	return db.Get(crosslinkKey(shardID, blockNum))
+}
+
+// WriteCrossLinkShardBlock stores the blockHash given shardID and blockNum
+func WriteCrossLinkShardBlock(db ethdb.Writer, shardID uint32, blockNum uint64, data []byte) error {
+	return db.Put(crosslinkKey(shardID, blockNum), data)
+}
+
+// DeleteCrossLinkShardBlock deletes the blockHash given shardID and blockNum
+func DeleteCrossLinkShardBlock(db ethdb.Writer, shardID uint32, blockNum uint64) error {
+	return db.Delete(crosslinkKey(shardID, blockNum))
+}
+
+// ReadShardLastCrossLink read the last cross link of a shard
+func ReadShardLastCrossLink(db ethdb.Reader, shardID uint32) ([]byte, error) {
+	return db.Get(shardLastCrosslinkKey(shardID))
+}
+
+// WriteShardLastCrossLink stores the last cross link of a shard
+func WriteShardLastCrossLink(db ethdb.Writer, shardID uint32, data []byte) error {
+	return db.Put(shardLastCrosslinkKey(shardID), data)
+}
+
+// ReadCXReceiptsProofUnspentCheckpoint returns the last unspent blocknumber
+func ReadCXReceiptsProofUnspentCheckpoint(db ethdb.Reader, shardID uint32) (uint64, error) {
+	by, err := db.Get(cxReceiptUnspentCheckpointKey(shardID))
+	if err != nil {
+		return 0, ctxerror.New("[ReadCXReceiptsProofUnspent] Cannot Unspent Checkpoint", "shardID", shardID).WithCause(err)
+	}
+	lastCheckpoint := binary.BigEndian.Uint64(by[:])
+	return lastCheckpoint, nil
+}
+
+// WriteCXReceiptsProofUnspentCheckpoint check whether a CXReceiptsProof is unspent, true means not spent
+func WriteCXReceiptsProofUnspentCheckpoint(db ethdb.Writer, shardID uint32, blockNum uint64) error {
+	by := make([]byte, 8)
+	binary.BigEndian.PutUint64(by[:], blockNum)
+	return db.Put(cxReceiptUnspentCheckpointKey(shardID), by)
+}
+
+// ReadValidatorInformation retrieves staking validator by its address
+func ReadValidatorInformation(db ethdb.Reader, addr common.Address) (*staking.ValidatorWrapper, error) {
+	data, err := db.Get(validatorKey(addr))
+	if err != nil || len(data) == 0 {
+		log.Info("ReadValidatorInformation", "err", err)
+		return nil, err
+	}
+	v := staking.ValidatorWrapper{}
+	if err := rlp.DecodeBytes(data, &v); err != nil {
+		log.Error("Unable to Decode staking validator from database", "err", err, "address", addr.Hex())
+		return nil, err
+	}
+	return &v, nil
+}
+
+// WriteValidatorData stores validator's information by its address
+func WriteValidatorData(db ethdb.Writer, v *staking.ValidatorWrapper) error {
+	bytes, err := rlp.EncodeToBytes(v)
+	if err != nil {
+		log.Error("[WriteValidatorData] Failed to encode")
+		return err
+	}
+	if err := db.Put(validatorKey(v.Address), bytes); err != nil {
+		log.Error("[WriteValidatorData] Failed to store to database")
+		return err
+	}
+	return err
+}
+
+// ReadValidatorSnapshot retrieves validator's snapshot by its address
+func ReadValidatorSnapshot(db ethdb.Reader, addr common.Address) (*staking.ValidatorWrapper, error) {
+	data, err := db.Get(validatorSnapshotKey(addr))
+	if err != nil || len(data) == 0 {
+		log.Info("ReadValidatorSnapshot", "err", err)
+		return nil, err
+	}
+	v := staking.ValidatorWrapper{}
+	if err := rlp.DecodeBytes(data, &v); err != nil {
+		log.Error("Unable to decode validator snapshot from database", "err", err, "address", addr.Hex())
+		return nil, err
+	}
+	return &v, nil
+}
+
+// WriteValidatorSnapshot stores validator's snapshot by its address
+func WriteValidatorSnapshot(db ethdb.Writer, v *staking.ValidatorWrapper) error {
+	bytes, err := rlp.EncodeToBytes(v)
+	if err != nil {
+		log.Error("[WriteValidatorSnapshot] Failed to encode")
+		return err
+	}
+	if err := db.Put(validatorSnapshotKey(v.Address), bytes); err != nil {
+		log.Error("[WriteValidatorSnapshot] Failed to store to database")
+		return err
+	}
+	return err
+}
+
+// ReadValidatorStats retrieves validator's stats by its address
+func ReadValidatorStats(db ethdb.Reader, addr common.Address) (*staking.ValidatorStats, error) {
+	data, err := db.Get(validatorStatsKey(addr))
+	if err != nil || len(data) == 0 {
+		log.Info("ReadValidatorStats", "err", err)
+		return nil, err
+	}
+	stats := staking.ValidatorStats{}
+	if err := rlp.DecodeBytes(data, &stats); err != nil {
+		log.Error("Unable to decode validator stats from database", "err", err, "address", addr.Hex())
+		return nil, err
+	}
+	return &stats, nil
+}
+
+// WriteValidatorStats stores validator's stats by its address
+func WriteValidatorStats(db ethdb.Writer, addr common.Address, stats *staking.ValidatorStats) error {
+	bytes, err := rlp.EncodeToBytes(stats)
+	if err != nil {
+		log.Error("[WriteValidatorStats] Failed to encode")
+		return err
+	}
+	if err := db.Put(validatorStatsKey(addr), bytes); err != nil {
+		log.Error("[WriteValidatorStats] Failed to store to database")
+		return err
+	}
+	return err
+}
+
+// DeleteValidatorSnapshot removes the validator's snapshot by its address
+func DeleteValidatorSnapshot(db DatabaseDeleter, addr common.Address) {
+	if err := db.Delete(validatorSnapshotKey(addr)); err != nil {
+		log.Error("Failed to delete snapshot of a validator")
+	}
+}
+
+// ReadValidatorList retrieves staking validator by its address
+// Return only active validators if activeOnly==true, otherwise, return all validators
+func ReadValidatorList(db ethdb.Reader, activeOnly bool) ([]common.Address, error) {
+	key := validatorListKey
+	if activeOnly {
+		key = activeValidatorListKey
+	}
+	data, err := db.Get(key)
+	if err != nil || len(data) == 0 {
+		return []common.Address{}, nil
+	}
+	addrs := []common.Address{}
+	if err := rlp.DecodeBytes(data, &addrs); err != nil {
+		log.Error("Unable to Decode validator List from database")
+		return nil, err
+	}
+	return addrs, nil
+}
+
+// WriteValidatorList stores staking validator's information by its address
+// Writes only for active validators if activeOnly==true, otherwise, writes for all validators
+func WriteValidatorList(db ethdb.Writer, addrs []common.Address, activeOnly bool) error {
+	key := validatorListKey
+	if activeOnly {
+		key = activeValidatorListKey
+	}
+
+	bytes, err := rlp.EncodeToBytes(addrs)
+	if err != nil {
+		log.Error("[WriteValidatorList] Failed to encode")
+	}
+	if err := db.Put(key, bytes); err != nil {
+		log.Error("[WriteValidatorList] Failed to store to database")
+	}
+	return err
+}
+
+// ReadDelegationsByDelegator retrieves the list of validators delegated by a delegator
+func ReadDelegationsByDelegator(db ethdb.Reader, delegator common.Address) ([]staking.DelegationIndex, error) {
+	data, err := db.Get(delegatorValidatorListKey(delegator))
+	if err != nil || len(data) == 0 {
+		return []staking.DelegationIndex{}, nil
+	}
+	addrs := []staking.DelegationIndex{}
+	if err := rlp.DecodeBytes(data, &addrs); err != nil {
+		log.Error("Unable to Decode delegations from database", "err", err)
+		return nil, err
+	}
+	return addrs, nil
+}
+
+// WriteDelegationsByDelegator stores the list of validators delegated by a delegator
+func WriteDelegationsByDelegator(db ethdb.Writer, delegator common.Address, indices []staking.DelegationIndex) error {
+	bytes, err := rlp.EncodeToBytes(indices)
+	if err != nil {
+		log.Error("[writeDelegationsByDelegator] Failed to encode")
+	}
+	if err := db.Put(delegatorValidatorListKey(delegator), bytes); err != nil {
+		log.Error("[writeDelegationsByDelegator] Failed to store to database")
+	}
+	return err
+}
+
+// ReadBlockRewardAccumulator ..
+func ReadBlockRewardAccumulator(db ethdb.Reader, number uint64) (*big.Int, error) {
+	data, err := db.Get(blockRewardAccumKey(number))
+	if err != nil {
+		return nil, err
+	}
+	return new(big.Int).SetBytes(data), nil
+}
+
+// WriteBlockRewardAccumulator ..
+func WriteBlockRewardAccumulator(db ethdb.Writer, newAccum *big.Int, number uint64) error {
+	return db.Put(blockRewardAccumKey(number), newAccum.Bytes())
 }
