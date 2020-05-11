@@ -71,6 +71,7 @@ type StateTransition struct {
 	data       []byte
 	state      vm.StateDB
 	evm        *vm.EVM
+	bc         ChainContext
 }
 
 // Message represents a message sent to a contract.
@@ -138,6 +139,13 @@ func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition 
 		data:     msg.Data(),
 		state:    evm.StateDB,
 	}
+}
+
+// NewStateTransition initialises and returns a new state transition object.
+func NewStateTransitionEx(evm *vm.EVM, msg Message, gp *GasPool, bc ChainContext) *StateTransition {
+	retval := NewStateTransition(evm, msg, gp)
+	retval.bc = bc
+	return retval
 }
 
 // ApplyMessage computes the new state by applying the given message
@@ -300,6 +308,7 @@ func (st *StateTransition) StakingTransitionDb() (usedGas uint64, err error) {
 	// Increment the nonce for the next transaction
 	st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
 
+	// ATLAS(yhx): should we verify msg.BlockNum() and st.evm.BlockNumber?
 	switch msg.Type() {
 	case types.StakeNewVal:
 		stkMsg := &staking.CreateValidator{}

@@ -5,8 +5,8 @@ import (
 )
 
 const (
-	isValidatorKeyStr = "Harmony/IsValidator/Key/v1"
-	isValidatorStr    = "Harmony/IsValidator/Value/v1"
+	isValidatorKeyStr = "Atlas/IsValidator/Key/v1"
+	isValidatorStr    = "Atlas/IsValidator/Value/v1"
 )
 
 // keys used to retrieve staking related informatio

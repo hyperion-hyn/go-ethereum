@@ -13,7 +13,15 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
+const (
+	//MaxPoolTransactionDataSize is a 32KB heuristic data limit for DOS prevention
+	MaxPoolTransactionDataSize = 32 * 1024
+	//MaxEncodedPoolTransactionSize is a heuristic raw/encoded data size limit. It has an additional 10KB for metadata
+	MaxEncodedPoolTransactionSize = MaxPoolTransactionDataSize + (10 * 1024)
+)
+
 var (
+
 	errStakingTransactionTypeCastErr = errors.New("Cannot type cast to matching staking type")
 )
 

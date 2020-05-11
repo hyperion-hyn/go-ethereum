@@ -1468,16 +1468,6 @@ func SubmitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (c
 	return tx.Hash(), nil
 }
 
-// SubmitStakingTransaction is a helper function that submits tx to txPool and logs a message.
-func SubmitStakingTransaction(ctx context.Context, b Backend, tx *types.Transaction,
-) (common.Hash, error) {
-	if err := b.SendStakingTx(ctx, tx); err != nil {
-		return common.Hash{}, err
-	}
-	log.Info("Submitted Staking transaction", "tx hash", tx.Hash().Hex())
-	return tx.Hash(), nil
-}
-
 // SendTransaction creates a transaction for the given argument, sign it and submit it to the
 // transaction pool.
 func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args SendTxArgs) (common.Hash, error) {
@@ -1812,21 +1802,3 @@ func (s *PublicNetAPI) PeerCount() hexutil.Uint {
 func (s *PublicNetAPI) Version() string {
 	return fmt.Sprintf("%d", s.networkVersion)
 }
-
-// ATLAS: APIs for staking
-// SendRawStakingTransaction will add the signed transaction to the transaction pool.
-// The sender is responsible for signing the transaction and using the correct nonce.
-func (s *PublicTransactionPoolAPI) SendRawStakingTransaction(ctx context.Context, encodedTx hexutil.Bytes) (common.Hash, error) {
-	tx := new(types.Transaction)
-	if err := rlp.DecodeBytes(encodedTx, tx); err != nil {
-		return common.Hash{}, err
-	}
-	c := s.b.ChainConfig().ChainID
-	if tx.ChainId().Cmp(c) != 0 {
-		e := errors.Wrapf(errInvalidChainID, "current chain id:%s", c.String())
-		return common.Hash{}, e
-	}
-	return SubmitStakingTransaction(ctx, s.b, tx)
-}
-
-// TODO: other APIs
