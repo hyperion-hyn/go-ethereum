@@ -88,7 +88,6 @@ type Message interface {
 	CheckNonce() bool
 	Data() []byte
 	Type() types.TransactionType
-	BlockNum() *big.Int
 }
 
 // IntrinsicGas computes the 'intrinsic gas' for a message with the given data.
@@ -308,9 +307,9 @@ func (st *StateTransition) StakingTransitionDb() (usedGas uint64, err error) {
 	// Increment the nonce for the next transaction
 	st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
 
-	// ATLAS(yhx): should we verify msg.BlockNum() and st.evm.BlockNumber?
+	// ATLAS(yhx): should we verify st.evm.BlockNumber and st.evm.BlockNumber?
 	switch msg.Type() {
-	case types.StakeNewVal:
+	case types.StakeCreateVal:
 		stkMsg := &staking.CreateValidator{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return 0, err
@@ -319,7 +318,7 @@ func (st *StateTransition) StakingTransitionDb() (usedGas uint64, err error) {
 		if msg.From() != stkMsg.ValidatorAddress {
 			return 0, errInvalidSigner
 		}
-		err = st.applyCreateValidatorTx(stkMsg, msg.BlockNum())
+		err = st.applyCreateValidatorTx(stkMsg, st.evm.BlockNumber)
 
 	case types.StakeEditVal:
 		stkMsg := &staking.EditValidator{}
@@ -330,7 +329,7 @@ func (st *StateTransition) StakingTransitionDb() (usedGas uint64, err error) {
 		if msg.From() != stkMsg.ValidatorAddress {
 			return 0, errInvalidSigner
 		}
-		err = st.applyEditValidatorTx(stkMsg, msg.BlockNum())
+		err = st.applyEditValidatorTx(stkMsg, st.evm.BlockNumber)
 
 	case types.Delegate:
 		stkMsg := &staking.Delegate{}

@@ -305,8 +305,3 @@ func (b *EthAPIBackend) ServiceFilter(ctx context.Context, session *bloombits.Ma
 		go session.Multiplex(bloomRetrievalBatch, bloomRetrievalWait, b.eth.bloomRequests)
 	}
 }
-
-// ATLAS: SendStakingTx adds a staking transaction
-func (b *EthAPIBackend) SendStakingTx(ctx context.Context, newStakingTx *types.Transaction) error {
-	return b.eth.txPool.AddLocal(newStakingTx)
-}

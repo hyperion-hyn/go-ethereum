@@ -1,6 +1,7 @@
 package eth
 
 import (
+    "context"
     "math/big"
 
     "github.com/harmony-one/harmony/consensus/quorum"
@@ -10,15 +11,9 @@ import (
     "github.com/ethereum/go-ethereum/rpc"
     "github.com/ethereum/go-ethereum/shard"
     "github.com/ethereum/go-ethereum/shard/committee"
-)
 
-// SendStakingTx adds a staking transaction
-func (b *EthAPIBackend) SendStakingTx(
-    ctx context.Context,
-    newStakingTx *staking.StakingTransaction) error {
-    b.hmy.nodeAPI.AddPendingStakingTransaction(newStakingTx)
-    return nil
-}
+    staking "github.com/ethereum/go-ethereum/staking/types"
+)
 
 // GetElectedValidatorAddresses returns the address of elected validators for current epoch
 func (b *EthAPIBackend) GetElectedValidatorAddresses() []common.Address {

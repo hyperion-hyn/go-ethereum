@@ -21,7 +21,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	staking "github.com/ethereum/go-ethereum/staking/types"
+	stk "github.com/ethereum/go-ethereum/staking/types"
 )
 
 // StateDB is an EVM database for full state querying.
@@ -67,12 +67,12 @@ type StateDB interface {
 	ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) error
 
 	// ATLAS
-	GetStakingInfo(common.Address) *staking.ValidatorWrapper
-	UpdateStakingInfo(common.Address, *staking.ValidatorWrapper) error
+	GetStakingInfo(common.Address) *stk.ValidatorWrapper
+	UpdateStakingInfo(common.Address, *stk.ValidatorWrapper) error
 	SetValidatorFlag(common.Address)
 	UnsetValidatorFlag(common.Address)
 	IsValidator(common.Address) bool
-	AddReward(*staking.ValidatorWrapper, *big.Int) error
+	AddReward(*stk.ValidatorWrapper, *big.Int) error
 }
 
 // CallContext provides a basic interface for the EVM calling conventions. The EVM

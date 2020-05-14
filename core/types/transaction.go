@@ -27,6 +27,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
+	staking "github.com/harmony-one/harmony/staking/types"
 )
 
 //go:generate gencodec -type txdata -field-override txdataMarshaling -out gen_tx_json.go
@@ -42,12 +43,18 @@ type TransactionType byte
 // Different Transaction Types
 const (
 	Normal TransactionType = iota
-	StakeNewVal
+	StakeCreateVal
 	StakeEditVal
 	Delegate
 	Undelegate
 	CollectRewards
 )
+
+// StakingTypeMap is the map from staking type to transactionType
+var StakingTypeMap = map[staking.Directive]TransactionType{staking.DirectiveCreateValidator: StakeCreateVal,
+	staking.DirectiveEditValidator: StakeEditVal, staking.DirectiveDelegate: Delegate,
+	staking.DirectiveUndelegate: Undelegate, staking.DirectiveCollectRewards: CollectRewards}
+
 // ATLAS - END
 
 // TODO: check whether Transaction's methods are compatible to staking transaction or not.
@@ -423,6 +430,7 @@ type Message struct {
 	data       []byte
 	checkNonce bool
 	txType     TransactionType
+	blockNum   *big.Int
 }
 
 func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, checkNonce bool) Message {
