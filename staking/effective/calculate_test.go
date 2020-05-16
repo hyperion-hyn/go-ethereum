@@ -11,8 +11,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/harmony-one/bls/ffi/go/bls"
-	"github.com/ethereum/go-ethereum/numeric"
-	"github.com/ethereum/go-ethereum/staking/types"
+	"github.com/harmony-one/harmony/numeric"
+	"github.com/harmony-one/harmony/shard"
 )
 
 const eposTestingFile = "epos.json"
@@ -20,7 +20,7 @@ const eposTestingFile = "epos.json"
 var (
 	testingNumber    = 20
 	testingSlots     slotsData
-	testingPurchases Slots
+	testingPurchases []SlotPurchase
 	expectedMedian   numeric.Dec
 	maxAccountGen    = int64(98765654323123134)
 	accountGen       = rand.New(rand.NewSource(1337))
@@ -53,14 +53,14 @@ func init() {
 	testingPurchases = generateRandomSlots(testingNumber)
 }
 
-func generateRandomSlots(num int) Slots {
-	randomSlots := Slots{}
+func generateRandomSlots(num int) []SlotPurchase {
+	randomSlots := []SlotPurchase{}
 	for i := 0; i < num; i++ {
 		addr := common.Address{}
 		addr.SetBytes(big.NewInt(int64(accountGen.Int63n(maxAccountGen))).Bytes())
 		secretKey := bls.SecretKey{}
 		secretKey.Deserialize(big.NewInt(int64(keyGen.Int63n(maxKeyGen))).Bytes())
-		key := types.BlsPublicKey{}
+		key := shard.BlsPublicKey{}
 		key.FromLibBLSPublicKey(secretKey.GetPublicKey())
 		stake := numeric.NewDecFromBigInt(big.NewInt(int64(stakeGen.Int63n(maxStakeGen))))
 		randomSlots = append(randomSlots, SlotPurchase{addr, key, stake})
@@ -71,14 +71,18 @@ func generateRandomSlots(num int) Slots {
 func TestMedian(t *testing.T) {
 	copyPurchases := append([]SlotPurchase{}, testingPurchases...)
 	sort.SliceStable(copyPurchases,
-		func(i, j int) bool { return copyPurchases[i].Dec.LTE(copyPurchases[j].Dec) })
+		func(i, j int) bool {
+			return copyPurchases[i].Stake.LTE(copyPurchases[j].Stake)
+		})
 	numPurchases := len(copyPurchases) / 2
 	if len(copyPurchases)%2 == 0 {
-		expectedMedian = copyPurchases[numPurchases-1].Dec.Add(copyPurchases[numPurchases].Dec).Quo(two)
+		expectedMedian = copyPurchases[numPurchases-1].Stake.Add(
+			copyPurchases[numPurchases].Stake,
+		).Quo(two)
 	} else {
-		expectedMedian = copyPurchases[numPurchases].Dec
+		expectedMedian = copyPurchases[numPurchases].Stake
 	}
-	med := median(testingPurchases)
+	med := Median(testingPurchases)
 	if !med.Equal(expectedMedian) {
 		t.Errorf("Expected: %s, Got: %s", expectedMedian.String(), med.String())
 	}
@@ -86,11 +90,14 @@ func TestMedian(t *testing.T) {
 
 func TestEffectiveStake(t *testing.T) {
 	for _, val := range testingPurchases {
-		expectedStake := numeric.MaxDec(numeric.MinDec(numeric.OneDec().Add(c).Mul(expectedMedian), val.Dec),
+		expectedStake := numeric.MaxDec(
+			numeric.MinDec(numeric.OneDec().Add(c).Mul(expectedMedian), val.Stake),
 			numeric.OneDec().Sub(c).Mul(expectedMedian))
-		calculatedStake := effectiveStake(expectedMedian, val.Dec)
+		calculatedStake := effectiveStake(expectedMedian, val.Stake)
 		if !expectedStake.Equal(calculatedStake) {
-			t.Errorf("Expected: %s, Got: %s", expectedStake.String(), calculatedStake.String())
+			t.Errorf(
+				"Expected: %s, Got: %s", expectedStake.String(), calculatedStake.String(),
+			)
 		}
 	}
 }

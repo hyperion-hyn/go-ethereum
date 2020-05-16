@@ -7,8 +7,6 @@ import (
 	"sort"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/log"
-
 	"github.com/ethereum/go-ethereum/numeric"
 	"github.com/ethereum/go-ethereum/staking/types"
 )
@@ -29,76 +27,66 @@ func effectiveStake(median, actual numeric.Dec) numeric.Dec {
 
 // SlotPurchase ..
 type SlotPurchase struct {
-	common.Address     `json:"slot-owner"`
-	types.BlsPublicKey `json:"bls-public-key"`
-	numeric.Dec        `json:"eposed-stake"`
+	Addr  common.Address     `json:"slot-owner"`
+	Key   types.BlsPublicKey `json:"bls-public-key"`
+	Stake numeric.Dec        `json:"eposed-stake"`
+}
+
+// MarshalJSON ..
+func (p SlotPurchase) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Addr  string      `json:"slot-owner"`
+		Key   string      `json:"bls-public-key"`
+		Stake numeric.Dec `json:"eposed-stake"`
+	}{
+		common.MustAddressToBech32(p.Addr),
+		p.Key.Hex(),
+		p.Stake,
+	})
 }
 
 // SlotOrder ..
 type SlotOrder struct {
-	Stake       *big.Int
-	SpreadAmong []types.BlsPublicKey
+	Stake       *big.Int             `json:"stake"`
+	SpreadAmong []types.BlsPublicKey `json:"keys-at-auction"`
+	Percentage  numeric.Dec          `json:"percentage-of-total-auction-stake"`
 }
 
-// Slots ..
-type Slots []SlotPurchase
-
-// JSON is a plain JSON dump
-func (s Slots) JSON() string {
-	type t struct {
-		Address string `json:"slot-owner"`
-		Key     string `json:"bls-public-key"`
-		Stake   string `json:"actual-stake"`
-	}
-	type v struct {
-		Slots []t `json:"slots"`
-	}
-	data := v{}
-	for i := range s {
-		newData := t{
-			common.MustAddressToBech32(s[i].Address),
-			s[i].BlsPublicKey.Hex(),
-			s[i].Dec.String(),
-		}
-		data.Slots = append(data.Slots, newData)
-	}
-	b, _ := json.Marshal(data)
-	return string(b)
-}
-
-func median(stakes []SlotPurchase) numeric.Dec {
-
+// Median ..
+func Median(stakes []SlotPurchase) numeric.Dec {
 	if len(stakes) == 0 {
-		log.Debug("Input to median has len 0, check caller", "non-zero", len(stakes))
+		return numeric.ZeroDec()
 	}
 
 	sort.SliceStable(
 		stakes,
-		func(i, j int) bool { return stakes[i].Dec.LT(stakes[j].Dec) },
+		func(i, j int) bool {
+			return stakes[i].Stake.GT(stakes[j].Stake)
+		},
 	)
 	const isEven = 0
 	switch l := len(stakes); l % 2 {
 	case isEven:
 		left := (l / 2) - 1
-		right := (l / 2)
-		log.Info("left", left, "right", right)
-		return stakes[left].Dec.Add(stakes[right].Dec).Quo(two)
+		right := l / 2
+		return stakes[left].Stake.Add(stakes[right].Stake).Quo(two)
 	default:
-		log.Info("median index", l/2)
-		return stakes[l/2].Dec
+		return stakes[l/2].Stake
 	}
 }
 
-// Apply ..
-func Apply(shortHand map[common.Address]SlotOrder, pull int) Slots {
-	eposedSlots := Slots{}
+// Compute ..
+func Compute(
+	shortHand map[common.Address]*SlotOrder, pull int,
+) (numeric.Dec, []SlotPurchase) {
+	eposedSlots := []SlotPurchase{}
 	if len(shortHand) == 0 {
-		return eposedSlots
+		return numeric.ZeroDec(), eposedSlots
 	}
 
 	type t struct {
 		addr common.Address
-		slot SlotOrder
+		slot *SlotOrder
 	}
 
 	shorter := []t{}
@@ -128,13 +116,12 @@ func Apply(shortHand map[common.Address]SlotOrder, pull int) Slots {
 			})
 		}
 	}
-	if len(eposedSlots) < len(shortHand) {
-		// WARN Should never happen
-	}
 
 	sort.SliceStable(
 		eposedSlots,
-		func(i, j int) bool { return eposedSlots[i].Dec.GT(eposedSlots[j].Dec) },
+		func(i, j int) bool {
+			return eposedSlots[i].Stake.GT(eposedSlots[j].Stake)
+		},
 	)
 
 	if l := len(eposedSlots); l < pull {
@@ -143,14 +130,21 @@ func Apply(shortHand map[common.Address]SlotOrder, pull int) Slots {
 	picks := eposedSlots[:pull]
 
 	if len(picks) == 0 {
-		return Slots{}
+		return numeric.ZeroDec(), []SlotPurchase{}
 	}
 
-	median := median(picks)
+	return Median(picks), picks
 
+}
+
+// Apply ..
+func Apply(shortHand map[common.Address]*SlotOrder, pull int) (
+	numeric.Dec, []SlotPurchase,
+) {
+	median, picks := Compute(shortHand, pull)
 	for i := range picks {
-		picks[i].Dec = effectiveStake(median, picks[i].Dec)
+		picks[i].Stake = effectiveStake(median, picks[i].Stake)
 	}
 
-	return picks
+	return median, picks
 }
