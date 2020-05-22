@@ -60,8 +60,8 @@ type CreateValidator struct {
 	CommissionRates    `json:"commission"`
 	MinSelfDelegation  *big.Int             `json:"min-self-delegation"`
 	MaxTotalDelegation *big.Int             `json:"max-total-delegation"`
-	SlotPubKeys        []types.BlsPublicKey `json:"slot-pub-keys"`
-	SlotKeySigs        []types.BlsSignature `json:"slot-key-sigs"`
+	SlotPubKeys        []types.BLSPublicKey `json:"slot-pub-keys"`
+	SlotKeySigs        []types.BLSSignature `json:"slot-key-sigs"`
 	Amount             *big.Int             `json:"amount"`
 }
 
@@ -72,9 +72,9 @@ type EditValidator struct {
 	CommissionRate     *numeric.Dec          `json:"commission-rate" rlp:"nil"`
 	MinSelfDelegation  *big.Int              `json:"min-self-delegation" rlp:"nil"`
 	MaxTotalDelegation *big.Int              `json:"max-total-delegation" rlp:"nil"`
-	SlotKeyToRemove    *types.BlsPublicKey   `json:"slot-key-to_remove" rlp:"nil"`
-	SlotKeyToAdd       *types.BlsPublicKey   `json:"slot-key-to_add" rlp:"nil"`
-	SlotKeyToAddSig    *types.BlsSignature   `json:"slot-key-to-add-sig" rlp:"nil"`
+	SlotKeyToRemove    *types.BLSPublicKey   `json:"slot-key-to_remove" rlp:"nil"`
+	SlotKeyToAdd       *types.BLSPublicKey   `json:"slot-key-to_add" rlp:"nil"`
+	SlotKeyToAddSig    *types.BLSSignature   `json:"slot-key-to-add-sig" rlp:"nil"`
 	EPOSStatus         effective.Eligibility `json:"epos-eligibility-status" rlp:"nil"`
 }
 

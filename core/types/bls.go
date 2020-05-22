@@ -10,7 +10,7 @@ import (
 )
 
 var (
-    emptyBlsPubKey = BlsPublicKey{}
+    emptyBlsPubKey = BLSPublicKey{}
 )
 
 // PublicKeySizeInBytes ..
@@ -20,31 +20,31 @@ const (
 )
 
 
-// BlsPublicKey defines the bls public key
-type BlsPublicKey [PublicKeySizeInBytes]byte
+// BLSPublicKey defines the bls public key
+type BLSPublicKey [PublicKeySizeInBytes]byte
 
-// BlsSignature defines the bls signature
-type BlsSignature [BlsSignatureSizeInBytes]byte
+// BLSSignature defines the bls signature
+type BLSSignature [BlsSignatureSizeInBytes]byte
 
 
 
 // Big ..
-func (pk BlsPublicKey) Big() *big.Int {
+func (pk BLSPublicKey) Big() *big.Int {
     return new(big.Int).SetBytes(pk[:])
 }
 
 // IsEmpty returns whether the bls public key is empty 0 bytes
-func (pk BlsPublicKey) IsEmpty() bool {
+func (pk BLSPublicKey) IsEmpty() bool {
     return bytes.Compare(pk[:], emptyBlsPubKey[:]) == 0
 }
 
 // Hex returns the hex string of bls public key
-func (pk BlsPublicKey) Hex() string {
+func (pk BLSPublicKey) Hex() string {
     return hex.EncodeToString(pk[:])
 }
 
 // MarshalJSON ..
-func (pk BlsPublicKey) MarshalJSON() ([]byte, error) {
+func (pk BLSPublicKey) MarshalJSON() ([]byte, error) {
     buf := bytes.Buffer{}
     buf.WriteString(`"`)
     buf.WriteString(pk.Hex())
@@ -53,7 +53,7 @@ func (pk BlsPublicKey) MarshalJSON() ([]byte, error) {
 }
 
 // FromLibBLSPublicKey replaces the key contents with the given key,
-func (pk *BlsPublicKey) FromLibBLSPublicKey(key *bls.PublicKey) error {
+func (pk *BLSPublicKey) FromLibBLSPublicKey(key *bls.PublicKey) error {
     bytes := key.Serialize()
     if len(bytes) != len(pk) {
         return errors.New( fmt.Sprint("BLS public key size mismatch",
@@ -65,12 +65,12 @@ func (pk *BlsPublicKey) FromLibBLSPublicKey(key *bls.PublicKey) error {
 }
 
 // ToLibBLSPublicKey copies the key contents into the given key.
-func (pk *BlsPublicKey) ToLibBLSPublicKey(key *bls.PublicKey) error {
+func (pk *BLSPublicKey) ToLibBLSPublicKey(key *bls.PublicKey) error {
     return key.Deserialize(pk[:])
 }
 
-// CompareBlsPublicKey compares two BlsPublicKey, lexicographically.
-func CompareBlsPublicKey(k1, k2 BlsPublicKey) int {
+// CompareBlsPublicKey compares two BLSPublicKey, lexicographically.
+func CompareBlsPublicKey(k1, k2 BLSPublicKey) int {
     return bytes.Compare(k1[:], k2[:])
 }
 

@@ -5,6 +5,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -185,7 +186,7 @@ type Validator struct {
 	// ECDSA address of the validator
 	Address common.Address `json:"address"`
 	// The BLS public key of the validator for consensus
-	SlotPubKeys []types.BlsPublicKey `json:"bls-public-keys"`
+	SlotPubKeys []types.BLSPublicKey `json:"bls-public-keys"`
 	// The number of the last epoch this validator is
 	// selected in committee (0 means never selected)
 	LastEpochInCommittee *big.Int `json:"last-epoch-in-committee"`
@@ -286,7 +287,7 @@ func (v *Validator) SanityCheck(oneThirdExtrn int) error {
 		)
 	}
 
-	allKeys := map[types.BlsPublicKey]struct{}{}
+	allKeys := map[types.BLSPublicKey]struct{}{}
 	for i := range v.SlotPubKeys {
 		if _, ok := allKeys[v.SlotPubKeys[i]]; !ok {
 			allKeys[v.SlotPubKeys[i]] = struct{}{}
@@ -430,7 +431,7 @@ func (d Description) EnsureLength() (Description, error) {
 
 // VerifyBLSKeys checks if the public BLS key at index i of pubKeys matches the
 // BLS key signature at index i of pubKeysSigs.
-func VerifyBLSKeys(pubKeys []types.BlsPublicKey, pubKeySigs []types.BlsSignature) error {
+func VerifyBLSKeys(pubKeys []types.BLSPublicKey, pubKeySigs []types.BLSSignature) error {
 	if len(pubKeys) != len(pubKeySigs) {
 		return errBLSKeysNotMatchSigs
 	}
@@ -445,7 +446,7 @@ func VerifyBLSKeys(pubKeys []types.BlsPublicKey, pubKeySigs []types.BlsSignature
 }
 
 // VerifyBLSKey checks if the public BLS key matches the BLS signature
-func VerifyBLSKey(pubKey *types.BlsPublicKey, pubKeySig *types.BlsSignature) error {
+func VerifyBLSKey(pubKey *types.BLSPublicKey, pubKeySig *types.BLSSignature) error {
 	if len(pubKeySig) == 0 {
 		return errBLSKeysNotMatchSigs
 	}
@@ -477,6 +478,9 @@ func CreateValidatorFromNewMsg(val *CreateValidator, blockNum *big.Int) (*Valida
 	}
 	commission := Commission{val.CommissionRates, blockNum}
 	pubKeys := append(val.SlotPubKeys[0:0], val.SlotPubKeys...)
+
+	// ATLAS(zgx): only one BLS key allowed
+	pubKeys = pubKeys[0: math.Min(1, len(pubKeys))]
 
 	if err = VerifyBLSKeys(pubKeys, val.SlotKeySigs); err != nil {
 		return nil, err
@@ -555,6 +559,9 @@ func UpdateValidatorFromEditMsg(validator *Validator, edit *EditValidator) error
 			return errSlotKeyToAddExists
 		}
 	}
+
+	// ATLAS(zgx): only one BLS key allowed
+	validator.SlotPubKeys = validator.SlotPubKeys[0:math.Min(1, len(validator.SlotPubKeys))]
 
 	switch validator.Status {
 	case effective.Banned:
