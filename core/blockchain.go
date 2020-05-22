@@ -2204,6 +2204,9 @@ func (bc *BlockChain) Config() *params.ChainConfig { return bc.chainConfig }
 // Engine retrieves the blockchain's consensus engine.
 func (bc *BlockChain) Engine() consensus.Engine { return bc.engine }
 
+// Database retrieves the blockchain's database.
+func (bc *BlockChain) Database() ethdb.Database { return bc.db }
+
 // SubscribeRemovedLogsEvent registers a subscription of RemovedLogsEvent.
 func (bc *BlockChain) SubscribeRemovedLogsEvent(ch chan<- RemovedLogsEvent) event.Subscription {
 	return bc.scope.Track(bc.rmLogsFeed.Subscribe(ch))

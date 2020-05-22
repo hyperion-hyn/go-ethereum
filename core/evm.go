@@ -23,6 +23,8 @@ import (
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/ethdb"
+	staking "github.com/ethereum/go-ethereum/staking/types"
 )
 
 // ChainContext supports retrieving headers and consensus parameters from the
@@ -31,8 +33,20 @@ type ChainContext interface {
 	// Engine retrieves the chain's consensus engine.
 	Engine() consensus.Engine
 
+	// Database retrieves the blockchain's database.
+	Database() ethdb.Database
+
 	// GetHeader returns the hash corresponding to their hash.
 	GetHeader(common.Hash, uint64) *types.Header
+
+	// ReadDelegationsByDelegator returns the validators list of a delegator
+	ReadDelegationsByDelegator(common.Address) (staking.DelegationIndexes, error)
+
+	// ReadValidatorSnapshot returns the snapshot of validator at the beginning of current epoch.
+	ReadValidatorSnapshot(common.Address) (*staking.ValidatorSnapshot, error)
+
+	// ReadValidatorList returns the list of all validators
+	ReadValidatorList() ([]common.Address, error)
 }
 
 // NewEVMContext creates a new context for use in the EVM.
@@ -55,6 +69,8 @@ func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author
 		Difficulty:  new(big.Int).Set(header.Difficulty),
 		GasLimit:    header.GasLimit,
 		GasPrice:    new(big.Int).Set(msg.GasPrice()),
+		EpochNumber: header.Epoch(),
+		ChainContext:chain,
 	}
 }
 
