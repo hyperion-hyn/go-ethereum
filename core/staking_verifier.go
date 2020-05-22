@@ -64,7 +64,9 @@ func VerifyAndCreateValidatorFromMsg(
 	wrapper.Counters.NumBlocksSigned = zero
 	wrapper.Counters.NumBlocksToSign = zero
 	wrapper.BlockReward = big.NewInt(0)
-	maxBLSKeyAllowed := shard.ExternalSlotsAvailableForEpoch(epoch) / 3
+
+	// ATLAS(zgx): only one BLS key allowed
+	maxBLSKeyAllowed := 1
 	if err := wrapper.SanityCheck(maxBLSKeyAllowed); err != nil {
 		return nil, err
 	}
@@ -104,6 +106,7 @@ func VerifyAndEditValidatorFromMsg(
 		return nil, errCommissionRateChangeTooHigh
 	}
 
+	// ATLAS(zgx): use epoch parameter to retrive specific state
 	snapshotValidator, err := chainContext.ReadValidatorSnapshot(wrapper.Address)
 	if err != nil {
 		return nil, errors.WithMessage(err, "Validator snapshot not found.")
@@ -120,14 +123,16 @@ func VerifyAndEditValidatorFromMsg(
 	) {
 		return nil, errCommissionRateChangeTooFast
 	}
-	maxBLSKeyAllowed := shard.ExternalSlotsAvailableForEpoch(epoch) / 3
+
+	// ATLAS(zgx): only one BLS key allowed
+	maxBLSKeyAllowed := 1
 	if err := wrapper.SanityCheck(maxBLSKeyAllowed); err != nil {
 		return nil, err
 	}
 	return wrapper, nil
 }
 
-const oneThousand = 1000
+const oneThousand = 2000
 
 var (
 	oneAsBigInt           = big.NewInt(denominations.One)
