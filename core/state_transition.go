@@ -139,13 +139,6 @@ func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition 
 	}
 }
 
-// NewStateTransition initialises and returns a new state transition object.
-func NewStateTransitionEx(evm *vm.EVM, msg Message, gp *GasPool, bc ChainContext) *StateTransition {
-	retval := NewStateTransition(evm, msg, gp)
-	retval.bc = bc
-	return retval
-}
-
 // ApplyMessage computes the new state by applying the given message
 // against the old state within the environment.
 //
@@ -155,11 +148,6 @@ func NewStateTransitionEx(evm *vm.EVM, msg Message, gp *GasPool, bc ChainContext
 // state and would never be accepted within a block.
 func ApplyMessage(evm *vm.EVM, msg Message, gp *GasPool) ([]byte, uint64, bool, error) {
 	return NewStateTransition(evm, msg, gp).TransitionDb()
-}
-
-// ATLAS: ApplyStakingMessage computes the new state for staking message
-func ApplyStakingMessage(evm *vm.EVM, msg Message, gp *GasPool) (uint64, error) {
-	return NewStateTransition(evm, msg, gp).StakingTransitionDb()
 }
 
 // to returns the recipient of the message.

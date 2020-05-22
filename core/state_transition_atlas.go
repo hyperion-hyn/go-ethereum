@@ -17,6 +17,18 @@ import (
     staking "github.com/ethereum/go-ethereum/staking/types"
 )
 
+// NewStateTransition initialises and returns a new state transition object.
+func NewStateTransitionEx(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition {
+    retval := NewStateTransition(evm, msg, gp)
+    retval.bc = evm.ChainContext
+    return retval
+}
+
+// ATLAS: ApplyStakingMessage computes the new state for staking message
+func ApplyStakingMessage(evm *vm.EVM, msg Message, gp *GasPool) (uint64, error) {
+    return NewStateTransitionEx(evm, msg, gp).StakingTransitionDb()
+}
+
 // ATLAS
 // StakingTransitionDb will transition the state by applying the staking message and
 // returning the result including the used gas. It returns an error if failed.
