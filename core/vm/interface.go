@@ -19,7 +19,9 @@ package vm
 import (
 	"math/big"
 
+
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/numeric"
 	"github.com/ethereum/go-ethereum/core/types"
 	stk "github.com/ethereum/go-ethereum/staking/types"
 )
@@ -67,12 +69,12 @@ type StateDB interface {
 	ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) error
 
 	// ATLAS
-	ValidatorWrapper(common.Address) (*stk.ValidatorWrapper, error)
+	ValidatorWrapperCopy(common.Address) (*stk.ValidatorWrapper, error)
 	UpdateValidatorWrapper(common.Address, *stk.ValidatorWrapper) error
 	SetValidatorFlag(common.Address)
 	UnsetValidatorFlag(common.Address)
 	IsValidator(common.Address) bool
-	AddReward(*stk.ValidatorWrapper, *big.Int) error
+	AddReward(*stk.ValidatorWrapper, *big.Int, map[common.Address]numeric.Dec) error
 }
 
 // CallContext provides a basic interface for the EVM calling conventions. The EVM

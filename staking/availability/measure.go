@@ -4,23 +4,17 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/block"
-	"github.com/ethereum/go-ethereum/core/state"
 	bls2 "github.com/ethereum/go-ethereum/crypto/bls"
-	"github.com/ethereum/go-ethereum/internal/ctxerror"
 	"github.com/ethereum/go-ethereum/internal/utils"
 	"github.com/ethereum/go-ethereum/numeric"
-
+	"github.com/ethereum/go-ethereum/shard"
 	"github.com/ethereum/go-ethereum/staking/effective"
 	staking "github.com/ethereum/go-ethereum/staking/types"
 	"github.com/pkg/errors"
 )
 
 var (
-	measure                    = numeric.NewDec(2).Quo(numeric.NewDec(3))
-	errValidatorEpochDeviation = errors.New(
-		"validator snapshot epoch not exactly one epoch behind",
-	)
+	measure = numeric.NewDec(2).Quo(numeric.NewDec(3))
 	// ErrDivByZero ..
 	ErrDivByZero = errors.New("toSign of availability cannot be 0, mistake in protocol")
 )
@@ -30,23 +24,15 @@ func BlockSigners(
 	bitmap []byte, parentCommittee *shard.Committee,
 ) (shard.SlotList, shard.SlotList, error) {
 	committerKeys, err := parentCommittee.BLSPublicKeys()
-
 	if err != nil {
-		return nil, nil, ctxerror.New(
-			"cannot convert a BLS public key",
-		).WithCause(err)
+		return nil, nil, err
 	}
-
 	mask, err := bls2.NewMask(committerKeys, nil)
 	if err != nil {
-		return nil, nil, ctxerror.New(
-			"cannot create group sig mask",
-		).WithCause(err)
+		return nil, nil, err
 	}
 	if err := mask.SetMask(bitmap); err != nil {
-		return nil, nil, ctxerror.New(
-			"cannot set group sig mask bits",
-		).WithCause(err)
+		return nil, nil, err
 	}
 
 	payable, missing := shard.SlotList{}, shard.SlotList{}
@@ -54,9 +40,7 @@ func BlockSigners(
 	for idx, member := range parentCommittee.Slots {
 		switch signed, err := mask.IndexEnabled(idx); true {
 		case err != nil:
-			return nil, nil, ctxerror.New("cannot check for committer bit",
-				"committerIndex", idx,
-			).WithCause(err)
+			return nil, nil, err
 		case signed:
 			payable = append(payable, member)
 		default:
@@ -67,17 +51,17 @@ func BlockSigners(
 }
 
 // BallotResult returns
-// (parentCommittee.Slots, payable, missing, err)
+// (parentCommittee.Slots, payable, missings, err)
 func BallotResult(
-	parentHeader, header *block.Header, parentShardState *shard.State, shardID uint32,
+	parentHeader, header RoundHeader, parentShardState *shard.State, shardID uint32,
 ) (shard.SlotList, shard.SlotList, shard.SlotList, error) {
 	parentCommittee, err := parentShardState.FindCommitteeByID(shardID)
 
 	if err != nil {
-		return nil, nil, nil, ctxerror.New(
-			"cannot find shard in the shard state",
-			"parentBlockNumber", parentHeader.Number(),
-			"shardID", parentHeader.ShardID(),
+		return nil, nil, nil, errors.Errorf(
+			"cannot find shard in the shard state %d %d",
+			parentHeader.Number(),
+			parentHeader.ShardID(),
 		)
 	}
 
@@ -94,7 +78,7 @@ type signerKind struct {
 
 func bumpCount(
 	bc Reader,
-	state *state.DB,
+	state ValidatorState,
 	signers []signerKind,
 	stakedAddrSet map[common.Address]struct{},
 ) error {
@@ -122,12 +106,6 @@ func bumpCount(
 					wrapper.Counters.NumBlocksSigned, common.Big1,
 				)
 			}
-
-			if err := state.UpdateValidatorWrapper(
-				addr, wrapper,
-			); err != nil {
-				return err
-			}
 		}
 	}
 
@@ -138,20 +116,13 @@ func bumpCount(
 func IncrementValidatorSigningCounts(
 	bc Reader,
 	staked *shard.StakedSlots,
-	state *state.DB,
+	state ValidatorState,
 	signers, missing shard.SlotList,
 ) error {
 	return bumpCount(
 		bc, state, []signerKind{{false, missing}, {true, signers}},
 		staked.LookupSet,
 	)
-}
-
-// Reader ..
-type Reader interface {
-	ReadValidatorSnapshot(
-		addr common.Address,
-	) (*staking.ValidatorWrapper, error)
 }
 
 // ComputeCurrentSigning returns (signed, toSign, quotient, error)
@@ -172,8 +143,6 @@ func ComputeCurrentSigning(
 	)
 
 	if toSign.Cmp(common.Big0) == 0 {
-		utils.Logger().Info().
-			Msg("toSign is 0, perhaps did not receive crosslink proving signing")
 		return computed
 	}
 
@@ -187,8 +156,7 @@ func ComputeCurrentSigning(
 		utils.Logger().Error().Msg("negative number of blocks to sign")
 	}
 
-	s1, s2 :=
-		numeric.NewDecFromBigInt(signed), numeric.NewDecFromBigInt(toSign)
+	s1, s2 := numeric.NewDecFromBigInt(signed), numeric.NewDecFromBigInt(toSign)
 	computed.Percentage = s1.Quo(s2)
 	computed.IsBelowThreshold = IsBelowSigningThreshold(computed.Percentage)
 	return computed
@@ -206,7 +174,7 @@ func IsBelowSigningThreshold(quotient numeric.Dec) bool {
 // signing threshold is 66%
 func ComputeAndMutateEPOSStatus(
 	bc Reader,
-	state *state.DB,
+	state ValidatorState,
 	addr common.Address,
 ) error {
 	utils.Logger().Info().Msg("begin compute for availability")
@@ -215,20 +183,20 @@ func ComputeAndMutateEPOSStatus(
 	if err != nil {
 		return err
 	}
+	if wrapper.Status == effective.Banned {
+		utils.Logger().Debug().Msg("Can't update EPoS status on a banned validator")
+		return nil
+	}
 
 	snapshot, err := bc.ReadValidatorSnapshot(wrapper.Address)
 	if err != nil {
 		return err
 	}
 
-	computed := ComputeCurrentSigning(snapshot, wrapper)
+	computed := ComputeCurrentSigning(snapshot.Validator, wrapper)
 
-	utils.Logger().Info().
-		Str("signed", computed.Signed.String()).
-		Str("to-sign", computed.ToSign.String()).
-		Str("percentage-signed", computed.Percentage.String()).
-		Bool("is-below-threshold", computed.IsBelowThreshold).
-		Msg("check if signing percent is meeting required threshold")
+	utils.Logger().
+		Info().Msg("check if signing percent is meeting required threshold")
 
 	const missedTooManyBlocks = true
 
@@ -237,16 +205,11 @@ func ComputeAndMutateEPOSStatus(
 		wrapper.Status = effective.Inactive
 		utils.Logger().Info().
 			Str("threshold", measure.String()).
+			Interface("computed", computed).
 			Msg("validator failed availability threshold, set to inactive")
 	default:
-		// Default is no-op so validator who wants to leave the committee can actually leave.
-	}
-
-	if err := state.UpdateValidatorWrapper(
-		addr, wrapper,
-	); err != nil {
-		const msg = "[ComputeAndMutateEPOSStatus] failed update validator info"
-		return ctxerror.New(msg).WithCause(err)
+		// Default is no-op so validator who wants
+		// to leave the committee can actually leave.
 	}
 
 	return nil

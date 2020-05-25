@@ -8,9 +8,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/harmony-one/bls/ffi/go/bls"
-	common2 "github.com/harmony-one/harmony/internal/common"
-	numeric "github.com/harmony-one/harmony/numeric"
-	"github.com/harmony-one/harmony/shard"
+	common "github.com/ethereum/go-ethereum/internal/common"
+	numeric "github.com/ethereum/go-ethereum/numeric"
+	"github.com/ethereum/go-ethereum/shard"
 )
 
 // for testing purpose
@@ -21,8 +21,8 @@ var (
 )
 
 func createDelegate() (*StakingTransaction, error) {
-	dAddr, _ := common2.Bech32ToAddress(testAccount)
-	vAddr, _ := common2.Bech32ToAddress(testAccount)
+	dAddr, _ := common.Bech32ToAddress(testAccount)
+	vAddr, _ := common.Bech32ToAddress(testAccount)
 	stakePayloadMaker := func() (Directive, interface{}) {
 		return DirectiveDelegate, Delegate{
 			DelegatorAddress: dAddr,
@@ -35,12 +35,12 @@ func createDelegate() (*StakingTransaction, error) {
 }
 
 func CreateTestNewTransaction() (*StakingTransaction, error) {
-	dAddr, _ := common2.Bech32ToAddress(testAccount)
+	dAddr, _ := common.Bech32ToAddress(testAccount)
 
 	stakePayloadMaker := func() (Directive, interface{}) {
 		p := &bls.PublicKey{}
 		p.DeserializeHexStr(testBLSPubKey)
-		pub := shard.BlsPublicKey{}
+		pub := BLSPublicKey{}
 		pub.FromLibBLSPublicKey(p)
 
 		ra, _ := numeric.NewDecFromStr("0.7")
@@ -62,7 +62,7 @@ func CreateTestNewTransaction() (*StakingTransaction, error) {
 			MinSelfDelegation:  big.NewInt(10),
 			MaxTotalDelegation: big.NewInt(3000),
 			ValidatorAddress:   common.Address(dAddr),
-			SlotPubKeys:        []shard.BlsPublicKey{pub},
+			SlotPubKeys:        []BLSPublicKey{pub},
 			Amount:             big.NewInt(100),
 		}
 	}
@@ -88,7 +88,7 @@ func TestTransactionCopy(t *testing.T) {
 
 	p := &bls.PublicKey{}
 	p.DeserializeHexStr(testBLSPubKey2)
-	pub := shard.BlsPublicKey{}
+	pub := BLSPublicKey{}
 	pub.FromLibBLSPublicKey(p)
 	cv1.SlotPubKeys = append(cv1.SlotPubKeys, pub)
 
@@ -150,18 +150,6 @@ func TestGasCost(t *testing.T) {
 	if err != nil || cost.Int64() != 21100 {
 		t.Errorf("staking transaction cost is incorrect %v\n", err)
 	}
-	dAddr, _ := common2.Bech32ToAddress(testAccount)
-	vAddr, _ := common2.Bech32ToAddress(testAccount)
-	delegateTx1, err := NewStakingTransaction(0, 21000, big.NewInt(1), func() (Directive, interface{}) {
-		return DirectiveCreateValidator, Delegate{
-			DelegatorAddress: dAddr,
-			ValidatorAddress: vAddr,
-			Amount:           big.NewInt(100),
-		}
-	})
-	if _, err = delegateTx1.Cost(); err == nil {
-		t.Error("expected", errStakingTransactionTypeCastErr, "got", nil)
-	}
 }
 
 func TestNonce(t *testing.T) {
@@ -183,7 +171,7 @@ func TestData(t *testing.T) {
 	if err != nil {
 		t.Errorf("could not rlp encode staking tx %v\n", err)
 	}
-	if bytes.Compare(stakingTx.Data(), encoded) != 0 {
+	if !bytes.Equal(stakingTx.Data(), encoded) {
 		t.Error("RLPEncode and Data does not match \n")
 	}
 	if _, err = RLPDecodeStakeMsg(encoded, DirectiveCreateValidator); err != nil {

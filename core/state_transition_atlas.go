@@ -17,6 +17,11 @@ import (
     staking "github.com/ethereum/go-ethereum/staking/types"
 )
 
+var (
+    errDupIdentity                 = errors.New("validator identity exists")
+    errDupBlsKey                   = errors.New("BLS key exists")
+)
+
 // NewStateTransition initialises and returns a new state transition object.
 func NewStateTransitionEx(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition {
     retval := NewStateTransition(evm, msg, gp)
@@ -122,8 +127,9 @@ func (st *StateTransition) StakingTransitionDb() (usedGas uint64, err error) {
     }
     st.refundGas()
 
-    txFee := new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)
-    st.state.AddBalance(st.evm.Coinbase, txFee)
+	// Burn Txn Fees
+	//txFee := new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)
+	//st.state.AddBalance(st.evm.Coinbase, txFee)
 
     return st.gasUsed(), err
 }
@@ -131,9 +137,8 @@ func (st *StateTransition) StakingTransitionDb() (usedGas uint64, err error) {
 func (st *StateTransition) verifyAndApplyCreateValidatorTx(
     createValidator *staking.CreateValidator, blockNum *big.Int,
 ) error {
-
     wrapper, err := VerifyAndCreateValidatorFromMsg(
-        st.state, st.evm.EpochNumber, blockNum, createValidator,
+		st.state, st.bc, st.evm.EpochNumber, blockNum, createValidator,
     )
     if err != nil {
         return err
@@ -141,8 +146,8 @@ func (st *StateTransition) verifyAndApplyCreateValidatorTx(
     if err := st.state.UpdateValidatorWrapper(wrapper.Address, wrapper); err != nil {
         return err
     }
-    st.state.SetValidatorFlag(wrapper.Address)
-    st.state.SubBalance(wrapper.Address, createValidator.Amount)
+	st.state.SetValidatorFlag(createValidator.ValidatorAddress)
+	st.state.SubBalance(createValidator.ValidatorAddress, createValidator.Amount)
     return nil
 }
 

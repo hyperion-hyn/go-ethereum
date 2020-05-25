@@ -31,7 +31,6 @@ import (
 )
 
 var (
-
 	errInvalidSigner               = errors.New("invalid signer for staking transaction")
 	errInsufficientBalanceForGas   = errors.New("insufficient balance to pay for gas")
 	errInsufficientBalanceForStake = errors.New("insufficient balance to stake")

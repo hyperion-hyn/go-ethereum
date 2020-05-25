@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/harmony-one/bls/ffi/go/bls"
 	"github.com/ethereum/go-ethereum/consensus/quorum"
@@ -20,10 +21,12 @@ var (
 
 // AggregateSigForCommittee ..
 func AggregateSigForCommittee(
+	chain *core.BlockChain,
 	committee *shard.Committee,
+	decider quorum.Decider,
 	aggSignature *bls.Sign,
 	hash common.Hash,
-	blockNum uint64,
+	blockNum, viewID uint64,
 	epoch *big.Int,
 	bitmap []byte,
 ) error {
@@ -39,22 +42,11 @@ func AggregateSigForCommittee(
 		return err
 	}
 
-	decider := quorum.NewDecider(
-		quorum.SuperMajorityStake, committee.ShardID,
-	)
-	decider.SetMyPublicKeyProvider(func() (*multibls.PublicKey, error) {
-		return nil, nil
-	})
-	if _, err := decider.SetVoters(committee, epoch); err != nil {
-		return err
-	}
 	if !decider.IsQuorumAchievedByMask(mask) {
 		return errQuorumVerifyAggSign
 	}
 
-	blockNumBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(blockNumBytes, blockNum)
-	commitPayload := append(blockNumBytes, hash[:]...)
+	commitPayload := signature.ConstructCommitPayload(chain, epoch, hash, blockNum, viewID)
 	if !aggSignature.VerifyHash(mask.AggregatePublic, commitPayload) {
 		return errAggregateSigFail
 	}

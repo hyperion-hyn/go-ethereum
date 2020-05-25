@@ -5,16 +5,15 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/math"
+	math2 "github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/harmony-one/bls/ffi/go/bls"
-
 	"github.com/ethereum/go-ethereum/common/denominations"
-	"github.com/ethereum/go-ethereum/internal/ctxerror"
+	"github.com/ethereum/go-ethereum/consensus/votepower"
+	"github.com/ethereum/go-ethereum/internal/genesis"
 	"github.com/ethereum/go-ethereum/numeric"
-
 	"github.com/ethereum/go-ethereum/staking/effective"
 	"github.com/pkg/errors"
 )
@@ -26,20 +25,22 @@ const (
 	MaxWebsiteLength         = 140
 	MaxSecurityContactLength = 140
 	MaxDetailsLength         = 280
-	BlsVerificationStr       = "harmony-one"
+	BLSVerificationStr       = "harmony-one"
 	TenThousand              = 10000
+	APRHistoryLength         = 30
 )
 
 var (
-	errAddressNotMatch       = errors.New("Validator key not match")
-	errInvalidSelfDelegation = errors.New(
+	errAddressNotMatch = errors.New("validator key not match")
+	// ErrInvalidSelfDelegation ..
+	ErrInvalidSelfDelegation = errors.New(
 		"self delegation can not be less than min_self_delegation",
 	)
 	errInvalidTotalDelegation = errors.New(
 		"total delegation can not be bigger than max_total_delegation",
 	)
 	errMinSelfDelegationTooSmall = errors.New(
-		"min_self_delegation has to be greater than 10,000 ONE",
+		"min_self_delegation must be greater than or equal to 10,000 ONE",
 	)
 	errInvalidMaxTotalDelegation = errors.New(
 		"max_total_delegation can not be less than min_self_delegation",
@@ -48,7 +49,7 @@ var (
 		"commission rate and change rate can not be larger than max commission rate",
 	)
 	errInvalidCommissionRate = errors.New(
-		"commission rate, change rate and max rate should be within 0-100 percent",
+		"commission rate, change rate and max rate should be a value ranging from 0.0 to 1.0",
 	)
 	errNeedAtLeastOneSlotKey = errors.New("need at least one slot key")
 	errBLSKeysNotMatchSigs   = errors.New(
@@ -69,7 +70,7 @@ type ValidatorSnapshotReader interface {
 	ReadValidatorSnapshotAtEpoch(
 		epoch *big.Int,
 		addr common.Address,
-	) (*ValidatorWrapper, error)
+	) (*ValidatorSnapshot, error)
 }
 
 type counters struct {
@@ -91,12 +92,18 @@ type ValidatorWrapper struct {
 	BlockReward *big.Int `json:"-"`
 }
 
+// ValidatorSnapshot contains validator snapshot and the corresponding epoch
+type ValidatorSnapshot struct {
+	Validator *ValidatorWrapper
+	Epoch     *big.Int
+}
+
 // Computed represents current epoch
 // availability measures, mostly for RPC
 type Computed struct {
 	Signed            *big.Int    `json:"current-epoch-signed"`
 	ToSign            *big.Int    `json:"current-epoch-to-sign"`
-	BlocksLeftInEpoch uint64      `json:"current-epoch-blocks-left"`
+	BlocksLeftInEpoch uint64      `json:"-"`
 	Percentage        numeric.Dec `json:"current-epoch-signing-percentage"`
 	IsBelowThreshold  bool        `json:"-"`
 }
@@ -118,9 +125,10 @@ func NewComputed(
 // NewEmptyStats ..
 func NewEmptyStats() *ValidatorStats {
 	return &ValidatorStats{
+		[]APREntry{},
 		numeric.ZeroDec(),
-		numeric.ZeroDec(),
-		[]votepower.VoteOnSubcomittee{},
+		[]VoteWithCurrentEpochEarning{},
+		effective.Booted,
 	}
 }
 
@@ -130,14 +138,17 @@ type CurrentEpochPerformance struct {
 	CurrentSigningPercentage Computed `json:"current-epoch-signing-percent"`
 }
 
-// ValidatorRPCEnchanced contains extra information for RPC consumer
-type ValidatorRPCEnchanced struct {
+// ValidatorRPCEnhanced contains extra information for RPC consumer
+type ValidatorRPCEnhanced struct {
 	Wrapper              ValidatorWrapper         `json:"validator"`
 	Performance          *CurrentEpochPerformance `json:"current-epoch-performance"`
 	ComputedMetrics      *ValidatorStats          `json:"metrics"`
 	TotalDelegated       *big.Int                 `json:"total-delegation"`
 	CurrentlyInCommittee bool                     `json:"currently-in-committee"`
 	EPoSStatus           string                   `json:"epos-status"`
+	EPoSWinningStake     *numeric.Dec             `json:"epos-winning-stake"`
+	BootedStatus         *string                  `json:"booted-status"`
+	ActiveStatus         string                   `json:"active-status"`
 	Lifetime             *AccumulatedOverLifetime `json:"lifetime"`
 }
 
@@ -166,14 +177,28 @@ func (w ValidatorWrapper) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// VoteWithCurrentEpochEarning ..
+type VoteWithCurrentEpochEarning struct {
+	Vote   votepower.VoteOnSubcomittee `json:"key"`
+	Earned *big.Int                    `json:"earned-reward"`
+}
+
+// APREntry ..
+type APREntry struct {
+	Epoch *big.Int
+	Value numeric.Dec
+}
+
 // ValidatorStats to record validator's performance and history records
 type ValidatorStats struct {
-	// APR ..
-	APR numeric.Dec `json:"-"`
+	// APRs is the APR history containing APR's of epochs
+	APRs []APREntry `json:"-"`
 	// TotalEffectiveStake is the total effective stake this validator has
-	TotalEffectiveStake numeric.Dec `json:"total-effective-stake"`
+	TotalEffectiveStake numeric.Dec `json:"-"`
 	// MetricsPerShard ..
-	MetricsPerShard []votepower.VoteOnSubcomittee `json:"by-shard"`
+	MetricsPerShard []VoteWithCurrentEpochEarning `json:"by-bls-key"`
+	// BootedStatus
+	BootedStatus effective.BootedStatus `json:"-"`
 }
 
 func (s ValidatorStats) String() string {
@@ -239,7 +264,7 @@ func (v *Validator) SanityCheck(oneThirdExtrn int) error {
 		return errNilMaxTotalDelegation
 	}
 
-	// MinSelfDelegation must be >= 1 ONE
+	// MinSelfDelegation must be >= 10000 ONE
 	if v.MinSelfDelegation.Cmp(minimumStake) < 0 {
 		return errors.Wrapf(
 			errMinSelfDelegationTooSmall,
@@ -265,25 +290,27 @@ func (v *Validator) SanityCheck(oneThirdExtrn int) error {
 
 	if v.MaxRate.LT(zeroPercent) || v.MaxRate.GT(hundredPercent) {
 		return errors.Wrapf(
-			errInvalidCommissionRate, "rate:%s", v.MaxRate.String(),
+			errInvalidCommissionRate, "max rate:%s", v.MaxRate.String(),
 		)
 	}
 
 	if v.MaxChangeRate.LT(zeroPercent) || v.MaxChangeRate.GT(hundredPercent) {
 		return errors.Wrapf(
-			errInvalidCommissionRate, "rate:%s", v.MaxChangeRate.String(),
+			errInvalidCommissionRate, "max change rate:%s", v.MaxChangeRate.String(),
 		)
 	}
 
 	if v.Rate.GT(v.MaxRate) {
 		return errors.Wrapf(
-			errCommissionRateTooLarge, "rate:%s", v.MaxRate.String(),
+			errCommissionRateTooLarge,
+			"rate:%s max rate:%s", v.Rate.String(), v.MaxRate.String(),
 		)
 	}
 
 	if v.MaxChangeRate.GT(v.MaxRate) {
 		return errors.Wrapf(
-			errCommissionRateTooLarge, "rate:%s", v.MaxChangeRate.String(),
+			errCommissionRateTooLarge,
+			"rate:%s max change rate:%s", v.Rate.String(), v.MaxChangeRate.String(),
 		)
 	}
 
@@ -325,15 +352,18 @@ func (w *ValidatorWrapper) SanityCheck(
 	switch len(w.Delegations) {
 	case 0:
 		return errors.Wrapf(
-			errInvalidSelfDelegation, "no self delegation given at all",
+			ErrInvalidSelfDelegation, "no self delegation given at all",
 		)
 	default:
 		if w.Status != effective.Banned &&
 			w.Delegations[0].Amount.Cmp(w.Validator.MinSelfDelegation) < 0 {
-			return errors.Wrapf(
-				errInvalidSelfDelegation,
-				"have %s want %s", w.Delegations[0].Amount.String(), w.Validator.MinSelfDelegation,
-			)
+			if w.Status == effective.Active {
+				return errors.Wrapf(
+					ErrInvalidSelfDelegation,
+					"min_self_delegation %s, amount %s",
+					w.Validator.MinSelfDelegation, w.Delegations[0].Amount.String(),
+				)
+			}
 		}
 	}
 	totalDelegation := w.TotalDelegation()
@@ -364,9 +394,9 @@ func MarshalValidator(validator Validator) ([]byte, error) {
 }
 
 // UnmarshalValidator unmarshal binary into Validator object
-func UnmarshalValidator(by []byte) (*Validator, error) {
-	decoded := &Validator{}
-	err := rlp.DecodeBytes(by, decoded)
+func UnmarshalValidator(by []byte) (Validator, error) {
+	decoded := Validator{}
+	err := rlp.DecodeBytes(by, &decoded)
 	return decoded, err
 }
 
@@ -396,33 +426,28 @@ func UpdateDescription(d1, d2 Description) (Description, error) {
 // EnsureLength ensures the length of a validator's description.
 func (d Description) EnsureLength() (Description, error) {
 	if len(d.Name) > MaxNameLength {
-		return d, ctxerror.New(
-			"[EnsureLength] Exceed Maximum Length", "have",
-			len(d.Name), "maxNameLen", MaxNameLength,
+		return d, errors.Errorf(
+			"exceed maximum name length %d %d", len(d.Name), MaxNameLength,
 		)
 	}
 	if len(d.Identity) > MaxIdentityLength {
-		return d, ctxerror.New(
-			"[EnsureLength] Exceed Maximum Length", "have",
-			len(d.Identity), "maxIdentityLen", MaxIdentityLength,
+		return d, errors.Errorf(
+			"exceed Maximum Length identity %d %d", len(d.Identity), MaxIdentityLength,
 		)
 	}
 	if len(d.Website) > MaxWebsiteLength {
-		return d, ctxerror.New(
-			"[EnsureLength] Exceed Maximum Length", "have", len(d.Website),
-			"maxWebsiteLen", MaxWebsiteLength,
+		return d, errors.Errorf(
+			"exceed Maximum Length website %d %d", len(d.Website), MaxWebsiteLength,
 		)
 	}
 	if len(d.SecurityContact) > MaxSecurityContactLength {
-		return d, ctxerror.New(
-			"[EnsureLength] Exceed Maximum Length", "have",
-			len(d.SecurityContact), "maxSecurityContactLen", MaxSecurityContactLength,
+		return d, errors.Errorf(
+			"exceed Maximum Length %d %d", len(d.SecurityContact), MaxSecurityContactLength,
 		)
 	}
 	if len(d.Details) > MaxDetailsLength {
-		return d, ctxerror.New(
-			"[EnsureLength] Exceed Maximum Length", "have", len(d.Details),
-			"maxDetailsLen", MaxDetailsLength,
+		return d, errors.Errorf(
+			"exceed Maximum Length for details %d %d", len(d.Details), MaxDetailsLength,
 		)
 	}
 
@@ -452,7 +477,7 @@ func VerifyBLSKey(pubKey *types.BLSPublicKey, pubKeySig *types.BLSSignature) err
 	}
 
 	blsPubKey := new(bls.PublicKey)
-	if err := pubKey.ToLibBLSPublicKey(blsPubKey); err != nil {
+	if err := pubKey.ToLibtypes.BLSPublicKey(blsPubKey); err != nil {
 		return errBLSKeysNotMatchSigs
 	}
 
@@ -461,7 +486,7 @@ func VerifyBLSKey(pubKey *types.BLSPublicKey, pubKeySig *types.BLSSignature) err
 		return err
 	}
 
-	messageBytes := []byte(BlsVerificationStr)
+	messageBytes := []byte(BLSVerificationStr)
 	msgHash := crypto.Keccak256(messageBytes)
 	if !msgSig.VerifyHash(blsPubKey, msgHash[:]) {
 		return errBLSKeysNotMatchSigs
@@ -471,7 +496,9 @@ func VerifyBLSKey(pubKey *types.BLSPublicKey, pubKeySig *types.BLSSignature) err
 }
 
 // CreateValidatorFromNewMsg creates validator from NewValidator message
-func CreateValidatorFromNewMsg(val *CreateValidator, blockNum *big.Int) (*Validator, error) {
+func CreateValidatorFromNewMsg(
+	val *CreateValidator, blockNum, epoch *big.Int,
+) (*Validator, error) {
 	desc, err := val.Description.EnsureLength()
 	if err != nil {
 		return nil, err
@@ -480,7 +507,7 @@ func CreateValidatorFromNewMsg(val *CreateValidator, blockNum *big.Int) (*Valida
 	pubKeys := append(val.SlotPubKeys[0:0], val.SlotPubKeys...)
 
 	// ATLAS(zgx): only one BLS key allowed
-	pubKeys = pubKeys[0: math.Min(1, len(pubKeys))]
+	pubKeys = pubKeys[0: math2.Min(1, len(pubKeys))]
 
 	if err = VerifyBLSKeys(pubKeys, val.SlotKeySigs); err != nil {
 		return nil, err
@@ -501,7 +528,7 @@ func CreateValidatorFromNewMsg(val *CreateValidator, blockNum *big.Int) (*Valida
 }
 
 // UpdateValidatorFromEditMsg updates validator from EditValidator message
-func UpdateValidatorFromEditMsg(validator *Validator, edit *EditValidator) error {
+func UpdateValidatorFromEditMsg(validator *Validator, edit *EditValidator, epoch *big.Int) error {
 	if validator.Address != edit.ValidatorAddress {
 		return errAddressNotMatch
 	}
@@ -516,6 +543,7 @@ func UpdateValidatorFromEditMsg(validator *Validator, edit *EditValidator) error
 		validator.Rate = *edit.CommissionRate
 	}
 
+	// ATLAS(zgx): MinSelfDelegation should not be modified after creation?
 	if edit.MinSelfDelegation != nil && edit.MinSelfDelegation.Sign() != 0 {
 		validator.MinSelfDelegation = edit.MinSelfDelegation
 	}
@@ -559,9 +587,6 @@ func UpdateValidatorFromEditMsg(validator *Validator, edit *EditValidator) error
 			return errSlotKeyToAddExists
 		}
 	}
-
-	// ATLAS(zgx): only one BLS key allowed
-	validator.SlotPubKeys = validator.SlotPubKeys[0:math.Min(1, len(validator.SlotPubKeys))]
 
 	switch validator.Status {
 	case effective.Banned:

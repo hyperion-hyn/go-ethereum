@@ -21,6 +21,19 @@ const (
 	Banned
 )
 
+func (e Eligibility) String() string {
+	switch e {
+	case Active:
+		return "active"
+	case Inactive:
+		return "inactive"
+	case Banned:
+		return doubleSigningBanned
+	default:
+		return "unknown"
+	}
+}
+
 // Candidacy is a more semantically meaningful
 // value that is derived from core protocol logic but
 // meant more for the presentation of user, like at RPC
@@ -29,43 +42,78 @@ type Candidacy byte
 const (
 	// Unknown ..
 	Unknown Candidacy = iota
+	// ForeverBanned ..
+	ForeverBanned
 	// Candidate ..
 	Candidate = iota
 	// NotCandidate ..
 	NotCandidate
-	// ElectedAndSigning ..
-	ElectedAndSigning
-	// ElectedAndFellBelowThreshold ..
-	ElectedAndFellBelowThreshold
+	// Elected ..
+	Elected
+)
+
+const (
+	doubleSigningBanned = "banned forever from network because was caught double-signing"
 )
 
 func (c Candidacy) String() string {
 	switch c {
+	case ForeverBanned:
+		return doubleSigningBanned
 	case Candidate:
 		return "eligible to be elected next epoch"
 	case NotCandidate:
 		return "not eligible to be elected next epoch"
-	case ElectedAndSigning:
-		return "currently elected and signing enough blocks to be eligible for election next epoch"
-	case ElectedAndFellBelowThreshold:
-		return "currently elected and not signing enough blocks to be eligible for election next epoch"
+	case Elected:
+		return "currently elected"
 	default:
 		return "unknown"
 	}
 }
 
 // ValidatorStatus ..
-func ValidatorStatus(currentlyInCommittee, isActive bool) Candidacy {
+func ValidatorStatus(currentlyInCommittee bool, status Eligibility) Candidacy {
 	switch {
-	case currentlyInCommittee && isActive:
-		return ElectedAndSigning
-	case !currentlyInCommittee && isActive:
+	case status == Banned:
+		return ForeverBanned
+	case currentlyInCommittee:
+		return Elected
+	case !currentlyInCommittee && status == Active:
 		return Candidate
-	case currentlyInCommittee && !isActive:
-		return ElectedAndFellBelowThreshold
-	case !currentlyInCommittee && !isActive:
+	case !currentlyInCommittee && status != Active:
 		return NotCandidate
 	default:
 		return Unknown
+	}
+}
+
+// BootedStatus ..
+type BootedStatus byte
+
+const (
+	// Booted ..
+	Booted BootedStatus = iota
+	// NotBooted ..
+	NotBooted
+	// LostEPoSAuction ..
+	LostEPoSAuction
+	// TurnedInactiveOrInsufficientUptime ..
+	TurnedInactiveOrInsufficientUptime
+	// BannedForDoubleSigning ..
+	BannedForDoubleSigning
+)
+
+func (r BootedStatus) String() string {
+	switch r {
+	case Booted:
+		return "booted"
+	case LostEPoSAuction:
+		return "lost epos auction"
+	case TurnedInactiveOrInsufficientUptime:
+		return "manually turned inactive or insufficient uptime"
+	case BannedForDoubleSigning:
+		return doubleSigningBanned
+	default:
+		return "not booted"
 	}
 }

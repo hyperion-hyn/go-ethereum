@@ -5,24 +5,17 @@ import (
 	"io"
 	"math/big"
 	"sync/atomic"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rlp"
+
 	"github.com/ethereum/go-ethereum/crypto/hash"
 	"github.com/ethereum/go-ethereum/internal/utils"
-
-)
-
-const (
-	//MaxPoolTransactionDataSize is a 32KB heuristic data limit for DOS prevention
-	MaxPoolTransactionDataSize = 32 * 1024
-	//MaxEncodedPoolTransactionSize is a heuristic raw/encoded data size limit. It has an additional 10KB for metadata
-	MaxEncodedPoolTransactionSize = MaxPoolTransactionDataSize + (10 * 1024)
+	"github.com/ethereum/go-ethereum/shard"
 )
 
 var (
-	errStakingTransactionTypeCastErr = errors.New("Cannot type cast to matching staking type")
+	errStakingTransactionTypeCastErr = errors.New("cannot type cast to matching staking type")
 )
 
 type txdata struct {
@@ -79,24 +72,6 @@ type StakingTransaction struct {
 	hash atomic.Value
 	size atomic.Value
 	from atomic.Value
-}
-
-// RPCTransactionError ..
-type RPCTransactionError struct {
-	TxHashID             string `json:"tx-hash-id"`
-	StakingDirective     string `json:"directive-kind"`
-	TimestampOfRejection int64  `json:"time-at-rejection"`
-	ErrMessage           string `json:"error-message"`
-}
-
-// NewRPCTransactionError ...
-func NewRPCTransactionError(hash common.Hash, directive Directive, err error) RPCTransactionError {
-	return RPCTransactionError{
-		TxHashID:             hash.Hex(),
-		StakingDirective:     directive.String(),
-		TimestampOfRejection: time.Now().Unix(),
-		ErrMessage:           err.Error(),
-	}
 }
 
 // StakeMsgFulfiller is signature of callback intended to produce the StakeMsg

@@ -4,21 +4,20 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/denominations"
 	"github.com/ethereum/go-ethereum/consensus/engine"
 	"github.com/ethereum/go-ethereum/consensus/reward"
 	"github.com/ethereum/go-ethereum/internal/utils"
 	"github.com/ethereum/go-ethereum/numeric"
-
+	"github.com/ethereum/go-ethereum/shard"
 )
 
 var (
 	// BlockReward is the block reward, to be split evenly among block signers.
 	BlockReward = new(big.Int).Mul(big.NewInt(24), big.NewInt(denominations.One))
-	// BaseStakedReward is the base block reward for epos.
+	// BaseStakedReward is the flat-rate block reward for epos staking launch.
 	BaseStakedReward = numeric.NewDecFromBigInt(new(big.Int).Mul(
-		big.NewInt(18), big.NewInt(denominations.One),
+		big.NewInt(28), big.NewInt(denominations.One),
 	))
 	// BlockRewardStakedCase is the baseline block reward in staked case -
 	totalTokens = numeric.NewDecFromBigInt(
@@ -31,7 +30,7 @@ var (
 		"total payout not equal to blockreward",
 	)
 	// NoReward ..
-	NoReward = common.Big0
+	NoReward = big.NewInt(0)
 	// EmptyPayout ..
 	EmptyPayout = noReward{}
 )
@@ -46,7 +45,7 @@ type noReward struct{ ignoreMissing }
 
 func (noReward) ReadRoundResult() *reward.CompletedRound {
 	return &reward.CompletedRound{
-		Total:            common.Big0,
+		Total:            big.NewInt(0),
 		BeaconchainAward: []reward.Payout{},
 		ShardChainAward:  []reward.Payout{},
 	}
@@ -79,18 +78,19 @@ type stakingEra struct {
 func NewStakingEraRewardForRound(
 	totalPayout *big.Int,
 	mia shard.SlotList,
+	beaconP, shardP []reward.Payout,
 ) reward.Reader {
-
 	return &stakingEra{
 		CompletedRound: reward.CompletedRound{
 			Total:            totalPayout,
-			BeaconchainAward: []reward.Payout{},
-			ShardChainAward:  []reward.Payout{},
+			BeaconchainAward: beaconP,
+			ShardChainAward:  shardP,
 		},
 		missingSigners: mia,
 	}
 }
 
+// MissingSigners ..
 func (r *stakingEra) MissingSigners() shard.SlotList {
 	return r.missingSigners
 }
@@ -122,7 +122,7 @@ func WhatPercentStakedNow(
 ) (*big.Int, *numeric.Dec, error) {
 	stakedNow := numeric.ZeroDec()
 	// Only elected validators' stake is counted in stake ratio because only their stake is under slashing risk
-	active, err := beaconchain.ReadElectedValidatorList()
+	active, err := beaconchain.ReadShardState(beaconchain.CurrentBlock().Epoch())
 	if err != nil {
 		return nil, nil, err
 	}
@@ -137,8 +137,8 @@ func WhatPercentStakedNow(
 
 	dole := numeric.NewDecFromBigInt(soFarDoledOut)
 
-	for i := range active {
-		wrapper, err := beaconchain.ReadValidatorInformation(active[i])
+	for _, electedValAdr := range active.StakedValidators().Addrs {
+		wrapper, err := beaconchain.ReadValidatorInformation(electedValAdr)
 		if err != nil {
 			return nil, nil, err
 		}
