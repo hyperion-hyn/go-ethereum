@@ -21,6 +21,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/harmony-one/harmony/core/vm"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -256,6 +258,34 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 	}
 	return ret, contract.Gas, err
 }
+
+
+// Execute executes the givin code on behalf of the addr with the given input as
+// parameters. It also handles any necessary value transfer required and takes
+// the necessary steps to create accounts and reverses the state in case of an
+// execution error or failed value transfer.
+func (evm *EVM) Execute(caller vm.ContractRef, addr common.Address, input []byte, gas uint64, value *big.Int, code []byte)  (ret []byte, err error) {
+	type Saved struct {
+		balance *big.Int
+		code []byte
+	}
+
+	saved := Saved{
+		balance : evm.StateDB.GetBalance(caller.Address()),
+		code : evm.StateDB.GetCode(addr),
+	}
+
+	evm.StateDB.SetBalance(caller.Address(), big.NewInt(10*params.Ether))
+	evm.StateDB.SetCode(addr, code)
+
+	// ATLAS(zgx): maybe should prohibit transfer value or set value to zero
+	ret, _, err = evm.Call(caller, addr, input, gas, value)
+
+	evm.StateDB.SetCode(addr, saved.code)
+	evm.StateDB.SetBalance(caller.Address(), saved.balance)
+	return ret, err
+}
+
 
 // CallCode executes the contract associated with the addr with the given input
 // as parameters. It also handles any necessary value transfer required and takes
