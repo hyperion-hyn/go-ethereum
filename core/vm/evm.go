@@ -270,11 +270,11 @@ func (evm *EVM) Execute(caller ContractRef, addr common.Address, input []byte, g
 	}
 
 	evm.StateDB.SetBalance(caller.Address(), new(big.Int).Mul(big.NewInt(10), big.NewInt(params.Ether)))
-	evm.StateDB.SetCode(addr, code)
+	evm.StateDB.SetCodeWithoutJournal(addr, code)
 
 	ret, _, err = evm.Call(caller, addr, input, gas, value)
 
-	evm.StateDB.SetCode(addr, saved.code)
+	evm.StateDB.SetCodeWithoutJournal(addr, saved.code)
 	evm.StateDB.SetBalance(caller.Address(), saved.balance)
 
 	return ret, 0, err

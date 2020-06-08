@@ -38,6 +38,7 @@ type StateDB interface {
 	GetCodeHash(common.Address) common.Hash
 	GetCode(common.Address) []byte
 	SetCode(common.Address, []byte)
+	SetCodeWithoutJournal(common.Address, []byte)
 	GetCodeSize(common.Address) int
 
 	AddRefund(uint64)

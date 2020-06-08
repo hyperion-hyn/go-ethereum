@@ -435,6 +435,10 @@ func (s *stateObject) setCode(codeHash common.Hash, code []byte) {
 	s.dirtyCode = true
 }
 
+func (s *stateObject) SetCodeWithoutJournal(codeHash common.Hash, code []byte) {
+	s.setCode(codeHash, code)
+}
+
 func (s *stateObject) SetNonce(nonce uint64) {
 	s.db.journal.append(nonceChange{
 		account: &s.address,
