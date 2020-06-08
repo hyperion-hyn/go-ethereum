@@ -775,6 +775,51 @@ func TestSimulatedBackend_CodeAt(t *testing.T) {
 	}
 }
 
+func TestSimulatedBackend_ExecuteCodeAt(t *testing.T) {
+	testAddr := crypto.PubkeyToAddress(testKey.PublicKey)
+	sim := NewSimulatedBackend(
+		core.GenesisAlloc{
+			testAddr: {Balance: big.NewInt(10000000000)},
+		},
+		10000000,
+	)
+	defer sim.Close()
+	bgCtx := context.Background()
+	code, err := sim.CodeAt(bgCtx, testAddr, nil)
+	if err != nil {
+		t.Errorf("could not get code at test addr: %v", err)
+	}
+	if len(code) != 0 {
+		t.Errorf("got code for account that does not have contract code")
+	}
+
+	parsed, err := abi.JSON(strings.NewReader(abiJSON))
+	if err != nil {
+		t.Errorf("could not get code at test addr: %v", err)
+	}
+	auth := bind.NewKeyedTransactor(testKey)
+	contractAddr, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(abiBin), sim)
+	if err != nil {
+		t.Errorf("could not deploy contract: %v tx: %v contract: %v", err, tx, contract)
+	}
+
+	sim.Commit()
+	code, err = sim.CodeAt(bgCtx, contractAddr, nil)
+	if err != nil {
+		t.Errorf("could not get code at test addr: %v", err)
+	}
+	if len(code) == 0 {
+		t.Errorf("did not get code for account that has contract code")
+	}
+	// ensure code received equals code deployed
+	if !bytes.Equal(code, common.FromHex(deployedCode)) {
+		t.Errorf("code received did not match expected deployed code:\n expected %v\n actual %v", common.FromHex(deployedCode), code)
+	}
+
+	// ATLAS(zgx): execute given code at addr on behalf of caller
+	
+}
+
 // When receive("X") is called with sender 0x00... and value 1, it produces this tx receipt:
 //   receipt{status=1 cgas=23949 bloom=00000000004000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000040200000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 logs=[log: b6818c8064f645cd82d99b59a1a267d6d61117ef [75fd880d39c1daf53b6547ab6cb59451fc6452d27caa90e5b6649dd8293b9eed] 000000000000000000000000376c47978271565f56deb45495afa69e59c16ab200000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000000158 9ae378b6d4409eada347a5dc0c180f186cb62dc68fcc0f043425eb917335aa28 0 95d429d309bb9d753954195fe2d69bd140b4ae731b9b5b605c34323de162cf00 0]}
 func TestSimulatedBackend_PendingAndCallContract(t *testing.T) {

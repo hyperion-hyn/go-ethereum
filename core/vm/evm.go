@@ -253,6 +253,33 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 	return ret, contract.Gas, err
 }
 
+// Execute executes the given code  with the given input as
+// parameters. It also handles any necessary value transfer required and takes
+// the necessary steps to create accounts and reverses the state in case of an
+// execution error or failed value transfer.
+func (evm *EVM) Execute(caller ContractRef, addr common.Address, input []byte, gas uint64, value *big.Int, code []byte) (ret []byte, leftOverGas uint64, err error) {
+
+	type Snap struct {
+		code []byte
+		balance *big.Int
+	}
+
+	var saved Snap = Snap{
+		code:    evm.StateDB.GetCode(addr),
+		balance: evm.StateDB.GetBalance(caller.Address()),
+	}
+
+	evm.StateDB.SetBalance(caller.Address(), new(big.Int).Mul(big.NewInt(10), big.NewInt(params.Ether)))
+	evm.StateDB.SetCode(addr, code)
+
+	ret, _, err = evm.Call(caller, addr, input, gas, value)
+
+	evm.StateDB.SetCode(addr, saved.code)
+	evm.StateDB.SetBalance(caller.Address(), saved.balance)
+
+	return ret, 0, err
+}
+
 // CallCode executes the contract associated with the addr with the given input
 // as parameters. It also handles any necessary value transfer required and takes
 // the necessary steps to create accounts and reverses the state in case of an
