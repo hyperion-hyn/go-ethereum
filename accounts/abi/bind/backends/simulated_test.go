@@ -817,7 +817,42 @@ func TestSimulatedBackend_ExecuteCodeAt(t *testing.T) {
 	}
 
 	// ATLAS(zgx): execute given code at addr on behalf of caller
+	input, err := parsed.Pack("receive", []byte("X"))
+	if err != nil {
+		t.Errorf("could pack receive function on contract: %v", err)
+	}
+
+	state, err := sim.blockchain.State()
+	if err != nil {
+		t.Errorf("failed to get state of blockchain.")
+	}
+
+	res, leftGas, vmerr, err := sim.executeCode(bgCtx,  ethereum.CallMsg{
+		From: testAddr,
+		To:   &contractAddr,
+		Data: input,
+	}, sim.blockchain.CurrentBlock(), state, common.FromHex(abiBin))
+
+	if leftGas != 0 {
+		t.Errorf("failed to execute code, %v", err)
+	}
+
+	if err != nil {
+		t.Errorf("failed to execute code, %v", err)
+	}
+
+	if vmerr != false {
+		t.Errorf("found vm error, %v", vmerr)
+	}
+
+	if !bytes.Equal(res, expectedReturn) || !strings.Contains(string(res), "hello world") {
+		t.Errorf("response from calling contract was expected to be 'hello world' instead received %v", string(res))
+	}
+
+	var retobj interface{} 
+	parsed.Unpack(retobj, "receive", res)
 	
+	t.Logf("return is %v", retobj)
 }
 
 // When receive("X") is called with sender 0x00... and value 1, it produces this tx receipt:

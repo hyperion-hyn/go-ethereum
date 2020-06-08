@@ -456,6 +456,34 @@ func (b *SimulatedBackend) callContract(ctx context.Context, call ethereum.CallM
 	return core.NewStateTransition(vmenv, msg, gaspool).TransitionDb()
 }
 
+// executeCode implements common code between normal and pending contract calls.
+// state is modified during execution, make sure to copy it if necessary.
+func (b *SimulatedBackend) executeCode(ctx context.Context, call ethereum.CallMsg, block *types.Block, statedb *state.StateDB, code []byte) ([]byte, uint64, bool, error) {
+	// Ensure message is initialized properly.
+	if call.GasPrice == nil {
+		call.GasPrice = big.NewInt(1)
+	}
+	if call.Gas == 0 {
+		call.Gas = 50000000
+	}
+	if call.Value == nil {
+		call.Value = new(big.Int)
+	}
+	// Set infinite balance to the fake caller account.
+	from := statedb.GetOrNewStateObject(call.From)
+	from.SetBalance(math.MaxBig256)
+	// Execute the call.
+	msg := callmsg{call}
+
+	evmContext := core.NewEVMContext(msg, block.Header(), b.blockchain, nil)
+	// Create a new environment which holds all relevant information
+	// about the transaction and calling mechanisms.
+	vmenv := vm.NewEVM(evmContext, statedb, b.config, vm.Config{})
+	ret, leftGas, vmerr := vmenv.Execute(from, *call.To, call.Data, params.Ether, big.NewInt(0), code)
+
+	return ret, leftGas, vmerr != nil, nil
+}
+
 // SendTransaction updates the pending block to include the given transaction.
 // It panics if the transaction is invalid.
 func (b *SimulatedBackend) SendTransaction(ctx context.Context, tx *types.Transaction) error {
