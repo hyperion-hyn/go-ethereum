@@ -372,6 +372,10 @@ func (s *stateObject) SetBalance(amount *big.Int) {
 	s.setBalance(amount)
 }
 
+func (s *stateObject) SetBalanceWithoutJournal(amount *big.Int) {
+	s.setBalance(amount)
+}
+
 func (s *stateObject) setBalance(amount *big.Int) {
 	s.data.Balance = amount
 }
