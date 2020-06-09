@@ -841,7 +841,9 @@ func TestSimulatedBackend_ExecuteCodeAt(t *testing.T) {
 		t.Errorf("response from calling contract was expected to be 'hello world' instead received %v", string(res))
 	}
 
-	var retobj interface{} 
+	var retobj= &struct {
+		Res string
+	}{}
 	parsed.Unpack(retobj, "receive", res)
 	
 	t.Logf("return is %v", retobj)
