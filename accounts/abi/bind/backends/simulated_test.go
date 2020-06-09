@@ -785,14 +785,6 @@ func TestSimulatedBackend_ExecuteCodeAt(t *testing.T) {
 	)
 	defer sim.Close()
 	bgCtx := context.Background()
-	code, err := sim.CodeAt(bgCtx, testAddr, nil)
-	if err != nil {
-		t.Errorf("could not get code at test addr: %v", err)
-	}
-	if len(code) != 0 {
-		t.Errorf("got code for account that does not have contract code")
-	}
-
 	parsed, err := abi.JSON(strings.NewReader(abiJSON))
 	if err != nil {
 		t.Errorf("could not get code at test addr: %v", err)
@@ -802,9 +794,9 @@ func TestSimulatedBackend_ExecuteCodeAt(t *testing.T) {
 	if err != nil {
 		t.Errorf("could not deploy contract: %v tx: %v contract: %v", err, tx, contract)
 	}
-
 	sim.Commit()
-	code, err = sim.CodeAt(bgCtx, contractAddr, nil)
+
+	code, err := sim.CodeAt(bgCtx, contractAddr, nil)
 	if err != nil {
 		t.Errorf("could not get code at test addr: %v", err)
 	}
@@ -831,7 +823,7 @@ func TestSimulatedBackend_ExecuteCodeAt(t *testing.T) {
 		From: testAddr,
 		To:   &contractAddr,
 		Data: input,
-	}, sim.blockchain.CurrentBlock(), state, common.FromHex(abiBin))
+	}, sim.blockchain.CurrentBlock(), state, common.FromHex(deployedCode))
 
 	if leftGas != 0 {
 		t.Errorf("failed to execute code, %v", err)
