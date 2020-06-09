@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"math/big"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -819,7 +820,9 @@ func TestSimulatedBackend_ExecuteCodeAt(t *testing.T) {
 		t.Errorf("failed to get state of blockchain.")
 	}
 
-	res, leftGas, vmerr, err := sim.executeCode(bgCtx,  ethereum.CallMsg{
+	expectedRoot := state.IntermediateRoot(true)
+
+	res, leftGas, vmerr, err := sim.executeCode(bgCtx, ethereum.CallMsg{
 		From: testAddr,
 		To:   &contractAddr,
 		Data: input,
@@ -839,6 +842,10 @@ func TestSimulatedBackend_ExecuteCodeAt(t *testing.T) {
 
 	if !bytes.Equal(res, expectedReturn) || !strings.Contains(string(res), "hello world") {
 		t.Errorf("response from calling contract was expected to be 'hello world' instead received %v", string(res))
+	}
+
+	if !reflect.DeepEqual(expectedRoot, state.IntermediateRoot(true)) {
+		t.Errorf("state should not be changed")
 	}
 
 	var retobj= &struct {
