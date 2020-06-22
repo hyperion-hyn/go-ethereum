@@ -559,6 +559,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		return ErrInsufficientFunds
 	}
 	// Ensure the transaction has more gas than the basic tx fee.
+	// TODO(ATLAS) staking tx fee?
 	intrGas, err := IntrinsicGas(tx.Data(), tx.To() == nil, true, pool.istanbul)
 	if err != nil {
 		return err
@@ -566,8 +567,20 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	if tx.Gas() < intrGas {
 		return ErrIntrinsicGas
 	}
+
+	// ATLAS: Do more checks if it is a staking transaction
+	if tx.Type() != types.Normal {
+		return pool.validateStakingTx(tx)
+	}
 	return nil
 }
+
+// ATLAS
+// validateStakingTx checks the staking message based on the staking directive
+func (pool *TxPool) validateStakingTx(tx *types.Transaction) error {
+	return nil
+}
+// ATLAS - END
 
 // add validates a transaction and inserts it into the non-executable queue for later
 // pending promotion and execution. If the transaction is a replacement for an already

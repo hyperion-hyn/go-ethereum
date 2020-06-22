@@ -18,6 +18,9 @@ package core
 
 import (
 	"errors"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/rlp"
+	staking "github.com/ethereum/go-ethereum/staking/types"
 	"math"
 	"math/big"
 
@@ -73,6 +76,7 @@ type Message interface {
 	Nonce() uint64
 	CheckNonce() bool
 	Data() []byte
+	Type() types.TransactionType	// ATLAS
 }
 
 // IntrinsicGas computes the 'intrinsic gas' for a message with the given data.
@@ -134,6 +138,11 @@ func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition 
 // state and would never be accepted within a block.
 func ApplyMessage(evm *vm.EVM, msg Message, gp *GasPool) ([]byte, uint64, bool, error) {
 	return NewStateTransition(evm, msg, gp).TransitionDb()
+}
+
+// ATLAS: ApplyStakingMessage computes the new state for staking message
+func ApplyStakingMessage(evm *vm.EVM, msg Message, gp *GasPool) (uint64, error) {
+	return NewStateTransition(evm, msg, gp).StakingTransitionDb()
 }
 
 // to returns the recipient of the message.
@@ -253,3 +262,209 @@ func (st *StateTransition) refundGas() {
 func (st *StateTransition) gasUsed() uint64 {
 	return st.initialGas - st.gas
 }
+
+// ATLAS
+// StakingTransitionDb will transition the state by applying the staking message and
+// returning the result including the used gas. It returns an error if failed.
+// It is used for staking transaction only
+func (st *StateTransition) StakingTransitionDb() (usedGas uint64, err error) {
+	if err = st.preCheck(); err != nil {
+		return 0, err
+	}
+	msg := st.msg
+
+	sender := vm.AccountRef(msg.From())
+	homestead := st.evm.ChainConfig().IsHomestead(st.evm.BlockNumber)
+	istanbul := st.evm.ChainConfig().IsIstanbul(st.evm.BlockNumber)
+
+	// Pay intrinsic gas
+	gas, err := IntrinsicGas(st.data, false, homestead, istanbul)
+
+	if err != nil {
+		return 0, err
+	}
+	if err = st.useGas(gas); err != nil {
+		return 0, err
+	}
+
+	// Increment the nonce for the next transaction
+	st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
+
+	switch msg.Type() {
+	case types.StakeCreateNode:
+	case types.StakeEditNode:
+	case types.Microdelegate:
+	case types.Unmicrodelegate:
+	case types.CollectMicrodelRewards:
+	case types.StakeCreateVal:
+		stkMsg := &staking.CreateValidator{}
+		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
+			return 0, err
+		}
+		//utils.Logger().Info().
+		//	Msgf("[DEBUG STAKING] staking type: %s, gas: %d, txn: %+v", msg.Type(), gas, stkMsg)
+		//if msg.From() != stkMsg.ValidatorAddress {
+		//	return 0, errInvalidSigner
+		//}
+		err = st.verifyAndApplyCreateValidatorTx(stkMsg, st.evm.BlockNumber)
+	case types.StakeEditVal:
+		stkMsg := &staking.EditValidator{}
+		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
+			return 0, err
+		}
+		//utils.Logger().Info().
+		//	Msgf("[DEBUG STAKING] staking type: %s, gas: %d, txn: %+v", msg.Type(), gas, stkMsg)
+		//if msg.From() != stkMsg.ValidatorAddress {
+		//	return 0, errInvalidSigner
+		//}
+		err = st.verifyAndApplyEditValidatorTx(stkMsg, st.evm.BlockNumber)
+	case types.Redelegate:
+		stkMsg := &staking.Redelegate{}
+		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
+			return 0, err
+		}
+		//utils.Logger().Info().Msgf("[DEBUG STAKING] staking type: %s, gas: %d, txn: %+v", msg.Type(), gas, stkMsg)
+		//if msg.From() != stkMsg.MicrodelegatorAddress {
+		//	return 0, errInvalidSigner
+		//}
+		err = st.verifyAndApplyDelegateTx(stkMsg)
+	case types.Unredelegate:
+		stkMsg := &staking.Unredelegate{}
+		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
+			return 0, err
+		}
+		//utils.Logger().Info().Msgf("[DEBUG STAKING] staking type: %s, gas: %d, txn: %+v", msg.Type(), gas, stkMsg)
+		//if msg.From() != stkMsg.MicrodelegatorAddress {
+		//	return 0, errInvalidSigner
+		//}
+		err = st.verifyAndApplyUndelegateTx(stkMsg)
+	case types.CollectMicroreRewards:
+		stkMsg := &staking.CollectRedelegationRewards{}
+		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
+			return 0, err
+		}
+		//utils.Logger().Info().Msgf("[DEBUG STAKING] staking type: %s, gas: %d, txn: %+v", msg.Type(), gas, stkMsg)
+		//if msg.From() != stkMsg.MicrodelegatorAddress {
+		//	return 0, errInvalidSigner
+		//}
+		collectedRewards, tempErr := st.verifyAndApplyCollectRewards(stkMsg)
+		err = tempErr
+		if err == nil {
+			st.state.AddLog(&types.Log{
+				Address:     stkMsg.DelegatorAddress,
+				Topics:      []common.Hash{staking2.CollectRewardsTopic},
+				Data:        collectedRewards.Bytes(),
+				BlockNumber: st.evm.BlockNumber.Uint64(),
+			})
+		}
+	default:
+		return 0, staking.ErrInvalidStakingKind
+	}
+	st.refundGas()
+
+	// TODO(ATLAS) Txn Fees
+	//txFee := new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)
+	//st.state.AddBalance(st.evm.Coinbase, txFee)
+
+	return st.gasUsed(), err
+}
+
+func (st *StateTransition) verifyAndApplyCreateMap3NodeTx(createMap3Node *staking.CreateMap3Node) error {
+	return nil
+}
+
+func (st *StateTransition) verifyAndApplyEditMap3NodeTx(editMap3Node *staking.EditMap3Node) error {
+	return nil
+}
+
+func (st *StateTransition) verifyAndApplyMicrodelegateTx(microdelegate *staking.Microdelegate) error {
+	return nil
+}
+
+func (st *StateTransition) verifyAndApplyUnmicrodelegateTx(unmicrodelegate *staking.Unmicrodelegate) error {
+	return nil
+}
+
+func (st *StateTransition) verifyAndApplyCollectMicrodelRewardsTx(
+	collectMicrodelegationRewards *staking.CollectMicrodelegationRewards,
+) error {
+	return nil
+}
+
+
+
+
+func (st *StateTransition) verifyAndApplyCreateValidatorTx(
+	createValidator *staking.CreateValidator, blockNum *big.Int,
+) error {
+	wrapper, err := VerifyAndCreateValidatorFromMsg(
+		st.state, st.evm.EpochNumber, blockNum, createValidator,
+	)
+	if err != nil {
+		return err
+	}
+	// TODO(Storage)
+	if err := st.state.UpdateValidator(wrapper); err != nil {
+		return err
+	}
+	// TODO(ATLAS): update node state
+	return nil
+}
+
+func (st *StateTransition) verifyAndApplyEditValidatorTx(
+	editValidator *staking.EditValidator, blockNum *big.Int,
+) error {
+	wrapper, err := VerifyAndEditValidatorFromMsg(
+		st.state, st.bc, st.evm.EpochNumber, blockNum, editValidator,
+	)
+	if err != nil {
+		return err
+	}
+	return st.state.UpdateValidatorWrapper(wrapper.Address, wrapper)
+}
+
+func (st *StateTransition) verifyAndApplyDelegateTx(delegate *staking.Redelegate) error {
+	wrapper, balanceToBeDeducted, err := VerifyAndDelegateFromMsg(st.state, delegate)
+	if err != nil {
+		return err
+	}
+
+	st.state.SubBalance(delegate.DelegatorAddress, balanceToBeDeducted)
+
+	return st.state.UpdateValidatorWrapper(wrapper.Address, wrapper)
+}
+
+func (st *StateTransition) verifyAndApplyUndelegateTx(
+	undelegate *staking.Unredelegate,
+) error {
+	wrapper, err := VerifyAndUndelegateFromMsg(st.state, st.evm.EpochNumber, undelegate)
+	if err != nil {
+		return err
+	}
+	return st.state.UpdateValidatorWrapper(wrapper.Address, wrapper)
+}
+
+func (st *StateTransition) verifyAndApplyCollectRewards(collectRewards *staking.CollectRedelegationRewards) (*big.Int, error) {
+	if st.bc == nil {
+		return network.NoReward, errors.New("[CollectRedelegationRewards] No chain context provided")
+	}
+	delegations, err := st.bc.ReadDelegationsByDelegator(collectRewards.DelegatorAddress)
+	if err != nil {
+		return network.NoReward, err
+	}
+	updatedValidatorWrappers, totalRewards, err := VerifyAndCollectRewardsFromDelegation(
+		st.state, delegations,
+	)
+	if err != nil {
+		return network.NoReward, err
+	}
+	for _, wrapper := range updatedValidatorWrappers {
+		if err := st.state.UpdateValidatorWrapper(wrapper.Address, wrapper); err != nil {
+			return network.NoReward, err
+		}
+	}
+	st.state.AddBalance(collectRewards.DelegatorAddress, totalRewards)
+	return totalRewards, nil
+}
+
+// ATLAS - END

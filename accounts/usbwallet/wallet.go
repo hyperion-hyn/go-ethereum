@@ -154,7 +154,7 @@ func (w *wallet) Open(passphrase string) error {
 		w.commsLock = make(chan struct{}, 1)
 		w.commsLock <- struct{}{} // Enable lock
 	}
-	// Delegate device initialization to the underlying driver
+	// Redelegate device initialization to the underlying driver
 	if err := w.driver.Open(w.device, passphrase); err != nil {
 		return err
 	}

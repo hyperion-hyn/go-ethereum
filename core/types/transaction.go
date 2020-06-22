@@ -49,7 +49,7 @@ type txdata struct {
 	GasLimit     uint64          `json:"gas"      gencodec:"required"`
 	Recipient    *common.Address `json:"to"       rlp:"nil"` // nil means contract creation
 	Amount       *big.Int        `json:"value"    gencodec:"required"`
-	Payload      []byte          `json:"input"    gencodec:"required"`
+	Payload      []byte          `json:"input"    gencodec:"required"`		// ATLAS: also used to be staking message
 
 	// Signature values
 	V *big.Int `json:"v" gencodec:"required"`
@@ -58,6 +58,9 @@ type txdata struct {
 
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
+
+	// ATLAS: staking tx
+	Type		 TransactionType	// Default: normal tx
 }
 
 type txdataMarshaling struct {
@@ -226,6 +229,7 @@ func (tx *Transaction) AsMessage(s Signer) (Message, error) {
 		amount:     tx.data.Amount,
 		data:       tx.data.Payload,
 		checkNonce: true,
+		txType:     tx.data.Type,		// ATLAS
 	}
 
 	var err error
@@ -257,6 +261,16 @@ func (tx *Transaction) Cost() *big.Int {
 func (tx *Transaction) RawSignatureValues() (v, r, s *big.Int) {
 	return tx.data.V, tx.data.R, tx.data.S
 }
+
+// ATLAS
+func (tx *Transaction) SetType(txType TransactionType) {
+	tx.data.Type = txType
+}
+
+func (tx *Transaction) Type() TransactionType {
+	return tx.data.Type
+}
+// ATLAS - END
 
 // Transactions is a Transaction slice type for basic sorting.
 type Transactions []*Transaction
@@ -394,6 +408,7 @@ type Message struct {
 	gasPrice   *big.Int
 	data       []byte
 	checkNonce bool
+	txType     TransactionType	// ATLAS
 }
 
 func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, checkNonce bool) Message {
@@ -417,3 +432,5 @@ func (m Message) Gas() uint64          { return m.gasLimit }
 func (m Message) Nonce() uint64        { return m.nonce }
 func (m Message) Data() []byte         { return m.data }
 func (m Message) CheckNonce() bool     { return m.checkNonce }
+// ATLAS
+func (m Message) Type() TransactionType { return m.txType }
