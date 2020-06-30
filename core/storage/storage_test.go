@@ -1,5 +1,8 @@
 package storage
 
+// generate wrapper_test.go
+// cat data/build/contracts/Storage.json | jq -c '.abi' | abigen --abi - --pkg storage --type StorageWrapper --out wrapper_test.go
+
 import (
 	"context"
 	"encoding/json"
@@ -23,6 +26,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 )
+
 
 type Description struct {
 	name string `storage:"slot0"`
@@ -194,6 +198,16 @@ func TestBlockchain(t *testing.T) {
 
 	if response.Res != "hello world" {
 		t.Errorf("response from calling contract was expected to be 'hello world' instead received '%v'", res)
+	}
+
+	wrapper, err := NewStorageWrapper(addr, sim)
+	if err != nil {
+		t.Errorf("could not new a StorageWrapper: %v", err)
+	}
+
+	rv, err := wrapper.Hello(nil)
+	if err != nil || rv != "hello world" {
+		t.Errorf("response from calling contract was expected to be 'hello world' instead received '%v'", rv)
 	}
 }
 

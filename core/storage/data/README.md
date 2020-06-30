@@ -17,3 +17,10 @@ cat build/contracts/Storage.json | jq '.bytecode'
 ````shell script
 cat build/contracts/Storage.json | jq '.deployedBytecode'
 ````
+
+# generate bindings
+````shell script
+cat build/contracts/Storage.json | jq -c '.abi' | abigen --abi - --pkg storage --type Storage --out wrapper.go
+````
+
+
