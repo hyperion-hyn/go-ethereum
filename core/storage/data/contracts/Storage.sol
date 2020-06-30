@@ -12,7 +12,11 @@ contract Storage {
 
     }
 
-    function Version() public view returns (int) {
+    function Hello() public pure returns (string memory res) {
+        return "hello world";
+    }
+
+    function Version() public view returns (int v) {
         return version;
     }
 
