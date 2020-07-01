@@ -16,8 +16,6 @@ var (
 const (
 	// LockPeriodInEpoch is the number of epochs a undelegated token needs to be before it's released to the delegator's balance
 	LockPeriodInEpoch = 7
-	// LockPeriodInEpochV2 there is no extended locking time besides the current epoch time.
-	LockPeriodInEpochV2 = 0
 )
 
 // Redelegation represents the bond with tokens held by an account. It is
@@ -31,13 +29,7 @@ type Redelegation struct {
 }
 
 // Redelegations ..
-type Redelegations []Redelegation
-
-// String ..
-func (d Redelegations) String() string {
-	s, _ := json.Marshal(d)
-	return string(s)
-}
+type Redelegations map[common.Address]Redelegation
 
 func (d Redelegation) String() string {
 	s, _ := json.Marshal(d)
@@ -45,8 +37,8 @@ func (d Redelegation) String() string {
 }
 
 type RedelegationReference struct {
-	ValidatorAddress       common.Address
-	ReleaseTotalDelegation *big.Int
+	ValidatorAddress        common.Address
+	ReleasedTotalDelegation *big.Int // for a portion of released amount
 }
 
 // NewDelegation creates a new delegation object

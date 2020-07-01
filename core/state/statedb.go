@@ -20,6 +20,7 @@ package state
 import (
 	"errors"
 	"fmt"
+	staking "github.com/ethereum/go-ethereum/staking/types"
 	"math/big"
 	"sort"
 	"time"
@@ -103,6 +104,12 @@ type StateDB struct {
 	StorageHashes  time.Duration
 	StorageUpdates time.Duration
 	StorageCommits time.Duration
+
+	// ATLAS
+	originalMap3NodePool *staking.Map3NodePool
+	originalValidatorPool *staking.ValidatorPool
+	map3NodePool	*staking.Map3NodePoolStorage
+	validatorPool	*staking.ValidatorPoolStorage
 }
 
 // Create a new state from a given trie.
@@ -121,6 +128,8 @@ func New(root common.Hash, db Database) (*StateDB, error) {
 		preimages:           make(map[common.Hash][]byte),
 		journal:             newJournal(),
 	}, nil
+
+	// TODO(ATLAS): init map3 node and validator pool storage
 }
 
 // setError remembers the first non-nil error it is called with.
@@ -768,3 +777,15 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 		return nil
 	})
 }
+
+
+// ATLAS
+func (s *StateDB)  Map3NodePool() *staking.Map3NodePoolStorage {
+	return s.map3NodePool
+}
+
+func (s *StateDB) ValidatorPool() *staking.ValidatorPoolStorage {
+	return s.validatorPool
+}
+
+// ATLAS - END

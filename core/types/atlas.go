@@ -15,7 +15,8 @@ const (
 	StakeEditVal
 	Redelegate
 	Unredelegate
-	CollectMicroreRewards
+	CollectRedelRewards
+	// TODO(ATLAS): scale map3 node
 )
 
 func (txType TransactionType) String() string {
@@ -30,7 +31,7 @@ func (txType TransactionType) String() string {
 		return "DelegateValidator"
 	} else if txType == Unredelegate {
 		return "UndelegateValidator"
-	} else if txType == CollectMicroreRewards {
+	} else if txType == CollectRedelRewards {
 		return "CollectMicroredelegationRewards"
 	}
 	return "Normal"

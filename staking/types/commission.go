@@ -8,8 +8,8 @@ import (
 type (
 	// Commission defines a commission parameters for a given validator.
 	Commission struct {
-		CommissionRates
-		UpdateHeight *big.Int `json:"update-height"`
+		CommissionRates *CommissionRates
+		UpdateHeight    *big.Int `json:"update-height"`
 	}
 
 	// CommissionRates defines the initial commission rates to be used for creating a

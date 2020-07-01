@@ -5,13 +5,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus/clique/votepower"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/numeric"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/ethereum/go-ethereum/staking/committee"
 	"github.com/ethereum/go-ethereum/staking/effective"
 	"github.com/harmony-one/bls/ffi/go/bls"
-	"github.com/harmony-one/harmony/consensus/votepower"
 	"github.com/pkg/errors"
 	"math/big"
 )
@@ -23,7 +24,7 @@ const (
 	MaxWebsiteLength         = 140
 	MaxSecurityContactLength = 140
 	MaxDetailsLength         = 280
-	BLSVerificationStr       = "harmony-one"
+	BLSVerificationStr       = "hyperion-hyn"
 	TenThousand              = 10000
 	APRHistoryLength         = 30
 )
@@ -39,9 +40,6 @@ var (
 	)
 	errMinSelfDelegationTooSmall = errors.New(
 		"min_self_delegation must be greater than or equal to 10,000 ONE",
-	)
-	errInvalidMaxTotalDelegation = errors.New(
-		"max_total_delegation can not be less than min_self_delegation",
 	)
 	errCommissionRateTooLarge = errors.New(
 		"commission rate and change rate can not be larger than max commission rate",
@@ -74,6 +72,8 @@ var (
 
 // BLSPublicKey defines the bls public key
 type BLSPublicKey [PublicKeySizeInBytes]byte
+
+type BLSPublicKeys []BLSPublicKey
 
 // BLSSignature defines the bls signature
 type BLSSignature [BLSSignatureSizeInBytes]byte
@@ -113,9 +113,8 @@ type counters struct {
 // ValidatorWrapper contains validator,
 // its delegation information
 type ValidatorWrapper struct {
-	Validator
-	Redelegations Redelegations
-	//
+	Validator Validator
+	Redelegations map[common.Address]Redelegation
 	Counters counters `json:"-"`
 	// All the rewarded accumulated so far
 	BlockReward *big.Int `json:"-"`
@@ -123,8 +122,8 @@ type ValidatorWrapper struct {
 
 // ValidatorSnapshot contains validator snapshot and the corresponding epoch
 type ValidatorSnapshot struct {
-	Validator *ValidatorWrapper
-	Epoch     *big.Int
+	Validators map[common.Address]ValidatorWrapper
+	Epoch      *big.Int
 }
 
 // Computed represents current epoch
@@ -196,7 +195,7 @@ func (w ValidatorWrapper) String() string {
 
 // VoteWithCurrentEpochEarning ..
 type VoteWithCurrentEpochEarning struct {
-	Vote   votepower.VoteOnSubcomittee `json:"key"`
+	Vote   votepower.PureStakedVote `json:"key"`
 	Earned *big.Int                    `json:"earned-reward"`
 }
 
@@ -227,26 +226,29 @@ func (s ValidatorStats) String() string {
 type Validator struct {
 	// ECDSA address of the validator
 	ValidatorAddress common.Address `json:"validator-address"`
-	// validator's initiator
-	InitiatorAddresses map[common.Address]interface{} `json:"initiator-addresses"`
+	// validator's initiators (node address)
+	InitiatorAddresses *AddressSet `json:"initiator-addresses"`
 	// The BLS public key of the validator for consensus
-	SlotPubKeys []BLSPublicKey `json:"bls-public-keys"`
+	SlotPubKeys *BLSPublicKeys `json:"bls-public-keys"`
 	// The number of the last epoch this validator is
 	// selected in committee (0 means never selected)
 	LastEpochInCommittee *big.Int `json:"last-epoch-in-committee"`
-	// validator's self declared minimum self delegation
-	MinSelfDelegation *big.Int `json:"min-self-delegation"`
-	// maximum total delegation allowed
-	MaxTotalDelegation *big.Int `json:"max-total-delegation"`
 	// Is the validator active in participating
 	// committee selection process or not
 	Status effective.Eligibility `json:"-"`
 	// commission parameters
-	Commission
+	Commission *Commission
 	// description for the validator
-	Description
+	Description *Description
 	// CreationHeight is the height of creation
 	CreationHeight *big.Int `json:"creation-height"`
+}
+
+type ValidatorPool struct {
+	Validators         map[common.Address]ValidatorWrapper `slot:0`
+	ValidatorSnapshots map[*big.Int]ValidatorSnapshot      `slot:1`
+	Committees         map[*big.Int]committee.Committee    `slot:2`
+	ValidatorStats     map[*big.Int]ValidatorStats         `slot:3`
 }
 
 // DoNotEnforceMaxBLS ..
@@ -397,15 +399,6 @@ func (w *ValidatorWrapper) SanityCheck(
 	return nil
 }
 
-// Description - some possible IRL connections
-type Description struct {
-	Name            string `json:"name"`             // name
-	Identity        string `json:"identity"`         // optional identity signature (ex. UPort or Keybase)
-	Website         string `json:"website"`          // optional website link
-	SecurityContact string `json:"security-contact"` // optional security contact info
-	Details         string `json:"details"`          // optional details
-}
-
 // MarshalValidator marshals the validator object
 func MarshalValidator(validator Validator) ([]byte, error) {
 	return rlp.EncodeToBytes(validator)
@@ -418,59 +411,7 @@ func UnmarshalValidator(by []byte) (Validator, error) {
 	return decoded, err
 }
 
-// UpdateDescription returns a new Description object with d1 as the base and the fields that's not empty in d2 updated
-// accordingly. An error is returned if the resulting description fields have invalid length.
-func UpdateDescription(d1, d2 Description) (Description, error) {
-	newDesc := d1
-	if d2.Name != "" {
-		newDesc.Name = d2.Name
-	}
-	if d2.Identity != "" {
-		newDesc.Identity = d2.Identity
-	}
-	if d2.Website != "" {
-		newDesc.Website = d2.Website
-	}
-	if d2.SecurityContact != "" {
-		newDesc.SecurityContact = d2.SecurityContact
-	}
-	if d2.Details != "" {
-		newDesc.Details = d2.Details
-	}
 
-	return newDesc.EnsureLength()
-}
-
-// EnsureLength ensures the length of a validator's description.
-func (d Description) EnsureLength() (Description, error) {
-	if len(d.Name) > MaxNameLength {
-		return d, errors.Errorf(
-			"exceed maximum name length %d %d", len(d.Name), MaxNameLength,
-		)
-	}
-	if len(d.Identity) > MaxIdentityLength {
-		return d, errors.Errorf(
-			"exceed Maximum Length identity %d %d", len(d.Identity), MaxIdentityLength,
-		)
-	}
-	if len(d.Website) > MaxWebsiteLength {
-		return d, errors.Errorf(
-			"exceed Maximum Length website %d %d", len(d.Website), MaxWebsiteLength,
-		)
-	}
-	if len(d.SecurityContact) > MaxSecurityContactLength {
-		return d, errors.Errorf(
-			"exceed Maximum Length %d %d", len(d.SecurityContact), MaxSecurityContactLength,
-		)
-	}
-	if len(d.Details) > MaxDetailsLength {
-		return d, errors.Errorf(
-			"exceed Maximum Length for details %d %d", len(d.Details), MaxDetailsLength,
-		)
-	}
-
-	return d, nil
-}
 
 // VerifyBLSKeys checks if the public BLS key at index i of pubKeys matches the
 // BLS key signature at index i of pubKeysSigs.

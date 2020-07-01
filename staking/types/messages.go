@@ -13,23 +13,22 @@ type StakeMsg interface {
 }
 
 type CreateMap3Node struct {
-	InitiatorAddress   common.Address `json:"initiator-address"`
-	Description        `json:"description"`
-	CommissionRates    `json:"commission"`
-	MinSelfDelegation  *big.Int `json:"min-self-delegation"`
-	MaxTotalDelegation *big.Int `json:"max-total-delegation"`
-	PublicKeys         []PublicKey
-	Amount             *big.Int `json:"amount"`
+	InitiatorAddress common.Address   `json:"initiator-address"`
+	Description      *Description     `json:"description"`
+	CommissionRates  *CommissionRates `json:"commission"`
+	NodeKeys         []Map3NodeKey
+	Amount           *big.Int `json:"amount"`
+	AutoRenew        bool
 }
 
 type EditMap3Node struct {
 	Map3NodeAddress    common.Address `json:"validator-address"`
-	Description        `json:"description"`
-	CommissionRate     *numeric.Dec `json:"commission-rate" rlp:"nil"`
-	MinSelfDelegation  *big.Int     `json:"min-self-delegation" rlp:"nil"`
-	MaxTotalDelegation *big.Int     `json:"max-total-delegation" rlp:"nil"`
-	PublicKeyToRemove  *PublicKey
-	PublicKeyToAdd     *PublicKey
+	Description        *Description   `json:"description"`
+	CommissionRate     numeric.Dec    `json:"commission-rate" rlp:"nil"`
+	MinSelfDelegation  *big.Int       `json:"min-self-delegation" rlp:"nil"`
+	MaxTotalDelegation *big.Int       `json:"max-total-delegation" rlp:"nil"`
+	NodeKeyToRemove    *Map3NodeKey
+	NodeKeyToAdd       *Map3NodeKey
 }
 
 // Microdelegate - type for delegating to a map3 node
@@ -37,12 +36,14 @@ type Microdelegate struct {
 	DelegatorAddress common.Address `json:"delegator_address"`
 	Map3NodeAddress  common.Address
 	Amount           *big.Int
+	AutoRenew        bool
 }
 
 // Unmicrodelegate - type for removing delegation responsibility
 type Unmicrodelegate struct {
-	DelegatorAddress common.Address `json:"delegator_address"`
+	DelegatorAddress common.Address
 	Map3NodeAddress  common.Address
+	Amount           *big.Int
 }
 
 // CollectMicrodelegationRewards - type for collecting token rewards

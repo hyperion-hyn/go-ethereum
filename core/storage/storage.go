@@ -136,9 +136,33 @@ func (s *Storage) Value() (interface{}){
     return indirectVal.Interface()
 }
 
+func (s *Storage) Value2(isLazy bool) interface{} {
+    return nil
+}
+
 func (s *Storage) SetValue(data interface{}) (*Storage) {
     s.setter(data)
     return s
 }
 
+func (s *Storage) Contain(data interface{}) bool {
+    return true
+}
 
+func (s *Storage) DeleteByName(name string) bool {
+    return true
+}
+
+func (s *Storage) DeleteByIndex(index int) error {
+    return nil
+}
+
+func (s *Storage) Len() int {
+    // support array and map
+    return 0
+}
+
+func (s *Storage) Keys() interface{} {
+    // only support map
+    return 0
+}

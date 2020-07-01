@@ -691,13 +691,11 @@ func accumulateRewardsAndCountSigs(
 		return network.EmptyPayout, nil
 	}
 
-	defaultReward := network.BlockReward
-
-	// TODO(ATLAS): adjust block reward by block num
+	blockReward := network.CalcBlockReward(header.Number, bc.Config())
 
 	// If too much is staked, then possible to have negative reward,
 	// not an error, just a possible economic situation, hence we return
-	if defaultReward.Sign() == -1 {		// negative
+	if blockReward.Sign() == -1 { // negative
 		return network.EmptyPayout, nil
 	}
 
@@ -741,7 +739,7 @@ func accumulateRewardsAndCountSigs(
 		if err != nil {
 			return network.EmptyPayout, err
 		}
-		due := defaultReward.Mul(
+		due := blockReward.Mul(
 			voter.OverallPercent.Quo(allSignersShare),
 		).RoundInt()
 		newRewards.Add(newRewards, due)

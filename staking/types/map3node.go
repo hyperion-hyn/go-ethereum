@@ -2,6 +2,8 @@ package types
 
 import (
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/numeric"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/pkg/errors"
 	"math/big"
 )
@@ -24,129 +26,138 @@ const (
 const (
 	// LockPeriodInEpoch is the number of epochs a undelegated token needs to be before it's released to the delegator's balance
 	Map3NodeLockPeriodInEpoch = 180
+	Million                   = 1000000
+	MaxPubKeyAllowed          = 1
 )
 
-type PublicKey []byte
+var (
+	MinSelfDelegation     = numeric.NewDecWithPrec(20, 2) // 20%
+	MinDelegation         = numeric.NewDecWithPrec(1, 2)  // 1%
+	baseMinTotalNodeStake = numeric.NewDecFromBigInt(new(big.Int).Mul(big.NewInt(params.Ether), big.NewInt(Million)))
+	minimumMap3NodeStake  = new(big.Int).Mul(big.NewInt(params.Ether), big.NewInt(Million))
+)
+
+type Map3NodeKey []byte // TODO: fix size?
+
+func (pk Map3NodeKey) Hex() string {
+	return common.Bytes2Hex(pk[:])
+}
+
+type Map3NodeKeys []Map3NodeKey
 
 type Map3Node struct {
 	// ECDSA address of the map3 node
-	Map3NodeAddr common.Address `json:"map3node-address"`
+	NodeAddress common.Address `json:"map3node-address"`
 	// map3 node's initiator
-	InitiatorAddr common.Address `json:"initiator-address"`
-	// The public keys of the map3 node (used for communication and identification)
-	PublicKeys []PublicKey
-	// map3 node's self declared minimum self delegation
-	MinSelfDelegation *big.Int `json:"min-self-delegation"`
-	// maximum total delegation allowed
-	MaxTotalDelegation *big.Int `json:"max-total-delegation"`
+	InitiatorAddress common.Address `json:"initiator-address"`
+	// The node keys of the map3 node (used for communication and identification)
+	NodeKeys []Map3NodeKey
 	// commission parameters
-	Commission
+	Commission Commission
 	// description for the validator
-	Description
+	Description Description
+	//
+	SplittedFrom common.Address
 }
 
 // Map3NodeWrapper contains map3 node,
 // its micro-delegation information
 type Map3NodeWrapper struct {
-	Map3Node
-	Microdelegations Microdelegations
-	RedelegationReference     RedelegationReference
-	// All the rewarded accumulated so far
-	AccumulatedReward *big.Int
-	NodeState         NodeState
+	Map3Node               Map3Node
+	Microdelegations       Microdelegations
+	RedelegationReference  RedelegationReference
+	AccumulatedReward      *big.Int // All the rewarded accumulated so far
+	NodeState              NodeState
+	TotalDelegation        *big.Int
+	TotalPendingDelegation *big.Int
 }
+
+type Map3NodeWrappers map[common.Address]Map3NodeWrapper
+
+// Map3NodeSnapshot contains map3 node snapshot and the corresponding epoch
+type Map3NodeSnapshot struct {
+	Map3Nodes Map3NodeWrappers
+	Epoch     *big.Int
+}
+
+type Map3NodeSnapshotByEpoch map[uint64]Map3NodeSnapshot
 
 type NodeState struct {
-	// map3 node statue
-	Status Map3NodeStatus
-	// Node age
-	NodeAge *big.Int
-	// CreationHeight is the height of creation
-	CreationHeight *big.Int
-	ActiveHeight   *big.Int
-	ReleaseHeight  *big.Int
+	Status          Map3NodeStatus // map3 node statue
+	NodeAge         *big.Int       // Node age
+	CreationEpoch   *big.Int
+	ActivationEpoch *big.Int
+	ReleaseEpoch    *big.Int
 }
 
-// SanityCheck checks basic requirements of a validator
-func (n *Map3Node) SanityCheck(oneThirdExtrn int) error {
-	if _, err := n.EnsureLength(); err != nil {
+type AddressSet map[common.Address]struct{}
+type Map3NodeAddressSetByDelegator map[common.Address]AddressSet
+type NodeKeySet map[string]struct{} // node key hex
+
+type Map3NodePool struct {
+	Nodes                     Map3NodeWrappers
+	NodeSnapshotByEpoch       Map3NodeSnapshotByEpoch
+	NodeAddressSetByDelegator Map3NodeAddressSetByDelegator
+	NodeKeySet                NodeKeySet
+	DescriptionIdentitySet    DescriptionIdentitySet
+}
+
+// SanityCheck checks basic requirements of a map3 node
+func (n *Map3Node) SanityCheck(maxPubKeyAllowed int) error {
+	if _, err := n.Description.EnsureLength(); err != nil {
 		return err
 	}
 
-	if len(n.SlotPubKeys) == 0 {
+	if len(n.NodeKeys) == 0 {
 		return errNeedAtLeastOneSlotKey
 	}
 
-	if c := len(n.SlotPubKeys); oneThirdExtrn != DoNotEnforceMaxBLS &&
-		c > oneThirdExtrn {
+	if c := len(n.NodeKeys); maxPubKeyAllowed != DoNotEnforceMaxBLS &&
+		c > maxPubKeyAllowed {
 		return errors.Wrapf(
 			ErrExcessiveBLSKeys, "have: %d allowed: %d",
-			c, oneThirdExtrn,
+			c, maxPubKeyAllowed,
 		)
 	}
 
-	if n.MinSelfDelegation == nil {
-		return errNilMinSelfDelegation
-	}
-
-	if n.MaxTotalDelegation == nil {
-		return errNilMaxTotalDelegation
-	}
-
-	// MinSelfDelegation must be >= 10000 ONE
-	if n.MinSelfDelegation.Cmp(minimumStake) < 0 {
+	if n.Commission.CommissionRates.Rate.LT(zeroPercent) || n.Commission.CommissionRates.Rate.GT(hundredPercent) {
 		return errors.Wrapf(
-			errMinSelfDelegationTooSmall,
-			"delegation-given %s", n.MinSelfDelegation.String(),
+			errInvalidCommissionRate, "rate:%s", n.Commission.CommissionRates.Rate.String(),
 		)
 	}
 
-	// MaxTotalDelegation must not be less than MinSelfDelegation
-	if n.MaxTotalDelegation.Cmp(n.MinSelfDelegation) < 0 {
+	if n.Commission.CommissionRates.MaxRate.LT(zeroPercent) || n.Commission.CommissionRates.MaxRate.GT(hundredPercent) {
 		return errors.Wrapf(
-			errInvalidMaxTotalDelegation,
-			"max-total-delegation %s min-self-delegation %s",
-			n.MaxTotalDelegation.String(),
-			n.MinSelfDelegation.String(),
+			errInvalidCommissionRate, "max rate:%s", n.Commission.CommissionRates.MaxRate.String(),
 		)
 	}
 
-	if n.Rate.LT(zeroPercent) || n.Rate.GT(hundredPercent) {
+	if n.Commission.CommissionRates.MaxChangeRate.LT(zeroPercent) ||
+		n.Commission.CommissionRates.MaxChangeRate.GT(hundredPercent) {
 		return errors.Wrapf(
-			errInvalidCommissionRate, "rate:%s", n.Rate.String(),
+			errInvalidCommissionRate, "max change rate:%s", n.Commission.CommissionRates.MaxChangeRate.String(),
 		)
 	}
 
-	if n.MaxRate.LT(zeroPercent) || n.MaxRate.GT(hundredPercent) {
-		return errors.Wrapf(
-			errInvalidCommissionRate, "max rate:%s", n.MaxRate.String(),
-		)
-	}
-
-	if n.MaxChangeRate.LT(zeroPercent) || n.MaxChangeRate.GT(hundredPercent) {
-		return errors.Wrapf(
-			errInvalidCommissionRate, "max change rate:%s", n.MaxChangeRate.String(),
-		)
-	}
-
-	if n.Rate.GT(n.MaxRate) {
+	if n.Commission.CommissionRates.Rate.GT(n.Commission.CommissionRates.MaxRate) {
 		return errors.Wrapf(
 			errCommissionRateTooLarge,
-			"rate:%s max rate:%s", n.Rate.String(), n.MaxRate.String(),
+			"rate:%s max rate:%s", n.Commission.CommissionRates.Rate.String(), n.Commission.CommissionRates.MaxRate.String(),
 		)
 	}
 
-	if n.MaxChangeRate.GT(n.MaxRate) {
+	if n.Commission.CommissionRates.MaxChangeRate.GT(n.Commission.CommissionRates.MaxRate) {
 		return errors.Wrapf(
 			errCommissionRateTooLarge,
-			"rate:%s max change rate:%s", n.Rate.String(), n.MaxChangeRate.String(),
+			"rate:%s max change rate:%s", n.Commission.CommissionRates.Rate.String(),
+			n.Commission.CommissionRates.MaxChangeRate.String(),
 		)
 	}
 
-	allKeys := map[shard.BLSPublicKey]struct{}{}
-	for i := range n.SlotPubKeys {
-		if _, ok := allKeys[n.SlotPubKeys[i]]; !ok {
-			allKeys[n.SlotPubKeys[i]] = struct{}{}
+	allKeys := map[string]struct{}{}
+	for _, key := range n.NodeKeys {
+		if _, ok := allKeys[key.Hex()]; !ok {
+			allKeys[key.Hex()] = struct{}{}
 		} else {
 			return errDuplicateSlotKeys
 		}
@@ -154,11 +165,67 @@ func (n *Map3Node) SanityCheck(oneThirdExtrn int) error {
 	return nil
 }
 
-// TotalDelegation - return the total amount of token in delegation
-func (w *Map3NodeWrapper) TotalDelegation() *big.Int {
-	total := big.NewInt(0)
-	for _, entry := range w.Microdelegations {
-		total.Add(total, entry.Amount)
+func CalcMinTotalNodeStake(blockHeight *big.Int, config *params.ChainConfig) (numeric.Dec, numeric.Dec, numeric.Dec) {
+	return baseMinTotalNodeStake, baseMinTotalNodeStake.Mul(MinSelfDelegation), baseMinTotalNodeStake.Mul(MinDelegation)
+}
+
+// CreateValidatorFromNewMsg creates validator from NewValidator message
+func CreateMap3NodeFromNewMsg(node *CreateMap3Node, nodeAddr common.Address, blockNum *big.Int) (*Map3Node, error) {
+	desc, err := node.Description.EnsureLength()
+	if err != nil {
+		return nil, err
 	}
-	return total
+	commission := Commission{node.CommissionRates, blockNum}
+	nodeKeys := append(node.NodeKeys[0:0], node.NodeKeys...)
+
+	v := Map3Node{
+		NodeAddress:      nodeAddr,
+		InitiatorAddress: node.InitiatorAddress,
+		NodeKeys:         nodeKeys,
+		Commission:       commission,
+		Description:      *desc,
+	}
+	return &v, nil
+}
+
+// UpdateValidatorFromEditMsg updates validator from EditValidator message
+func UpdateMap3NodeFromEditMsg(map3Node *Map3NodeStorage, nodeKeySet *NodeKeySetStorage,
+	identitySet *DescriptionIdentitySetStorage, edit *EditMap3Node) error {
+	if map3Node.GetNodeAddress() != edit.Map3NodeAddress {
+		return errAddressNotMatch
+	}
+	err := UpdateDescription(map3Node.GetDescription(), edit.Description, identitySet)
+	if err != nil {
+		return err
+	}
+
+	if !edit.CommissionRate.IsNil() {
+		map3Node.GetCommission().GetCommissionRates().SetRate(edit.CommissionRate)
+	}
+
+	if edit.NodeKeyToRemove != nil {
+		index := -1
+		for i := 0; i < map3Node.GetNodeKeys().Len(); i++ {
+			if edit.NodeKeyToRemove.Hex() == map3Node.GetNodeKeys().Get(i).Hex() {
+				index = i
+				break
+			}
+		}
+		// we found key to be removed
+		if index >= 0 {
+			map3Node.GetNodeKeys().Remove(index, false)
+			nodeKeySet.Remove(edit.NodeKeyToRemove.Hex())
+		} else {
+			return errSlotKeyToRemoveNotFound
+		}
+	}
+
+	if edit.NodeKeyToAdd != nil {
+		if nodeKeySet.Contain(edit.NodeKeyToAdd.Hex()) {
+			map3Node.GetNodeKeys().Push(edit.NodeKeyToAdd)
+		} else {
+			return errSlotKeyToAddExists
+		}
+	}
+	return nil
 }

@@ -6,17 +6,24 @@ import (
 	"math/big"
 )
 
+const (
+	PendingDelegationLockPeriodInEpoch = 7
+)
+
 // Microdelegation represents the bond with tokens held by an account. It is
 // owned by one delegator, and is associated with the voting power of one
 // validator.
 type Microdelegation struct {
-	BaseDelegation
+	DelegatorAddress   common.Address
+	Amount             *big.Int
+	Reward             *big.Int
+	Undelegations      Undelegations
 	PendingDelegations PendingDelegations
-	IsAutoRenew        bool
+	AutoRenew          bool
 }
 
 // Microdelegations ..
-type Microdelegations []Microdelegation
+type Microdelegations map[common.Address]Microdelegation
 
 // String ..
 func (d Microdelegations) String() string {
@@ -29,46 +36,42 @@ func (d Microdelegation) String() string {
 	return string(s)
 }
 
+// Undelegation represents one undelegation entry
+type Undelegation struct {
+	Amount *big.Int `json:"amount"`
+	Epoch  *big.Int `json:"epoch"`
+}
+
+// Undelegations ..
+type Undelegations []Undelegation
+
 // PendingDelegation represents tokens during map3 node in pending state
 type PendingDelegation struct {
 	Amount *big.Int
-	Epoch  *big.Int `json:"epoch"`
+	Epoch  *big.Int
 }
 
 type PendingDelegations []PendingDelegation
 
-//type MicrodelegationAugmenterEntries []MicrodelegationAugmenterEntry
-//
-//type MicrodelegationAugmenterEntry struct {
-//	MicrodelegatorAddress common.Address
-//	Amount                *big.Int
-//}
-//
-//type MicrodelegationAugmenters []MicrodelegationAugmenter
-//
-//type MicrodelegationAugmenter struct {
-//	MicrodelegationAugmenterEntries MicrodelegationAugmenterEntries
-//	BlockHeight                     *big.Int
-//	RewardSnapshot                  *big.Int
-//}
-
-// MicrodelegationIndexes is a slice of MicrodelegationIndex
-type MicrodelegationIndexes []MicrodelegationIndex // TODO(ATLAS): need?
-
-// MicrodelegationIndex stored the index of a delegation in the validator's delegation list
-type MicrodelegationIndex struct {
-	Map3NodeAddress common.Address
-	Index           uint64
-	BlockNum        *big.Int
-}
-
-// NewMicroDelegation creates a new microdelegation object
-func NewMicroDelegation(delegatorAddr common.Address, amount *big.Int) Microdelegation {
-	return Microdelegation{
-		DelegatorAddress: delegatorAddr,
-		Amount:           amount,
+// NewMicrodelegation creates a new microdelegation object
+func NewMicrodelegation(
+	delegator common.Address, amount, epoch *big.Int, autoRenew, pending bool,
+) Microdelegation {
+	d := Microdelegation{
+		DelegatorAddress: delegator,
+		Amount:           big.NewInt(0),
 		Reward:           big.NewInt(0),
+		AutoRenew:        autoRenew,
 	}
+	if pending {
+		d.PendingDelegations = append(d.PendingDelegations, PendingDelegation{
+			Amount: amount,
+			Epoch:  epoch,
+		})
+	} else {
+		d.Amount = amount
+	}
+	return d
 }
 
 // Unmicrodelegate - append entry to the unmicrodelegation

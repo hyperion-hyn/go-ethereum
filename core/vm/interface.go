@@ -17,6 +17,7 @@
 package vm
 
 import (
+	staking "github.com/ethereum/go-ethereum/staking/types"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -64,6 +65,10 @@ type StateDB interface {
 	AddPreimage(common.Hash, []byte)
 
 	ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) error
+
+	// ATLAS
+	Map3NodePool() *staking.Map3NodePoolStorage
+	ValidatorPool() *staking.ValidatorPoolStorage
 }
 
 // CallContext provides a basic interface for the EVM calling conventions. The EVM

@@ -12,10 +12,10 @@ import (
 
 var (
 	// BlockReward is the block reward, to be split evenly among block signers.
-	BlockReward = numeric.NewDecFromBigInt(new(big.Int).Mul(big.NewInt(2), big.NewInt(params.Ether)))
+	BaseBlockReward = new(big.Int).Mul(big.NewInt(2), big.NewInt(params.Ether))
 	// BlockRewardStakedCase is the baseline block reward in staked case -
 	totalTokens = numeric.NewDecFromBigInt(
-		new(big.Int).Mul(big.NewInt(12600000000), big.NewInt(params.Ether)),
+		new(big.Int).Mul(big.NewInt(10000000000), big.NewInt(params.Ether)),
 	)
 	// ErrPayoutNotEqualBlockReward ..
 	ErrPayoutNotEqualBlockReward = errors.New(
@@ -72,3 +72,6 @@ func (r *stakingEra) ReadRoundResult() *reward.CompletedRound {
 	return &r.CompletedRound
 }
 
+func CalcBlockReward(blockHeight *big.Int, config *params.ChainConfig) numeric.Dec {
+	return numeric.NewDecFromBigInt(BaseBlockReward)
+}
