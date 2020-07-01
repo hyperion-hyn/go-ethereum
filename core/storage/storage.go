@@ -63,7 +63,7 @@ func updateSlot(base int, slot int, typ reflect.Type, val reflect.Value, slots D
 	s := common.BigToHash(big.NewInt(int64(base + slot)))
 	switch typ.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		slots[s] = common.BytesToHash(val.Bytes())
+		slots[s] = common.BigToHash(big.NewInt(val.Int()))
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 	case reflect.Float32, reflect.Float64:
 		// TODO:
@@ -109,6 +109,14 @@ func (s *Storage) GetByName(name string) *Storage {
 				return newStorage(s.db, s.addr, 0, obj, func(value interface{}) {
 					target := reflect.Indirect(reflect.ValueOf(obj))
 					target.Set(reflect.ValueOf(value))
+					tag := sf.Tag.Get("storage")
+					fmt.Println(":::", tag)
+					if slot, err := parseTag(tag); err != nil {
+						fmt.Println(">>>", tag)
+						typ := sf.Type
+						updateSlot(s.slot, slot, typ, reflect.ValueOf(value), s.dirty)
+					}
+
 				}, s.dirty)
 			} else {
 				obj := reflect.NewAt(reflect.Indirect(val).Type(), unsafe.Pointer(val.Pointer())).Interface()
@@ -190,7 +198,9 @@ func (s *Storage) SetValue(data interface{}) *Storage {
 }
 
 func (s *Storage) Flush() *Storage {
+	log.Debug("Flush", "dirty", s.dirty)
 	for k, v := range s.dirty {
+		log.Debug("Flush", "addr", s.addr, "slot", k, "value", v)
 		s.db.SetState(s.addr, k, v)
 	}
 	return s

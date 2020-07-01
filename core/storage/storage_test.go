@@ -21,8 +21,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 )
@@ -89,13 +87,13 @@ func init() {
 	var builtContract BuiltContract
 	err = json.Unmarshal(content, &builtContract)
 	if err != nil {
-		log.Info("init", "Unmarshal failed", err, "content", content)
+		log.Debug("init", "Unmarshal failed", err, "content", content)
 	}
 
 	abi, _ := json.Marshal(builtContract.ABI)
-	log.Info("init", "abi", string(abi))
-	log.Info("init", "bytecode", builtContract.Bytecode)
-	log.Info("init", "deployedBytecode", builtContract.DeployedBytecode)
+	log.Debug("init", "abi", string(abi))
+	log.Debug("init", "bytecode", builtContract.Bytecode)
+	log.Debug("init", "deployedBytecode", builtContract.DeployedBytecode)
 
 	abiJSON = string(abi)
 	abiBin = builtContract.Bytecode
@@ -126,18 +124,15 @@ func TestParseTag(t *testing.T) {
 	}
 }
 
-// expected return value contains "hello world"
-var expectedReturn = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-
 func setupBlockchain(t *testing.T, abiJSON string, abiBin string) (common.Address, *backends.SimulatedBackend, context.Context) {
 	testAddr := crypto.PubkeyToAddress(testKey.PublicKey)
 	sim := backends.NewSimulatedBackend(
 		core.GenesisAlloc{
 			testAddr: {Balance: big.NewInt(10000000000)},
 		},
-		10000000,
+		100000000,
 	)
-	defer sim.Close()
+
 	bgCtx := context.Background()
 
 	parsed, err := abi.JSON(strings.NewReader(abiJSON))
@@ -147,6 +142,7 @@ func setupBlockchain(t *testing.T, abiJSON string, abiBin string) (common.Addres
 	contractAuth := bind.NewKeyedTransactor(testKey)
 	contractAuth.GasLimit = 10000000
 	addr, _, _, err := bind.DeployContract(contractAuth, parsed, common.FromHex(abiBin), sim)
+	log.Debug("setup", "deployed", addr, "test", testAddr)
 	if err != nil {
 		t.Errorf("could not deploy contract: %v", err)
 	}
@@ -156,7 +152,7 @@ func setupBlockchain(t *testing.T, abiJSON string, abiBin string) (common.Addres
 	return addr, sim, bgCtx
 }
 
-func TestBlockchain(t *testing.T) {
+func TestBlockchainViaPackParameters(t *testing.T) {
 	addr, sim, bgCtx := setupBlockchain(t, abiJSON, abiBin)
 
 	testAddr := crypto.PubkeyToAddress(testKey.PublicKey)
@@ -194,11 +190,16 @@ func TestBlockchain(t *testing.T) {
 	if err != nil {
 		t.Errorf("could not unpack response %v: %v", err, res)
 	}
-	log.Info("Unpack", "response", response)
+	log.Debug("Unpack", "response", response)
 
 	if response.Res != "hello world" {
 		t.Errorf("response from calling contract was expected to be 'hello world' instead received '%v'", res)
 	}
+}
+
+
+func TestBlockchainViaBinding(t *testing.T) {
+	addr, sim, _ := setupBlockchain(t, abiJSON, abiBin)
 
 	wrapper, err := NewStorageWrapper(addr, sim)
 	if err != nil {
@@ -214,10 +215,15 @@ func TestBlockchain(t *testing.T) {
 // Tests that storage manipulation
 func TestStorageManipulation(t *testing.T) {
 
-	// Create an empty state database
-	db := rawdb.NewMemoryDatabase()
-	state, _ := state.New(common.Hash{}, state.NewDatabase(db))
-	addr := common.BytesToAddress([]byte{9})
+	addr, sim, _ := setupBlockchain(t, abiJSON, abiBin)
+	log.Debug("Blockchain", "deployed", addr)
+
+	state, _ := sim.Blockchain().State()
+
+	wrapper, err := NewStorageWrapper(addr, sim)
+	if err != nil {
+		t.Errorf("could not new a StorageWrapper: %v", err)
+	}
 
 	var globalVariables GlobalVariables = GlobalVariables{
 		ValidatorList: ValidatorList{
@@ -232,26 +238,26 @@ func TestStorageManipulation(t *testing.T) {
 		},
 	}
 
-	log.Info("ValueOf", "globalVariables", reflect.ValueOf(&globalVariables))
-	log.Info("ValueOf", "globalVariables.validatorList", reflect.ValueOf(&globalVariables).Elem().FieldByName("ValidatorList"))
-	log.Info("ValueOf", "globalVariables.validatorList", reflect.ValueOf(&globalVariables).Elem().FieldByName("ValidatorList").FieldByName("Name"))
+	log.Debug("ValueOf", "globalVariables", reflect.ValueOf(&globalVariables))
+	log.Debug("ValueOf", "globalVariables.validatorList", reflect.ValueOf(&globalVariables).Elem().FieldByName("ValidatorList"))
+	log.Debug("ValueOf", "globalVariables.validatorList", reflect.ValueOf(&globalVariables).Elem().FieldByName("ValidatorList").FieldByName("Name"))
 	// reflect.ValueOf(&globalVariables).Elem().FieldByName("ValidatorList").FieldByName("author").SetString("ethereum")
-	log.Info("ValueOf", "ValidatorList.Name", globalVariables.ValidatorList.Name)
+	log.Debug("ValueOf", "ValidatorList.Name", globalVariables.ValidatorList.Name)
 	reflect.Indirect(reflect.ValueOf(&globalVariables)).FieldByName("ValidatorList").FieldByName("Name").SetString("harmony")
-	log.Info("ValueOf", "ValidatorList.Name", globalVariables.ValidatorList.Name)
+	log.Debug("ValueOf", "ValidatorList.Name", globalVariables.ValidatorList.Name)
 	// reflect.ValueOf(validatorList).FieldByName("Name").SetString("harmony")
 
 	{
 		storage := NewStorage(state, addr, 0, &globalVariables, nil)
-		log.Info("TestStorageManipulation", "validatorList", globalVariables)
+		log.Debug("TestStorageManipulation", "validatorList", globalVariables)
 		name := storage.GetByName("ValidatorList").GetByName("Desc").GetByName("name")
 		// name := storage.GetByName("validators").GetByName("name")
-		log.Info("result", "validatorList.Name", name.Value())
+		log.Debug("result", "validatorList.Name", name.Value())
 		//     {
 		//         name := storage.GetByName("Name")
-		//         log.Info("result", "validatorList.Name", name.Value())
+		//         log.Debug("result", "validatorList.Name", name.Value())
 		name.SetValue("harmony")
-		log.Info("result", "validatorList.Name", name.Value())
+		log.Debug("result", "validatorList.Name", name.Value())
 		//     }
 		//     // os.Exit(1)
 	}
@@ -259,51 +265,96 @@ func TestStorageManipulation(t *testing.T) {
 	storage := NewStorage(state, addr, 0, &globalVariables, nil)
 
 	{
-		log.Info("TestStorageManipulation", "Version", globalVariables.Version)
+		var target int = 0b101010
+		log.Debug("TestStorageManipulation", "Version", globalVariables.Version)
 		version := storage.Get("Version")
-		version.SetValue(0b101010)
-		log.Info("TestStorageManipulation", "Version", globalVariables.Version)
+		version.SetValue(target)
+		log.Debug("TestStorageManipulation", "Version", globalVariables.Version)
 		storage.Flush()
 
+		rv, err := wrapper.Version(nil)
+		log.Debug("Version", "rv", rv)
+		if err != nil || rv.Cmp(big.NewInt(int64(target))) != 0 {
+			t.Errorf("response from Version() was expected to be %v instead received %v, err: %v", target, rv, err)
+		}
+		v := state.GetState(addr, common.BigToHash(big.NewInt(0)))
+		log.Debug("GetState", "v", v)
+
+		state.SetBalance(addr, big.NewInt(7788))
+		state.Commit(true)
+		sim.Commit()
+		v4 := state.GetBalance(addr)
+		log.Debug("GetBalance", "v4", v4)
+
+		sim.Commit()
+		state, err = sim.Blockchain().State()
+		v3 := state.GetBalance(addr)
+		log.Debug("GetBalance", "v3", v3)
+		testAddr := crypto.PubkeyToAddress(testKey.PublicKey)
+		v1, err := wrapper.Balance(&bind.CallOpts{
+			Pending:     false,
+			From:        testAddr,
+			BlockNumber: sim.Blockchain().CurrentBlock().Number(),
+			Context:     nil,
+		})
+		if err != nil {
+			t.Errorf("response from Version() was expected to be %v instead received %v, err: %v", target, rv, err)
+		}
+		log.Debug("GetState", "v1", v1)
+
+		return
+		// log.Debug("--------------")
+		// contractAuth := bind.NewKeyedTransactor(testKey)
+		// contractAuth.GasLimit = 10000000
+		// trans, err := wrapper.Modify(contractAuth)
+		// if err != nil {
+		// 	log.Debug("Modify", "err", err, "trans", trans)
+		// }
+		// sim.Commit()
+		//
+		// state, err = sim.Blockchain().State()
+		// v2 := state.GetState(addr, common.HexToHash("0"))
+		// log.Debug("GetState", "v2", v2)
 	}
 
-	log.Info("TestStorageManipulation", "validatorList", globalVariables)
+	return
+	log.Debug("TestStorageManipulation", "validatorList", globalVariables)
 	// name := storage.GetByName("validators").GetByName("desc").GetByName("name")
 	// name := storage.GetByName("validators").GetByName("name")
 	{
 		name := storage.GetByName("ValidatorList").GetByName("Name")
-		log.Info("result", "validatorList.Name", name.Value())
+		log.Debug("result", "validatorList.Name", name.Value())
 	}
 
 	{
 		name := storage.GetByName("ValidatorList").GetByName("author")
-		log.Info("result", "validatorList.author", name.Value())
+		log.Debug("result", "validatorList.author", name.Value())
 	}
 
 	{
 		name := storage.GetByName("ValidatorList").GetByName("Desc").GetByName("name")
-		log.Info("result", "validatorList.Desc.name", name.Value())
+		log.Debug("result", "validatorList.Desc.name", name.Value())
 	}
 
 	{
 		name := storage.GetByName("ValidatorList").GetByName("author")
-		log.Info("result", "validatorList.author", name.Value())
+		log.Debug("result", "validatorList.author", name.Value())
 		name.SetValue("harmony")
-		log.Info("result", "validatorList.author", globalVariables.ValidatorList.author)
+		log.Debug("result", "validatorList.author", globalVariables.ValidatorList.author)
 	}
 
 	{
 		name := storage.GetByName("ValidatorList").GetByName("count")
-		log.Info("result", "validatorList.count", name.Value())
+		log.Debug("result", "validatorList.count", name.Value())
 		name.SetValue(22)
-		log.Info("result", "validatorList.count", globalVariables.ValidatorList.count)
+		log.Debug("result", "validatorList.count", globalVariables.ValidatorList.count)
 	}
 
 	{
-		log.Info("compare", "validatorList.validators == nil", globalVariables.ValidatorList.validators == nil)
-		log.Info("compare", "len(validatorList.validators)", len(globalVariables.ValidatorList.validators))
+		log.Debug("compare", "validatorList.validators == nil", globalVariables.ValidatorList.validators == nil)
+		log.Debug("compare", "len(validatorList.validators)", len(globalVariables.ValidatorList.validators))
 		validators := storage.GetByName("ValidatorList").GetByName("validators")
-		log.Info("result", "validatorList.validators", validators.Value())
+		log.Debug("result", "validatorList.validators", validators.Value())
 		vv := validators.Value().([]Validator)
 		t := Validator{
 			desc: Description{
@@ -313,13 +364,13 @@ func TestStorageManipulation(t *testing.T) {
 			delegations: nil,
 		}
 		vv = append(vv, t)
-		log.Info("result", "validatorList.validators", vv)
-		log.Info("result", "validatorList.validators", globalVariables.ValidatorList.validators)
+		log.Debug("result", "validatorList.validators", vv)
+		log.Debug("result", "validatorList.validators", globalVariables.ValidatorList.validators)
 		validators.GetByIndex(1).SetValue(t)
-		log.Info("result", "validatorList.validators", globalVariables.ValidatorList.validators)
+		log.Debug("result", "validatorList.validators", globalVariables.ValidatorList.validators)
 
 		validators.GetByIndex(2).GetByName("desc").GetByName("name").SetValue("haha")
-		log.Info("result", "validatorList.validators", globalVariables.ValidatorList.validators)
+		log.Debug("result", "validatorList.validators", globalVariables.ValidatorList.validators)
 	}
 
 	{
@@ -329,7 +380,7 @@ func TestStorageManipulation(t *testing.T) {
 			amount: 8899,
 		}
 		donations := storage.GetByName("ValidatorList").GetByName("donations")
-		log.Info("result", "validatorList.donations", donations.Value())
+		log.Debug("result", "validatorList.donations", donations.Value())
 		donations.GetByName("what").SetValue(Donation{
 			Name:   "who-donation",
 			amount: 7788,
@@ -338,10 +389,10 @@ func TestStorageManipulation(t *testing.T) {
 		val.Name = "6688"
 
 		// donations.GetByName("what").GetByName("Name").SetValue("6688")
-		// log.Info("result", "validatorList.donations['what'].name", validatorList.donations["what"].Name)
+		// log.Debug("result", "validatorList.donations['what'].name", validatorList.donations["what"].Name)
 		// m := validatorList.donations["what"]
 		// m.Name = "abc"
-		// log.Info("result", "validatorList.donations['what'].name", validatorList.donations["what"].Name)
+		// log.Debug("result", "validatorList.donations['what'].name", validatorList.donations["what"].Name)
 		// vv := donations.Value().(map[string]string)
 		// t := Validator{
 		//     desc:        Description{
@@ -350,12 +401,12 @@ func TestStorageManipulation(t *testing.T) {
 		//     },
 		//     delegations: nil,
 		// }
-		// log.Info("result", "validatorList.validators", vv)
-		// log.Info("result", "validatorList.validators", validatorList.validators)
+		// log.Debug("result", "validatorList.validators", vv)
+		// log.Debug("result", "validatorList.validators", validatorList.validators)
 		// donations.GetByIndex(1).SetValue(t)
-		// log.Info("result", "validatorList.validators", validatorList.validators)
+		// log.Debug("result", "validatorList.validators", validatorList.validators)
 		//
 		// donations.GetByIndex(2).GetByName("desc").GetByName("name").SetValue("haha")
-		// log.Info("result", "validatorList.validators", validatorList.validators)
+		// log.Debug("result", "validatorList.validators", validatorList.validators)
 	}
 }

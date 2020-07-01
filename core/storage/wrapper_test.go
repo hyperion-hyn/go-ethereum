@@ -27,7 +27,7 @@ var (
 )
 
 // StorageWrapperABI is the input ABI used to generate the binding from.
-const StorageWrapperABI = "[{\"inputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"constant\":true,\"inputs\":[],\"name\":\"Hello\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"res\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"Version\",\"outputs\":[{\"internalType\":\"int256\",\"name\":\"v\",\"type\":\"int256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"Name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
+const StorageWrapperABI = "[{\"inputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"constant\":true,\"inputs\":[],\"name\":\"Hello\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"res\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"Version\",\"outputs\":[{\"internalType\":\"int256\",\"name\":\"v\",\"type\":\"int256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"Name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"Balance\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
 // StorageWrapper is an auto generated Go binding around an Ethereum contract.
 type StorageWrapper struct {
@@ -169,6 +169,32 @@ func (_StorageWrapper *StorageWrapperTransactorRaw) Transfer(opts *bind.Transact
 // Transact invokes the (paid) contract method with params as input values.
 func (_StorageWrapper *StorageWrapperTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
 	return _StorageWrapper.Contract.contract.Transact(opts, method, params...)
+}
+
+// Balance is a free data retrieval call binding the contract method 0x0ef67887.
+//
+// Solidity: function Balance() view returns(uint256)
+func (_StorageWrapper *StorageWrapperCaller) Balance(opts *bind.CallOpts) (*big.Int, error) {
+	var (
+		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _StorageWrapper.contract.Call(opts, out, "Balance")
+	return *ret0, err
+}
+
+// Balance is a free data retrieval call binding the contract method 0x0ef67887.
+//
+// Solidity: function Balance() view returns(uint256)
+func (_StorageWrapper *StorageWrapperSession) Balance() (*big.Int, error) {
+	return _StorageWrapper.Contract.Balance(&_StorageWrapper.CallOpts)
+}
+
+// Balance is a free data retrieval call binding the contract method 0x0ef67887.
+//
+// Solidity: function Balance() view returns(uint256)
+func (_StorageWrapper *StorageWrapperCallerSession) Balance() (*big.Int, error) {
+	return _StorageWrapper.Contract.Balance(&_StorageWrapper.CallOpts)
 }
 
 // Hello is a free data retrieval call binding the contract method 0xbcdfe0d5.
