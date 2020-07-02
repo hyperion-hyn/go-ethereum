@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/big"
+	"math/rand"
 	"os"
 	"reflect"
 	"strings"
@@ -213,6 +214,107 @@ func TestBlockchainViaBinding(t *testing.T) {
 	}
 }
 
+func testGetAndSetFields(t *testing.T, sim *backends.SimulatedBackend, addr common.Address, globalVariables *GlobalVariables) {
+	state, _ := sim.Blockchain().State()
+	storage := NewStorage(state, addr, 0, globalVariables, nil)
+
+	{
+		val := globalVariables.ValidatorList.Name
+		name := storage.GetByName("ValidatorList").GetByName("Name")
+		if name.Value().(string) != val {
+			t.Errorf("failed to get ValidatorList.Name, expected: %v, got: %v", val, name.Value())
+		}
+	}
+
+	{
+		val := globalVariables.ValidatorList.author
+		name := storage.GetByName("ValidatorList").GetByName("author")
+		if name.Value().(string) != val {
+			t.Errorf("failed to get ValidatorList.author, expected: %v, got: %v", val, name.Value())
+		}
+	}
+
+	{
+		val := globalVariables.ValidatorList.Desc.name
+		name := storage.GetByName("ValidatorList").GetByName("Desc").GetByName("name")
+		if name.Value().(string) != val {
+			t.Errorf("failed to get ValidatorList.Desc.name, expected: %v, got: %v", val, name.Value())
+		}
+	}
+
+	{
+		val := fmt.Sprintf("hyperion-%d", rand.Intn(1024))
+		name := storage.GetByName("ValidatorList").GetByName("author")
+		name.SetValue(val)
+		if name.Value().(string) != val {
+			t.Errorf("failed to set ValidatorList.author, expected: %v, got: %v", val, name.Value())
+		}
+	}
+
+	{
+		val := rand.Intn(2048)
+		name := storage.GetByName("ValidatorList").GetByName("count")
+		name.SetValue(val)
+		if name.Value().(int) != val {
+			t.Errorf("failed to set ValidatorList.author, expected: %v, got: %v", val, name.Value())
+		}
+	}
+
+	{
+		if globalVariables.ValidatorList.validators != nil {
+			t.Errorf("ValidatorList.validators should be nil here.")
+		}
+		if len(globalVariables.ValidatorList.validators) != 0 {
+			t.Errorf("len(ValidatorList.validators) should be zero here.")
+		}
+		validators := storage.GetByName("ValidatorList").GetByName("validators")
+		v := Validator{
+			desc: Description{
+				name: "temp",
+				url:  "http://www.hyn.space",
+			},
+			delegations: nil,
+		}
+		validators.GetByIndex(1).SetValue(v)
+
+		val := fmt.Sprintf("validator-%d", rand.Intn(1024))
+		validators.GetByIndex(2).GetByName("desc").GetByName("name").SetValue(val)
+		if len(globalVariables.ValidatorList.validators) != 3 {
+			t.Errorf("len(ValidatorList.validators) should be 3 here, actual: %v", len(globalVariables.ValidatorList.validators))
+		}
+
+		if !reflect.DeepEqual(globalVariables.ValidatorList.validators[1], v) {
+			t.Errorf("ValidatorList.validators[1] expected: %v, got: %v", v, globalVariables.ValidatorList.validators[1])
+		}
+
+		if globalVariables.ValidatorList.validators[2].desc.name != val {
+			t.Errorf("ValidatorList.validators[2].desc.name expected: %v, got: %v", val, globalVariables.ValidatorList.validators[2].desc.name)
+		}
+	}
+
+	{
+		globalVariables.ValidatorList.donations = make(map[string]Donation)
+		globalVariables.ValidatorList.donations["Linux"] = Donation{
+			Name:   "Linux",
+			amount: 4096,
+		}
+
+		val := 8192
+		donations := storage.GetByName("ValidatorList").GetByName("donations")
+		donations.GetByName("Linux").SetValue(Donation{
+			Name:   "Linux",
+			amount: val,
+		})
+
+		if globalVariables.ValidatorList.donations["Linux"].amount != val {
+			t.Errorf("ValidatorList.donations[\"Linux\"].amount expected: %v, got: %v", val, globalVariables.ValidatorList.donations["Linux"].amount)
+		}
+
+		if donations.GetByName("Linux").GetByName("Name").Value().(string) != "Linux" {
+			t.Errorf("ValidatorList.donations[\"Linux\"].amount expected: %v, got: %v", "Linux", globalVariables.ValidatorList.donations["Linux"].Name)
+		}
+	}
+}
 func testSetUnexportedField (t *testing.T, sim *backends.SimulatedBackend, addr common.Address, globalVariables *GlobalVariables) {
 	state, _ := sim.Blockchain().State()
 	storage := NewStorage(state, addr, 0, globalVariables, nil)
@@ -268,8 +370,6 @@ func TestStorageManipulation(t *testing.T) {
 	addr, sim, _ := setupBlockchain(t, abiJSON, abiBin)
 	defer sim.Close()
 
-	log.Debug("Blockchain", "deployed", addr)
-
 	// smartcontract binding wrapper
 	wrapper, err := NewStorageWrapper(addr, sim)
 	if err != nil {
@@ -299,100 +399,6 @@ func TestStorageManipulation(t *testing.T) {
 
 
 	testSetUnexportedField(t, sim, addr, &globalVariables)
+	testGetAndSetFields(t, sim, addr, &globalVariables)
 	testWriteViaStorageAndReadFromContract(t, sim, addr, wrapper, &globalVariables)
-
-	state, err := sim.Blockchain().State()
-	storage := NewStorage(state, addr, 0, &globalVariables, nil)
-	
-	log.Debug("TestStorageManipulation", "validatorList", globalVariables)
-	// name := storage.GetByName("validators").GetByName("desc").GetByName("name")
-	// name := storage.GetByName("validators").GetByName("name")
-	{
-		name := storage.GetByName("ValidatorList").GetByName("Name")
-		log.Debug("result", "validatorList.Name", name.Value())
-	}
-
-	{
-		name := storage.GetByName("ValidatorList").GetByName("author")
-		log.Debug("result", "validatorList.author", name.Value())
-	}
-
-	{
-		name := storage.GetByName("ValidatorList").GetByName("Desc").GetByName("name")
-		log.Debug("result", "validatorList.Desc.name", name.Value())
-	}
-
-	{
-		name := storage.GetByName("ValidatorList").GetByName("author")
-		log.Debug("result", "validatorList.author", name.Value())
-		name.SetValue("harmony")
-		log.Debug("result", "validatorList.author", globalVariables.ValidatorList.author)
-	}
-
-	{
-		name := storage.GetByName("ValidatorList").GetByName("count")
-		log.Debug("result", "validatorList.count", name.Value())
-		name.SetValue(22)
-		log.Debug("result", "validatorList.count", globalVariables.ValidatorList.count)
-	}
-
-	{
-		log.Debug("compare", "validatorList.validators == nil", globalVariables.ValidatorList.validators == nil)
-		log.Debug("compare", "len(validatorList.validators)", len(globalVariables.ValidatorList.validators))
-		validators := storage.GetByName("ValidatorList").GetByName("validators")
-		log.Debug("result", "validatorList.validators", validators.Value())
-		vv := validators.Value().([]Validator)
-		t := Validator{
-			desc: Description{
-				name: "temp",
-				url:  "http://www.hyn.space",
-			},
-			delegations: nil,
-		}
-		vv = append(vv, t)
-		log.Debug("result", "validatorList.validators", vv)
-		log.Debug("result", "validatorList.validators", globalVariables.ValidatorList.validators)
-		validators.GetByIndex(1).SetValue(t)
-		log.Debug("result", "validatorList.validators", globalVariables.ValidatorList.validators)
-
-		validators.GetByIndex(2).GetByName("desc").GetByName("name").SetValue("haha")
-		log.Debug("result", "validatorList.validators", globalVariables.ValidatorList.validators)
-	}
-
-	{
-		globalVariables.ValidatorList.donations = make(map[string]Donation)
-		globalVariables.ValidatorList.donations["what"] = Donation{
-			Name:   "who-donation",
-			amount: 8899,
-		}
-		donations := storage.GetByName("ValidatorList").GetByName("donations")
-		log.Debug("result", "validatorList.donations", donations.Value())
-		donations.GetByName("what").SetValue(Donation{
-			Name:   "who-donation",
-			amount: 7788,
-		})
-		val := donations.GetByName("what").Value().(Donation)
-		val.Name = "6688"
-
-		// donations.GetByName("what").GetByName("Name").SetValue("6688")
-		// log.Debug("result", "validatorList.donations['what'].name", validatorList.donations["what"].Name)
-		// m := validatorList.donations["what"]
-		// m.Name = "abc"
-		// log.Debug("result", "validatorList.donations['what'].name", validatorList.donations["what"].Name)
-		// vv := donations.Value().(map[string]string)
-		// t := Validator{
-		//     desc:        Description{
-		//         name: "temp",
-		//         url: "http://www.hyn.space",
-		//     },
-		//     delegations: nil,
-		// }
-		// log.Debug("result", "validatorList.validators", vv)
-		// log.Debug("result", "validatorList.validators", validatorList.validators)
-		// donations.GetByIndex(1).SetValue(t)
-		// log.Debug("result", "validatorList.validators", validatorList.validators)
-		//
-		// donations.GetByIndex(2).GetByName("desc").GetByName("name").SetValue("haha")
-		// log.Debug("result", "validatorList.validators", validatorList.validators)
-	}
 }
