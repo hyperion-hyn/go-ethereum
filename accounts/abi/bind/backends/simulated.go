@@ -38,7 +38,6 @@ import (
 	"github.com/ethereum/go-ethereum/eth/filters"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rpc"
 )
@@ -125,7 +124,6 @@ func (b *SimulatedBackend) rollback() {
 	statedb, _ := b.blockchain.State()
 
 	b.pendingBlock = blocks[0]
-	log.Debug("rollback", "root", b.pendingBlock.Root())
 	b.pendingState, _ = state.New(b.pendingBlock.Root(), statedb.Database())
 }
 
@@ -133,16 +131,35 @@ func (b * SimulatedBackend) PendingBlock() (*types.Block){
 	return b.pendingBlock
 }
 
-func (b* SimulatedBackend) FlushState(state *state.StateDB) error {
-	root, err := state.Commit(true)
+func (b* SimulatedBackend) FlushStateInNewBlock(stateDB *state.StateDB) error {
+	root, err := stateDB.Commit(true)
 	if err != nil {
 		return err
 	}
 
-	err = state.Database().TrieDB().Commit(root, false)
+	err = stateDB.Database().TrieDB().Commit(root, false)
 	if err != nil {
 		return err
 	}
+
+	header := b.pendingBlock.Header()
+	header.Root = root
+	block := types.NewBlock(header, nil, nil, nil)
+	_, err = b.Blockchain().WriteBlockWithState(block, nil, nil, stateDB, false)
+	if err != nil {
+		return err
+	}
+
+	blocks, _ := core.GenerateChain(b.config, b.blockchain.CurrentBlock(), ethash.NewFaker(), b.database, 1, func(number int, block *core.BlockGen) {
+		for _, tx := range b.pendingBlock.Transactions() {
+			block.AddTx(tx)
+		}
+	})
+	statedb, _ := b.blockchain.State()
+
+	b.pendingBlock = blocks[0]
+	b.pendingState, _ = state.New(b.pendingBlock.Root(), statedb.Database())
+
 	return err
 }
 
