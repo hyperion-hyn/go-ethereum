@@ -23,4 +23,8 @@ contract Storage {
     function Name() public view returns (string memory) {
         return name;
     }
+
+    function Balance() public view returns(uint256) {
+        return address(this).balance;
+    }
 }
