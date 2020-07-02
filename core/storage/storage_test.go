@@ -21,8 +21,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
-	statemm "github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 )
@@ -156,6 +154,7 @@ func setupBlockchain(t *testing.T, abiJSON string, abiBin string) (common.Addres
 
 func TestBlockchainViaPackParameters(t *testing.T) {
 	addr, sim, bgCtx := setupBlockchain(t, abiJSON, abiBin)
+	defer sim.Close()
 
 	testAddr := crypto.PubkeyToAddress(testKey.PublicKey)
 
@@ -192,7 +191,6 @@ func TestBlockchainViaPackParameters(t *testing.T) {
 	if err != nil {
 		t.Errorf("could not unpack response %v: %v", err, res)
 	}
-	log.Debug("Unpack", "response", response)
 
 	if response.Res != "hello world" {
 		t.Errorf("response from calling contract was expected to be 'hello world' instead received '%v'", res)
@@ -202,6 +200,7 @@ func TestBlockchainViaPackParameters(t *testing.T) {
 
 func TestBlockchainViaBinding(t *testing.T) {
 	addr, sim, _ := setupBlockchain(t, abiJSON, abiBin)
+	defer sim.Close()
 
 	wrapper, err := NewStorageWrapper(addr, sim)
 	if err != nil {
@@ -214,14 +213,64 @@ func TestBlockchainViaBinding(t *testing.T) {
 	}
 }
 
+func testSetUnexportedField (t *testing.T, sim *backends.SimulatedBackend, addr common.Address, globalVariables *GlobalVariables) {
+	state, _ := sim.Blockchain().State()
+	storage := NewStorage(state, addr, 0, globalVariables, nil)
+
+	name := storage.GetByName("ValidatorList").GetByName("Desc").GetByName("name")
+	name.SetValue("TheWonderingEarth")
+
+	if globalVariables.ValidatorList.Desc.name != "TheWonderingEarth" {
+		t.Errorf("failed to set value via storage")
+	}
+
+	// NOTE: no Flush in this case.
+}
+
+func testWriteViaStorageAndReadFromContract(t *testing.T, sim *backends.SimulatedBackend, addr common.Address, wrapper *StorageWrapper, globalVariables *GlobalVariables) {
+		state, err := sim.Blockchain().State()
+		var target int = 0b101010
+		storage := NewStorage(state, addr, 0, globalVariables, nil)
+		version := storage.Get("Version")
+		version.SetValue(target)
+		if globalVariables.Version != target {
+			t.Errorf("failed to set .Version, expect %v got %v", target, globalVariables.Version)
+		}
+
+		// write modifications to statedb
+		storage.Flush()
+		// flush state in a new block
+		if err = sim.FlushStateInNewBlock(storage.StateDB()); err != nil {
+			t.Errorf("failed to FlushStateInNewBlock, err: %v", err)
+		}
+
+		rv, err := wrapper.Version(nil)
+		if err != nil || rv.Cmp(big.NewInt(int64(target))) != 0 {
+			t.Errorf("response from Version() was expected to be %v instead received %v, err: %v", target, rv, err)
+		}
+
+		target = 7788
+		state, err = sim.Blockchain().State()
+		state.SetBalance(addr, big.NewInt(int64(target)))
+		if err = sim.FlushStateInNewBlock(state); err != nil {
+			t.Errorf("failed to FlushStateInNewBlock, err: %v", err)
+		}
+
+		rv, err = wrapper.Balance(nil)
+		if err != nil  || rv.Cmp(big.NewInt(int64(target))) != 0 {
+			t.Errorf("response from Version() was expected to be %v instead received %v, err: %v", target, rv, err)
+		}
+}
+
+
 // Tests that storage manipulation
 func TestStorageManipulation(t *testing.T) {
-
 	addr, sim, _ := setupBlockchain(t, abiJSON, abiBin)
+	defer sim.Close()
+
 	log.Debug("Blockchain", "deployed", addr)
 
-	state, _ := sim.Blockchain().State()
-
+	// smartcontract binding wrapper
 	wrapper, err := NewStorageWrapper(addr, sim)
 	if err != nil {
 		t.Errorf("could not new a StorageWrapper: %v", err)
@@ -240,130 +289,21 @@ func TestStorageManipulation(t *testing.T) {
 		},
 	}
 
-	log.Debug("ValueOf", "globalVariables", reflect.ValueOf(&globalVariables))
-	log.Debug("ValueOf", "globalVariables.validatorList", reflect.ValueOf(&globalVariables).Elem().FieldByName("ValidatorList"))
-	log.Debug("ValueOf", "globalVariables.validatorList", reflect.ValueOf(&globalVariables).Elem().FieldByName("ValidatorList").FieldByName("Name"))
-	// reflect.ValueOf(&globalVariables).Elem().FieldByName("ValidatorList").FieldByName("author").SetString("ethereum")
-	log.Debug("ValueOf", "ValidatorList.Name", globalVariables.ValidatorList.Name)
-	reflect.Indirect(reflect.ValueOf(&globalVariables)).FieldByName("ValidatorList").FieldByName("Name").SetString("harmony")
-	log.Debug("ValueOf", "ValidatorList.Name", globalVariables.ValidatorList.Name)
-	// reflect.ValueOf(validatorList).FieldByName("Name").SetString("harmony")
-
-	{
-		storage := NewStorage(state, addr, 0, &globalVariables, nil)
-		log.Debug("TestStorageManipulation", "validatorList", globalVariables)
-		name := storage.GetByName("ValidatorList").GetByName("Desc").GetByName("name")
-		// name := storage.GetByName("validators").GetByName("name")
-		log.Debug("result", "validatorList.Name", name.Value())
-		//     {
-		//         name := storage.GetByName("Name")
-		//         log.Debug("result", "validatorList.Name", name.Value())
-		name.SetValue("harmony")
-		log.Debug("result", "validatorList.Name", name.Value())
-		//     }
-		//     // os.Exit(1)
+	if reflect.ValueOf(&globalVariables).Elem().FieldByName("ValidatorList").FieldByName("Name").String() != globalVariables.ValidatorList.Name {
+		t.Errorf("FieldByName to retrive globalVariables.ValidatorList.Name got wrong value")
+	}
+	reflect.Indirect(reflect.ValueOf(&globalVariables)).FieldByName("ValidatorList").FieldByName("Name").SetString("ATLAS")
+	if globalVariables.ValidatorList.Name != "ATLAS" {
+		t.Errorf("failed to set globalVariables.ValidatorList.Name")
 	}
 
+
+	testSetUnexportedField(t, sim, addr, &globalVariables)
+	testWriteViaStorageAndReadFromContract(t, sim, addr, wrapper, &globalVariables)
+
+	state, err := sim.Blockchain().State()
 	storage := NewStorage(state, addr, 0, &globalVariables, nil)
-
-	for i := 1; i < 256; i++ {
-		sim.Commit()
-	}
-
-	log.Debug("...", "currentBlockNumber", sim.Blockchain().CurrentBlock().Number(), "root", sim.Blockchain().CurrentBlock().Root())
-
-	{
-		state, err = sim.Blockchain().State()
-		var target int = 0b101010
-		log.Debug("TestStorageManipulation", "Version", globalVariables.Version)
-		version := storage.Get("Version")
-		version.SetValue(target)
-		log.Debug("TestStorageManipulation", "Version", globalVariables.Version)
-		storage.Flush()
-		{
-			ss := storage.StateDB()
-			var block *types.Block
-			block = sim.PendingBlock()
-			var header *types.Header
-			header = block.Header()
-			log.Debug("...", "root", ss.IntermediateRoot(true))
-			root := ss.IntermediateRoot(true)
-			header.Root = root
-			root, err := ss.Commit(true)
-			statemm.New(root, state.Database())
-			mm, _ := sim.Blockchain().State()
-			ss.Database().TrieDB().Commit(root, false)
-			log.Debug(">>>", "db", state.Database(), "ddb", mm.Database())
-			sim.Blockchain().StateAt(root)
-			bb := types.NewBlock(header, nil, nil, nil)
-			status, err := sim.Blockchain().WriteBlockWithState(bb, nil, nil, ss, false)
-			log.Debug("WriteBlockWithState", "status", status, "err", err)
-			log.Debug("...", "currentBlockNumber", sim.Blockchain().CurrentBlock().Number(), "root", sim.Blockchain().CurrentBlock().Root())
-		}
-
-		sim.Rollback()
-
-		rv, err := wrapper.Version(nil)
-		log.Debug("Version from contract", "rv", rv)
-		if err != nil || rv.Cmp(big.NewInt(int64(target))) != 0 {
-			t.Errorf("response from Version() was expected to be %v instead received %v, err: %v", target, rv, err)
-		}
-		v := state.GetState(addr, common.BigToHash(big.NewInt(0)))
-		log.Debug("GetState", "v", v)
-
-		state, err = sim.Blockchain().State()
-		state.SetBalance(addr, big.NewInt(7788))
-		state.Commit(true)
-		log.Debug("----->")
-		log.Debug("...", "currentBlockNumber", sim.Blockchain().CurrentBlock().Number(), "root", sim.Blockchain().CurrentBlock().Root())
-		var block *types.Block
-		block = sim.PendingBlock()
-		var header *types.Header
-		header = block.Header()
-		log.Debug("...", "root", state.IntermediateRoot(true))
-		header.Root = state.IntermediateRoot(true)
-		bb := types.NewBlock(header, nil, nil, nil)
-
-
-		log.Debug("...", "root", state.IntermediateRoot(true), "header.root", block.Header().Root)
-		// sim.Blockchain().CurrentBlock().Number()+1
-		status,  err := sim.Blockchain().WriteBlockWithState(bb, nil, nil, state, false)
-		log.Debug("WriteBlockWithState", "status", status, "err", err)
-		log.Debug("...", "currentBlockNumber", sim.Blockchain().CurrentBlock().Number(), "root", sim.Blockchain().CurrentBlock().Root())
-		// sim.Commit()
-		v4 := state.GetBalance(addr)
-		log.Debug("GetBalance", "v4", v4)
-		state, err = sim.Blockchain().State()
-		v3 := state.GetBalance(addr)
-		log.Debug("GetBalance", "v3", v3)
-		testAddr := crypto.PubkeyToAddress(testKey.PublicKey)
-		v1, err := wrapper.Balance(&bind.CallOpts{
-			Pending:     false,
-			From:        testAddr,
-			BlockNumber: sim.Blockchain().CurrentBlock().Number(),
-			Context:     nil,
-		})
-		if err != nil {
-			t.Errorf("response from Version() was expected to be %v instead received %v, err: %v", target, rv, err)
-		}
-		log.Debug("GetState", "v1", v1)
-
-		return
-		// log.Debug("--------------")
-		// contractAuth := bind.NewKeyedTransactor(testKey)
-		// contractAuth.GasLimit = 10000000
-		// trans, err := wrapper.Modify(contractAuth)
-		// if err != nil {
-		// 	log.Debug("Modify", "err", err, "trans", trans)
-		// }
-		// sim.Commit()
-		//
-		// state, err = sim.Blockchain().State()
-		// v2 := state.GetState(addr, common.HexToHash("0"))
-		// log.Debug("GetState", "v2", v2)
-	}
-
-	return
+	
 	log.Debug("TestStorageManipulation", "validatorList", globalVariables)
 	// name := storage.GetByName("validators").GetByName("desc").GetByName("name")
 	// name := storage.GetByName("validators").GetByName("name")
