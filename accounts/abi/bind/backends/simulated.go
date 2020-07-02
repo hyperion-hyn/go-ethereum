@@ -133,6 +133,19 @@ func (b * SimulatedBackend) PendingBlock() (*types.Block){
 	return b.pendingBlock
 }
 
+func (b* SimulatedBackend) FlushState(state *state.StateDB) error {
+	root, err := state.Commit(true)
+	if err != nil {
+		return err
+	}
+
+	err = state.Database().TrieDB().Commit(root, false)
+	if err != nil {
+		return err
+	}
+	return err
+}
+
 // stateByBlockNumber retrieves a state by a given blocknumber.
 func (b *SimulatedBackend) stateByBlockNumber(ctx context.Context, blockNumber *big.Int) (*state.StateDB, error) {
 	if blockNumber == nil || blockNumber.Cmp(b.blockchain.CurrentBlock().Number()) == 0 {
