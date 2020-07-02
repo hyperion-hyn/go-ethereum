@@ -205,3 +205,7 @@ func (s *Storage) Flush() *Storage {
 	}
 	return s
 }
+
+func (s *Storage) StateDB()  *state.StateDB {
+	return s.db
+}

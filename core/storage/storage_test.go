@@ -21,6 +21,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
+	statemm "github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 )
@@ -264,29 +266,73 @@ func TestStorageManipulation(t *testing.T) {
 
 	storage := NewStorage(state, addr, 0, &globalVariables, nil)
 
+	for i := 1; i < 256; i++ {
+		sim.Commit()
+	}
+
+	log.Debug("...", "currentBlockNumber", sim.Blockchain().CurrentBlock().Number(), "root", sim.Blockchain().CurrentBlock().Root())
+
 	{
+		state, err = sim.Blockchain().State()
 		var target int = 0b101010
 		log.Debug("TestStorageManipulation", "Version", globalVariables.Version)
 		version := storage.Get("Version")
 		version.SetValue(target)
 		log.Debug("TestStorageManipulation", "Version", globalVariables.Version)
 		storage.Flush()
+		{
+			ss := storage.StateDB()
+			var block *types.Block
+			block = sim.PendingBlock()
+			var header *types.Header
+			header = block.Header()
+			log.Debug("...", "root", ss.IntermediateRoot(true))
+			root := ss.IntermediateRoot(true)
+			header.Root = root
+			root, err := ss.Commit(true)
+			statemm.New(root, state.Database())
+			mm, _ := sim.Blockchain().State()
+			ss.Database().TrieDB().Commit(root, false)
+			log.Debug(">>>", "db", state.Database(), "ddb", mm.Database())
+			sim.Blockchain().StateAt(root)
+			bb := types.NewBlock(header, nil, nil, nil)
+			status, err := sim.Blockchain().WriteBlockWithState(bb, nil, nil, ss, false)
+			log.Debug("WriteBlockWithState", "status", status, "err", err)
+			log.Debug("...", "currentBlockNumber", sim.Blockchain().CurrentBlock().Number(), "root", sim.Blockchain().CurrentBlock().Root())
+		}
+
+		sim.Rollback()
 
 		rv, err := wrapper.Version(nil)
-		log.Debug("Version", "rv", rv)
+		log.Debug("Version from contract", "rv", rv)
 		if err != nil || rv.Cmp(big.NewInt(int64(target))) != 0 {
 			t.Errorf("response from Version() was expected to be %v instead received %v, err: %v", target, rv, err)
 		}
 		v := state.GetState(addr, common.BigToHash(big.NewInt(0)))
 		log.Debug("GetState", "v", v)
 
+		state, err = sim.Blockchain().State()
 		state.SetBalance(addr, big.NewInt(7788))
 		state.Commit(true)
-		sim.Commit()
+		log.Debug("----->")
+		log.Debug("...", "currentBlockNumber", sim.Blockchain().CurrentBlock().Number(), "root", sim.Blockchain().CurrentBlock().Root())
+		var block *types.Block
+		block = sim.PendingBlock()
+		var header *types.Header
+		header = block.Header()
+		log.Debug("...", "root", state.IntermediateRoot(true))
+		header.Root = state.IntermediateRoot(true)
+		bb := types.NewBlock(header, nil, nil, nil)
+
+
+		log.Debug("...", "root", state.IntermediateRoot(true), "header.root", block.Header().Root)
+		// sim.Blockchain().CurrentBlock().Number()+1
+		status,  err := sim.Blockchain().WriteBlockWithState(bb, nil, nil, state, false)
+		log.Debug("WriteBlockWithState", "status", status, "err", err)
+		log.Debug("...", "currentBlockNumber", sim.Blockchain().CurrentBlock().Number(), "root", sim.Blockchain().CurrentBlock().Root())
+		// sim.Commit()
 		v4 := state.GetBalance(addr)
 		log.Debug("GetBalance", "v4", v4)
-
-		sim.Commit()
 		state, err = sim.Blockchain().State()
 		v3 := state.GetBalance(addr)
 		log.Debug("GetBalance", "v3", v3)

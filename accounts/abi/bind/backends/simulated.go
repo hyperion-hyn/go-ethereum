@@ -38,6 +38,7 @@ import (
 	"github.com/ethereum/go-ethereum/eth/filters"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rpc"
 )
@@ -124,7 +125,12 @@ func (b *SimulatedBackend) rollback() {
 	statedb, _ := b.blockchain.State()
 
 	b.pendingBlock = blocks[0]
+	log.Debug("rollback", "root", b.pendingBlock.Root())
 	b.pendingState, _ = state.New(b.pendingBlock.Root(), statedb.Database())
+}
+
+func (b * SimulatedBackend) PendingBlock() (*types.Block){
+	return b.pendingBlock
 }
 
 // stateByBlockNumber retrieves a state by a given blocknumber.
