@@ -58,15 +58,15 @@ func (m *Map3NodeStorage) GetInitiatorAddress() common.Address {
 func (m *Map3NodeStorage) SetInitiatorAddress(initiatorAddress common.Address) {
 }
 
-func (m *Map3NodeStorage) GetNodeKeys() Map3NodeKeysStorage {
-	return Map3NodeKeysStorage{}
+func (m *Map3NodeStorage) GetNodeKeys() *Map3NodeKeysStorage {
+	return nil
 }
 
 func (m *Map3NodeStorage) SetNodeKeys(nodeKeys Map3NodeKeys) {
 }
 
-func (m *Map3NodeStorage) GetCommission() CommissionStorage {
-	return CommissionStorage{}
+func (m *Map3NodeStorage) GetCommission() *CommissionStorage {
+	return nil
 }
 
 func (m *Map3NodeStorage) SetCommission(commission Commission) {
@@ -192,7 +192,7 @@ func (m *Map3NodeWrappersStorage) Contain(key common.Address) bool {
 	return false
 }
 
-func (m *Map3NodeWrappersStorage) Put(key common.Address, map3NodeWrappers *Map3NodeWrapper) bool {
+func (m *Map3NodeWrappersStorage) Put(key common.Address, map3NodeWrapper *Map3NodeWrapper) bool {
 	return false
 }
 
@@ -210,15 +210,15 @@ func (m *Map3NodeWrappersStorage) Keys() []common.Address {
 type Map3NodeSnapshotStorage struct {
 }
 
-func (m *Map3NodeSnapshotStorage) ToMap3NodeSnapshot() Map3NodeSnapshot {
-	return Map3NodeSnapshot{}
+func (m *Map3NodeSnapshotStorage) ToMap3NodeSnapshot() *Map3NodeSnapshot {
+	return nil
 }
 
-func (m *Map3NodeSnapshotStorage) SetMap3Nodes(epoch *big.Int) {
+func (m *Map3NodeSnapshotStorage) SetMap3Nodes(map3Nodes *Map3NodeWrappers) {
 }
 
-func (m *Map3NodeSnapshotStorage) GetMap3Nodes() Map3NodeWrappersStorage {
-	return Map3NodeWrappersStorage{}
+func (m *Map3NodeSnapshotStorage) GetMap3Nodes() *Map3NodeWrappersStorage {
+	return nil
 }
 
 func (m *Map3NodeSnapshotStorage) SetEpoch(epoch *big.Int) {
@@ -231,7 +231,7 @@ func (m *Map3NodeSnapshotStorage) GetEpoch() *big.Int {
 type Map3NodeSnapshotByEpochStorage struct {
 }
 
-func (m *Map3NodeSnapshotByEpochStorage) ToMap3NodeSnapshotByEpoch() *Map3NodeSnapshotByEpochStorage {
+func (m *Map3NodeSnapshotByEpochStorage) ToMap3NodeSnapshotByEpoch() *Map3NodeSnapshotByEpoch {
 	return nil
 }
 
@@ -243,7 +243,7 @@ func (m *Map3NodeSnapshotByEpochStorage) Contain(key uint64) bool {
 	return false
 }
 
-func (m *Map3NodeSnapshotByEpochStorage) Put(key uint64, map3NodeWrappers *Map3NodeSnapshot) bool {
+func (m *Map3NodeSnapshotByEpochStorage) Put(key uint64, map3NodeSnapshot *Map3NodeSnapshot) bool {
 	return false
 }
 
@@ -314,29 +314,29 @@ func (m *Map3NodeAddressSetByDelegatorStorage) Keys() []common.Address {
 	return nil
 }
 
-type NodeKeySetStorage struct {
+type PubKeySetStorage struct {
 }
 
-func (n *NodeKeySetStorage) ToNodeKeySet() NodeKeySet {
+func (p *PubKeySetStorage) ToPubKeySet() *PubKeySet {
 	return nil
 }
 
-func (n *NodeKeySetStorage) Size() int {
+func (p *PubKeySetStorage) Size() int {
 	return 0
 }
 
-func (n *NodeKeySetStorage) Contain(key string) bool {
+func (p *PubKeySetStorage) Contain(key string) bool {
 	return false
 }
 
-func (n *NodeKeySetStorage) Put(key string) bool {
+func (p *PubKeySetStorage) Put(key string) bool {
 	return false
 }
 
-func (n *NodeKeySetStorage) Remove(key string) {
+func (p *PubKeySetStorage) Remove(key string) {
 }
 
-func (n *NodeKeySetStorage) Keys() []string {
+func (p *PubKeySetStorage) Keys() []string {
 	return nil
 }
 
@@ -368,10 +368,10 @@ func (m *Map3NodePoolStorage) GetNodeAddressSetByDelegator() *Map3NodeAddressSet
 	return nil
 }
 
-func (m *Map3NodePoolStorage) SetNodeKeySet(nodeKeySet NodeKeySet) {
+func (m *Map3NodePoolStorage) SetNodeKeySet(nodeKeySet *PubKeySet) {
 }
 
-func (m *Map3NodePoolStorage) GetNodeKeySet() *NodeKeySetStorage {
+func (m *Map3NodePoolStorage) GetNodeKeySet() *PubKeySetStorage {
 	return nil
 }
 

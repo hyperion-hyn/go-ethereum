@@ -8,7 +8,7 @@ import (
 type (
 	// Commission defines a commission parameters for a given validator.
 	Commission struct {
-		CommissionRates *CommissionRates
+		CommissionRates CommissionRates
 		UpdateHeight    *big.Int `json:"update-height"`
 	}
 
@@ -25,7 +25,7 @@ type (
 )
 
 // Copy deep copies the staking.CommissionRates
-func (cr CommissionRates) Copy() CommissionRates {
+func (cr *CommissionRates) Copy() CommissionRates {
 	return CommissionRates{
 		Rate:          cr.Rate.Copy(),
 		MaxRate:       cr.MaxRate.Copy(),

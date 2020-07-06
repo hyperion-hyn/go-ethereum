@@ -11,12 +11,12 @@ const (
 	Microdelegate
 	Unmicrodelegate
 	CollectMicrodelRewards
+	SplitNode
 	StakeCreateVal
 	StakeEditVal
 	Redelegate
 	Unredelegate
 	CollectRedelRewards
-	// TODO(ATLAS): scale map3 node
 )
 
 func (txType TransactionType) String() string {

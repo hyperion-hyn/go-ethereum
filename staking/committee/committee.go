@@ -28,11 +28,6 @@ func (s Slot) String() string {
 // SlotList is a list of Slot.
 type SlotList []Slot
 
-type Committee struct {
-	Epoch *big.Int
-	Slots SlotList
-}
-
 func (l SlotList) String() string {
 	blsKeys := make([]string, len(l))
 	for i, k := range l {
@@ -41,3 +36,10 @@ func (l SlotList) String() string {
 	s, _ := json.Marshal(blsKeys)
 	return string(s)
 }
+
+type Committee struct {
+	Epoch *big.Int
+	Slots SlotList
+}
+
+type CommitteeByEpoch map[uint64]Committee

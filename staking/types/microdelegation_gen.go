@@ -7,7 +7,6 @@ import (
 )
 
 type MicrodelegationStorage struct {
-
 }
 
 func (m *MicrodelegationStorage) ToMicrodelegation() *Microdelegation {
@@ -35,17 +34,17 @@ func (m *MicrodelegationStorage) GetReward() *big.Int {
 	return nil
 }
 
-func (m *MicrodelegationStorage) SetUndelegations(undelegations *Undelegations) {
+func (m *MicrodelegationStorage) SetUndelegation(undelegation *Undelegation) {
 }
 
-func (m *MicrodelegationStorage) GetUndelegations() *UndelegationsStorage {
+func (m *MicrodelegationStorage) GetUndelegation() *UndelegationStorage {
 	return nil
 }
 
-func (m *MicrodelegationStorage) SetPendingDelegations(pendingDelegations *PendingDelegations) {
+func (m *MicrodelegationStorage) SetPendingDelegation(pendingDelegation *PendingDelegation) {
 }
 
-func (m *MicrodelegationStorage) GetPendingDelegations() *PendingDelegationsStorage {
+func (m *MicrodelegationStorage) GetPendingDelegation() *PendingDelegationStorage {
 	return nil
 }
 
@@ -71,40 +70,11 @@ func (p *PendingDelegationStorage) GetAmount() *big.Int {
 	return nil
 }
 
-func (p *PendingDelegationStorage) SetEpoch(epoch *big.Int) {
+func (p *PendingDelegationStorage) SetUnlockedEpoch(epoch *big.Int) {
 }
 
-func (p *PendingDelegationStorage) GetEpoch() *big.Int {
+func (p *PendingDelegationStorage) GetUnlockedEpoch() *big.Int {
 	return nil
-}
-
-type PendingDelegationsStorage struct {
-}
-
-func (p *PendingDelegationsStorage) ToPendingDelegations() *PendingDelegations {
-	return nil
-}
-
-func (p *PendingDelegationsStorage) Get(index int) *PendingDelegationStorage {
-	return nil
-}
-
-func (p *PendingDelegationsStorage) Set(index int, pendingDelegation *PendingDelegation) {
-
-}
-
-func (p *PendingDelegationsStorage) Remove(index int, keepOrder bool) {
-}
-
-func (p *PendingDelegationsStorage) Push(pendingDelegation *PendingDelegation) {
-}
-
-func (p *PendingDelegationsStorage) Pop() *PendingDelegation {
-	return nil
-}
-
-func (p *PendingDelegationsStorage) Len() int {
-	return 0
 }
 
 type UndelegationStorage struct {
@@ -129,36 +99,6 @@ func (u *UndelegationStorage) GetEpoch() *big.Int {
 	return nil
 }
 
-type UndelegationsStorage struct {
-	storage *storage.Storage
-}
-
-func (u *UndelegationsStorage) ToUndelegations() *Undelegations {
-	return nil
-}
-
-func (u *UndelegationsStorage) Get(index int) *UndelegationStorage {
-	return nil
-}
-
-func (u *UndelegationsStorage) Set(index int, undelegation *Undelegation) {
-
-}
-
-func (u *UndelegationsStorage) Remove(index int, keepOrder bool) {
-}
-
-func (u *UndelegationsStorage) Push(undelegation *Undelegation) {
-}
-
-func (u *UndelegationsStorage) Pop() *Undelegation {
-	return nil
-}
-
-func (u *UndelegationsStorage) Len() int {
-	return 0
-}
-
 type MicrodelegationsStorage struct {
 	storage *storage.Storage
 }
@@ -175,7 +115,7 @@ func (m *MicrodelegationsStorage) Contain(key common.Address) bool {
 	return false
 }
 
-func (m *MicrodelegationsStorage) Put(key common.Address, microdelegation Microdelegation) bool {
+func (m *MicrodelegationsStorage) Put(key common.Address, microdelegation *Microdelegation) bool {
 	return false
 }
 

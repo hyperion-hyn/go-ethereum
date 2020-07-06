@@ -16,7 +16,7 @@ type Description struct {
 }
 
 // EnsureLength ensures the length of a validator's description.
-func (d *Description) EnsureLength() (*Description, error) {
+func (d Description) EnsureLength() (Description, error) {
 	if len(d.Name) > MaxNameLength {
 		return d, errors.Errorf(
 			"exceed maximum name length %d %d", len(d.Name), MaxNameLength,
@@ -48,27 +48,22 @@ func (d *Description) EnsureLength() (*Description, error) {
 
 // UpdateDescription returns a new Description object with d1 as the base and the fields that's not empty in d2 updated
 // accordingly. An error is returned if the resulting description fields have invalid length.
-func UpdateDescription(curDecs *DescriptionStorage, newDesc *Description, identitySet *DescriptionIdentitySetStorage) error {
-	if _, err := newDesc.EnsureLength(); err != nil {
-		return err
+func UpdateDescription(d1, d2 Description) (Description, error) {
+	newDesc := d1
+	if d2.Name != "" {
+		newDesc.Name = d2.Name
 	}
-
-	if newDesc.Name != "" {
-		curDecs.SetName(newDesc.Name)
+	if d2.Identity != "" {
+		newDesc.Identity = d2.Identity
 	}
-	if newDesc.Identity != "" {
-		identitySet.Remove(curDecs.GetIdentity())
-		curDecs.SetIdentity(newDesc.Identity)
-		identitySet.Put(newDesc.Identity)
+	if d2.Website != "" {
+		newDesc.Website = d2.Website
 	}
-	if newDesc.Website != "" {
-		curDecs.SetWebsite(newDesc.Website)
+	if d2.SecurityContact != "" {
+		newDesc.SecurityContact = d2.SecurityContact
 	}
-	if newDesc.SecurityContact != "" {
-		curDecs.SetSecurityContact(newDesc.SecurityContact)
+	if d2.Details != "" {
+		newDesc.Details = d2.Details
 	}
-	if newDesc.Details != "" {
-		curDecs.SetDetails(newDesc.Details)
-	}
-	return nil
+	return newDesc.EnsureLength()
 }

@@ -51,7 +51,7 @@ type Map3Node struct {
 	// map3 node's initiator
 	InitiatorAddress common.Address `json:"initiator-address"`
 	// The node keys of the map3 node (used for communication and identification)
-	NodeKeys []Map3NodeKey
+	NodeKeys Map3NodeKeys
 	// commission parameters
 	Commission Commission
 	// description for the validator
@@ -85,20 +85,20 @@ type Map3NodeSnapshotByEpoch map[uint64]Map3NodeSnapshot
 type NodeState struct {
 	Status          Map3NodeStatus // map3 node statue
 	NodeAge         *big.Int       // Node age
-	CreationEpoch   *big.Int
+	CreationEpoch   *big.Int	// TODO: height?
 	ActivationEpoch *big.Int
 	ReleaseEpoch    *big.Int
 }
 
 type AddressSet map[common.Address]struct{}
+type PubKeySet map[string]struct{} // node key hex
 type Map3NodeAddressSetByDelegator map[common.Address]AddressSet
-type NodeKeySet map[string]struct{} // node key hex
 
 type Map3NodePool struct {
 	Nodes                     Map3NodeWrappers
 	NodeSnapshotByEpoch       Map3NodeSnapshotByEpoch
 	NodeAddressSetByDelegator Map3NodeAddressSetByDelegator
-	NodeKeySet                NodeKeySet
+	NodeKeySet                PubKeySet
 	DescriptionIdentitySet    DescriptionIdentitySet
 }
 
@@ -166,6 +166,7 @@ func (n *Map3Node) SanityCheck(maxPubKeyAllowed int) error {
 }
 
 func CalcMinTotalNodeStake(blockHeight *big.Int, config *params.ChainConfig) (numeric.Dec, numeric.Dec, numeric.Dec) {
+	// TODO: total node state change by time
 	return baseMinTotalNodeStake, baseMinTotalNodeStake.Mul(MinSelfDelegation), baseMinTotalNodeStake.Mul(MinDelegation)
 }
 
@@ -183,46 +184,54 @@ func CreateMap3NodeFromNewMsg(node *CreateMap3Node, nodeAddr common.Address, blo
 		InitiatorAddress: node.InitiatorAddress,
 		NodeKeys:         nodeKeys,
 		Commission:       commission,
-		Description:      *desc,
+		Description:      desc,
 	}
 	return &v, nil
 }
 
 // UpdateValidatorFromEditMsg updates validator from EditValidator message
-func UpdateMap3NodeFromEditMsg(map3Node *Map3NodeStorage, nodeKeySet *NodeKeySetStorage,
-	identitySet *DescriptionIdentitySetStorage, edit *EditMap3Node) error {
-	if map3Node.GetNodeAddress() != edit.Map3NodeAddress {
+func UpdateMap3NodeFromEditMsg(map3Node *Map3Node, edit *EditMap3Node) error {
+	if map3Node.NodeAddress != edit.Map3NodeAddress {
 		return errAddressNotMatch
 	}
-	err := UpdateDescription(map3Node.GetDescription(), edit.Description, identitySet)
+	newDes, err := UpdateDescription(map3Node.Description, *edit.Description)
 	if err != nil {
 		return err
 	}
+	map3Node.Description = newDes
 
 	if !edit.CommissionRate.IsNil() {
-		map3Node.GetCommission().GetCommissionRates().SetRate(edit.CommissionRate)
+		map3Node.Commission.CommissionRates.Rate = edit.CommissionRate
 	}
 
 	if edit.NodeKeyToRemove != nil {
 		index := -1
-		for i := 0; i < map3Node.GetNodeKeys().Len(); i++ {
-			if edit.NodeKeyToRemove.Hex() == map3Node.GetNodeKeys().Get(i).Hex() {
+		for i := 0; i < len(map3Node.NodeKeys); i++ {
+			if edit.NodeKeyToRemove.Hex() == map3Node.NodeKeys[i].Hex() {
 				index = i
 				break
 			}
 		}
 		// we found key to be removed
 		if index >= 0 {
-			map3Node.GetNodeKeys().Remove(index, false)
-			nodeKeySet.Remove(edit.NodeKeyToRemove.Hex())
+			map3Node.NodeKeys = append(
+				map3Node.NodeKeys[:index], map3Node.NodeKeys[index+1:]...,
+			)
 		} else {
 			return errSlotKeyToRemoveNotFound
 		}
 	}
 
 	if edit.NodeKeyToAdd != nil {
-		if nodeKeySet.Contain(edit.NodeKeyToAdd.Hex()) {
-			map3Node.GetNodeKeys().Push(edit.NodeKeyToAdd)
+		found := false
+		for _, key := range map3Node.NodeKeys {
+			if key.Hex() == edit.NodeKeyToAdd.Hex() {
+				found = true
+				break
+			}
+		}
+		if !found {
+			map3Node.NodeKeys = append(map3Node.NodeKeys, *edit.NodeKeyToAdd)
 		} else {
 			return errSlotKeyToAddExists
 		}

@@ -14,9 +14,9 @@ type StakeMsg interface {
 
 type CreateMap3Node struct {
 	InitiatorAddress common.Address   `json:"initiator-address"`
-	Description      *Description     `json:"description"`
-	CommissionRates  *CommissionRates `json:"commission"`
-	NodeKeys         []Map3NodeKey
+	Description      Description     `json:"description"`
+	CommissionRates  CommissionRates `json:"commission"`
+	NodeKeys         Map3NodeKeys
 	Amount           *big.Int `json:"amount"`
 	AutoRenew        bool
 }
@@ -51,16 +51,17 @@ type CollectMicrodelegationRewards struct {
 	DelegatorAddress common.Address `json:"delegator_address"`
 }
 
+type SplitNode struct {
+	Map3NodeAddress common.Address
+}
+
 // CreateValidator - type for creating a new validator
 type CreateValidator struct {
-	InitiatorAddress   common.Address `json:"initiator-address"`
-	Description        `json:"description"`
-	CommissionRates    `json:"commission"`
-	MinSelfDelegation  *big.Int       `json:"min-self-delegation"`
-	MaxTotalDelegation *big.Int       `json:"max-total-delegation"`
-	SlotPubKeys        []BLSPublicKey `json:"slot-pub-keys"`
-	SlotKeySigs        []BLSSignature `json:"slot-key-sigs"`
-	Amount             *big.Int       `json:"amount"`
+	InitiatorAddress common.Address  `json:"initiator-address"`
+	Description      Description     `json:"description"`
+	CommissionRates  CommissionRates `json:"commission"`
+	SlotPubKeys      BLSPublicKeys   `json:"slot-pub-keys"`
+	SlotKeySigs      []BLSSignature  `json:"slot-key-sigs"`
 }
 
 // Copy returns a deep copy of the CreateValidator as a StakeMsg interface
@@ -79,23 +80,14 @@ func (v CreateValidator) Copy() StakeMsg {
 		cp.SlotKeySigs = make([]BLSSignature, len(v.SlotKeySigs))
 		copy(cp.SlotKeySigs, v.SlotKeySigs)
 	}
-	if v.MinSelfDelegation != nil {
-		cp.MinSelfDelegation = new(big.Int).Set(v.MinSelfDelegation)
-	}
-	if v.MaxTotalDelegation != nil {
-		cp.MaxTotalDelegation = new(big.Int).Set(v.MaxTotalDelegation)
-	}
-	if v.Amount != nil {
-		cp.Amount = new(big.Int).Set(v.Amount)
-	}
 	return cp
 }
 
 // EditValidator - type for edit existing validator
 type EditValidator struct {
-	ValidatorAddress   common.Address `json:"validator-address"`
-	Description        `json:"description"`
-	CommissionRate     *numeric.Dec          `json:"commission-rate" rlp:"nil"`
+	ValidatorAddress   common.Address        `json:"validator-address"`
+	Description        *Description          `json:"description"`
+	CommissionRate     numeric.Dec           `json:"commission-rate" rlp:"nil"`
 	MinSelfDelegation  *big.Int              `json:"min-self-delegation" rlp:"nil"`
 	MaxTotalDelegation *big.Int              `json:"max-total-delegation" rlp:"nil"`
 	SlotKeyToRemove    *BLSPublicKey         `json:"slot-key-to_remove" rlp:"nil"`
@@ -173,11 +165,13 @@ func (v Unredelegate) Copy() StakeMsg {
 // CollectRedelegationRewards - type for collecting token rewards
 type CollectRedelegationRewards struct {
 	DelegatorAddress common.Address `json:"delegator_address"`
+	ValidatorAddress common.Address `json:"validator_address"`
 }
 
 // Copy returns a deep copy of the CollectRedelegationRewards as a StakeMsg interface
 func (v CollectRedelegationRewards) Copy() StakeMsg {
 	return CollectRedelegationRewards{
 		DelegatorAddress: v.DelegatorAddress,
+		ValidatorAddress: v.ValidatorAddress,
 	}
 }

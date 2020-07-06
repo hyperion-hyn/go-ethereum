@@ -75,3 +75,4 @@ func (r *stakingEra) ReadRoundResult() *reward.CompletedRound {
 func CalcBlockReward(blockHeight *big.Int, config *params.ChainConfig) numeric.Dec {
 	return numeric.NewDecFromBigInt(BaseBlockReward)
 }
+

@@ -368,7 +368,7 @@ func TestVerifyAndCreateValidatorFromMsg(t *testing.T) {
 		},
 	}
 	for i, test := range tests {
-		w, err := VerifyAndCreateValidatorFromMsg(test.sdb, test.chain, test.epoch,
+		w, err := VerifyCreateValidatorMsg(test.sdb, test.chain, test.epoch,
 			test.blockNum, &test.msg)
 
 		if assErr := assertError(err, test.expErr); assErr != nil {
@@ -654,7 +654,7 @@ func TestVerifyAndEditValidatorFromMsg(t *testing.T) {
 		},
 	}
 	for i, test := range tests {
-		w, err := VerifyAndEditValidatorFromMsg(test.sdb, test.bc, test.epoch, test.blockNum,
+		w, err := VerifyEditValidatorMsg(test.sdb, test.bc, test.epoch, test.blockNum,
 			&test.msg)
 
 		if assErr := assertError(err, test.expErr); assErr != nil {
@@ -834,7 +834,7 @@ func TestVerifyAndDelegateFromMsg(t *testing.T) {
 		},
 	}
 	for i, test := range tests {
-		w, amt, err := VerifyAndDelegateFromMsg(test.sdb, &test.msg)
+		w, amt, err := VerifyRedelegateMsg(test.sdb, &test.msg)
 
 		if assErr := assertError(err, test.expErr); assErr != nil {
 			t.Errorf("Test %v: %v", i, assErr)
@@ -1056,7 +1056,7 @@ func TestVerifyAndUndelegateFromMsg(t *testing.T) {
 		},
 	}
 	for i, test := range tests {
-		w, err := VerifyAndUndelegateFromMsg(test.sdb, test.epoch, &test.msg)
+		w, err := VerifyUnredelegateMsg(test.sdb, test.epoch, &test.msg)
 
 		if assErr := assertError(err, test.expErr); assErr != nil {
 			t.Errorf("Test %v: %v", i, assErr)
@@ -1206,7 +1206,7 @@ func TestVerifyAndCollectRewardsFromDelegation(t *testing.T) {
 		},
 	}
 	for i, test := range tests {
-		ws, tReward, err := VerifyAndCollectRewardsFromDelegation(test.sdb, test.ds)
+		ws, tReward, err := VerifyCollectRedelRewardsMsg(test.sdb, nil, )
 
 		if assErr := assertError(err, test.expErr); assErr != nil {
 			t.Fatalf("Test %v: %v", i, err)

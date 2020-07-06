@@ -17,8 +17,8 @@ type Microdelegation struct {
 	DelegatorAddress   common.Address
 	Amount             *big.Int
 	Reward             *big.Int
-	Undelegations      Undelegations
-	PendingDelegations PendingDelegations
+	Undelegation       Undelegation
+	PendingDelegation  PendingDelegation
 	AutoRenew          bool
 }
 
@@ -42,16 +42,11 @@ type Undelegation struct {
 	Epoch  *big.Int `json:"epoch"`
 }
 
-// Undelegations ..
-type Undelegations []Undelegation
-
 // PendingDelegation represents tokens during map3 node in pending state
 type PendingDelegation struct {
 	Amount *big.Int
-	Epoch  *big.Int
+	UnlockedEpoch  *big.Int
 }
-
-type PendingDelegations []PendingDelegation
 
 // NewMicrodelegation creates a new microdelegation object
 func NewMicrodelegation(
@@ -64,10 +59,10 @@ func NewMicrodelegation(
 		AutoRenew:        autoRenew,
 	}
 	if pending {
-		d.PendingDelegations = append(d.PendingDelegations, PendingDelegation{
+		d.PendingDelegation = PendingDelegation{
 			Amount: amount,
 			Epoch:  epoch,
-		})
+		}
 	} else {
 		d.Amount = amount
 	}
