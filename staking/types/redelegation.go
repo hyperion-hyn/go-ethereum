@@ -35,11 +35,6 @@ func (d Redelegation) String() string {
 	return string(s)
 }
 
-type RedelegationReference struct {
-	ValidatorAddress        common.Address
-	ReleasedTotalDelegation *big.Int // for a portion of released amount
-}
-
 // NewDelegation creates a new delegation object
 func NewRedelegation(delegatorAddr common.Address, amount *big.Int) Redelegation {
 	return Redelegation{

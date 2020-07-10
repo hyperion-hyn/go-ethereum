@@ -3,6 +3,7 @@ package types
 import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/storage"
+	"github.com/ethereum/go-ethereum/numeric"
 	"math/big"
 )
 
@@ -14,7 +15,7 @@ func (m *MicrodelegationStorage) ToMicrodelegation() *Microdelegation {
 }
 
 func (m *MicrodelegationStorage) GetDelegatorAddress() common.Address {
-	return [20]byte{}
+	return common.Address0
 }
 
 func (m *MicrodelegationStorage) SetDelegatorAddress(delegatorAddress common.Address) {
@@ -48,10 +49,27 @@ func (m *MicrodelegationStorage) GetPendingDelegation() *PendingDelegationStorag
 	return nil
 }
 
-func (m *MicrodelegationStorage) SetAutoRenew(autoRenew bool) {
+func (m *MicrodelegationStorage) SetRenewal(renewal *Renewal) {
 }
 
-func (m *MicrodelegationStorage) GetAutoRenew() bool {
+func (m *MicrodelegationStorage) GetRenewal() *RenewalStorage {
+	return nil
+}
+
+type RenewalStorage struct {
+}
+
+func (r *RenewalStorage) GetUpdateHeight() *big.Int {
+	return nil
+}
+
+func (r *RenewalStorage) SetUpdateHeight(updateHeight *big.Int) {
+}
+
+func (r *RenewalStorage) SetRenew(isRenew bool) {
+}
+
+func (r *RenewalStorage) IsRenew() bool {
 	return false
 }
 
@@ -70,10 +88,10 @@ func (p *PendingDelegationStorage) GetAmount() *big.Int {
 	return nil
 }
 
-func (p *PendingDelegationStorage) SetUnlockedEpoch(epoch *big.Int) {
+func (p *PendingDelegationStorage) SetUnlockedEpoch(epoch *numeric.Dec) {
 }
 
-func (p *PendingDelegationStorage) GetUnlockedEpoch() *big.Int {
+func (p *PendingDelegationStorage) GetUnlockedEpoch() *numeric.Dec {
 	return nil
 }
 

@@ -3,6 +3,7 @@ package types
 import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/storage"
+	"github.com/ethereum/go-ethereum/numeric"
 	"math/big"
 )
 
@@ -45,14 +46,14 @@ func (m *Map3NodeStorage) ToMap3Node() *Map3Node {
 }
 
 func (m *Map3NodeStorage) GetNodeAddress() common.Address {
-	return [20]byte{}
+	return common.Address0
 }
 
 func (m *Map3NodeStorage) SetNodeAddress(nodeAddress common.Address) {
 }
 
 func (m *Map3NodeStorage) GetInitiatorAddress() common.Address {
-	return [20]byte{}
+	return common.Address0
 }
 
 func (m *Map3NodeStorage) SetInitiatorAddress(initiatorAddress common.Address) {
@@ -86,10 +87,10 @@ func (n *NodeStateStorage) ToNodeState() *NodeState {
 	return nil
 }
 
-func (n *NodeStateStorage) SetStatus(status Map3NodeStatus) {
+func (n *NodeStateStorage) SetStatus(status Status) {
 }
 
-func (n *NodeStateStorage) GetStatus() Map3NodeStatus {
+func (n *NodeStateStorage) GetStatus() Status {
 	return 0
 }
 
@@ -114,10 +115,10 @@ func (n *NodeStateStorage) GetActivationEpoch() *big.Int {
 	return nil
 }
 
-func (n *NodeStateStorage) SetReleaseEpoch(releaseEpoch *big.Int) {
+func (n *NodeStateStorage) SetReleaseEpoch(releaseEpoch *numeric.Dec) {
 }
 
-func (n *NodeStateStorage) GetReleaseEpoch() *big.Int {
+func (n *NodeStateStorage) GetReleaseEpoch() *numeric.Dec {
 	return nil
 }
 
@@ -142,11 +143,11 @@ func (m *Map3NodeWrapperStorage) GetMicrodelegations() *MicrodelegationsStorage 
 	return nil
 }
 
-func (m *Map3NodeWrapperStorage) SetRedelegationReference(redelegationReference *RedelegationReference) {
+func (m *Map3NodeWrapperStorage) SetRedelegationReference(redelegationReference common.Address) {
 }
 
-func (m *Map3NodeWrapperStorage) GetRedelegationReference() *RedelegationReference {
-	return nil
+func (m *Map3NodeWrapperStorage) GetRedelegationReference() common.Address {
+	return common.Address0
 }
 
 func (m *Map3NodeWrapperStorage) SetAccumulatedReward(accumulatedReward *big.Int) {

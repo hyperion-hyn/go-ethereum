@@ -44,7 +44,7 @@ func (v *ValidatorStorage) ToValidator() *Validator {
 }
 
 func (v *ValidatorStorage) GetValidatorAddress() common.Address {
-	return [20]byte{}
+	return common.Address0
 }
 
 func (v *ValidatorStorage) SetValidatorAddress(validatorAddress common.Address) {

@@ -11,7 +11,8 @@ const (
 	Microdelegate
 	Unmicrodelegate
 	CollectMicrodelRewards
-	SplitNode
+	DivideNodeStake
+	RenewNodeStake
 	StakeCreateVal
 	StakeEditVal
 	Redelegate

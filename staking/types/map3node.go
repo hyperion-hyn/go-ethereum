@@ -8,10 +8,10 @@ import (
 	"math/big"
 )
 
-type Map3NodeStatus byte
+type Status byte
 
 const (
-	Nil Map3NodeStatus = iota
+	Nil Status = iota
 	// Pending means total delegation of this node is still not enough
 	Pending
 	// Active means allowed in serving map data
@@ -21,20 +21,23 @@ const (
 	// Banned records whether this node is banned from the network
 	// because it faked map data it can never be undone
 	Banned
+	// Dividing means this node is divided from another node but staking not enough
+	Dividing
 )
 
 const (
 	// LockPeriodInEpoch is the number of epochs a undelegated token needs to be before it's released to the delegator's balance
-	Map3NodeLockPeriodInEpoch = 180
-	Million                   = 1000000
-	MaxPubKeyAllowed          = 1
+	Map3NodeRenewalPeriodInEpoch = 7
+	Million                      = 1000000
+	MaxPubKeyAllowed             = 1
 )
 
 var (
-	MinSelfDelegation     = numeric.NewDecWithPrec(20, 2) // 20%
-	MinDelegation         = numeric.NewDecWithPrec(1, 2)  // 1%
-	baseMinTotalNodeStake = numeric.NewDecFromBigInt(new(big.Int).Mul(big.NewInt(params.Ether), big.NewInt(Million)))
-	minimumMap3NodeStake  = new(big.Int).Mul(big.NewInt(params.Ether), big.NewInt(Million))
+	Map3NodeLockPeriodInEpoch = numeric.NewDec(180)
+	MinSelfDelegation         = numeric.NewDecWithPrec(20, 2) // 20%
+	MinDelegation             = numeric.NewDecWithPrec(1, 2)  // 1%
+	baseMinTotalNodeStake     = numeric.NewDecFromBigInt(new(big.Int).Mul(big.NewInt(params.Ether), big.NewInt(Million)))
+	minimumMap3NodeStake      = new(big.Int).Mul(big.NewInt(params.Ether), big.NewInt(Million))
 )
 
 type Map3NodeKey []byte // TODO: fix size?
@@ -57,7 +60,7 @@ type Map3Node struct {
 	// description for the validator
 	Description Description
 	//
-	SplittedFrom common.Address
+	DividedFrom common.Address
 }
 
 // Map3NodeWrapper contains map3 node,
@@ -65,7 +68,7 @@ type Map3Node struct {
 type Map3NodeWrapper struct {
 	Map3Node               Map3Node
 	Microdelegations       Microdelegations
-	RedelegationReference  RedelegationReference
+	RedelegationReference  common.Address
 	AccumulatedReward      *big.Int // All the rewarded accumulated so far
 	NodeState              NodeState
 	TotalDelegation        *big.Int
@@ -83,11 +86,11 @@ type Map3NodeSnapshot struct {
 type Map3NodeSnapshotByEpoch map[uint64]Map3NodeSnapshot
 
 type NodeState struct {
-	Status          Map3NodeStatus // map3 node statue
-	NodeAge         *big.Int       // Node age
-	CreationEpoch   *big.Int	// TODO: height?
+	Status          Status   // map3 node statue
+	NodeAge         *big.Int // Node age
+	CreationHeight  *big.Int
 	ActivationEpoch *big.Int
-	ReleaseEpoch    *big.Int
+	ReleaseEpoch    numeric.Dec
 }
 
 type AddressSet map[common.Address]struct{}
@@ -119,6 +122,8 @@ func (n *Map3Node) SanityCheck(maxPubKeyAllowed int) error {
 			c, maxPubKeyAllowed,
 		)
 	}
+
+	// TODO: Depend on node state?
 
 	if n.Commission.CommissionRates.Rate.LT(zeroPercent) || n.Commission.CommissionRates.Rate.GT(hundredPercent) {
 		return errors.Wrapf(
@@ -165,9 +170,11 @@ func (n *Map3Node) SanityCheck(maxPubKeyAllowed int) error {
 	return nil
 }
 
-func CalcMinTotalNodeStake(blockHeight *big.Int, config *params.ChainConfig) (numeric.Dec, numeric.Dec, numeric.Dec) {
+func CalcMinTotalNodeStake(blockHeight *big.Int, config *params.ChainConfig) (*big.Int, *big.Int, *big.Int) {
 	// TODO: total node state change by time
-	return baseMinTotalNodeStake, baseMinTotalNodeStake.Mul(MinSelfDelegation), baseMinTotalNodeStake.Mul(MinDelegation)
+	return baseMinTotalNodeStake.RoundInt(),
+		baseMinTotalNodeStake.Mul(MinSelfDelegation).RoundInt(),
+		baseMinTotalNodeStake.Mul(MinDelegation).RoundInt()
 }
 
 // CreateValidatorFromNewMsg creates validator from NewValidator message

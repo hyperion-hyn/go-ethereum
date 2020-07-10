@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/consensus/clique/reward"
 	"github.com/ethereum/go-ethereum/consensus/clique/votepower"
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/numeric"
 	"github.com/ethereum/go-ethereum/staking/availability"
 	"github.com/ethereum/go-ethereum/staking/committee"
@@ -446,8 +447,17 @@ func (c *AtlasClique) FinalizeAndAssemble(chain consensus.ChainReader, header *t
 	// ATLAS
 	isNewEpoch := chain.Config().Atlas.IsLastBlock(header.Number.Uint64())
 	if isNewEpoch {
+		// TODO: map3 node undelegation by time
+		// get all map3 node addresses
+		// check if each node is to be released
+		// auto renew node
+		if err := releaseAndRenewMap3Node(header, state); err != nil {
+			return nil, err
+		}
+
+
 		// unredelegation
-		if err := payoutUnredelegations(chain, header, state); err != nil {
+		if err := payoutUnredelegations(header, state); err != nil {
 			return nil, err
 		}
 
@@ -473,13 +483,8 @@ func (c *AtlasClique) FinalizeAndAssemble(chain consensus.ChainReader, header *t
 		}
 	}
 
-	// TODO: map3 node undelegation by time
-	// get all map3 node addresses
-	// check if each node is to be released
-	// auto renew node
-
 	// reward
-	accumulateRewardsAndCountSigs(chain, state ,header)
+	accumulateRewardsAndCountSigs(chain, state, header)
 
 	// TODO: slash
 
@@ -623,16 +628,38 @@ func setLastEpochInCommittee(newComm *committee.Committee, state *state.StateDB)
 }
 
 // Withdraw unlocked tokens to the delegators' accounts
-func payoutUnredelegations(chain consensus.ChainReader, header *types.Header, state *state.StateDB) error {
+func payoutUnredelegations(header *types.Header, state *state.StateDB) error {
 	nowEpoch, blockNow := header.Epoch, header.Number
 
-	// TODO(storage): read all validator addresses from state db
-	validators, err := chain.ReadValidatorList()
-	if err != nil {
-		const msg = "[Finalize] failed to read all validators"
-		return errors.New(msg)
-	}
+	validators := state.ValidatorPool().GetValidators()
 	// Payout undelegated/unlocked tokens
+	for _, validatorAddr := range validators.Keys() {
+		validator, ok := validators.Get(validatorAddr)
+		if !ok {
+			return core.ErrValidatorNotExist
+		}
+
+		lastEpochInCommittee := validator.GetValidator().GetLastEpochInCommittee()
+		for _, delegator := range validator.GetRedelegations().Keys() {
+			redelegation, ok := validator.GetRedelegations().Get(delegator)
+			if !ok {
+				return core.ErrRedelegationNotExist
+			}
+
+			if undelegation := redelegation.GetUndelegation(); undelegation != nil {
+				// need to wait at least 7 epochs to withdraw; or the validator has been out of committee for 7 epochs
+				if big.NewInt(0).Sub(nowEpoch, undelegation.GetEpoch()).Int64() >= int64(staking.LockPeriodInEpoch) ||
+					big.NewInt(0).Sub(nowEpoch, lastEpochInCommittee).Int64() >= int64(staking.LockPeriodInEpoch) {
+					??
+
+
+				}
+			}
+		}
+
+
+	}
+
 	for _, validator := range validators {
 		wrapper, err := state.ValidatorWrapper(validator)
 		if err != nil {
@@ -849,6 +876,40 @@ func lookupDelegatorShares(
 	}
 
 	return shares.(map[common.Address]numeric.Dec), nil
+}
+
+func releaseAndRenewMap3Node(header *types.Header, state *state.StateDB) error {
+	nowEpoch := header.Epoch
+
+	nodePool := state.Map3NodePool()
+	for _, nodeAddr := range nodePool.GetNodes().Keys() {
+		node, ok := nodePool.GetNodes().Get(nodeAddr)
+		if !ok {
+			return core.ErrMap3NodeNotExist
+		}
+
+		initiator := node.GetMap3Node().GetInitiatorAddress()
+		ns := node.GetNodeState()
+		if ns.GetStatus() == staking.Active && ns.GetReleaseEpoch().Cmp(nowEpoch) == 0 {
+			initiatorMircrodel, ok := node.GetMicrodelegations().Get(initiator)
+			if !ok {
+				return core.ErrMicrodelegationNotExist
+			}
+
+			// renew?
+			if initiatorMircrodel.GetAutoRenew() {
+
+			} else {
+				amt := node.GetTotalDelegation()
+
+
+			}
+
+			// portion renew?
+			// redelegation
+			//
+		}
+	}
 }
 
 // ATLAS - END

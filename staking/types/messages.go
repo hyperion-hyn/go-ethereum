@@ -18,7 +18,6 @@ type CreateMap3Node struct {
 	CommissionRates  CommissionRates `json:"commission"`
 	NodeKeys         Map3NodeKeys
 	Amount           *big.Int `json:"amount"`
-	AutoRenew        bool
 }
 
 type EditMap3Node struct {
@@ -36,7 +35,6 @@ type Microdelegate struct {
 	DelegatorAddress common.Address `json:"delegator_address"`
 	Map3NodeAddress  common.Address
 	Amount           *big.Int
-	AutoRenew        bool
 }
 
 // Unmicrodelegate - type for removing delegation responsibility
@@ -51,8 +49,14 @@ type CollectMicrodelegationRewards struct {
 	DelegatorAddress common.Address `json:"delegator_address"`
 }
 
-type SplitNode struct {
+type DivideMap3NodeStake struct {
 	Map3NodeAddress common.Address
+}
+
+type RenewMap3NodeStake struct {
+	Map3NodeAddress common.Address
+	DelegatorAddress common.Address
+	IsRenew         bool
 }
 
 // CreateValidator - type for creating a new validator
@@ -103,9 +107,9 @@ func (v EditValidator) Copy() StakeMsg {
 		Description:      v.Description,
 		EPOSStatus:       v.EPOSStatus,
 	}
-	if v.CommissionRate != nil {
+	if !v.CommissionRate.IsNil() {
 		cr := v.CommissionRate.Copy()
-		cp.CommissionRate = &cr
+		cp.CommissionRate = cr
 	}
 	if v.MinSelfDelegation != nil {
 		cp.MinSelfDelegation = new(big.Int).Set(v.MinSelfDelegation)

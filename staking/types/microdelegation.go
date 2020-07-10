@@ -3,6 +3,7 @@ package types
 import (
 	"encoding/json"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/numeric"
 	"math/big"
 )
 
@@ -10,16 +11,21 @@ const (
 	PendingDelegationLockPeriodInEpoch = 7
 )
 
+type Renewal struct {
+	IsRenew      bool
+	UpdateHeight *big.Int
+}
+
 // Microdelegation represents the bond with tokens held by an account. It is
 // owned by one delegator, and is associated with the voting power of one
 // validator.
 type Microdelegation struct {
-	DelegatorAddress   common.Address
-	Amount             *big.Int
-	Reward             *big.Int
-	Undelegation       Undelegation
-	PendingDelegation  PendingDelegation
-	AutoRenew          bool
+	DelegatorAddress  common.Address
+	Amount            *big.Int
+	Reward            *big.Int
+	Undelegation      Undelegation
+	PendingDelegation PendingDelegation
+	Renewal           Renewal
 }
 
 // Microdelegations ..
@@ -44,24 +50,23 @@ type Undelegation struct {
 
 // PendingDelegation represents tokens during map3 node in pending state
 type PendingDelegation struct {
-	Amount *big.Int
-	UnlockedEpoch  *big.Int
+	Amount        *big.Int
+	UnlockedEpoch numeric.Dec
 }
 
 // NewMicrodelegation creates a new microdelegation object
 func NewMicrodelegation(
-	delegator common.Address, amount, epoch *big.Int, autoRenew, pending bool,
+	delegator common.Address, amount *big.Int, unlockedEpoch numeric.Dec, pending bool,
 ) Microdelegation {
 	d := Microdelegation{
 		DelegatorAddress: delegator,
 		Amount:           big.NewInt(0),
 		Reward:           big.NewInt(0),
-		AutoRenew:        autoRenew,
 	}
 	if pending {
 		d.PendingDelegation = PendingDelegation{
-			Amount: amount,
-			Epoch:  epoch,
+			Amount:        amount,
+			UnlockedEpoch: unlockedEpoch,
 		}
 	} else {
 		d.Amount = amount
