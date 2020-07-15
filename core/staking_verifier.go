@@ -11,6 +11,7 @@ import (
 )
 
 var (
+	ErrSelfDelegationTooSmall          = errors.New("self delegation amount too small")
 	errStateDBIsMissing                = errors.New("no stateDB was provided")
 	errChainContextMissing             = errors.New("no chain context was provided")
 	errEpochMissing                    = errors.New("no epoch was provided")
@@ -78,7 +79,7 @@ func checkValDuplicatedFields(state vm.StateDB, identity string, keys staking.BL
 }
 
 func VerifyCreateMap3NodeMsg(stateDB vm.StateDB, epoch, blockNum *big.Int, msg *staking.CreateMap3Node,
-	signer common.Address, minDel *big.Int) (*staking.Map3Node, error) {
+	signer common.Address, minSelf *big.Int) (*staking.Map3NodeWrapper, error) {
 	if stateDB == nil {
 		return nil, errStateDBIsMissing
 	}
@@ -105,8 +106,8 @@ func VerifyCreateMap3NodeMsg(stateDB vm.StateDB, epoch, blockNum *big.Int, msg *
 		return nil, errInsufficientBalanceForStake
 	}
 
-	if minDel.Cmp(msg.Amount) > 0 {
-		return nil, errDelegationTooSmall
+	if minSelf.Cmp(msg.Amount) > 0 {
+		return nil, ErrSelfDelegationTooSmall
 	}
 
 	nodeAddress := crypto.CreateAddress(signer, stateDB.GetNonce(signer))
@@ -118,7 +119,22 @@ func VerifyCreateMap3NodeMsg(stateDB vm.StateDB, epoch, blockNum *big.Int, msg *
 		return nil, err
 	}
 
-	return node, nil
+	// create map3 node wrapper
+	wrapper := &staking.Map3NodeWrapper{}
+	wrapper.Map3Node = *node
+	wrapper.Microdelegations = staking.Microdelegations{
+		node.InitiatorAddress: staking.NewMicrodelegation(
+			node.InitiatorAddress, msg.Amount,
+			numeric.NewDecFromBigInt(epoch).Add(numeric.NewDec(staking.PendingDelegationLockPeriodInEpoch)),
+			true,
+		),
+	}
+	wrapper.NodeState = staking.NodeState{
+		Status:         staking.Pending,
+		CreationHeight: blockNum,
+	}
+	wrapper.TotalPendingDelegation = big.NewInt(0).Set(msg.Amount)
+	return wrapper, nil
 }
 
 func VerifyEditMap3NodeMsg(
@@ -157,26 +173,75 @@ func VerifyEditMap3NodeMsg(
 	if err := node.SanityCheck(staking.MaxPubKeyAllowed); err != nil {
 		return err
 	}
+	return nil
+}
 
-	newRate := node.Commission.CommissionRates.Rate
-	if newRate.GT(node.Commission.CommissionRates.MaxRate) {
-		return errCommissionRateChangeTooHigh
+func VerifyStopMap3NodeMsg(stateDB vm.StateDB, epoch *big.Int, msg *staking.StopMap3Node, signer common.Address) error {
+	if stateDB == nil {
+		return errStateDBIsMissing
 	}
-
-	lastEpoch := big.NewInt(0).Sub(epoch, common.Big1)
-	nodeSnapshot, ok := nodePool.GetNodeSnapshotByEpoch().Get(lastEpoch.Uint64())
+	if epoch == nil {
+		return errEpochMissing
+	}
+	nodePool := stateDB.Map3NodePool()
+	wrapper, ok := nodePool.GetNodes().Get(msg.Map3NodeAddress)
 	if !ok {
-		return errMap3NodeSnapshotNotExist
-	}
-	snapshotMap3Node, ok := nodeSnapshot.GetMap3Nodes().Get(node.NodeAddress)
-	if !ok {
-		return errMap3NodeSnapshotNotExist
+		return ErrMap3NodeNotExist
 	}
 
-	rateAtBeginningOfEpoch := snapshotMap3Node.GetMap3Node().GetCommission().GetCommissionRates().GetRate()
-	if newRate.Sub(*rateAtBeginningOfEpoch).Abs().GT(node.Commission.CommissionRates.MaxChangeRate) {
-		return errCommissionRateChangeTooFast
+	node := wrapper.GetMap3Node().ToMap3Node()
+	if node.InitiatorAddress != signer {
+		return errInvalidSigner
 	}
+
+	if wrapper.GetNodeState().GetStatus() != staking.Pending {
+		return errStopMap3NodeNotAllowed
+	}
+
+	md, ok := wrapper.GetMicrodelegations().Get(signer)
+	if !ok {
+		return ErrMicrodelegationNotExist
+	}
+
+	if md.GetPendingDelegation().GetUnlockedEpoch().GT(numeric.NewDecFromBigInt(epoch)) {
+		return errMicrodelegationStillLocked
+	}
+	return nil
+}
+
+func VerifyResumeMap3NodeMsg(stateDB vm.StateDB, msg *staking.ResumeMap3Node, minSelf *big.Int, signer common.Address) error {
+	if stateDB == nil {
+		return errStateDBIsMissing
+	}
+
+	if msg.Amount.Sign() == -1 {
+		return errNegativeAmount
+	}
+
+	map3NodePool := stateDB.Map3NodePool()
+	wrapper, ok := map3NodePool.GetNodes().Get(msg.Map3NodeAddress)
+	if !ok {
+		return ErrMap3NodeNotExist
+	}
+	if wrapper.GetMap3Node().GetNodeAddress() != signer {
+		return errInvalidSigner
+	}
+
+	if wrapper.GetNodeState().GetStatus() != staking.Inactive {
+		return errInvalidNodeStateForResume
+	}
+
+	// Check if there is enough liquid token to delegate
+	if !CanTransfer(stateDB, signer, msg.Amount) {
+		return errInsufficientBalanceForStake
+	}
+
+	if minSelf.Cmp(msg.Amount) > 0 {
+		return ErrSelfDelegationTooSmall
+	}
+
+	// TODO: check new commission
+
 	return nil
 }
 
@@ -204,6 +269,11 @@ func VerifyMicrodelegateMsg(stateDB vm.StateDB, msg *staking.Microdelegate, minD
 		return ErrMap3NodeNotExist
 	}
 
+	status := wrapper.GetNodeState().GetStatus()
+	if status == staking.Active || status == staking.Pending || status == staking.Dividing {
+		return errInvalidNodeStateForDelegation
+	}
+
 	// Check if there is enough liquid token to delegate
 	if !CanTransfer(stateDB, msg.DelegatorAddress, msg.Amount) {
 		return errInsufficientBalanceForStake
@@ -211,12 +281,6 @@ func VerifyMicrodelegateMsg(stateDB vm.StateDB, msg *staking.Microdelegate, minD
 
 	if minDel.Cmp(msg.Amount) > 0 {
 		return errDelegationTooSmall
-	}
-
-	isInitiator := wrapper.GetMap3Node().GetInitiatorAddress() == signer
-	status := wrapper.GetNodeState().GetStatus()
-	if !isInitiator && status == staking.Inactive {
-		return errInvalidNodeStateForDelegation
 	}
 	return nil
 }
@@ -226,7 +290,8 @@ func VerifyMicrodelegateMsg(stateDB vm.StateDB, msg *staking.Microdelegate, minD
 // with the undelegation applied to it.
 //
 // Note that this function never updates the stateDB, it only reads from stateDB.
-func VerifyUnmicrodelegateMsg(stateDB vm.StateDB, epoch *big.Int, msg *staking.Unmicrodelegate, signer common.Address) error {
+func VerifyUnmicrodelegateMsg(stateDB vm.StateDB, epoch *big.Int, msg *staking.Unmicrodelegate, minSelf *big.Int,
+	signer common.Address) error {
 	if stateDB == nil {
 		return errStateDBIsMissing
 	}
@@ -246,7 +311,8 @@ func VerifyUnmicrodelegateMsg(stateDB vm.StateDB, epoch *big.Int, msg *staking.U
 		return ErrMap3NodeNotExist
 	}
 
-	if wrapper.GetNodeState().GetStatus() != staking.Pending {
+	status := wrapper.GetNodeState().GetStatus()
+	if status != staking.Pending && status != staking.Dividing {
 		return errUnmicrodelegateNotAllowed
 	}
 
@@ -256,15 +322,22 @@ func VerifyUnmicrodelegateMsg(stateDB vm.StateDB, epoch *big.Int, msg *staking.U
 	}
 
 	p := md.GetPendingDelegation()
-	if p == nil {
-		return err
+	if p.GetAmount().Cmp(common.Big0) == 0 {
+		return errNotEnoughMicrodelegationToUndelegate
 	}
 
-	if p.GetUnlockedEpoch().GT(numeric.ZeroDec()) {
-		return err
+	if p.GetUnlockedEpoch().GT(numeric.NewDecFromBigInt(epoch)) {
+		return errMicrodelegationStillLocked
 	}
 	if p.GetAmount().Cmp(msg.Amount) > 0 {
-		return err
+		return errNotEnoughMicrodelegationToUndelegate
+	}
+
+	if wrapper.GetMap3Node().GetInitiatorAddress() == signer {
+		amt := big.NewInt(0).Sub(p.GetAmount(), msg.Amount)
+		if minSelf.Cmp(amt.Add(amt, md.GetAmount())) > 0 {
+			return ErrSelfDelegationTooSmall
+		}
 	}
 	return nil
 }
@@ -311,35 +384,87 @@ func VerifyCollectMicrodelRewardsDelegation(
 	return nil
 }
 
-func VerifyDivideNodeStakeMsg(stateDB vm.StateDB, blockNum *big.Int, msg *staking.DivideMap3NodeStake, singer common.Address) error {
+func VerifyDivideNodeStakeMsg(stateDB vm.StateDB, epoch, blockNum *big.Int, msg *staking.DivideMap3NodeStake,
+	signer common.Address, minTotal, minSelf *big.Int) (*staking.Map3NodeWrapper, error) {
 	if stateDB == nil {
-		return errStateDBIsMissing
+		return nil, errStateDBIsMissing
+	}
+	if epoch == nil {
+		return nil, errEpochMissing
 	}
 	if blockNum == nil {
-		return errBlockNumMissing
+		return nil, errBlockNumMissing
+	}
+	if msg.Amount.Sign() == -1 {
+		return nil, errNegativeAmount
 	}
 
 	map3NodePool := stateDB.Map3NodePool()
 	wrapper, ok := map3NodePool.GetNodes().Get(msg.Map3NodeAddress)
 	if !ok {
-		return ErrMap3NodeNotExist
+		return nil, ErrMap3NodeNotExist
 	}
-	if wrapper.GetMap3Node().GetInitiatorAddress() != singer {
-		return errInvalidSigner
+	if wrapper.GetMap3Node().GetInitiatorAddress() != msg.InitiatorAddress || msg.InitiatorAddress != signer {
+		return nil, errInvalidSigner
 	}
 
-	// TODO: divided node need 20%
+	if wrapper.GetNodeState().GetStatus() != staking.Active {
+		return nil, errMap3NodeDivisionNotAllowed
+	}
 
-	// node exist
-	// node state
-	// total delegation
+	if !CanTransfer(stateDB, msg.InitiatorAddress, msg.Amount) {
+		return nil, errInsufficientBalanceForStake
+	}
 
-	return nil
+	if err := checkNodeDuplicatedFields(
+		stateDB,
+		msg.Description.Identity,
+		msg.NodeKeys); err != nil {
+		return nil, err
+	}
+
+	nodeAddress := crypto.CreateAddress(signer, stateDB.GetNonce(signer))
+	node, err := staking.CreateMap3NodeFromNewMsg(&msg.CreateMap3Node, nodeAddress, blockNum)
+	if err != nil {
+		return nil, err
+	}
+	if err := node.SanityCheck(staking.MaxPubKeyAllowed); err != nil {
+		return nil, err
+	}
+	node.DividedFrom = msg.Map3NodeAddress
+
+	shares, err := LookupMicrodelegationShares(wrapper)
+	if err != nil {
+		return nil, err
+	}
+
+	totalDelegationDec := numeric.NewDecFromBigInt(wrapper.GetTotalDelegation())
+	minTotalDec, minSelfDec := numeric.NewDecFromBigInt(minTotal), numeric.NewDecFromBigInt(minSelf)
+	if minTotalDec.GT(totalDelegationDec) {
+		return nil, errTotalDelegationTooSmall
+	}
+	totalForNewNode := totalDelegationDec.Sub(minTotalDec)
+	initiatorShare, ok := shares[signer]
+	if !ok {
+		return nil, ErrMicrodelegationNotExist
+	}
+	initiatorAmountForNewNode := totalForNewNode.Mul(initiatorShare).Add(numeric.NewDecFromBigInt(msg.Amount))
+	if minSelfDec.GT(initiatorAmountForNewNode) {
+		return nil, ErrSelfDelegationTooSmall
+	}
+
+	// TODO: other delegations
+
+	return wrapper, nil
 }
 
-func VerifyRenewNodeStakeMsg(stateDB vm.StateDB, epoch, blockNum *big.Int, msg *staking.RenewMap3NodeStake, signer common.Address) error {
+func VerifyRenewNodeStakeMsg(stateDB vm.StateDB, chainContext ChainContext, epoch, blockNum *big.Int,
+	msg *staking.RenewMap3NodeStake, signer common.Address) error {
 	if stateDB == nil {
 		return errStateDBIsMissing
+	}
+	if chainContext == nil {
+		return errChainContextMissing
 	}
 	if epoch == nil {
 		return errEpochMissing
@@ -361,24 +486,56 @@ func VerifyRenewNodeStakeMsg(stateDB vm.StateDB, epoch, blockNum *big.Int, msg *
 		return ErrMicrodelegationNotExist
 	}
 
-	if wrapper.GetNodeState().GetStatus() != staking.Active ||
-		big.NewInt(0).Sub(wrapper.GetNodeState().GetReleaseEpoch(), epoch).Int64() > staking.Map3NodeRenewalPeriodInEpoch {
+	if wrapper.GetNodeState().GetStatus() != staking.Active || wrapper.GetNodeState().GetStatus() != staking.Dividing {
 		return errMap3NodeRenewalNotAllowed
 	}
 
-	if md.GetRenewal() != nil {
-		return errMap3NodeAlreadyRenewal
-	}
+	isInitiator := wrapper.GetMap3Node().GetInitiatorAddress() == signer
+	curEpoch := numeric.NewDecFromBigInt(epoch)
+	releaseEpoch := wrapper.GetNodeState().GetReleaseEpoch()
+	updatedEpoch := numeric.NewDec(int64(chainContext.Config().Atlas.EpochByBlock(md.GetRenewal().GetUpdateHeight().Uint64())))
+	if isInitiator {
+		// 8 <= epoch <= 14
+		if !within(releaseEpoch.Sub(numeric.NewDec(2*staking.RenewalPeriodInEpoch)),
+			releaseEpoch.Sub(numeric.NewDec(staking.RenewalPeriodInEpoch)), curEpoch) {
+			return errMap3NodeRenewalNotAllowed
+		}
 
-	imd, ok := wrapper.GetMicrodelegations().Get(wrapper.GetMap3Node().GetInitiatorAddress())
-	if !ok {
-		return ErrMicrodelegationNotExist
-	}
+		if within(releaseEpoch.Sub(numeric.NewDec(2*staking.RenewalPeriodInEpoch)),
+			releaseEpoch.Sub(numeric.NewDec(staking.RenewalPeriodInEpoch)), updatedEpoch) {
+			return errMap3NodeAlreadyRenewal
+		}
 
-	if imd.GetRenewal() != nil && !imd.GetRenewal().IsRenew() {
-		return errMap3NodeNotRenewalByInitiator
-	}
+		if !msg.CommissionRate.IsNil() {
+			currComm := wrapper.GetMap3Node().GetCommission().GetCommissionRates().GetRate()
+			maxChange := wrapper.GetMap3Node().GetCommission().GetCommissionRates().GetMaxChangeRate()
+			if msg.CommissionRate.Sub(*currComm).Abs().GT(*maxChange) {
+				return errCommissionRateChangeTooFast
+			}
 
+			// TODO: how to set
+			// Sanity check
+
+			// check max change rate
+		}
+	} else {
+		if !msg.CommissionRate.IsNil() {
+			return errCommissionUpdateNotAllow
+		}
+
+		imd, ok := wrapper.GetMicrodelegations().Get(wrapper.GetMap3Node().GetInitiatorAddress())
+		if !ok {
+			return ErrMicrodelegationNotExist
+		}
+
+		if imd.GetRenewal() != nil && !imd.GetRenewal().IsRenew() {
+			return errMap3NodeNotRenewalByInitiator
+		}
+
+		if within(releaseEpoch.Sub(numeric.NewDec(staking.RenewalPeriodInEpoch-1)), *releaseEpoch, updatedEpoch) {
+			return errMap3NodeAlreadyRenewal
+		}
+	}
 	return nil
 }
 
@@ -389,9 +546,8 @@ func VerifyRenewNodeStakeMsg(stateDB vm.StateDB, epoch, blockNum *big.Int, msg *
 // in the process.
 //
 // Note that this function never updates the stateDB, it only reads from stateDB.
-func VerifyCreateValidatorMsg(
-	stateDB vm.StateDB, blockNum *big.Int, msg *staking.CreateValidator, signer common.Address,
-) (*staking.ValidatorWrapper, error) {
+func VerifyCreateValidatorMsg(stateDB vm.StateDB, blockNum *big.Int, msg *staking.CreateValidator,
+	signer common.Address) (*staking.ValidatorWrapper, error) {
 	if stateDB == nil {
 		return nil, errStateDBIsMissing
 	}
@@ -448,9 +604,8 @@ func VerifyCreateValidatorMsg(
 // the stateDB, chainContext and returns the edited validatorWrapper.
 //
 // Note that this function never updates the stateDB, it only reads from stateDB.
-func VerifyEditValidatorMsg(
-	stateDB vm.StateDB, epoch, blockNum *big.Int, msg *staking.EditValidator, signer common.Address,
-) error {
+func VerifyEditValidatorMsg(stateDB vm.StateDB, epoch, blockNum *big.Int, msg *staking.EditValidator,
+	signer common.Address) error {
 	if stateDB == nil {
 		return errStateDBIsMissing
 	}
@@ -631,4 +786,8 @@ func VerifyCollectRedelRewardsMsg(stateDB vm.StateDB, msg *staking.CollectRedele
 		return errNoRewardsToCollect
 	}
 	return nil
+}
+
+func within(from, to, num numeric.Dec) bool {
+	return num.GTE(from) && num.LTE(to)
 }

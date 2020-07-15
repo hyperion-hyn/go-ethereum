@@ -27,9 +27,9 @@ const (
 
 const (
 	// LockPeriodInEpoch is the number of epochs a undelegated token needs to be before it's released to the delegator's balance
-	Map3NodeRenewalPeriodInEpoch = 7
-	Million                      = 1000000
-	MaxPubKeyAllowed             = 1
+	RenewalPeriodInEpoch = 7
+	Million              = 1000000
+	MaxPubKeyAllowed     = 1
 )
 
 var (
@@ -68,7 +68,7 @@ type Map3Node struct {
 type Map3NodeWrapper struct {
 	Map3Node               Map3Node
 	Microdelegations       Microdelegations
-	RedelegationReference  common.Address
+	RedelegationReference  RedelegationReference
 	AccumulatedReward      *big.Int // All the rewarded accumulated so far
 	NodeState              NodeState
 	TotalDelegation        *big.Int
@@ -76,14 +76,6 @@ type Map3NodeWrapper struct {
 }
 
 type Map3NodeWrappers map[common.Address]Map3NodeWrapper
-
-// Map3NodeSnapshot contains map3 node snapshot and the corresponding epoch
-type Map3NodeSnapshot struct {
-	Map3Nodes Map3NodeWrappers
-	Epoch     *big.Int
-}
-
-type Map3NodeSnapshotByEpoch map[uint64]Map3NodeSnapshot
 
 type NodeState struct {
 	Status          Status   // map3 node statue
@@ -94,13 +86,13 @@ type NodeState struct {
 }
 
 type AddressSet map[common.Address]struct{}
+type AddressToAddressSetMap map[common.Address]AddressSet
 type PubKeySet map[string]struct{} // node key hex
-type Map3NodeAddressSetByDelegator map[common.Address]AddressSet
 
 type Map3NodePool struct {
 	Nodes                     Map3NodeWrappers
-	NodeSnapshotByEpoch       Map3NodeSnapshotByEpoch
-	NodeAddressSetByDelegator Map3NodeAddressSetByDelegator
+	NodeAddressSetByInitiator AddressToAddressSetMap
+	NodeAddressSetByDelegator AddressToAddressSetMap
 	NodeKeySet                PubKeySet
 	DescriptionIdentitySet    DescriptionIdentitySet
 }
@@ -122,8 +114,6 @@ func (n *Map3Node) SanityCheck(maxPubKeyAllowed int) error {
 			c, maxPubKeyAllowed,
 		)
 	}
-
-	// TODO: Depend on node state?
 
 	if n.Commission.CommissionRates.Rate.LT(zeroPercent) || n.Commission.CommissionRates.Rate.GT(hundredPercent) {
 		return errors.Wrapf(
@@ -206,10 +196,6 @@ func UpdateMap3NodeFromEditMsg(map3Node *Map3Node, edit *EditMap3Node) error {
 		return err
 	}
 	map3Node.Description = newDes
-
-	if !edit.CommissionRate.IsNil() {
-		map3Node.Commission.CommissionRates.Rate = edit.CommissionRate
-	}
 
 	if edit.NodeKeyToRemove != nil {
 		index := -1

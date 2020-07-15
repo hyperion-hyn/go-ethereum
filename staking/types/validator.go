@@ -97,14 +97,6 @@ func (pk *BLSPublicKey) ToLibBLSPublicKey(key *bls.PublicKey) error {
 	return key.Deserialize(pk[:])
 }
 
-// ValidatorSnapshotReader ..
-type ValidatorSnapshotReader interface {
-	ReadValidatorSnapshotAtEpoch(
-		epoch *big.Int,
-		addr common.Address,
-	) (*ValidatorSnapshot, error)
-}
-
 type Counters struct {
 	// The number of blocks the validator
 	// should've signed when in active mode (selected in committee)
@@ -124,14 +116,6 @@ type ValidatorWrapper struct {
 }
 
 type ValidatorWrappers map[common.Address]ValidatorWrapper
-
-// ValidatorSnapshot contains validator snapshot and the corresponding epoch
-type ValidatorSnapshot struct {
-	Validators ValidatorWrappers
-	Epoch      *big.Int
-}
-
-type ValidatorSnapshotByEpoch map[uint64]ValidatorSnapshot
 
 // Computed represents current epoch
 // availability measures, mostly for RPC
@@ -253,7 +237,6 @@ type Validator struct {
 
 type ValidatorPool struct {
 	Validators               ValidatorWrappers
-	ValidatorSnapshotByEpoch ValidatorSnapshotByEpoch
 	SlotKeySet               PubKeySet
 	DescriptionIdentitySet   DescriptionIdentitySet
 	CommitteeByEpoch         committee.CommitteeByEpoch

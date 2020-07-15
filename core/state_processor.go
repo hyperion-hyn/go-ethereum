@@ -104,7 +104,7 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 	if msg.Type() == types.Normal {
 		_, gas, failed, err = ApplyMessage(vmenv, msg, gp)
 	} else {
-		gas, err = ApplyStakingMessage(vmenv, msg, gp)
+		gas, err = ApplyStakingMessage(vmenv, msg, gp, bc)
 	}
 	// ATLAS - END
 

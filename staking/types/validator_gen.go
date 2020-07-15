@@ -192,58 +192,6 @@ func (v *ValidatorWrappersStorage) Keys() []common.Address {
 	return nil
 }
 
-type ValidatorSnapshotStorage struct {
-}
-
-func (v *ValidatorSnapshotStorage) ToValidatorSnapshot() *ValidatorSnapshot {
-	return nil
-}
-
-func (v *ValidatorSnapshotStorage) SetValidators(validators *ValidatorWrappersStorage) {
-}
-
-func (v *ValidatorSnapshotStorage) GetValidators() *ValidatorWrappersStorage {
-	return nil
-}
-
-func (v *ValidatorSnapshotStorage) SetEpoch(epoch *big.Int) {
-}
-
-func (v *ValidatorSnapshotStorage) GetEpoch() *big.Int {
-	return nil
-}
-
-type ValidatorSnapshotByEpochStorage struct {
-}
-
-func (v *ValidatorSnapshotByEpochStorage) ToValidatorSnapshotByEpoch() *ValidatorSnapshotByEpoch {
-	return nil
-}
-
-func (v *ValidatorSnapshotByEpochStorage) Size() int {
-	return 0
-}
-
-func (v *ValidatorSnapshotByEpochStorage) Contain(key uint64) bool {
-	return false
-}
-
-func (v *ValidatorSnapshotByEpochStorage) Put(key uint64, validatorSnapshot *ValidatorSnapshot) bool {
-	return false
-}
-
-func (v *ValidatorSnapshotByEpochStorage) Remove(key uint64) {
-}
-
-func (v *ValidatorSnapshotByEpochStorage) Get(key uint64) (*ValidatorSnapshotStorage, bool) {
-	return nil, false
-}
-
-func (v *ValidatorSnapshotByEpochStorage) Keys() []uint64 {
-	return nil
-}
-
-
 type ValidatorPoolStorage struct {
 }
 
@@ -255,13 +203,6 @@ func (v *ValidatorPoolStorage) SetValidators(validators *ValidatorWrappers) {
 }
 
 func (v *ValidatorPoolStorage) GetValidators() *ValidatorWrappersStorage {
-	return nil
-}
-
-func (v *ValidatorPoolStorage) SetValidatorSnapshotByEpoch(validatorSnapshotByEpoch *ValidatorSnapshotByEpoch) {
-}
-
-func (v *ValidatorPoolStorage) GetValidatorSnapshotByEpoch() *ValidatorSnapshotByEpochStorage {
 	return nil
 }
 

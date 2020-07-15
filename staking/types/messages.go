@@ -13,7 +13,7 @@ type StakeMsg interface {
 }
 
 type CreateMap3Node struct {
-	InitiatorAddress common.Address   `json:"initiator-address"`
+	InitiatorAddress common.Address  `json:"initiator-address"`
 	Description      Description     `json:"description"`
 	CommissionRates  CommissionRates `json:"commission"`
 	NodeKeys         Map3NodeKeys
@@ -21,13 +21,25 @@ type CreateMap3Node struct {
 }
 
 type EditMap3Node struct {
-	Map3NodeAddress    common.Address `json:"validator-address"`
-	Description        *Description   `json:"description"`
-	CommissionRate     numeric.Dec    `json:"commission-rate" rlp:"nil"`
-	MinSelfDelegation  *big.Int       `json:"min-self-delegation" rlp:"nil"`
-	MaxTotalDelegation *big.Int       `json:"max-total-delegation" rlp:"nil"`
-	NodeKeyToRemove    *Map3NodeKey
-	NodeKeyToAdd       *Map3NodeKey
+	Map3NodeAddress common.Address `json:"validator-address"`
+	Description     *Description   `json:"description"`
+	NodeKeyToRemove *Map3NodeKey
+	NodeKeyToAdd    *Map3NodeKey
+}
+
+type StopMap3Node struct {
+	Map3NodeAddress common.Address `json:"validator-address"`
+}
+
+type ResumeMap3Node struct {
+	Map3NodeAddress common.Address `json:"validator-address"`
+	CommissionRate  numeric.Dec    `json:"commission-rate"`
+	Amount          *big.Int       `json:"amount"`
+}
+
+type DivideMap3NodeStake struct {
+	Map3NodeAddress common.Address
+	CreateMap3Node
 }
 
 // Microdelegate - type for delegating to a map3 node
@@ -44,19 +56,16 @@ type Unmicrodelegate struct {
 	Amount           *big.Int
 }
 
+type RenewMap3NodeStake struct {
+	Map3NodeAddress  common.Address
+	DelegatorAddress common.Address
+	IsRenew          bool
+	CommissionRate   numeric.Dec // just for node initiator
+}
+
 // CollectMicrodelegationRewards - type for collecting token rewards
 type CollectMicrodelegationRewards struct {
 	DelegatorAddress common.Address `json:"delegator_address"`
-}
-
-type DivideMap3NodeStake struct {
-	Map3NodeAddress common.Address
-}
-
-type RenewMap3NodeStake struct {
-	Map3NodeAddress common.Address
-	DelegatorAddress common.Address
-	IsRenew         bool
 }
 
 // CreateValidator - type for creating a new validator

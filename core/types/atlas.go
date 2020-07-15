@@ -6,13 +6,19 @@ type TransactionType byte
 // Different Transaction Types
 const (
 	Normal TransactionType = iota
+
+	// map3 node
 	StakeCreateNode
 	StakeEditNode
+	StopNodeStake
+	ResumeNodeStake
+	DivideNodeStake
+	RenewNodeStake
 	Microdelegate
 	Unmicrodelegate
 	CollectMicrodelRewards
-	DivideNodeStake
-	RenewNodeStake
+
+	// validator
 	StakeCreateVal
 	StakeEditVal
 	Redelegate

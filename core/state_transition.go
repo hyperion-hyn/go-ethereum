@@ -59,6 +59,7 @@ type StateTransition struct {
 	data       []byte
 	state      vm.StateDB
 	evm        *vm.EVM
+	bc         ChainContext	// ATLAS
 }
 
 // Message represents a message sent to a contract.

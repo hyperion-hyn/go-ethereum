@@ -208,57 +208,6 @@ func (m *Map3NodeWrappersStorage) Keys() []common.Address {
 	return nil
 }
 
-type Map3NodeSnapshotStorage struct {
-}
-
-func (m *Map3NodeSnapshotStorage) ToMap3NodeSnapshot() *Map3NodeSnapshot {
-	return nil
-}
-
-func (m *Map3NodeSnapshotStorage) SetMap3Nodes(map3Nodes *Map3NodeWrappers) {
-}
-
-func (m *Map3NodeSnapshotStorage) GetMap3Nodes() *Map3NodeWrappersStorage {
-	return nil
-}
-
-func (m *Map3NodeSnapshotStorage) SetEpoch(epoch *big.Int) {
-}
-
-func (m *Map3NodeSnapshotStorage) GetEpoch() *big.Int {
-	return nil
-}
-
-type Map3NodeSnapshotByEpochStorage struct {
-}
-
-func (m *Map3NodeSnapshotByEpochStorage) ToMap3NodeSnapshotByEpoch() *Map3NodeSnapshotByEpoch {
-	return nil
-}
-
-func (m *Map3NodeSnapshotByEpochStorage) Size() int {
-	return 0
-}
-
-func (m *Map3NodeSnapshotByEpochStorage) Contain(key uint64) bool {
-	return false
-}
-
-func (m *Map3NodeSnapshotByEpochStorage) Put(key uint64, map3NodeSnapshot *Map3NodeSnapshot) bool {
-	return false
-}
-
-func (m *Map3NodeSnapshotByEpochStorage) Remove(key uint64) {
-}
-
-func (m *Map3NodeSnapshotByEpochStorage) Get(key uint64) (*Map3NodeSnapshotStorage, bool) {
-	return nil, false
-}
-
-func (m *Map3NodeSnapshotByEpochStorage) Keys() []uint64 {
-	return nil
-}
-
 type AddressSetStorage struct {
 }
 
@@ -288,7 +237,7 @@ func (m *AddressSetStorage) Keys() []common.Address {
 type Map3NodeAddressSetByDelegatorStorage struct {
 }
 
-func (m *Map3NodeAddressSetByDelegatorStorage) ToMap3NodeAddressSetByDelegator() *Map3NodeAddressSetByDelegator {
+func (m *Map3NodeAddressSetByDelegatorStorage) ToMap3NodeAddressSetByDelegator() *AddressToAddressSetMap {
 	return nil
 }
 
@@ -355,14 +304,7 @@ func (m *Map3NodePoolStorage) GetNodes() *Map3NodeWrappersStorage {
 	return nil
 }
 
-func (m *Map3NodePoolStorage) SetNodeSnapshotByEpoch(map3NodeSnapshotByEpoch *Map3NodeSnapshotByEpoch) {
-}
-
-func (m *Map3NodePoolStorage) GetNodeSnapshotByEpoch() *Map3NodeSnapshotByEpochStorage {
-	return nil
-}
-
-func (m *Map3NodePoolStorage) SetNodeAddressSetByDelegator(map3NodeAddressSetByDelegator *Map3NodeAddressSetByDelegator) {
+func (m *Map3NodePoolStorage) SetNodeAddressSetByDelegator(map3NodeAddressSetByDelegator *AddressToAddressSetMap) {
 }
 
 func (m *Map3NodePoolStorage) GetNodeAddressSetByDelegator() *Map3NodeAddressSetByDelegatorStorage {

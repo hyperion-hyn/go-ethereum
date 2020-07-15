@@ -17,6 +17,8 @@
 package core
 
 import (
+	"github.com/ethereum/go-ethereum/params"
+	staking "github.com/ethereum/go-ethereum/staking/types"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -33,6 +35,11 @@ type ChainContext interface {
 
 	// GetHeader returns the hash corresponding to their hash.
 	GetHeader(common.Hash, uint64) *types.Header
+
+	// ATLAS
+	GetMap3NodePoolByBlockNum(blockNum *big.Int) *staking.Map3NodePoolStorage
+	GetValidatorPoolByBlockNum(blockNum *big.Int) *staking.ValidatorPoolStorage
+	Config() *params.ChainConfig
 }
 
 // NewEVMContext creates a new context for use in the EVM.

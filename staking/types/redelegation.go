@@ -30,6 +30,11 @@ type Redelegation struct {
 // Redelegations ..
 type Redelegations map[common.Address]Redelegation
 
+type RedelegationReference struct {
+	ValidatorAddress common.Address
+	UpdatedEpochs []*big.Int
+}
+
 func (d Redelegation) String() string {
 	s, _ := json.Marshal(d)
 	return string(s)
