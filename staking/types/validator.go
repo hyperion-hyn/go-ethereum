@@ -108,11 +108,12 @@ type Counters struct {
 // ValidatorWrapper contains validator,
 // its delegation information
 type ValidatorWrapper struct {
-	Validator       Validator
-	Redelegations   Redelegations
-	Counters        Counters
-	BlockReward     *big.Int // All the rewarded accumulated so far
-	TotalDelegation *big.Int
+	Validator                  Validator
+	Redelegations              Redelegations
+	Counters                   Counters
+	BlockReward                *big.Int // All the rewarded accumulated so far
+	TotalDelegation            *big.Int
+	TotalDelegationByInitiator *big.Int
 }
 
 type ValidatorWrappers map[common.Address]ValidatorWrapper
@@ -236,10 +237,10 @@ type Validator struct {
 }
 
 type ValidatorPool struct {
-	Validators               ValidatorWrappers
-	SlotKeySet               PubKeySet
-	DescriptionIdentitySet   DescriptionIdentitySet
-	CommitteeByEpoch         committee.CommitteeByEpoch
+	Validators             ValidatorWrappers
+	SlotKeySet             PubKeySet
+	DescriptionIdentitySet DescriptionIdentitySet
+	Committee              committee.Committee
 }
 
 // SanityCheck checks basic requirements of a validator

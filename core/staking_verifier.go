@@ -21,7 +21,6 @@ var (
 	errDupIdentity                     = errors.New("validator identity exists")
 	errDupPubKey                       = errors.New("public key exists")
 	errInsufficientBalanceForStake     = errors.New("insufficient balance to stake")
-	ErrMap3NodeNotExist                = errors.New("staking validator does not exist")
 	errMap3NodeSnapshotNotExist        = errors.New("map3 node snapshot not found.")
 	errCommissionRateChangeTooHigh     = errors.New("commission rate can not be higher than maximum commission rate")
 	errCommissionRateChangeTooFast     = errors.New("change on commission rate can not be more than max change rate within the same epoch")
@@ -32,7 +31,6 @@ var (
 	errNoRewardsToCollect              = errors.New("no rewards to collect")
 	errMap3NodeAlreadyRedelegate       = errors.New("map3 node already redelegated.")
 	errInvalidNodeStateForRedelegation = errors.New("invalid node state for redelegation")
-	ErrValidatorNotExist               = errors.New("staking validator does not exist")
 	errValidatorSnapshotNotExit        = errors.New("validator snapshot not found.")
 	ErrRedelegationNotExist            = errors.New("no redelegation exists")
 	errMap3NodeRenewalNotAllowed       = errors.New("map3 node renewal not allowed")
@@ -156,10 +154,9 @@ func VerifyEditMap3NodeMsg(
 		staking.Map3NodeKeys{*msg.NodeKeyToAdd}); err != nil {
 		return err
 	}
-	nodePool := stateDB.Map3NodePool()
-	wrapper, ok := nodePool.GetNodes().Get(msg.Map3NodeAddress)
-	if !ok {
-		return ErrMap3NodeNotExist
+	wrapper, err := stateDB.Map3NodeByAddress(msg.Map3NodeAddress)
+	if err != nil {
+		return err
 	}
 
 	node := wrapper.GetMap3Node().ToMap3Node()
@@ -183,10 +180,9 @@ func VerifyStopMap3NodeMsg(stateDB vm.StateDB, epoch *big.Int, msg *staking.Stop
 	if epoch == nil {
 		return errEpochMissing
 	}
-	nodePool := stateDB.Map3NodePool()
-	wrapper, ok := nodePool.GetNodes().Get(msg.Map3NodeAddress)
-	if !ok {
-		return ErrMap3NodeNotExist
+	wrapper, err := stateDB.Map3NodeByAddress(msg.Map3NodeAddress)
+	if err != nil {
+		return err
 	}
 
 	node := wrapper.GetMap3Node().ToMap3Node()
@@ -218,10 +214,9 @@ func VerifyResumeMap3NodeMsg(stateDB vm.StateDB, msg *staking.ResumeMap3Node, mi
 		return errNegativeAmount
 	}
 
-	map3NodePool := stateDB.Map3NodePool()
-	wrapper, ok := map3NodePool.GetNodes().Get(msg.Map3NodeAddress)
-	if !ok {
-		return ErrMap3NodeNotExist
+	wrapper, err := stateDB.Map3NodeByAddress(msg.Map3NodeAddress)
+	if err != nil {
+		return err
 	}
 	if wrapper.GetMap3Node().GetNodeAddress() != signer {
 		return errInvalidSigner
@@ -263,10 +258,9 @@ func VerifyMicrodelegateMsg(stateDB vm.StateDB, msg *staking.Microdelegate, minD
 		return errNegativeAmount
 	}
 
-	map3NodePool := stateDB.Map3NodePool()
-	wrapper, ok := map3NodePool.GetNodes().Get(msg.Map3NodeAddress)
-	if !ok {
-		return ErrMap3NodeNotExist
+	wrapper, err := stateDB.Map3NodeByAddress(msg.Map3NodeAddress)
+	if err != nil {
+		return err
 	}
 
 	status := wrapper.GetNodeState().GetStatus()
@@ -305,10 +299,9 @@ func VerifyUnmicrodelegateMsg(stateDB vm.StateDB, epoch *big.Int, msg *staking.U
 		return errInvalidSigner
 	}
 
-	map3NodePool := stateDB.Map3NodePool()
-	wrapper, ok := map3NodePool.GetNodes().Get(msg.Map3NodeAddress)
-	if !ok {
-		return ErrMap3NodeNotExist
+	wrapper, err := stateDB.Map3NodeByAddress(msg.Map3NodeAddress)
+	if err != nil {
+		return err
 	}
 
 	status := wrapper.GetNodeState().GetStatus()
@@ -365,16 +358,16 @@ func VerifyCollectMicrodelRewardsDelegation(
 
 	totalRewards := common.Big0
 	for _, nodeAddr := range nodeAddressSet.Keys() {
-		if node, ok := map3NodePool.GetNodes().Get(nodeAddr); ok {
-			if micro, ok := node.GetMicrodelegations().Get(signer); ok {
-				if micro.GetReward().Cmp(common.Big0) > 0 {
-					totalRewards.Add(totalRewards, micro.GetReward())
-				}
-			} else {
-				return ErrMicrodelegationNotExist
+		node, err := stateDB.Map3NodeByAddress(nodeAddr)
+		if err != nil {
+			return err
+		}
+		if micro, ok := node.GetMicrodelegations().Get(signer); ok {
+			if micro.GetReward().Cmp(common.Big0) > 0 {
+				totalRewards.Add(totalRewards, micro.GetReward())
 			}
 		} else {
-			return ErrMap3NodeNotExist
+			return ErrMicrodelegationNotExist
 		}
 	}
 
@@ -399,10 +392,9 @@ func VerifyDivideNodeStakeMsg(stateDB vm.StateDB, epoch, blockNum *big.Int, msg 
 		return nil, errNegativeAmount
 	}
 
-	map3NodePool := stateDB.Map3NodePool()
-	wrapper, ok := map3NodePool.GetNodes().Get(msg.Map3NodeAddress)
-	if !ok {
-		return nil, ErrMap3NodeNotExist
+	wrapper, err := stateDB.Map3NodeByAddress(msg.Map3NodeAddress)
+	if err != nil {
+		return nil, err
 	}
 	if wrapper.GetMap3Node().GetInitiatorAddress() != msg.InitiatorAddress || msg.InitiatorAddress != signer {
 		return nil, errInvalidSigner
@@ -476,10 +468,9 @@ func VerifyRenewNodeStakeMsg(stateDB vm.StateDB, chainContext ChainContext, epoc
 		return errInvalidSigner
 	}
 
-	map3NodePool := stateDB.Map3NodePool()
-	wrapper, ok := map3NodePool.GetNodes().Get(msg.Map3NodeAddress)
-	if !ok {
-		return ErrMap3NodeNotExist
+	wrapper, err := stateDB.Map3NodeByAddress(msg.Map3NodeAddress)
+	if err != nil {
+		return err
 	}
 	md, ok := wrapper.GetMicrodelegations().Get(msg.DelegatorAddress)
 	if !ok {
@@ -554,11 +545,9 @@ func VerifyCreateValidatorMsg(stateDB vm.StateDB, blockNum *big.Int, msg *stakin
 	if blockNum == nil {
 		return nil, errBlockNumMissing
 	}
-
-	map3NodePool := stateDB.Map3NodePool()
-	node, ok := map3NodePool.GetNodes().Get(msg.InitiatorAddress)
-	if !ok {
-		return nil, ErrMap3NodeNotExist
+	node, err := stateDB.Map3NodeByAddress(msg.InitiatorAddress)
+	if err != nil {
+		return nil, err
 	}
 
 	if node.GetMap3Node().GetInitiatorAddress() != signer {

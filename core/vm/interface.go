@@ -68,7 +68,9 @@ type StateDB interface {
 
 	// ATLAS
 	Map3NodePool() *staking.Map3NodePoolStorage
+	Map3NodeByAddress(nodeAddress common.Address) (*staking.Map3NodeWrapperStorage, error)
 	ValidatorPool() *staking.ValidatorPoolStorage
+	ValidatorByAddress(validatorAddress common.Address) (*staking.ValidatorWrapperStorage, error)
 }
 
 // CallContext provides a basic interface for the EVM calling conventions. The EVM

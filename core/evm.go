@@ -38,7 +38,11 @@ type ChainContext interface {
 
 	// ATLAS
 	GetMap3NodePoolByBlockNum(blockNum *big.Int) *staking.Map3NodePoolStorage
+	GetMap3NodeByBlockNumAndAddress(blockNum *big.Int, nodeAddress common.Address) (*staking.Map3NodeWrapperStorage, error)
+	GetMap3NodeByEpochAndAddress(epoch *big.Int, nodeAddress common.Address) (*staking.Map3NodeWrapperStorage, error)
 	GetValidatorPoolByBlockNum(blockNum *big.Int) *staking.ValidatorPoolStorage
+	GetValidatorByBlockNumAndAddress(blockNum *big.Int, validatorAddress common.Address) (*staking.ValidatorWrapperStorage, error)
+	GetValidatorByEpochAndAddress(epoch *big.Int, validatorAddress common.Address) (*staking.ValidatorWrapperStorage, error)
 	Config() *params.ChainConfig
 }
 

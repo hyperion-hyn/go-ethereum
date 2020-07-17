@@ -3,7 +3,6 @@ package types
 import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/numeric"
-	"github.com/ethereum/go-ethereum/params"
 	"github.com/pkg/errors"
 	"math/big"
 )
@@ -28,16 +27,12 @@ const (
 const (
 	// LockPeriodInEpoch is the number of epochs a undelegated token needs to be before it's released to the delegator's balance
 	RenewalPeriodInEpoch = 7
-	Million              = 1000000
 	MaxPubKeyAllowed     = 1
 )
 
 var (
 	Map3NodeLockPeriodInEpoch = numeric.NewDec(180)
-	MinSelfDelegation         = numeric.NewDecWithPrec(20, 2) // 20%
-	MinDelegation             = numeric.NewDecWithPrec(1, 2)  // 1%
-	baseMinTotalNodeStake     = numeric.NewDecFromBigInt(new(big.Int).Mul(big.NewInt(params.Ether), big.NewInt(Million)))
-	minimumMap3NodeStake      = new(big.Int).Mul(big.NewInt(params.Ether), big.NewInt(Million))
+
 )
 
 type Map3NodeKey []byte // TODO: fix size?
@@ -158,13 +153,6 @@ func (n *Map3Node) SanityCheck(maxPubKeyAllowed int) error {
 		}
 	}
 	return nil
-}
-
-func CalcMinTotalNodeStake(blockHeight *big.Int, config *params.ChainConfig) (*big.Int, *big.Int, *big.Int) {
-	// TODO: total node state change by time
-	return baseMinTotalNodeStake.RoundInt(),
-		baseMinTotalNodeStake.Mul(MinSelfDelegation).RoundInt(),
-		baseMinTotalNodeStake.Mul(MinDelegation).RoundInt()
 }
 
 // CreateValidatorFromNewMsg creates validator from NewValidator message

@@ -234,33 +234,29 @@ func (m *AddressSetStorage) Keys() []common.Address {
 	return nil
 }
 
-type Map3NodeAddressSetByDelegatorStorage struct {
+type AddressToAddressSetMapStorage struct {
 }
 
-func (m *Map3NodeAddressSetByDelegatorStorage) ToMap3NodeAddressSetByDelegator() *AddressToAddressSetMap {
-	return nil
-}
-
-func (m *Map3NodeAddressSetByDelegatorStorage) Size() int {
+func (m *AddressToAddressSetMapStorage) Size() int {
 	return 0
 }
 
-func (m *Map3NodeAddressSetByDelegatorStorage) Contain(key common.Address) bool {
+func (m *AddressToAddressSetMapStorage) Contain(key common.Address) bool {
 	return false
 }
 
-func (m *Map3NodeAddressSetByDelegatorStorage) Put(key common.Address, map3NodeAddressSet *AddressSet) bool {
+func (m *AddressToAddressSetMapStorage) Put(key common.Address, addressSet *AddressSet) bool {
 	return false
 }
 
-func (m *Map3NodeAddressSetByDelegatorStorage) Remove(key common.Address) {
+func (m *AddressToAddressSetMapStorage) Remove(key common.Address) {
 }
 
-func (m *Map3NodeAddressSetByDelegatorStorage) Get(key common.Address) (*AddressSetStorage, bool) {
+func (m *AddressToAddressSetMapStorage) Get(key common.Address) (*AddressSetStorage, bool) {
 	return nil, false
 }
 
-func (m *Map3NodeAddressSetByDelegatorStorage) Keys() []common.Address {
+func (m *AddressToAddressSetMapStorage) Keys() []common.Address {
 	return nil
 }
 
@@ -307,7 +303,14 @@ func (m *Map3NodePoolStorage) GetNodes() *Map3NodeWrappersStorage {
 func (m *Map3NodePoolStorage) SetNodeAddressSetByDelegator(map3NodeAddressSetByDelegator *AddressToAddressSetMap) {
 }
 
-func (m *Map3NodePoolStorage) GetNodeAddressSetByDelegator() *Map3NodeAddressSetByDelegatorStorage {
+func (m *Map3NodePoolStorage) GetNodeAddressSetByDelegator() *AddressToAddressSetMapStorage {
+	return nil
+}
+
+func (m *Map3NodePoolStorage) SetNodeAddressSetByInitiator(map3NodeAddressSetByInitiator *AddressToAddressSetMap) {
+}
+
+func (m *Map3NodePoolStorage) GetNodeAddressSetByInitiator() *AddressToAddressSetMapStorage {
 	return nil
 }
 

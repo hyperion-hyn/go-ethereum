@@ -447,14 +447,15 @@ func (c *AtlasClique) FinalizeAndAssemble(chain consensus.ChainReader, header *t
 	// ATLAS
 	isNewEpoch := chain.Config().Atlas.IsLastBlock(header.Number.Uint64())
 	if isNewEpoch {
-		// TODO: map3 node undelegation by time
-		// get all map3 node addresses
-		// check if each node is to be released
-		// auto renew node
-		if err := releaseAndRenewMap3Node(header, state); err != nil {
+		nodes := state.Map3NodePool().GetNodes()
+		if err := releaseAndRenewMap3Node(chain, header, state, nodes); err != nil {
 			return nil, err
 		}
 
+		// check and activate nodes if staking requirement changed in that epoch
+		if network.HaveRequirementChangeInEpoch(header.Epoch, chain.Config()) {
+			checkAndActiveMap3Nodes(state, nodes, header.Epoch)
+		}
 
 		// unredelegation
 		if err := payoutUnredelegations(header, state); err != nil {
@@ -465,16 +466,20 @@ func (c *AtlasClique) FinalizeAndAssemble(chain consensus.ChainReader, header *t
 		// ComputeAndMutateEPOSStatus depends on the signing counts that's
 		// consistent with the counts when the new shardState was proposed.
 		// Refer to committee.IsEligibleForEPoSAuction()
-		for _, addr := range curComm.StakedValidators().Addrs {		// current committee
+		curComm := state.ValidatorPool().GetCommittee()
+		for _, addr := range getValidatorAddressFromCommittee(curComm) {		// current committee
 			if err := availability.ComputeAndMutateEPOSStatus(
-				chain, state, addr,
+				chain, state, addr, header.Epoch,
 			); err != nil {
 				return nil, err
 			}
 		}
 
 		// committee
-		newComm := updateCommitteeForNextEpoch(chain, header, state)
+		newComm, err := updateCommitteeForNextEpoch(chain, header, state)
+		if err != nil {
+			return nil, err
+		}
 
 		// Needs to be after payoutUndelegations because payoutUndelegations
 		// depends on the old LastEpochInCommittee
@@ -497,7 +502,6 @@ func (c *AtlasClique) FinalizeAndAssemble(chain consensus.ChainReader, header *t
 	// Assemble and return the final block for sealing
 	return types.NewBlock(header, txs, nil, receipts), nil
 }
-
 
 // Authorize injects a private key into the consensus engine to mint new blocks
 // with.
@@ -614,15 +618,13 @@ func (c *AtlasClique) APIs(chain consensus.ChainReader) []rpc.API {
 }
 
 // ATLAS
-func setLastEpochInCommittee(newComm *committee.Committee, state *state.StateDB) error {
-	for _, addr := range newComm.StakedValidators().Addrs {
-		wrapper, err := state.ValidatorWrapper(addr)
+func setLastEpochInCommittee(newComm *committee.CommitteeStorage, stateDB *state.StateDB) error {
+	for _, addr := range getValidatorAddressFromCommittee(newComm) {
+		wrapper, err := stateDB.ValidatorByAddress(addr)
 		if err != nil {
-			return errors.New(
-				"[Finalize] failed to get validator from state to finalize",
-			)
+			return errors.WithMessage(err, "[Finalize] failed to get validator from state to finalize")
 		}
-		wrapper.LastEpochInCommittee = newShardState.Epoch
+		wrapper.GetValidator().SetLastEpochInCommittee(newComm.GetEpoch())
 	}
 	return nil
 }
@@ -631,6 +633,7 @@ func setLastEpochInCommittee(newComm *committee.Committee, state *state.StateDB)
 func payoutUnredelegations(header *types.Header, state *state.StateDB) error {
 	nowEpoch, blockNow := header.Epoch, header.Number
 
+	nodes := state.Map3NodePool().GetNodes()
 	validators := state.ValidatorPool().GetValidators()
 	// Payout undelegated/unlocked tokens
 	for _, validatorAddr := range validators.Keys() {
@@ -639,57 +642,43 @@ func payoutUnredelegations(header *types.Header, state *state.StateDB) error {
 			return core.ErrValidatorNotExist
 		}
 
-		lastEpochInCommittee := validator.GetValidator().GetLastEpochInCommittee()
+		var toBeRemoved []common.Address
 		for _, delegator := range validator.GetRedelegations().Keys() {
 			redelegation, ok := validator.GetRedelegations().Get(delegator)
 			if !ok {
 				return core.ErrRedelegationNotExist
 			}
 
-			if undelegation := redelegation.GetUndelegation(); undelegation != nil {
-				// need to wait at least 7 epochs to withdraw; or the validator has been out of committee for 7 epochs
-				if big.NewInt(0).Sub(nowEpoch, undelegation.GetEpoch()).Int64() >= int64(staking.LockPeriodInEpoch) ||
-					big.NewInt(0).Sub(nowEpoch, lastEpochInCommittee).Int64() >= int64(staking.LockPeriodInEpoch) {
-					??
-
-
-				}
+			undelegation := redelegation.GetUndelegation()
+			if undelegation.GetAmount().Cmp(common.Big0) > 0 && undelegation.GetEpoch().Cmp(nowEpoch) >= 0 {
+				toBeRemoved = append(toBeRemoved, delegator)
 			}
 		}
 
-
-	}
-
-	for _, validator := range validators {
-		wrapper, err := state.ValidatorWrapper(validator)
-		if err != nil {
-			return errors.New(
-				"[Finalize] failed to get validator from state to finalize",
-			)
-		}
-		lockPeriod := staking.LockPeriodInEpoch
-		for i := range wrapper.Redelegations {
-			redelegation := &wrapper.Redelegations[i]
-			totalWithdraw := redelegation.RemoveUnlockedUndelegations(
-				header.Epoch, wrapper.LastEpochInCommittee, lockPeriod,
-			)
-			//state.AddBalance(delegation.DelegatorAddress, totalWithdraw)
-			// TODO: update map3 node balance
+		for _, delegator := range toBeRemoved {
+			validator.GetRedelegations().Remove(delegator)
+			node, ok := nodes.Get(delegator)
+			if !ok {
+				return core.ErrMap3NodeNotExist
+			}
+			node.SetRedelegationReference(nil)
 		}
 	}
 	log.Info("paid out delegations", "epoch", nowEpoch.Uint64(), "block-number", blockNow.Uint64())
 	return nil
 }
 
-func updateCommitteeForNextEpoch(chain consensus.ChainReader, header *types.Header, db *state.StateDB) error {
-	if chain.Config().Atlas.IsLastBlock(header.Number.Uint64()) {
-		nextComm, err := committee.WithStakingEnabled.Compute(header.Epoch, chain)
-		if err != nil {
-			return err
-		}
-		// TODO(storage): save next committee to statedb
+func updateCommitteeForNextEpoch(chain consensus.ChainReader, header *types.Header,
+	stateDB *state.StateDB) (*committee.CommitteeStorage, error) {
+	nextComm, err := committee.WithStakingEnabled.Compute(header.Epoch, committee.ChainReaderWithPendingState{
+		ChainReader: chain,
+		StateDB:     stateDB,
+	})
+	if err != nil {
+		return nil, err
 	}
-	return nil
+	stateDB.ValidatorPool().SetCommittee(nextComm)	// TODO: how to update?
+	return stateDB.ValidatorPool().GetCommittee(), nil
 }
 
 // BlockCommitSig returns the byte array of aggregated
@@ -878,38 +867,71 @@ func lookupDelegatorShares(
 	return shares.(map[common.Address]numeric.Dec), nil
 }
 
-func releaseAndRenewMap3Node(header *types.Header, state *state.StateDB) error {
-	nowEpoch := header.Epoch
-
-	nodePool := state.Map3NodePool()
-	for _, nodeAddr := range nodePool.GetNodes().Keys() {
-		node, ok := nodePool.GetNodes().Get(nodeAddr)
+func releaseAndRenewMap3Node(chain consensus.ChainReader, header *types.Header, state *state.StateDB,
+	nodes *staking.Map3NodeWrappersStorage) error {
+	nowEpochDec := numeric.NewDecFromBigInt(header.Epoch)
+	for _, nodeAddr := range nodes.Keys() {
+		node, ok := nodes.Get(nodeAddr)
 		if !ok {
 			return core.ErrMap3NodeNotExist
 		}
-
-		initiator := node.GetMap3Node().GetInitiatorAddress()
-		ns := node.GetNodeState()
-		if ns.GetStatus() == staking.Active && ns.GetReleaseEpoch().Cmp(nowEpoch) == 0 {
-			initiatorMircrodel, ok := node.GetMicrodelegations().Get(initiator)
-			if !ok {
-				return core.ErrMicrodelegationNotExist
+		if canReleaseMap3Node(node, nowEpochDec) {
+			// handle redelegation reward if already redelegated
+			alreadyRedelegated := node.GetRedelegationReference() != common.Address0
+			if alreadyRedelegated {
+				err := core.HandleRedelegationReward(node, chain)
 			}
 
-			// renew?
-			if initiatorMircrodel.GetAutoRenew() {
+			if err := releaseNonrenewalMicrodelegations(node, state); err != nil {
+				return err
+			}
 
+			if core.CanActivateMap3Node(node) {
+				err := core.ActivateMap3Node(node, big.NewInt(0).Add(header.Epoch, common.Big1))
+
+				if alreadyRedelegated {
+					// change redelegation amount
+				}
 			} else {
-				amt := node.GetTotalDelegation()
-
-
+				if alreadyRedelegated {
+					// unredelegate
+					// remove index?
+				}
 			}
-
-			// portion renew?
-			// redelegation
-			//
 		}
 	}
+	return nil
+}
+
+func releaseNonrenewalMicrodelegations(wrapper *staking.Map3NodeWrapperStorage, state *state.StateDB) error {
+	initiator := wrapper.GetMap3Node().GetInitiatorAddress()
+	initiatorMircrodel, ok := wrapper.GetMicrodelegations().Get(initiator)
+	if !ok {
+		return core.ErrMicrodelegationNotExist
+	}
+	if initiatorMircrodel.GetRenewal().IsRenew() {
+		// release delegation not renewal
+	} else {
+		// release all
+	}
+	// remove index
+	return nil
+}
+
+func canReleaseMap3Node(wrapper *staking.Map3NodeWrapperStorage, curEpoch numeric.Dec) bool {
+	ns := wrapper.GetNodeState()
+	return (ns.GetStatus() == staking.Active || ns.GetStatus() == staking.Dividing) && ns.GetReleaseEpoch().LTE(curEpoch)
+}
+
+func checkAndActiveMap3Nodes(state *state.StateDB, nodes *staking.Map3NodeWrappersStorage, epoch *big.Int) {
+}
+
+func getValidatorAddressFromCommittee(committee *committee.CommitteeStorage) []common.Address {
+	var addrs []common.Address
+	for i := 0; i < committee.GetSlots().Len(); i++ {
+		addrs = append(addrs, committee.GetSlots().Get(i).GetEcdsaAddress())
+	}
+	return addrs
 }
 
 // ATLAS - END

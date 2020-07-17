@@ -2,6 +2,7 @@ package types
 
 import (
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/staking/committee"
 	"github.com/ethereum/go-ethereum/staking/effective"
 	"math/big"
 )
@@ -34,7 +35,6 @@ func (b *BLSPublicKeysStorage) Pop() *BLSPublicKey {
 func (b *BLSPublicKeysStorage) Len() int {
 	return 0
 }
-
 
 type ValidatorStorage struct {
 }
@@ -162,6 +162,13 @@ func (v *ValidatorWrapperStorage) GetTotalDelegation() *big.Int {
 	return nil
 }
 
+func (v *ValidatorWrapperStorage) SetTotalDelegationByInitiator(totalDelegation *big.Int) {
+}
+
+func (v *ValidatorWrapperStorage) GetTotalDelegationByInitiator() *big.Int {
+	return nil
+}
+
 type ValidatorWrappersStorage struct {
 }
 
@@ -217,5 +224,13 @@ func (v *ValidatorPoolStorage) SetDescriptionIdentitySet(descriptionIdentitySet 
 }
 
 func (v *ValidatorPoolStorage) GetDescriptionIdentitySet() *DescriptionIdentitySetStorage {
+	return nil
+}
+
+func (v *ValidatorPoolStorage) SetCommittee(committee *committee.Committee) bool {
+	return false
+}
+
+func (v *ValidatorPoolStorage) GetCommittee() *committee.CommitteeStorage {
 	return nil
 }

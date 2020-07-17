@@ -117,16 +117,16 @@ func IncrementValidatorSigningCounts(
 
 // ComputeCurrentSigning returns (signed, toSign, quotient, error)
 func ComputeCurrentSigning(
-	snapshot, wrapper *staking.ValidatorWrapper,
+	snapshot, wrapper *staking.ValidatorWrapperStorage,
 ) *staking.Computed {
 	statsNow, snapSigned, snapToSign :=
-		wrapper.Counters,
-		snapshot.Counters.NumBlocksSigned,
-		snapshot.Counters.NumBlocksToSign
+		wrapper.GetCounters(),
+		snapshot.GetCounters().GetNumBlocksSigned(),
+		snapshot.GetCounters().GetNumBlocksToSign()
 
 	signed, toSign :=
-		new(big.Int).Sub(statsNow.NumBlocksSigned, snapSigned),
-		new(big.Int).Sub(statsNow.NumBlocksToSign, snapToSign)
+		new(big.Int).Sub(statsNow.GetNumBlocksSigned(), snapSigned),
+		new(big.Int).Sub(statsNow.GetNumBlocksToSign(), snapToSign)
 
 	computed := staking.NewComputed(
 		signed, toSign, 0, numeric.ZeroDec(), true,
@@ -166,24 +166,25 @@ func ComputeAndMutateEPOSStatus(
 	bc Reader,
 	state ValidatorState,
 	addr common.Address,
+	epoch *big.Int,
 ) error {
 	log.Info("begin compute for availability")
 
-	wrapper, err := state.ValidatorWrapper(addr)
+	wrapper, err := state.ValidatorByAddress(addr)
 	if err != nil {
 		return err
 	}
-	if wrapper.Status == effective.Banned {
-		utils.Logger().Debug().Msg("Can't update EPoS status on a banned validator")
+	if wrapper.GetValidator().GetStatus() == effective.Banned {
+		log.Debug("Can't update EPoS status on a banned validator")
 		return nil
 	}
 
-	snapshot, err := bc.ReadValidatorSnapshot(wrapper.Address)
+	snapshot, err := bc.GetValidatorByEpochAndAddress(epoch, addr)
 	if err != nil {
 		return err
 	}
 
-	computed := ComputeCurrentSigning(snapshot.Validator, wrapper)
+	computed := ComputeCurrentSigning(snapshot, wrapper)
 
 	log.Info("check if signing percent is meeting required threshold")
 
@@ -191,15 +192,11 @@ func ComputeAndMutateEPOSStatus(
 
 	switch computed.IsBelowThreshold {
 	case missedTooManyBlocks:
-		wrapper.Status = effective.Inactive
-		utils.Logger().Info().
-			Str("threshold", measure.String()).
-			Interface("computed", computed).
-			Msg("validator failed availability threshold, set to inactive")
+		wrapper.GetValidator().SetStatus(effective.Inactive)
+		log.Info("validator failed availability threshold, set to inactive", "threshold", measure.String())
 	default:
 		// Default is no-op so validator who wants
 		// to leave the committee can actually leave.
 	}
-
 	return nil
 }

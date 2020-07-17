@@ -41,5 +41,3 @@ type Committee struct {
 	Epoch *big.Int
 	Slots SlotList
 }
-
-type CommitteeByEpoch map[uint64]Committee

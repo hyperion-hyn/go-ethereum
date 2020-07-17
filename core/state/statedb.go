@@ -777,15 +777,3 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 		return nil
 	})
 }
-
-
-// ATLAS
-func (s *StateDB)  Map3NodePool() *staking.Map3NodePoolStorage {
-	return s.map3NodePool
-}
-
-func (s *StateDB) ValidatorPool() *staking.ValidatorPoolStorage {
-	return s.validatorPool
-}
-
-// ATLAS - END

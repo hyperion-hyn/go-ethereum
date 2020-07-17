@@ -1,6 +1,9 @@
 package committee
 
 import (
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/numeric"
@@ -8,29 +11,14 @@ import (
 	"github.com/ethereum/go-ethereum/staking/availability"
 	"github.com/ethereum/go-ethereum/staking/effective"
 	staking "github.com/ethereum/go-ethereum/staking/types"
-	"math/big"
-
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
+	"math/big"
 )
 
-// ValidatorListProvider ..
-type ValidatorListProvider interface {
+// Committee Provider ..
+type Provider interface {
 	Compute(epoch *big.Int, reader DataProvider) (*Committee, error)
 	ReadFromDB(epoch *big.Int, reader DataProvider) (*Committee, error)
-}
-
-// Reader is committee.Reader and it is the API that committee membership assignment needs
-type Reader interface {
-	ValidatorListProvider
-}
-
-// StakingCandidatesReader ..
-type StakingCandidatesReader interface {
-	CurrentBlock() *types.Block
-	ReadValidatorInformation(addr common.Address) (*staking.ValidatorWrapper, error)
-	ReadValidatorSnapshot(addr common.Address) (*staking.ValidatorSnapshot, error)
-	ValidatorCandidates() []common.Address
 }
 
 // CandidatesForEPoS ..
@@ -55,10 +43,8 @@ type CandidateOrder struct {
 
 // NewEPoSRound runs a fresh computation of EPoS using
 // latest data always
-func NewEPoSRound(stakedReader StakingCandidatesReader) (
-	*CompletedEPoSRound, error,
-) {
-	eligibleCandidate, err := prepareOrders(stakedReader)
+func NewEPoSRound(epoch *big.Int, stakedReader DataProvider) (*CompletedEPoSRound, error) {
+	eligibleCandidate, err := prepareOrders(epoch, stakedReader)
 	if err != nil {
 		return nil, err
 	}
@@ -95,45 +81,32 @@ func NewEPoSRound(stakedReader StakingCandidatesReader) (
 	}, nil
 }
 
-func prepareOrders(
-	stakedReader StakingCandidatesReader,
-) (map[common.Address]*effective.SlotOrder, error) {
-	// TODO(storage): read all validators' address from statedb
-	candidates := stakedReader.ValidatorCandidates()
+func prepareOrders(epoch *big.Int, stakedReader DataProvider) (map[common.Address]*effective.SlotOrder, error) {
+	candidates := stakedReader.ValidatorList()
 	essentials := map[common.Address]*effective.SlotOrder{}
 	totalStaked, tempZero := big.NewInt(0), numeric.ZeroDec()
 
 	for i := range candidates {
-		// TODO(storage): read validator latest info and snapshot by epoch from statedb
-		validator, err := stakedReader.ReadValidatorInformation(
-			candidates[i],
-		)
+		validator, err := stakedReader.ValidatorByAddress(candidates[i])
 		if err != nil {
 			return nil, err
 		}
-		snapshot, err := stakedReader.ReadValidatorSnapshot(
-			candidates[i],
-		)
+		snapshot, err := stakedReader.GetValidatorAtEpoch(epoch, candidates[i])
 		if err != nil {
 			return nil, err
 		}
-		if !IsEligibleForEPoSAuction(snapshot, validator) {
+		if !IsEligibleForEPoSAuction(snapshot, validator, epoch) {
 			continue
 		}
 
-		validatorStake := big.NewInt(0)
-		for i := range validator.Redelegations {
-			validatorStake.Add(
-				validatorStake, validator.Redelegations[i].Amount,
-			)
-		}
-
+		validatorStake := validator.GetTotalDelegation()
 		totalStaked.Add(totalStaked, validatorStake)
+		keys := validator.GetValidator().GetSlotPubKeys().ToBLSPublicKeys()
 
-		essentials[validator.ValidatorAddress] = &effective.SlotOrder{
-			validatorStake,
-			validator.SlotPubKeys,
-			tempZero,
+		essentials[validator.GetValidator().GetValidatorAddress()] = &effective.SlotOrder{
+			Stake:       validatorStake,
+			SpreadAmong: *keys,
+			Percentage:  tempZero,
 		}
 	}
 	totalStakedDec := numeric.NewDecFromBigInt(totalStaked)
@@ -146,18 +119,18 @@ func prepareOrders(
 }
 
 // IsEligibleForEPoSAuction ..
-func IsEligibleForEPoSAuction(snapshot *staking.ValidatorSnapshot, validator *staking.ValidatorWrapper) bool {
+func IsEligibleForEPoSAuction(snapshot, validator *staking.ValidatorWrapperStorage, epoch *big.Int) bool {
 	// This original condition to check whether a validator is in last committee is not stable
 	// because cross-links may arrive after the epoch ends and it still got counted into the
 	// NumBlocksToSign, making this condition to be true when the validator is actually not in committee
 	//if snapshot.Counters.NumBlocksToSign.Cmp(validator.Counters.NumBlocksToSign) != 0 {
 
 	// Check whether the validator is in current committee
-	if validator.LastEpochInCommittee.Cmp(snapshot.Epoch) == 0 {
+	if validator.GetValidator().GetLastEpochInCommittee().Cmp(epoch) == 0 {
 		// validator was in last epoch's committee
 		// validator with below-threshold signing activity won't be considered for next epoch
 		// and their status will be turned to inactive in FinalizeNewBlock
-		computed := availability.ComputeCurrentSigning(snapshot.Validator, validator)
+		computed := availability.ComputeCurrentSigning(snapshot, validator)
 		if computed.IsBelowThreshold {
 			return false
 		}
@@ -165,7 +138,7 @@ func IsEligibleForEPoSAuction(snapshot *staking.ValidatorSnapshot, validator *st
 	// For validators who were not in last epoch's committee
 	// or for those who were and signed enough blocks,
 	// the decision is based on the status
-	switch validator.Status {
+	switch validator.GetValidator().GetStatus() {
 	case effective.Active:
 		return true
 	default:
@@ -173,14 +146,19 @@ func IsEligibleForEPoSAuction(snapshot *staking.ValidatorSnapshot, validator *st
 	}
 }
 
+// StakingCandidatesReader ..
+type StakingCandidatesReader interface {
+	ValidatorByAddress(validatorAddress common.Address) (*staking.ValidatorWrapperStorage, error)
+	ValidatorList() []common.Address
+}
+
 // ChainReader is a subset of Engine.ChainReader, just enough to do assignment
 type ChainReader interface {
-	// ReadCommittee retrieves sharding state given the epoch number.
+	GetValidatorAtEpoch(epoch *big.Int, validatorAddress common.Address) (*staking.ValidatorWrapperStorage, error)
+	// GetCommitteeAtEpoch retrieves sharding state given the epoch number.
 	// This api reads the shard state cached or saved on the chaindb.
 	// Thus, only should be used to read the shard state of the current chain.
-	ReadCommittee(epoch *big.Int) (*Committee, error)
-	// GetHeader retrieves a block header from the database by hash and number.
-	GetHeaderByHash(common.Hash) *types.Header
+	GetCommitteeAtEpoch(epoch *big.Int) (*CommitteeStorage, error)
 	// Config retrieves the blockchain's chain configuration.
 	Config() *params.ChainConfig
 	// CurrentHeader retrieves the current header from the local chain.
@@ -193,17 +171,22 @@ type DataProvider interface {
 	ChainReader
 }
 
+type ChainReaderWithPendingState struct {
+	ChainReader
+	*state.StateDB
+}
+
 type stakingEnabled struct{}
 
 var (
 	// WithStakingEnabled ..
-	WithStakingEnabled Reader = stakingEnabled{}
+	WithStakingEnabled Provider = stakingEnabled{}
 	// ErrComputeForEpochInPast ..
 	ErrComputeForEpochInPast = errors.New("cannot compute for epoch in past")
 )
 
-func eposStakedCommittee(stakerReader DataProvider) (*Committee, error) {
-	completedEPoSRound, err := NewEPoSRound(stakerReader)
+func eposStakedCommittee(epoch *big.Int, stakerReader DataProvider) (*Committee, error) {
+	completedEPoSRound, err := NewEPoSRound(epoch, stakerReader)
 	if err != nil {
 		return nil, err
 	}
@@ -220,29 +203,24 @@ func eposStakedCommittee(stakerReader DataProvider) (*Committee, error) {
 		)
 	}
 
+	// Set the epoch of shard state
+	committee.Epoch = big.NewInt(0).Set(epoch)	// TODO: epoch + 1?
 	return committee, nil
 }
 
-// ReadFromDB is a wrapper on ReadCommittee
-func (def stakingEnabled) ReadFromDB(
-	epoch *big.Int, reader DataProvider,
-) (newSuperComm *Committee, err error) {
+// ReadFromDB is a wrapper on GetCommitteeAtEpoch
+func (def stakingEnabled) ReadFromDB(epoch *big.Int, reader DataProvider) (newSuperComm *Committee, err error) {
 	// TODO(storage): read committee by epoch from statedb
-	return reader.ReadCommittee(epoch)
+	return reader.GetCommitteeAtEpoch(epoch)
 }
 
 // Compute is single entry point for
 // computing a new super committee, aka new shard state
-func (def stakingEnabled) Compute(
-	epoch *big.Int, stakerReader DataProvider,
-) (newSuperComm *Committee, err error) {
-	committee, err := eposStakedCommittee(stakerReader)
+func (def stakingEnabled) Compute(epoch *big.Int, stakerReader DataProvider) (newSuperComm *Committee, err error) {
+	committee, err := eposStakedCommittee(epoch, stakerReader)
 	if err != nil {
 		return nil, err
 	}
-
-	// Set the epoch of shard state
-	committee.Epoch = big.NewInt(0).Set(epoch)
 	log.Info("computed new super committee", "computed-for-epoch", epoch.Uint64())
 	return committee, nil
 }

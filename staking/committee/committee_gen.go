@@ -71,7 +71,7 @@ func (c *CommitteeStorage) ToCommittee() *Committee {
 	return nil
 }
 
-func (c *CommitteeStorage) GetSlots() *SlotList {
+func (c *CommitteeStorage) GetSlots() *SlotListStorage {
 	return nil
 }
 
@@ -82,35 +82,5 @@ func (c *CommitteeStorage) SetEpoch(epoch *big.Int) {
 }
 
 func (c *CommitteeStorage) GetEpoch() *big.Int {
-	return nil
-}
-
-type CommitteeByEpochStorage struct {
-}
-
-func (c *CommitteeByEpochStorage) ToCommitteeByEpoch() *CommitteeByEpoch {
-	return nil
-}
-
-func (c *CommitteeByEpochStorage) Size() int {
-	return 0
-}
-
-func (c *CommitteeByEpochStorage) Contain(key uint64) bool {
-	return false
-}
-
-func (c *CommitteeByEpochStorage) Put(key uint64, committee *Committee) bool {
-	return false
-}
-
-func (c *CommitteeByEpochStorage) Remove(key uint64) {
-}
-
-func (c *CommitteeByEpochStorage) Get(key uint64) (*CommitteeStorage, bool) {
-	return nil, false
-}
-
-func (c *CommitteeByEpochStorage) Keys() []uint64 {
 	return nil
 }

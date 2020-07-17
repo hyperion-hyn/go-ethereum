@@ -345,6 +345,7 @@ func (st *StateTransition) verifyAndApplyCollectMicrodelRewardsTx(
 	totalRewards := common.Big0
 	for _, nodeAddr := range nodeAddressSet.Keys() {
 		node, _ := map3NodePool.GetNodes().Get(nodeAddr)
+
 		micro, _ := node.GetMicrodelegations().Get(signer)
 		if micro.GetReward().Cmp(common.Big0) > 0 {
 			totalRewards.Add(totalRewards, micro.GetReward())
@@ -478,16 +479,25 @@ func (st *StateTransition) verifyAndApplyUnredelegateTx(msg *staking.Unredelegat
 
 	validator, _ := st.state.ValidatorPool().GetValidators().Get(msg.ValidatorAddress)
 	redelegation, _ := validator.GetRedelegations().Get(msg.DelegatorAddress)
-	amt := redelegation.GetAmount()
+	amount := redelegation.GetAmount()
 	redelegation.SetUndelegation(&staking.Undelegation{
-		Amount: amt,
+		Amount: amount,
 		Epoch:  st.evm.EpochNumber,
 	})
 	redelegation.SetAmount(common.Big0)
-	validator.SetTotalDelegation(big.NewInt(0).Sub(validator.GetTotalDelegation(), amt))
+	totalDelegation := big.NewInt(0).Sub(validator.GetTotalDelegation(), amount)
+	validator.SetTotalDelegation(totalDelegation)
 
-	// TODO: collect reward and remove delegation if remaining amount == 0
+	if redelegation.GetReward().Cmp(common.Big0) > 0 {
+		HandleRedelegationReward()
+	}
 
+	if validator.GetValidator().GetInitiatorAddresses().Contain(msg.DelegatorAddress) {
+		totalDelegationByInitator := big.NewInt(0).Sub(validator.GetTotalDelegationByInitiator(), amount)
+		validator.SetTotalDelegationByInitiator(totalDelegationByInitator)
+
+		// TODO: need 20%
+	}
 	return nil
 }
 
@@ -593,7 +603,7 @@ func WeightedAverageTime(weight1, time1, weight2, time2 numeric.Dec) numeric.Dec
 	return result.Quo(weight1.Add(weight2))
 }
 
-func addNodeAddressToAddressSet(nodeAddressSetByDelegator *staking.Map3NodeAddressSetByDelegatorStorage, delegator, nodeAddr common.Address) {
+func addNodeAddressToAddressSet(nodeAddressSetByDelegator *staking.AddressToAddressSetMapStorage, delegator, nodeAddr common.Address) {
 	if nodeAddrSet, ok := nodeAddressSetByDelegator.Get(delegator); ok {
 		nodeAddrSet.Put(nodeAddr)
 	} else {
@@ -622,4 +632,8 @@ func LookupMicrodelegationShares(wrapper *staking.Map3NodeWrapperStorage) (map[c
 		result[key] = percentage
 	}
 	return result, nil
+}
+
+func HandleRedelegationReward(wrapper *staking.Map3NodeWrapperStorage, ctx ChainContext) error {
+	return nil
 }

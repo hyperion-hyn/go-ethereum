@@ -12,11 +12,6 @@ var (
 	errInvalidAmount       = errors.New("invalid amount, must be positive")
 )
 
-const (
-	// LockPeriodInEpoch is the number of epochs a undelegated token needs to be before it's released to the delegator's balance
-	LockPeriodInEpoch = 7
-)
-
 // Redelegation represents the bond with tokens held by an account. It is
 // owned by one delegator, and is associated with the voting power of one
 // validator.

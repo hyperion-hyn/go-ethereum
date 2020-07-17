@@ -1,17 +1,14 @@
 package availability
 
 import (
-	"math/big"
-
 	"github.com/ethereum/go-ethereum/common"
-	staking "github.com/harmony-one/harmony/staking/types"
+	staking "github.com/ethereum/go-ethereum/staking/types"
+	"math/big"
 )
 
 // Reader ..
 type Reader interface {
-	ReadValidatorSnapshot(
-		addr common.Address,
-	) (*staking.ValidatorSnapshot, error)
+	GetValidatorAtEpoch(epoch *big.Int, validatorAddress common.Address) (*staking.ValidatorWrapperStorage, error)
 }
 
 // RoundHeader is the interface of block.Header for calculating the BallotResult.
@@ -23,6 +20,5 @@ type RoundHeader interface {
 
 // ValidatorState is the interface of state.DB
 type ValidatorState interface {
-	ValidatorWrapper(common.Address) (*staking.ValidatorWrapper, error)
-	UpdateValidatorWrapper(common.Address, *staking.ValidatorWrapper) error
+	ValidatorByAddress(validatorAddress common.Address) (*staking.ValidatorWrapperStorage, error)
 }
