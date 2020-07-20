@@ -436,6 +436,8 @@ func (c *AtlasClique) Prepare(chain consensus.ChainReader, header *types.Header)
 // Finalize implements consensus.Engine, ensuring no uncles are set, nor block
 // rewards given.
 func (c *AtlasClique) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header) {
+	_, _ = handleMap3AndAtlasStaking(chain, header, state) // ATLAS
+
 	// No block rewards in PoA, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	header.UncleHash = types.CalcUncleHash(nil)
@@ -444,56 +446,7 @@ func (c *AtlasClique) Finalize(chain consensus.ChainReader, header *types.Header
 // FinalizeAndAssemble implements consensus.Engine, ensuring no uncles are set,
 // nor block rewards given, and returns the final block.
 func (c *AtlasClique) FinalizeAndAssemble(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
-	// ATLAS
-	isNewEpoch := chain.Config().Atlas.IsLastBlock(header.Number.Uint64())
-	if isNewEpoch {
-		nodes := state.Map3NodePool().GetNodes()
-		if err := releaseAndRenewMap3Node(chain, header, state, nodes); err != nil {
-			return nil, err
-		}
-
-		// check and activate nodes if staking requirement changed in that epoch
-		if network.HaveRequirementChangeInEpoch(header.Epoch, chain.Config()) {
-			checkAndActiveMap3Nodes(state, nodes, header.Epoch)
-		}
-
-		// unredelegation
-		if err := payoutUnredelegations(header, state); err != nil {
-			return nil, err
-		}
-
-		// Needs to be before AccumulateRewardsAndCountSigs because
-		// ComputeAndMutateEPOSStatus depends on the signing counts that's
-		// consistent with the counts when the new shardState was proposed.
-		// Refer to committee.IsEligibleForEPoSAuction()
-		curComm := state.ValidatorPool().GetCommittee()
-		for _, addr := range getValidatorAddressFromCommittee(curComm) {		// current committee
-			if err := availability.ComputeAndMutateEPOSStatus(
-				chain, state, addr, header.Epoch,
-			); err != nil {
-				return nil, err
-			}
-		}
-
-		// committee
-		newComm, err := updateCommitteeForNextEpoch(chain, header, state)
-		if err != nil {
-			return nil, err
-		}
-
-		// Needs to be after payoutUndelegations because payoutUndelegations
-		// depends on the old LastEpochInCommittee
-		if err := setLastEpochInCommittee(newComm, state); err != nil {
-			return nil, err
-		}
-	}
-
-	// reward
-	accumulateRewardsAndCountSigs(chain, state, header)
-
-	// TODO: slash
-
-	// ATLAS - END
+	payout, err := handleMap3AndAtlasStaking(chain, header, state) // ATLAS
 
 	// No block rewards in PoA, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
@@ -618,6 +571,62 @@ func (c *AtlasClique) APIs(chain consensus.ChainReader) []rpc.API {
 }
 
 // ATLAS
+func handleMap3AndAtlasStaking(chain consensus.ChainReader, header *types.Header, state *state.StateDB) (reward.Reader, error) {
+	// ATLAS
+	isNewEpoch := chain.Config().Atlas.IsLastBlock(header.Number.Uint64())
+	if isNewEpoch {
+		nodes := state.Map3NodePool().GetNodes()
+		if err := releaseAndRenewMap3Node(chain, header, state, nodes); err != nil {
+			return nil, err
+		}
+
+		// check and activate nodes if staking requirement changed in that epoch
+		if network.HaveRequirementChangeAtEpoch(header.Epoch, chain.Config()) {
+			checkAndActiveMap3Nodes(state, nodes, header.Epoch)
+		}
+
+		// unredelegation
+		if err := payoutUnredelegations(header, state); err != nil {
+			return nil, err
+		}
+
+		// Needs to be before AccumulateRewardsAndCountSigs because
+		// ComputeAndMutateEPOSStatus depends on the signing counts that's
+		// consistent with the counts when the new shardState was proposed.
+		// Refer to committee.IsEligibleForEPoSAuction()
+		curComm := state.ValidatorPool().GetCommittee()
+		for _, addr := range getValidatorAddressFromCommittee(curComm) { // current committee
+			if err := availability.ComputeAndMutateEPOSStatus(
+				chain, state, addr, header.Epoch,
+			); err != nil {
+				return nil, err
+			}
+		}
+
+		// committee
+		newComm, err := updateCommitteeForNextEpoch(chain, header, state)
+		if err != nil {
+			return nil, err
+		}
+
+		// Needs to be after payoutUndelegations because payoutUndelegations
+		// depends on the old LastEpochInCommittee
+		if err := setLastEpochInCommittee(newComm, state); err != nil {
+			return nil, err
+		}
+	}
+
+	// reward
+	payout, err := accumulateRewardsAndCountSigs(chain, state, header)
+	if err != nil {
+		return nil, errors.New("cannot pay block reward")
+	}
+
+	// TODO(ATLAS): slash
+
+	return payout, nil
+}
+
 func setLastEpochInCommittee(newComm *committee.CommitteeStorage, stateDB *state.StateDB) error {
 	for _, addr := range getValidatorAddressFromCommittee(newComm) {
 		wrapper, err := stateDB.ValidatorByAddress(addr)
@@ -630,16 +639,16 @@ func setLastEpochInCommittee(newComm *committee.CommitteeStorage, stateDB *state
 }
 
 // Withdraw unlocked tokens to the delegators' accounts
-func payoutUnredelegations(header *types.Header, state *state.StateDB) error {
+func payoutUnredelegations(header *types.Header, stateDB *state.StateDB) error {
 	nowEpoch, blockNow := header.Epoch, header.Number
 
-	nodes := state.Map3NodePool().GetNodes()
-	validators := state.ValidatorPool().GetValidators()
+	nodes := stateDB.Map3NodePool().GetNodes()
+	validators := stateDB.ValidatorPool().GetValidators()
 	// Payout undelegated/unlocked tokens
 	for _, validatorAddr := range validators.Keys() {
 		validator, ok := validators.Get(validatorAddr)
 		if !ok {
-			return core.ErrValidatorNotExist
+			return state.ErrValidatorNotExist
 		}
 
 		var toBeRemoved []common.Address
@@ -659,7 +668,7 @@ func payoutUnredelegations(header *types.Header, state *state.StateDB) error {
 			validator.GetRedelegations().Remove(delegator)
 			node, ok := nodes.Get(delegator)
 			if !ok {
-				return core.ErrMap3NodeNotExist
+				return state.ErrMap3NodeNotExist
 			}
 			node.SetRedelegationReference(nil)
 		}
@@ -677,20 +686,8 @@ func updateCommitteeForNextEpoch(chain consensus.ChainReader, header *types.Head
 	if err != nil {
 		return nil, err
 	}
-	stateDB.ValidatorPool().SetCommittee(nextComm)	// TODO: how to update?
+	stateDB.ValidatorPool().SetCommittee(nextComm) // TODO: how to update?
 	return stateDB.ValidatorPool().GetCommittee(), nil
-}
-
-// BlockCommitSig returns the byte array of aggregated
-// commit signature and bitmap signed on the block
-func blockCommitSig(chain consensus.ChainReader, blockNum uint64) ([]byte, []byte, error) {
-	if blockNum < 1 {
-		return nil, nil, nil
-	}
-
-	extra := chain.GetHeaderByNumber(blockNum).Extra
-	// TODO: read aggSig and bitmap from extra
-	return aggSig, bitmap, nil
 }
 
 // accumulateRewardsAndCountSigs credits the coinbase of the given block with the mining
@@ -720,11 +717,11 @@ func accumulateRewardsAndCountSigs(
 	if err != nil {
 		return network.EmptyPayout, err
 	}
-	subComm := committee.Committee{members}		// TODO: from state?
+	comm := committee.Committee{Epoch: nowEpoch, Slots: members}
 
 	if err := availability.IncrementValidatorSigningCounts(
 		bc,
-		subComm.StakedValidators(),
+		comm.StakedValidators(),
 		state,
 		payable,
 		missing,
@@ -732,7 +729,7 @@ func accumulateRewardsAndCountSigs(
 		return network.EmptyPayout, err
 	}
 	votingPower, err := lookupVotingPower(
-		nowEpoch, &subComm,
+		nowEpoch, &comm,
 	)
 	if err != nil {
 		return network.EmptyPayout, err
@@ -749,9 +746,7 @@ func accumulateRewardsAndCountSigs(
 		// what to do about share of those that didn't sign
 		blsKey := payable[member].BLSPublicKey
 		voter := votingPower.Voters[blsKey]
-
-		// TODO(storage): read validator detail by epoch
-		snapshot, err := bc.ReadValidatorSnapshot(voter.EarningAccount)
+		snapshot, err := bc.GetValidatorAtEpoch(header.Epoch, voter.EarningAccount)
 		if err != nil {
 			return network.EmptyPayout, err
 		}
@@ -760,12 +755,11 @@ func accumulateRewardsAndCountSigs(
 		).RoundInt()
 		newRewards.Add(newRewards, due)
 
-		shares, err := lookupDelegatorShares(snapshot)
+		shares, err := lookupDelegatorShares(header.Epoch, snapshot)
 		if err != nil {
 			return network.EmptyPayout, err
 		}
-		// TODO(storage): update delegation reward
-		if err := state.AddReward(snapshot.Validator, due, shares); err != nil {
+		if err := state.AddRedelegationReward(snapshot, due, shares); err != nil {
 			return network.EmptyPayout, err
 		}
 		payouts = append(payouts, reward.Payout{
@@ -780,27 +774,65 @@ func accumulateRewardsAndCountSigs(
 func ballotResult(
 	bc consensus.ChainReader, header *types.Header,
 ) (committee.SlotList, committee.SlotList, committee.SlotList, error) {
-	//parentHeader := bc.GetHeaderByHash(header.ParentHash)
-	//if parentHeader == nil {
-	//	return nil, nil, nil, errors.Errorf(
-	//		"cannot find parent block header in DB %s",
-	//		header.ParentHash.Hex(),
-	//	)
-	//}
-	//parentShardState, err := bc.ReadShardState(parentHeader.Epoch())
-	//if err != nil {
-	//	return nil, nil, nil, errors.Errorf(
-	//		"cannot read shard state %v", parentHeader.Epoch(),
-	//	)
-	//}
-	// TODO(ATLAS): get parent committee by epoch
-	return availability.BallotResult(header, parentCommittee)
+	parentHeader := bc.GetHeaderByHash(header.ParentHash)
+	if parentHeader == nil {
+		return nil, nil, nil, errors.Errorf(
+			"cannot find parent block header in DB %s",
+			header.ParentHash.Hex(),
+		)
+	}
+	parentCommittee, err := lookupCommitteeAtEpoch(parentHeader.Epoch, bc)
+	if err != nil {
+		return nil, nil, nil, errors.Errorf(
+			"cannot read shard state %v", parentCommittee.Epoch,
+		)
+	}
+	reader := availability.CommitBitmapReader{Header: header}
+	return availability.BallotResult(reader, parentCommittee)
 }
 
 var (
 	votingPowerCache   singleflight.Group
 	delegateShareCache singleflight.Group
+	committeeCache     singleflight.Group
 )
+
+func lookupCommitteeAtEpoch(epoch *big.Int, bc consensus.ChainReader) (*committee.Committee, error) {
+	key := epoch.String()
+	results, err, _ := committeeCache.Do(
+		key, func() (interface{}, error) {
+			committeeSt, err := bc.GetCommitteeAtEpoch(epoch)
+			if err != nil {
+				return nil, err
+			}
+
+			// CommitteeStorage to Committee
+			var slots committee.SlotList
+			for i := 0; i < committeeSt.GetSlots().Len(); i++ {
+				slotSt := committeeSt.GetSlots().Get(i)
+				slots = append(slots, committee.Slot{
+					EcdsaAddress:   slotSt.GetEcdsaAddress(),
+					BLSPublicKey:   slotSt.GetBLSPublicKey(),
+					EffectiveStake: slotSt.GetEffectiveStake(),
+				})
+			}
+			comm := committee.Committee{
+				Epoch: epoch,
+				Slots: slots,
+			}
+
+			// For new calc, remove old data from 2 epochs ago
+			deleteEpoch := big.NewInt(0).Sub(epoch, big.NewInt(2))
+			deleteKey := deleteEpoch.String()
+			votingPowerCache.Forget(deleteKey)
+			return comm, nil
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	return results.(*committee.Committee), nil
+}
 
 func lookupVotingPower(epoch *big.Int, comm *committee.Committee) (*votepower.Roster, error) {
 	key := epoch.String()
@@ -828,33 +860,35 @@ func lookupVotingPower(epoch *big.Int, comm *committee.Committee) (*votepower.Ro
 
 // Lookup or compute the shares of stake for all delegators in a validator
 func lookupDelegatorShares(
-	snapshot *staking.ValidatorSnapshot,
+	epoch *big.Int, snapshot *staking.ValidatorWrapperStorage,
 ) (map[common.Address]numeric.Dec, error) {
-	epoch := snapshot.Epoch
-	validatorSnapshot := snapshot.Validator
-	key := fmt.Sprintf("%s-%s", epoch.String(), validatorSnapshot.ValidatorAddress.Hex())
+	valAddr := snapshot.GetValidator().GetValidatorAddress()
+	key := fmt.Sprintf("%s-%s", epoch.String(), valAddr.Hex())
 
 	shares, err, _ := delegateShareCache.Do(
 		key, func() (interface{}, error) {
 			result := map[common.Address]numeric.Dec{}
 
-			totalDelegationDec := numeric.NewDecFromBigInt(validatorSnapshot.TotalDelegation())
+			totalDelegationDec := numeric.NewDecFromBigInt(snapshot.GetTotalDelegation())
 			if totalDelegationDec.IsZero() {
 				log.Info("zero total delegation during AddReward delegation payout",
-					"validator-snapshot", validatorSnapshot.ValidatorAddress.Hex())
+					"validator-snapshot", valAddr.Hex())
 				return result, nil
 			}
 
-			for i := range validatorSnapshot.Redelegations {
-				delegation := validatorSnapshot.Redelegations[i]
+			for _, key := range snapshot.GetRedelegations().Keys() {
+				delegation, ok := snapshot.GetRedelegations().Get(key)
+				if !ok {
+					return nil, state.ErrValidatorNotExist
+				}
 				// NOTE percentage = <this_delegator_amount>/<total_delegation>
-				percentage := numeric.NewDecFromBigInt(delegation.Amount).Quo(totalDelegationDec)
-				result[delegation.DelegatorAddress] = percentage
+				percentage := numeric.NewDecFromBigInt(delegation.GetAmount()).Quo(totalDelegationDec)
+				result[delegation.GetDelegatorAddress()] = percentage
 			}
 
 			// For new calc, remove old data from 3 epochs ago
 			deleteEpoch := big.NewInt(0).Sub(epoch, big.NewInt(3))
-			deleteKey := fmt.Sprintf("%s-%s", deleteEpoch.String(), validatorSnapshot.ValidatorAddress.Hex())
+			deleteKey := fmt.Sprintf("%s-%s", deleteEpoch.String(), valAddr.Hex())
 			votingPowerCache.Forget(deleteKey)
 
 			return result, nil
@@ -867,13 +901,13 @@ func lookupDelegatorShares(
 	return shares.(map[common.Address]numeric.Dec), nil
 }
 
-func releaseAndRenewMap3Node(chain consensus.ChainReader, header *types.Header, state *state.StateDB,
+func releaseAndRenewMap3Node(chain consensus.ChainReader, header *types.Header, stateDB *state.StateDB,
 	nodes *staking.Map3NodeWrappersStorage) error {
 	nowEpochDec := numeric.NewDecFromBigInt(header.Epoch)
 	for _, nodeAddr := range nodes.Keys() {
 		node, ok := nodes.Get(nodeAddr)
 		if !ok {
-			return core.ErrMap3NodeNotExist
+			return state.ErrMap3NodeNotExist
 		}
 		if canReleaseMap3Node(node, nowEpochDec) {
 			// handle redelegation reward if already redelegated
@@ -882,7 +916,7 @@ func releaseAndRenewMap3Node(chain consensus.ChainReader, header *types.Header, 
 				err := core.HandleRedelegationReward(node, chain)
 			}
 
-			if err := releaseNonrenewalMicrodelegations(node, state); err != nil {
+			if err := releaseNonrenewalMicrodelegations(node, stateDB); err != nil {
 				return err
 			}
 

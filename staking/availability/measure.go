@@ -1,6 +1,7 @@
 package availability
 
 import (
+	"github.com/ethereum/go-ethereum/crypto/bls"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/numeric"
 	"github.com/ethereum/go-ethereum/staking/committee"
@@ -26,7 +27,7 @@ func BlockSigners(
 	if err != nil {
 		return nil, nil, err
 	}
-	mask, err := bls2.NewMask(committerKeys, nil)
+	mask, err := bls.NewMask(committerKeys, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -55,7 +56,6 @@ func BallotResult(
 	header RoundHeader, parentCommittee *committee.Committee,
 ) (committee.SlotList, committee.SlotList, committee.SlotList, error) {
 	payable, missing, err := BlockSigners(
-		// TODO(ATLAS): get LastCommitBitmap from parent header extra
 		header.LastCommitBitmap(), parentCommittee,
 	)
 	return parentCommittee.Slots, payable, missing, err

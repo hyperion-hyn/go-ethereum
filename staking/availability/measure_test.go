@@ -526,7 +526,6 @@ func (ctx *computeEPOSTestCtx) checkWrapperStatus(expStatus effective.Eligibilit
 // testHeader is the fake Header for testing
 type testHeader struct {
 	number           *big.Int
-	shardID          uint32
 	lastCommitBitmap []byte
 }
 
@@ -538,17 +537,12 @@ func newTestHeader(number int64, shardID uint32, numSlots, numVerified int) *tes
 	bitmap, _ := indexesToBitMap(indexes, numSlots)
 	return &testHeader{
 		number:           new(big.Int).SetInt64(number),
-		shardID:          shardID,
 		lastCommitBitmap: bitmap,
 	}
 }
 
 func (th *testHeader) Number() *big.Int {
 	return th.number
-}
-
-func (th *testHeader) ShardID() uint32 {
-	return th.shardID
 }
 
 func (th *testHeader) LastCommitBitmap() []byte {

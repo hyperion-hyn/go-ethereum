@@ -29,6 +29,6 @@ func LatestStakingRequirement(blockHeight *big.Int, Config *params.ChainConfig) 
 		baseStakingRequirement.Mul(MinDelegation).RoundInt()
 }
 
-func HaveRequirementChangeInEpoch(epoch *big.Int, Config *params.ChainConfig) bool {
+func HaveRequirementChangeAtEpoch(epoch *big.Int, Config *params.ChainConfig) bool {
 	return false
 }

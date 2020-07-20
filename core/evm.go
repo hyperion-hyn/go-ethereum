@@ -37,12 +37,12 @@ type ChainContext interface {
 	GetHeader(common.Hash, uint64) *types.Header
 
 	// ATLAS
-	GetMap3NodePoolByBlockNum(blockNum *big.Int) *staking.Map3NodePoolStorage
-	GetMap3NodeByBlockNumAndAddress(blockNum *big.Int, nodeAddress common.Address) (*staking.Map3NodeWrapperStorage, error)
-	GetMap3NodeByEpochAndAddress(epoch *big.Int, nodeAddress common.Address) (*staking.Map3NodeWrapperStorage, error)
-	GetValidatorPoolByBlockNum(blockNum *big.Int) *staking.ValidatorPoolStorage
-	GetValidatorByBlockNumAndAddress(blockNum *big.Int, validatorAddress common.Address) (*staking.ValidatorWrapperStorage, error)
-	GetValidatorByEpochAndAddress(epoch *big.Int, validatorAddress common.Address) (*staking.ValidatorWrapperStorage, error)
+	GetMap3NodePoolAtBlock(blockNum *big.Int) *staking.Map3NodePoolStorage
+	GetMap3NodeAtBlock(blockNum *big.Int, nodeAddress common.Address) (*staking.Map3NodeWrapperStorage, error)
+	GetMap3NodeAtEpoch(epoch *big.Int, nodeAddress common.Address) (*staking.Map3NodeWrapperStorage, error)
+	GetValidatorPoolAtBlock(blockNum *big.Int) *staking.ValidatorPoolStorage
+	GetValidatorAtBlock(blockNum *big.Int, validatorAddress common.Address) (*staking.ValidatorWrapperStorage, error)
+	GetValidatorAtEpoch(epoch *big.Int, validatorAddress common.Address) (*staking.ValidatorWrapperStorage, error)
 	Config() *params.ChainConfig
 }
 
