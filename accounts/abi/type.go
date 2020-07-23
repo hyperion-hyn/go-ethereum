@@ -42,6 +42,7 @@ const (
 	HashTy
 	FixedPointTy
 	FunctionTy
+	MappingTy
 )
 
 // Type is the reflection of the supported argument type
@@ -50,7 +51,9 @@ type Type struct {
 	Size int
 	T    byte // Our own type checking
 
-	stringKind string // holds the unparsed string for deriving signatures
+	NumberOfBytes uint
+
+	StringKind string // holds the unparsed string for deriving signatures
 
 	// Tuple relative fields
 	TupleRawName  string       // Raw struct name defined in source code, may be empty.
@@ -70,7 +73,7 @@ func NewType(t string, internalType string, components []ArgumentMarshaling) (ty
 	if strings.Count(t, "[") != strings.Count(t, "]") {
 		return Type{}, fmt.Errorf("invalid arg type in abi")
 	}
-	typ.stringKind = t
+	typ.StringKind = t
 
 	// if there are brackets, get ready to go into slice/array mode and
 	// recursively create the type
@@ -96,7 +99,7 @@ func NewType(t string, internalType string, components []ArgumentMarshaling) (ty
 			// is a slice
 			typ.T = SliceTy
 			typ.Elem = &embeddedType
-			typ.stringKind = embeddedType.stringKind + sliced
+			typ.StringKind = embeddedType.StringKind + sliced
 		} else if len(intz) == 1 {
 			// is an array
 			typ.T = ArrayTy
@@ -105,7 +108,7 @@ func NewType(t string, internalType string, components []ArgumentMarshaling) (ty
 			if err != nil {
 				return Type{}, fmt.Errorf("abi: error parsing variable size: %v", err)
 			}
-			typ.stringKind = embeddedType.stringKind + sliced
+			typ.StringKind = embeddedType.StringKind + sliced
 		} else {
 			return Type{}, fmt.Errorf("invalid formatting of array type")
 		}
@@ -181,7 +184,7 @@ func NewType(t string, internalType string, components []ArgumentMarshaling) (ty
 			})
 			elems = append(elems, &cType)
 			names = append(names, c.Name)
-			expression += cType.stringKind
+			expression += cType.StringKind
 			if idx != len(components)-1 {
 				expression += ","
 			}
@@ -192,7 +195,7 @@ func NewType(t string, internalType string, components []ArgumentMarshaling) (ty
 		typ.TupleElems = elems
 		typ.TupleRawNames = names
 		typ.T = TupleTy
-		typ.stringKind = expression
+		typ.StringKind = expression
 
 		const structPrefix = "struct "
 		// After solidity 0.5.10, a new field of abi "internalType"
@@ -266,7 +269,7 @@ func overloadedArgName(rawName string, names map[string]string) (string, error) 
 
 // String implements Stringer
 func (t Type) String() (out string) {
-	return t.stringKind
+	return t.StringKind
 }
 
 func (t Type) pack(v reflect.Value) ([]byte, error) {
