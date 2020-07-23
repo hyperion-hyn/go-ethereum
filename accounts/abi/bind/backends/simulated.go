@@ -129,6 +129,38 @@ func (b *SimulatedBackend) rollback() {
 	b.pendingState, _ = state.New(b.pendingBlock.Root(), statedb.Database(), nil)
 }
 
+func (b* SimulatedBackend) FlushStateInNewBlock(stateDB *state.StateDB) error {
+	root, err := stateDB.Commit(true)
+	if err != nil {
+		return err
+	}
+
+	err = stateDB.Database().TrieDB().Commit(root, false)
+	if err != nil {
+		return err
+	}
+
+	header := b.pendingBlock.Header()
+	header.Root = root
+	block := types.NewBlock(header, nil, nil, nil)
+	_, err = b.Blockchain().WriteBlockWithState(block, nil, nil, stateDB, false)
+	if err != nil {
+		return err
+	}
+
+	blocks, _ := core.GenerateChain(b.config, b.blockchain.CurrentBlock(), ethash.NewFaker(), b.database, 1, func(number int, block *core.BlockGen) {
+		for _, tx := range b.pendingBlock.Transactions() {
+			block.AddTx(tx)
+		}
+	})
+	statedb, _ := b.blockchain.State()
+
+	b.pendingBlock = blocks[0]
+	b.pendingState, _ = state.New(b.pendingBlock.Root(), statedb.Database())
+
+	return err
+}
+
 // stateByBlockNumber retrieves a state by a given blocknumber.
 func (b *SimulatedBackend) stateByBlockNumber(ctx context.Context, blockNumber *big.Int) (*state.StateDB, error) {
 	if blockNumber == nil || blockNumber.Cmp(b.blockchain.CurrentBlock().Number()) == 0 {
