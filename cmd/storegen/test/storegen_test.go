@@ -2,6 +2,7 @@ package test
 
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io/ioutil"
@@ -145,7 +146,7 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 	{
 		// .Node.Commission.CommissionRates.Rate
 		rateStorage := storage.Node().Commission().CommissionRates().Rate().Value()
-		expected := big.NewInt(0x33 * 10^18)
+		expected := big.NewInt(0).Mul(big.NewInt(0x33), big.NewInt(0).Exp(big.NewInt(10), big.NewInt(18), nil))
 		if rateStorage.Cmp(expected) != 0 {
 			t.Errorf("response from calling contract was expected to be %v instead received %v", expected, rateStorage)
 		}
@@ -181,7 +182,7 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 	{
 		// .Node.Description.Name
 		nameStorage := storage.Node().Description().Name().Value()
-		expected := "Hyperion"
+		expected := "Hyperion - 海伯利安"
 		if nameStorage != expected {
 			t.Errorf("response from calling contract was expected to be %v instead received %v", expected, nameStorage)
 		}
@@ -213,7 +214,7 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 	{
 		// .Node.Description.Details
 		nameStorage := storage.Node().Description().Details().Value()
-		expected := "Hyperion, a decentralized map platform, aims to achieve the “One Map” vision - to provide an unified view of global map data and service, and to make it universally accessible just like a public utility for 10B people."
+		expected := "Hyperion, a decentralized map platform, aims to achieve the “One Map” vision - to provide an unified view of global map data and service, and to make it universally accessible just like a public utility for 10B people.\n海伯利安是去中心化的地图生态。"
 		if nameStorage != expected {
 			t.Errorf("response from calling contract was expected to be %v instead received %v", expected, nameStorage)
 		}
@@ -226,7 +227,7 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 	{
 		// .Node.Description.Details
 		// Set/Get
-		expected := "Map3 is a decentralized map service network to safeguard Digital Location Autonomy."
+		expected := "Map3 is a decentralized map service network to safeguard Digital Location Autonomy.\nMap3是去中心化地图服务网络。"
 		storage.Node().Description().Details().SetValue(expected)
 		if expected != global.Node.Description.Details {
 			t.Errorf(" field expected to be %v instead received %v", expected, global.Node.Description.Details)
@@ -239,6 +240,38 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 	
 		if nameStorage != global.Node.Description.Details {
 			t.Errorf(" field expected to be %v instead received %v", global.Node.Description.Details, nameStorage)
+		}
+	}
+
+	{
+		// .Node.NodeKeys
+		nodeKeysStorage := storage.Node().NodeKeys().Value()
+		expected := []byte("MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDQBkQd2vUJtyNa2MBw4i8S0N9kQAAHwWdr1D5CPWgv/9GsGVCAUmLZhLV6E5JcrsL3fcKpak+oO+X3chffgOANVolvwqPUJif1ciimoMiEOU7+auLhTpRohX44phoCJ7J9C1nklTx1L6YHDrnMpvlAuRf0V6HM5Ro0L56LUMwZmwIDAQAB")
+		if bytes.Compare(nodeKeysStorage, expected) != 0 {
+			t.Errorf("response from calling contract was expected to be %v instead received %v", expected, nodeKeysStorage)
+		}
+	
+		if bytes.Compare(nodeKeysStorage, global.Node.NodeKeys) != 0 {
+			t.Errorf(" field expected to be %v instead received %v", global.Node.NodeKeys, nodeKeysStorage)
+		}
+	}
+	
+	{
+		// .Node.NodeKeys
+		// Set/Get
+		expected := []byte("MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCRRM4LWDW6x/8rHP0yte94a2LG17+6niq0uBq8h5AnwB5v6N0tHOoAA5nz18EkD4Lvp/NyUPCaAmWZyFQ3eHR5iv4bUItt5PJWbFGXSMWOxZyeoZjylK+V8fpbgjHq9a4JlMLzWtGJ/6f5/49uVXaUsfSiDL+zJawrdAjiM5/xyQIDAQAB")
+		storage.Node().NodeKeys().SetValue(expected)
+		if bytes.Compare(expected,global.Node.NodeKeys) != 0 {
+			t.Errorf(" field expected to be %v instead received %v", expected, global.Node.NodeKeys)
+		}
+	
+		nodeKeysStorage := storage.Node().NodeKeys().Value()
+		if bytes.Compare(nodeKeysStorage, expected) != 0 {
+			t.Errorf("response from calling contract was expected to be %v instead received %v", expected, nodeKeysStorage)
+		}
+	
+		if bytes.Compare(nodeKeysStorage, global.Node.NodeKeys) != 0 {
+			t.Errorf(" field expected to be %v instead received %v", global.Node.NodeKeys, nodeKeysStorage)
 		}
 	}
 
