@@ -69,3 +69,18 @@ func (r *RedelegationsStorage) Get(key common.Address) (*RedelegationStorage, bo
 func (r *RedelegationsStorage) Keys() []common.Address {
 	return nil
 }
+
+type RedelegationReferenceStorage struct {
+}
+
+func (r *RedelegationReferenceStorage) SetValidatorAddress(validatorAddress common.Address) {
+}
+
+func (r *RedelegationReferenceStorage) GetValidatorAddress() common.Address {
+	return common.Address0
+}
+
+
+func (r *RedelegationReferenceStorage) GetUpdatedEpochs() []*big.Int {
+	return nil
+}

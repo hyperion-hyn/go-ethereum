@@ -2,6 +2,7 @@ package core
 
 import (
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus/clique/reward"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/log"
@@ -10,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/staking/effective"
 	"github.com/ethereum/go-ethereum/staking/network"
 	staking "github.com/ethereum/go-ethereum/staking/types"
+	"github.com/influxdata/influxdb/pkg/pool"
 	"github.com/pkg/errors"
 	"math/big"
 )
@@ -171,7 +173,7 @@ func (st *StateTransition) StakingTransitionDb() (usedGas uint64, err error) {
 
 func (st *StateTransition) verifyAndApplyCreateMap3NodeTx(msg *staking.CreateMap3Node, signer common.Address) error {
 	epoch, blockNum := st.evm.EpochNumber, st.evm.BlockNumber
-	minTotal, minSelf, _ := staking.CalcMinTotalNodeStake(blockNum, st.evm.ChainConfig())
+	minTotal, minSelf, _ := network.LatestMap3StakingRequirement(blockNum, st.evm.ChainConfig())
 	wrapper, err := VerifyCreateMap3NodeMsg(st.state, epoch, blockNum, msg, signer, minSelf)
 	if err != nil {
 		return err
@@ -202,17 +204,16 @@ func (st *StateTransition) verifyAndApplyEditMap3NodeTx(msg *staking.EditMap3Nod
 		return err
 	}
 
-	pool := st.state.Map3NodePool()
-	wrapper, _ := pool.GetNodes().Get(msg.Map3NodeAddress)
+	nodePool := st.state.Map3NodePool()
+	wrapper, _ := st.state.Map3NodeByAddress(msg.Map3NodeAddress)
 	node := wrapper.GetMap3Node()
-
-	updateDescription(node.GetDescription(), msg.Description, pool.GetDescriptionIdentitySet())
+	updateDescription(node.GetDescription(), msg.Description, nodePool.GetDescriptionIdentitySet())
 
 	if msg.NodeKeyToRemove != nil {
 		for i := 0; i < node.GetNodeKeys().Len(); i++ {
 			if msg.NodeKeyToRemove.Hex() == node.GetNodeKeys().Get(i).Hex() {
 				node.GetNodeKeys().Remove(i, false)
-				pool.GetNodeKeySet().Remove(msg.NodeKeyToRemove.Hex())
+				nodePool.GetNodeKeySet().Remove(msg.NodeKeyToRemove.Hex())
 				break
 			}
 		}
@@ -220,7 +221,7 @@ func (st *StateTransition) verifyAndApplyEditMap3NodeTx(msg *staking.EditMap3Nod
 
 	if msg.NodeKeyToAdd != nil {
 		node.GetNodeKeys().Push(msg.NodeKeyToAdd)
-		pool.GetNodeKeySet().Put(msg.NodeKeyToAdd.Hex())
+		nodePool.GetNodeKeySet().Put(msg.NodeKeyToAdd.Hex())
 	}
 	return nil
 }
@@ -229,41 +230,54 @@ func (st *StateTransition) verifyAndApplyStopMap3NodeTx(msg *staking.StopMap3Nod
 	if err := VerifyStopMap3NodeMsg(st.state, st.evm.EpochNumber, msg, signer); err != nil {
 		return err
 	}
-
-	nodePool := st.state.Map3NodePool()
-	wrapper, _ := nodePool.GetNodes().Get(msg.Map3NodeAddress)
-	for _, delegator := range wrapper.GetMicrodelegations().Keys() {
-		delegation, ok := wrapper.GetMicrodelegations().Get(delegator)
-		if !ok {
-			return ErrMicrodelegationNotExist
-		}
-		amt := delegation.GetPendingDelegation().GetAmount()
-		st.state.AddBalance(delegator, amt)
+	node, _ := st.state.Map3NodeByAddress(msg.Map3NodeAddress)
+	allDelegators := node.GetMicrodelegations().Keys()
+	if err := ReleaseMicrodelegationFromMap3Node(st.state, node, allDelegators); err != nil {
+		return err
 	}
-
-	// TODO: remove all delegation and index
+	// update node state
+	node.GetNodeState().SetStatus(staking.Inactive)
+	node.GetNodeState().SetActivationEpoch(common.Big0)
+	zero := numeric.ZeroDec(); node.GetNodeState().SetReleaseEpoch(&zero)
 	return nil
 }
 
 func (st *StateTransition) verifyAndApplyResumeMap3NodeTx(msg *staking.ResumeMap3Node, signer common.Address) error {
-	minTotal, minSelf, _ := staking.CalcMinTotalNodeStake(st.evm.BlockNumber, st.evm.ChainConfig())
+	blockNum, epoch := st.evm.BlockNumber, st.evm.EpochNumber
+	minTotal, minSelf, _ := network.LatestMap3StakingRequirement(blockNum, st.evm.ChainConfig())
 	if err := VerifyResumeMap3NodeMsg(st.state, msg, minSelf, signer); err != nil {
 		return err
+	}
+	st.state.SubBalance(signer, msg.Amount)
+	m := staking.NewMicrodelegation(
+		signer, msg.Amount,
+		numeric.NewDecFromBigInt(epoch).Add(numeric.NewDec(staking.PendingDelegationLockPeriodInEpoch)),
+		true,
+	)
+	node, _ := st.state.Map3NodeByAddress(msg.Map3NodeAddress)
+	node.GetMicrodelegations().Put(signer, &m)
+	addNodeAddressToAddressSet(st.state.Map3NodePool().GetNodeAddressSetByDelegator(), signer, msg.Map3NodeAddress)
+	node.GetNodeState().SetStatus(staking.Pending)
+
+	if CanActivateMap3Node(node, minTotal, minSelf) {
+		if err := ActivateMap3Node(node, epoch); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
 func (st *StateTransition) verifyAndApplyMicrodelegateTx(msg *staking.Microdelegate, signer common.Address) error {
-	minTotal, minSelf, minDel := staking.CalcMinTotalNodeStake(st.evm.BlockNumber, st.evm.ChainConfig())
+	blockNum, epoch := st.evm.BlockNumber, st.evm.EpochNumber
+	minTotal, minSelf, minDel := network.LatestMap3StakingRequirement(blockNum, st.evm.ChainConfig())
 	if err := VerifyMicrodelegateMsg(st.state, msg, minDel, signer); err != nil {
 		return err
 	}
-
-	pool := st.state.Map3NodePool()
-	wrapper, _ := pool.GetNodes().Get(msg.Map3NodeAddress)
-	status := wrapper.GetNodeState().GetStatus()
-	unlockedEpoch := numeric.NewDecFromBigInt(st.evm.EpochNumber).Add(numeric.NewDec(staking.PendingDelegationLockPeriodInEpoch))
-	if microdelegation, ok := wrapper.GetMicrodelegations().Get(msg.DelegatorAddress); ok {
+	st.state.SubBalance(signer, msg.Amount)
+	node, _ := st.state.Map3NodeByAddress(msg.Map3NodeAddress)
+	status := node.GetNodeState().GetStatus()
+	unlockedEpoch := numeric.NewDecFromBigInt(epoch).Add(numeric.NewDec(staking.PendingDelegationLockPeriodInEpoch))
+	if microdelegation, ok := node.GetMicrodelegations().Get(msg.DelegatorAddress); ok {
 		if status == staking.Active {
 			microdelegation.SetAmount(big.NewInt(0).Add(microdelegation.GetAmount(), msg.Amount))
 		} else { // Pending or Dividing
@@ -278,41 +292,42 @@ func (st *StateTransition) verifyAndApplyMicrodelegateTx(msg *staking.Microdeleg
 			}
 		}
 	} else {
-		m := staking.NewMicrodelegation(
-			msg.DelegatorAddress, msg.Amount,
-			unlockedEpoch,
-			status != staking.Active,
-		)
-		wrapper.GetMicrodelegations().Put(msg.DelegatorAddress, &m)
-		addNodeAddressToAddressSet(pool.GetNodeAddressSetByDelegator(), signer, msg.Map3NodeAddress)
+		m := staking.NewMicrodelegation(msg.DelegatorAddress, msg.Amount, unlockedEpoch, status != staking.Active)
+		node.GetMicrodelegations().Put(msg.DelegatorAddress, &m)
+		addNodeAddressToAddressSet(st.state.Map3NodePool().GetNodeAddressSetByDelegator(), signer, msg.Map3NodeAddress)
 	}
 
 	if status == staking.Active {
-		wrapper.SetTotalDelegation(big.NewInt(0).Add(wrapper.GetTotalDelegation(), msg.Amount))
-		// TODO: add redelegation
-	} else {
-		wrapper.SetTotalPendingDelegation(big.NewInt(0).Add(wrapper.GetTotalPendingDelegation(), msg.Amount))
+		node.SetTotalDelegation(big.NewInt(0).Add(node.GetTotalDelegation(), msg.Amount))
+	} else { // Pending、Dividing
+		node.SetTotalPendingDelegation(big.NewInt(0).Add(node.GetTotalPendingDelegation(), msg.Amount))
 	}
-	st.state.SubBalance(signer, msg.Amount)
 
-	if CanActivateMap3Node(wrapper, minTotal, minSelf) {
-		if wrapper.GetRedelegationReference() != common.Address0 {
-			// TODO: add redelegation
-		}
-		if err := ActivateMap3Node(wrapper, st.evm.EpochNumber); err != nil {
+	if CanActivateMap3Node(node, minTotal, minSelf) {
+		if err := ActivateMap3Node(node, epoch); err != nil {
 			return err
 		}
+	}
+
+	// get latest status and update redelegation
+	status = node.GetNodeState().GetStatus()
+	if status == staking.Active && node.GetRedelegationReference() != common.Address0 {
+		validator, err := st.state.ValidatorByAddress(node.GetRedelegationReference())
+		if err != nil {
+			return err
+		}
+		UpdateRedelegationAmount(validator, msg.Map3NodeAddress, node.GetTotalDelegation())
 	}
 	return nil
 }
 
 func (st *StateTransition) verifyAndApplyUnmicrodelegateTx(msg *staking.Unmicrodelegate, signer common.Address) error {
-	_, minSelf, _ := staking.CalcMinTotalNodeStake(st.evm.BlockNumber, st.evm.ChainConfig())
+	_, minSelf, _ := network.LatestMap3StakingRequirement(st.evm.BlockNumber, st.evm.ChainConfig())
 	if err := VerifyUnmicrodelegateMsg(st.state, st.evm.EpochNumber, msg, minSelf, signer); err != nil {
 		return err
 	}
-	pool := st.state.Map3NodePool()
-	wrapper, _ := pool.GetNodes().Get(msg.Map3NodeAddress)
+	nodePool := st.state.Map3NodePool()
+	wrapper, _ := nodePool.GetNodes().Get(msg.Map3NodeAddress)
 	md, _ := wrapper.GetMicrodelegations().Get(msg.DelegatorAddress)
 	amt := md.GetPendingDelegation().GetAmount()
 
@@ -322,7 +337,7 @@ func (st *StateTransition) verifyAndApplyUnmicrodelegateTx(msg *staking.Unmicrod
 		md, _ := wrapper.GetMicrodelegations().Get(msg.DelegatorAddress)
 		if md.GetAmount().Cmp(common.Big0) == 0 {
 			wrapper.GetMicrodelegations().Remove(msg.DelegatorAddress)
-			nodeAddrSet, _ := pool.GetNodeAddressSetByDelegator().Get(msg.DelegatorAddress)
+			nodeAddrSet, _ := nodePool.GetNodeAddressSetByDelegator().Get(msg.DelegatorAddress)
 			nodeAddrSet.Remove(msg.Map3NodeAddress)
 		} else {
 			md.SetPendingDelegation(nil)
@@ -357,7 +372,7 @@ func (st *StateTransition) verifyAndApplyCollectMicrodelRewardsTx(
 
 func (st *StateTransition) verifyAndApplyDivideNodeStakeTx(msg *staking.DivideMap3NodeStake, signer common.Address) error {
 	epoch, blockNum := st.evm.EpochNumber, st.evm.BlockNumber
-	minTotal, minSelf, _ := staking.CalcMinTotalNodeStake(blockNum, st.evm.ChainConfig())
+	minTotal, minSelf, _ := network.LatestMap3StakingRequirement(blockNum, st.evm.ChainConfig())
 	if err, err := VerifyDivideNodeStakeMsg(st.state, epoch, blockNum, msg, signer, minTotal, minSelf); err != nil {
 		return err
 	}
@@ -372,8 +387,8 @@ func (st *StateTransition) verifyAndApplyRenewNodeStakeTx(msg *staking.RenewMap3
 		return err
 	}
 
-	pool := st.state.Map3NodePool()
-	wrapper, _ := pool.GetNodes().Get(msg.Map3NodeAddress)
+	nodePool := st.state.Map3NodePool()
+	wrapper, _ := nodePool.GetNodes().Get(msg.Map3NodeAddress)
 	md, _ := wrapper.GetMicrodelegations().Get(msg.DelegatorAddress)
 	md.SetRenewal(&staking.Renewal{
 		IsRenew:      msg.IsRenew,
@@ -411,11 +426,11 @@ func (st *StateTransition) verifyAndApplyEditValidatorTx(msg *staking.EditValida
 		return err
 	}
 
-	pool := st.state.ValidatorPool()
-	wrapper, _ := pool.GetValidators().Get(msg.ValidatorAddress)
+	validatorPool := st.state.ValidatorPool()
+	wrapper, _ := st.state.ValidatorByAddress(msg.ValidatorAddress)
 	validator := wrapper.GetValidator()
 
-	updateDescription(validator.GetDescription(), msg.Description, pool.GetDescriptionIdentitySet())
+	updateDescription(validator.GetDescription(), msg.Description, validatorPool.GetDescriptionIdentitySet())
 
 	if !msg.CommissionRate.IsNil() {
 		validator.GetCommission().GetCommissionRates().SetRate(&msg.CommissionRate)
@@ -426,7 +441,7 @@ func (st *StateTransition) verifyAndApplyEditValidatorTx(msg *staking.EditValida
 		for i := 0; i < validator.GetSlotPubKeys().Len(); i++ {
 			if msg.SlotKeyToRemove == validator.GetSlotPubKeys().Get(i) {
 				validator.GetSlotPubKeys().Remove(i, false)
-				pool.GetSlotKeySet().Remove(msg.SlotKeyToRemove.Hex())
+				validatorPool.GetSlotKeySet().Remove(msg.SlotKeyToRemove.Hex())
 				break
 			}
 		}
@@ -434,7 +449,7 @@ func (st *StateTransition) verifyAndApplyEditValidatorTx(msg *staking.EditValida
 
 	if msg.SlotKeyToAdd != nil {
 		validator.GetSlotPubKeys().Push(msg.SlotKeyToAdd)
-		pool.GetSlotKeySet().Put(msg.SlotKeyToAdd.Hex())
+		validatorPool.GetSlotKeySet().Put(msg.SlotKeyToAdd.Hex())
 	}
 
 	if msg.EPOSStatus == effective.Active || msg.EPOSStatus == effective.Inactive {
@@ -489,14 +504,15 @@ func (st *StateTransition) verifyAndApplyUnredelegateTx(msg *staking.Unredelegat
 	validator.SetTotalDelegation(totalDelegation)
 
 	if redelegation.GetReward().Cmp(common.Big0) > 0 {
-		HandleRedelegationReward()
+		if _, err := CollectRedelegationReward(nil); err != nil {
+			return err
+		}
 	}
 
 	if validator.GetValidator().GetInitiatorAddresses().Contain(msg.DelegatorAddress) {
 		totalDelegationByInitator := big.NewInt(0).Sub(validator.GetTotalDelegationByInitiator(), amount)
 		validator.SetTotalDelegationByInitiator(totalDelegationByInitator)
-
-		// TODO: need 20%
+		// TODO: need 20% ？
 	}
 	return nil
 }
@@ -505,16 +521,9 @@ func (st *StateTransition) verifyAndApplyCollectRedelRewards(msg *staking.Collec
 	if err := VerifyCollectRedelRewardsMsg(st.state, msg, signer); err != nil {
 		return network.NoReward, err
 	}
-
 	validator, _ := st.state.ValidatorPool().GetValidators().Get(msg.ValidatorAddress)
-	redelegation, _ := validator.GetRedelegations().Get(msg.DelegatorAddress)
-	reward := redelegation.GetReward()
-
 	node, _ := st.state.Map3NodePool().GetNodes().Get(msg.DelegatorAddress)
-	// TODO: lookup share of microdelegation
-	// piecewise calculation
-
-	return reward, nil
+	return CollectRedelegationReward(st.state, node, validator, st.bc, st.evm.EpochNumber)
 }
 
 func updateDescription(
@@ -634,6 +643,106 @@ func LookupMicrodelegationShares(wrapper *staking.Map3NodeWrapperStorage) (map[c
 	return result, nil
 }
 
-func HandleRedelegationReward(wrapper *staking.Map3NodeWrapperStorage, ctx ChainContext) error {
+func CollectRedelegationReward(stateDB vm.StateDB, node *staking.Map3NodeWrapperStorage,
+	validator *staking.ValidatorWrapperStorage, ctx ChainContext, epoch *big.Int) (*big.Int, error) {
+
+	nodeAddr := node.GetMap3Node().GetNodeAddress()
+	validatorAddr := validator.GetValidator().GetValidatorAddress()
+	collectedReward := big.NewInt(0)
+	for i := range node.GetRedelegationReference().GetUpdatedEpochs() {
+		updatedEpoch := node.GetRedelegationReference().GetUpdatedEpochs()[i]
+		if epoch.Cmp(updatedEpoch) == 0 {
+			break
+		}
+
+		// microdelegation shares
+		nodeSnapshot, err := ctx.GetMap3NodeAtEpoch(updatedEpoch, nodeAddr)
+		if err != nil {
+			return nil, err
+		}
+		shares, err := LookupMicrodelegationShares(nodeSnapshot)
+		if err != nil {
+			return nil, err
+		}
+
+		// get total reward from the last time when reward was collected
+		// to the given epoch
+		validatorSnapshot, err := ctx.GetValidatorAtEpoch(big.NewInt(0).Add(updatedEpoch, common.Big1), validatorAddr)
+		if err != nil {
+			return nil, err
+		}
+		redelegation, ok := validatorSnapshot.GetRedelegations().Get(nodeAddr)
+		if !ok {
+			return nil, ErrRedelegationNotExist
+		}
+		r := redelegation.GetReward()
+		rewardDelta := big.NewInt(0).Sub(r, collectedReward)
+		if err = stateDB.AddMicrodelegationReward(nodeSnapshot, rewardDelta, shares); err != nil {
+			return nil, err
+		}
+		collectedReward = r
+	}
+
+	// TODO: how to handle the last block reward?
+
+	return nil, nil
+}
+
+func UpdateRedelegationAmount(validator *staking.ValidatorWrapperStorage, delegator common.Address, amount *big.Int) {
+	delegation, ok := validator.GetRedelegations().Get(delegator)
+	if ok {
+		lastAmt := delegation.GetAmount()
+		delegation.SetAmount(amount)
+		delta := big.NewInt(0).Sub(amount, lastAmt)
+		validator.SetTotalDelegation(big.NewInt(0).Add(validator.GetTotalDelegation(), delta))
+	} else {
+		validator.GetRedelegations().Put(delegator, &staking.Redelegation{
+			DelegatorAddress: delegator,
+			Amount:           amount,
+		})
+		validator.SetTotalDelegation(big.NewInt(0).Add(validator.GetTotalDelegation(), amount))
+	}
+}
+
+func ReleaseRedelegationFromValidator(validator *staking.ValidatorWrapperStorage, delegator common.Address) {
+	delegation, ok := validator.GetRedelegations().Get(delegator)
+	if !ok {
+		return
+	}
+	validator.SetTotalDelegation(big.NewInt(0).Sub(validator.GetTotalDelegation(), delegation.GetAmount()))
+	validator.GetRedelegations().Remove(delegator)
+
+	// TODO: node.SetRedelegationReference(nil) ?
+}
+
+func ReleaseMicrodelegationFromMap3Node(stateDB vm.StateDB, node *staking.Map3NodeWrapperStorage,
+	delegatorsToBeReleased []common.Address) error {
+	totalToReduce, totalPendingToReduce := big.NewInt(0), big.NewInt(0)
+	for _, delegator := range delegatorsToBeReleased {
+		md, ok := node.GetMicrodelegations().Get(delegator)
+		if !ok {
+			return ErrMicrodelegationNotExist
+		}
+
+		balance := big.NewInt(0).Add(md.GetAmount(), md.GetReward())
+		balance.Add(balance, md.GetUndelegation().GetAmount())
+		balance.Add(balance, md.GetPendingDelegation().GetAmount())
+		stateDB.AddBalance(delegator, balance)
+
+		totalToReduce = totalToReduce.Add(totalToReduce, md.GetAmount())
+		totalPendingToReduce = totalPendingToReduce.Add(totalPendingToReduce, md.GetPendingDelegation().GetAmount())
+	}
+
+	for _, delegator := range delegatorsToBeReleased {
+		node.GetMicrodelegations().Remove(delegator)
+		nodeAddrs, ok := stateDB.Map3NodePool().GetNodeAddressSetByDelegator().Get(delegator)
+		if !ok {
+			return ErrMicrodelegationNotExist
+		}
+		nodeAddrs.Remove(node.GetMap3Node().GetNodeAddress())
+	}
+
+	node.SetTotalDelegation(big.NewInt(0).Sub(node.GetTotalDelegation(), totalToReduce))
+	node.SetTotalPendingDelegation(big.NewInt(0).Sub(node.GetTotalPendingDelegation(), totalPendingToReduce))
 	return nil
 }

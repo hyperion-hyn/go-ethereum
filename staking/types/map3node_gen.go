@@ -143,11 +143,11 @@ func (m *Map3NodeWrapperStorage) GetMicrodelegations() *MicrodelegationsStorage 
 	return nil
 }
 
-func (m *Map3NodeWrapperStorage) SetRedelegationReference(redelegationReference common.Address) {
+func (m *Map3NodeWrapperStorage) SetRedelegationReference() {
 }
 
-func (m *Map3NodeWrapperStorage) GetRedelegationReference() common.Address {
-	return common.Address0
+func (m *Map3NodeWrapperStorage) GetRedelegationReference() *RedelegationReferenceStorage {
+	return nil
 }
 
 func (m *Map3NodeWrapperStorage) SetAccumulatedReward(accumulatedReward *big.Int) {

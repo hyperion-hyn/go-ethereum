@@ -22,13 +22,13 @@ type Map3NodeStakingScheduler struct {
 	Config *params.ChainConfig
 }
 
-func LatestStakingRequirement(blockHeight *big.Int, Config *params.ChainConfig) (*big.Int, *big.Int, *big.Int) {
+func LatestMap3StakingRequirement(blockHeight *big.Int, Config *params.ChainConfig) (*big.Int, *big.Int, *big.Int) {
 	// TODO: total node state change by time
 	return baseStakingRequirement.RoundInt(),
 		baseStakingRequirement.Mul(MinSelfDelegation).RoundInt(),
 		baseStakingRequirement.Mul(MinDelegation).RoundInt()
 }
 
-func HaveRequirementChangeAtEpoch(epoch *big.Int, Config *params.ChainConfig) bool {
+func HaveMap3StakingRequirementChange(epoch *big.Int, Config *params.ChainConfig) bool {
 	return false
 }

@@ -118,3 +118,9 @@ func (s *StateDB) AddRedelegationReward(snapshot *staking.ValidatorWrapperStorag
 	}
 	return nil
 }
+
+// AddRedelegationReward distributes the reward to all the delegators based on stake percentage.
+func (s *StateDB) AddMicrodelegationReward(snapshot *staking.Map3NodeWrapperStorage, reward *big.Int,
+	shareLookup map[common.Address]numeric.Dec) error {
+	return nil
+}

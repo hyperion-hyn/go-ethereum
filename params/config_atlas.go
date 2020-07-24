@@ -10,6 +10,10 @@ func (c *AtlasConfig) IsLastBlock(blockNum uint64) bool {
 	return blockNum % blocks == blocks - 1
 }
 
+func (c *AtlasConfig) IsFirstBlock(u uint64) bool {
+	return false
+}
+
 func (c *AtlasConfig) EpochLastBlock(epochNum uint64) uint64 {
 	blocks := c.BlocksPerEpoch
 	if epochNum == 0 {
@@ -25,3 +29,4 @@ func (c *AtlasConfig) EpochFirstBlock(epochNum uint64) uint64 {
 func (c *AtlasConfig) EpochByBlock(blockNum uint64) uint64 {
 	return 0
 }
+

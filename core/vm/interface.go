@@ -17,6 +17,7 @@
 package vm
 
 import (
+	"github.com/ethereum/go-ethereum/numeric"
 	staking "github.com/ethereum/go-ethereum/staking/types"
 	"math/big"
 
@@ -71,6 +72,8 @@ type StateDB interface {
 	Map3NodeByAddress(nodeAddress common.Address) (*staking.Map3NodeWrapperStorage, error)
 	ValidatorPool() *staking.ValidatorPoolStorage
 	ValidatorByAddress(validatorAddress common.Address) (*staking.ValidatorWrapperStorage, error)
+	AddMicrodelegationReward(snapshot *staking.Map3NodeWrapperStorage, reward *big.Int, shareLookup map[common.Address]numeric.Dec) error
+	AddRedelegationReward(snapshot *staking.ValidatorWrapperStorage, reward *big.Int, shareLookup map[common.Address]numeric.Dec) error
 }
 
 // CallContext provides a basic interface for the EVM calling conventions. The EVM

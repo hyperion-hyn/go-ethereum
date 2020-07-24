@@ -218,7 +218,7 @@ func VerifyResumeMap3NodeMsg(stateDB vm.StateDB, msg *staking.ResumeMap3Node, mi
 	if err != nil {
 		return err
 	}
-	if wrapper.GetMap3Node().GetNodeAddress() != signer {
+	if wrapper.GetMap3Node().GetInitiatorAddress() != signer {
 		return errInvalidSigner
 	}
 
