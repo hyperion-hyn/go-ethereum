@@ -148,11 +148,11 @@ func SetStateAsBytes(db *state.StateDB, addr common.Address, slot *big.Int, valu
 {{range $basics}}
 type {{.Name}}={{.Type}}
 type Storage_{{.Name}} struct {
-{{if eq .Name "BigInt" "Bytes"}}
+{{- if eq .Name "BigInt"}}
 	obj    {{.Type}}
 {{else}}
 	obj    *{{.Type}}
-{{end}}
+{{end -}}
 	db     *state.StateDB
 	addr   common.Address
 	slot   *big.Int
@@ -166,8 +166,8 @@ func (s *Storage_{{.Name}}) Value() {{.Type}} {
 	return *s.obj
 {{else if eq .Name "Bytes"}}
 	rv := GetStateAsBytes(s.db, s.addr, s.slot)
-	s.obj = {{.Type}}(rv)
-	return s.obj
+	*s.obj = {{.Type}}(rv)
+	return *s.obj
 {{else if eq .Name "BigInt"}}
 	hash := s.db.GetState(s.addr, common.BigToHash(s.slot))
 	*s.obj = *hash.Big()
@@ -196,7 +196,7 @@ func (s *Storage_{{.Name}}) SetValue(value {{.Type}}) {
 	*s.obj = value
 {{else if eq .Name "Bytes" }}
 	SetStateAsBytes(s.db, s.addr, s.slot, []byte(value))
-	s.obj = value
+	*s.obj = value
 {{else if eq .Name "Uint8" "Uint16" "Uint32" "Uint64"}}
 	hash := big.NewInt(0).SetUint64(uint64(value))
 	s.db.SetState(s.addr, common.BigToHash(s.slot), common.BigToHash(hash))
@@ -236,7 +236,7 @@ func (s *Storage_{{.Name}}) SetValue(value {{.Type}}) {
 type {{.Name}} {{.Type}}
 
 type Storage_{{.Name}} struct {
-{{- if or (isptr . ) (ismap .) (isslice .)}}
+{{- if or (isptr .) (ismap .)}}
 	obj    {{.Name}}
 {{else}}
 	obj    *{{.Name}}
@@ -275,7 +275,11 @@ func (s* Storage_{{.Name}}) Get(index uint64) ( *Storage_{{$elem.Type}} ) {
 {{end}}
 
 	return &Storage_{{ $elem.Type }} {
-		obj: {{if or (isptr $elem) (ismap $elem) (isslice $elem)}}{{else}}&{{end}}s.obj[index],
+{{- if or (isptr $elem) (ismap $elem)}}
+		obj: s.obj[index],
+{{else}}
+		obj: &s.obj[index],
+{{end -}}
 		db: s.db,
 		addr: s.addr,
 		slot: actual,
@@ -301,7 +305,7 @@ func (s* Storage_{{.Name}}) Get(index uint64) ( *Storage_{{$elem.Type}} ) {
 	actual := hash.Big()
 
 	return &Storage_{{ $elem.Type }} {
-		obj: {{if or (isptr $elem) (ismap $elem) (isslice $elem)}}{{else}}&{{end}}s.obj[index],
+		obj: (*s.obj)[index],
 		db: s.db,
 		addr: s.addr,
 		slot: actual,
@@ -355,7 +359,11 @@ func (s* Storage_{{.Name}}) Get(key {{$elemKey.Type}}) ( *Storage_{{$elemValue.T
 {{end}}
 
 	return &Storage_{{ $elemValue.Type }} {
-		obj: {{if or (isptr $elemValue) (ismap $elemValue) (isslice $elemValue)}}{{else}}&{{end}}s.obj[key],
+{{- if or (isptr $elemValue) (ismap $elemValue)}}
+		obj: s.obj[key],
+{{else}}
+		obj: &s.obj[key],
+{{end -}}
 		db: s.db,
 		addr: s.addr,
 		slot: actual,
@@ -426,8 +434,8 @@ func (s *Storage_{{ $typeName }}) {{$field.Name}}() (*Storage_{{$field.Type}}) {
 	}
 {{end}}
 	return &Storage_{{ $field.Type }} {
-{{- if or (isptr $field) (ismap $field) (isslice $field)}}
-	obj: s.obj.{{$field.Name}},
+{{- if or (isptr $field) (ismap $field)}}
+		obj: s.obj.{{$field.Name}},
 {{else}}
 		obj: &s.obj.{{$field.Name}},
 {{end -}}
