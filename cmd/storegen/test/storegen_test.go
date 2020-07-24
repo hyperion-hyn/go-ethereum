@@ -92,9 +92,6 @@ func setupBlockchain(t *testing.T, abiJSON string, abiBin string) (common.Addres
 
 
 func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.SimulatedBackend, addr common.Address) {
-
-
-
 	state, err := sim.Blockchain().State()
 	if err != nil {
 		t.Errorf("could not get a new mutable state based on the current HEAD block")
@@ -105,17 +102,18 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 
 	{
 		// .Version
-	wrapper, err := NewMap3PoolWrapper(addr, sim)
-	if err != nil {
-		t.Errorf("could not new a StorageWrapper: %v", err)
-	}
+		wrapper, err := NewMap3PoolWrapper(addr, sim)
+		if err != nil {
+			t.Errorf("could not new a StorageWrapper: %v", err)
+		}
 
-	versionContract, err := wrapper.Version(nil, big.NewInt(0))
-	if err != nil  {
-		t.Errorf("failed to call function Version, %v", err)
-	}
-	
+		versionContract, err := wrapper.Version(nil)
+		if err != nil {
+			t.Errorf("failed to call function Version, %v", err)
+		}
+
 		versionStorage := storage.Version().Value()
+		log.Debug("TEST", "versionStorage", versionStorage)
 		if versionStorage.Cmp(versionContract) != 0 {
 			t.Errorf("response from calling contract was expected to be %v instead received %v", versionContract, versionStorage)
 		}
@@ -289,7 +287,7 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 		}
 
 		if amountStorage.Cmp(global.Pool.Nodes[addr1].TotalDelegation) != 0 {
-			t.Errorf(" field expected to be %v instead received %v", global.Node.Description.Details, amountStorage)
+			t.Errorf(" field expected to be %v instead received %v", global.Pool.Nodes[addr1].TotalDelegation, amountStorage)
 		}
 	}
 
@@ -310,7 +308,7 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 			}
 
 			if amountStorage.Cmp(global.Pool.Nodes[addr1].Microdelegations[addr2].PendingDelegationsfixed2dimension[0][0].Amount) != 0 {
-				t.Errorf(" field expected to be %v instead received %v", global.Node.Description.Details, amountStorage)
+				t.Errorf(" field expected to be %v instead received %v", global.Pool.Nodes[addr1].Microdelegations[addr2].PendingDelegationsfixed2dimension[0][0].Amount, amountStorage)
 			}
 		}
 
@@ -324,10 +322,51 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 			}
 
 			if amountStorage.Cmp(global.Pool.Nodes[addr1].Microdelegations[addr2].PendingDelegationsfixed2dimension[2][1].Amount) != 0 {
-				t.Errorf(" field expected to be %v instead received %v", global.Node.Description.Details, amountStorage)
+				t.Errorf(" field expected to be %v instead received %v", global.Pool.Nodes[addr1].Microdelegations[addr2].PendingDelegationsfixed2dimension[2][1].Amount, amountStorage)
 			}
 		}
 	}
+
+
+	{
+		// .Version
+		wrapper, err := NewMap3PoolWrapper(addr, sim)
+		if err != nil {
+			t.Errorf("could not new a StorageWrapper: %v", err)
+		}
+
+		lengthContract, err := wrapper.Length(nil)
+		if err != nil {
+			t.Errorf("failed to call function Length, %v", err)
+		}
+
+		expected := big.NewInt(10)
+		if expected.Cmp(lengthContract) != 0 {
+			t.Errorf("response from calling contract was expected to be %v instead received %v", lengthContract, expected)
+		}
+	}
+
+	{
+		// .Node[].Microdelegations[].PendingDelegations[].Amount
+		//
+		// pool.Nodes[0xA07306b4d845BD243Da172aeE557893172ccd04a].Microdelegations[0x3CB0B0B6D52885760A5404eb0A593B979c88BcEF].PendingDelegations[5].Amount = 0xdeaf;
+
+		// Set/Get
+		{
+			expected := 0x7788
+			addr1 := common.HexToAddress("A07306b4d845BD243Da172aeE557893172ccd04a")
+			addr2 := common.HexToAddress("3CB0B0B6D52885760A5404eb0A593B979c88BcEF")
+			amountStorage := storage.Pool().Nodes().Get(addr1).Microdelegations().Get(addr2).PendingDelegations().Get(5).Amount().Value()
+			if amountStorage.Cmp(big.NewInt(0).SetUint64(uint64(expected))) != 0 {
+				t.Errorf("response from calling contract was expected to be %v instead received %v", expected, amountStorage)
+			}
+
+			if amountStorage.Cmp(global.Pool.Nodes[addr1].Microdelegations[addr2].PendingDelegations[5].Amount) != 0 {
+				t.Errorf(" field expected to be %v instead received %v", global.Pool.Nodes[addr1].Microdelegations[addr2].PendingDelegations[5].Amount, amountStorage)
+			}
+		}
+	}
+
 }
 
 

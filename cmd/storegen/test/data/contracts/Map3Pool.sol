@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: LGPL-3.0 License
 pragma solidity ^0.6.10;
 pragma experimental ABIEncoderV2;
 
@@ -108,11 +109,19 @@ contract Map3Pool {
         pool.Nodes[0xA07306b4d845BD243Da172aeE557893172ccd04a].TotalDelegation = 0xdeadbeef;
         pool.Nodes[0xA07306b4d845BD243Da172aeE557893172ccd04a].Microdelegations[0x3CB0B0B6D52885760A5404eb0A593B979c88BcEF].PendingDelegationsfixed2dimension[2][1].Amount = 0xbeef;
         pool.Nodes[0xA07306b4d845BD243Da172aeE557893172ccd04a].Microdelegations[0x3CB0B0B6D52885760A5404eb0A593B979c88BcEF].PendingDelegationsfixed2dimension[0][0].Amount = 0xdead;
+        for (uint i = 0; i < 10; i++) {
+            pool.Nodes[0xA07306b4d845BD243Da172aeE557893172ccd04a].Microdelegations[0x3CB0B0B6D52885760A5404eb0A593B979c88BcEF].PendingDelegations.push();
+        }
 
+        pool.Nodes[0xA07306b4d845BD243Da172aeE557893172ccd04a].Microdelegations[0x3CB0B0B6D52885760A5404eb0A593B979c88BcEF].PendingDelegations[5].Amount = 0x7788;
         pool.NodeKeySet["0xA07306b4d845BD243Da172aeE557893172ccd04a"] = true;
     }
 
-    function Version(int tag) public view returns (int) {
+    function Version() public view returns (int) {
         return version;
+    }
+
+    function Length() public view returns (uint) {
+        return pool.Nodes[0xA07306b4d845BD243Da172aeE557893172ccd04a].Microdelegations[0x3CB0B0B6D52885760A5404eb0A593B979c88BcEF].PendingDelegations.length;
     }
 }
