@@ -265,7 +265,8 @@ func (s* Storage_{{.Name}}) Get(index uint64) ( *Storage_{{$elem.Type}} ) {
 {{else if or (isptr $elem)}}
 		s.obj[index] = new({{$elem.Type}})
 {{else if or (isslice $elem)}}
-		s.obj[index] = make({{$elem.Type}}, 0)
+		hash := s.db.GetState(s.addr, common.BigToHash(actual)) 
+		s.obj[index] = make({{$elem.Type}}, hash.Big().Int64())
 {{else if or (ismap $elem)}}
 		s.obj[index] = make({{$elem.Type}})
 {{else if or (isarray $elem)}}
@@ -300,9 +301,14 @@ func (s* Storage_{{.Name}}) Length() (*big.Int) {
 
 func (s* Storage_{{.Name}}) Get(index uint64) ( *Storage_{{$elem.Type}} ) {
 	// Value: {{ printf "%#v" $elem }}
-	indexBytes := common.BigToHash(big.NewInt(0).SetUint64(index)).Bytes()
-	hash := crypto.Keccak256Hash(append(indexBytes, common.BigToHash(s.slot).Bytes()...))
-	actual := hash.Big()
+	hash := crypto.Keccak256Hash(common.BigToHash(s.slot).Bytes())
+	actual := big.NewInt(0).Add(hash.Big(), big.NewInt(0).SetUint64(index*({{$elem.SolKind.NumberOfBytes}}/32)))
+
+{{if isptr $elem}}
+	if (*s.obj)[index] == nil {
+		(*s.obj)[index] = new({{$elem.Type}})
+	}
+{{end}}
 
 	return &Storage_{{ $elem.Type }} {
 		obj: (*s.obj)[index],
@@ -348,7 +354,8 @@ func (s* Storage_{{.Name}}) Get(key {{$elemKey.Type}}) ( *Storage_{{$elemValue.T
 {{else if isptr $elemValue}}
 		s.obj[key] = new({{$elemValue.Type}})
 {{else if or (isslice $elemValue)}}
-		s.obj[key] = make({{$elemValue.Type}}, 0)
+		hash := s.db.GetState(s.addr, common.BigToHash(actual)) 
+		s.obj[key] = make({{$elemValue.Type}}, hash.Big().Int64())
 {{else if or (ismap $elemValue)}}
 		s.obj[key] = make({{$elemValue.Type}})
 {{else if or (isarray $elemValue)}}
@@ -425,7 +432,8 @@ func (s *Storage_{{ $typeName }}) {{$field.Name}}() (*Storage_{{$field.Type}}) {
 {{else if or (isptr $field)}}
 		s.obj.{{$field.Name}} = new({{$field.Type}})
 {{else if or (isslice $field)}}
-		s.obj.{{$field.Name}} = make({{$field.Type}}, 0)
+		hash := s.db.GetState(s.addr, common.BigToHash(actual)) 
+		s.obj.{{$field.Name}} = make({{$field.Type}}, hash.Big().Int64())
 {{else if or (ismap $field)}}
 		s.obj.{{$field.Name}} = make({{$field.Type}})
 {{else if or (isarray $field)}}
