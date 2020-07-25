@@ -356,6 +356,7 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 			addr1 := common.HexToAddress("A07306b4d845BD243Da172aeE557893172ccd04a")
 			addr2 := common.HexToAddress("3CB0B0B6D52885760A5404eb0A593B979c88BcEF")
 
+			// length
 			{
 				expected := int64(10)
 				lengthStorage := storage.Pool().Nodes().Get(addr1).Microdelegations().Get(addr2).PendingDelegations().Length()
@@ -365,11 +366,33 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 				}
 			}
 
+			// expand
 			{
-				expected := int64(0)
-				amountStorage := storage.Pool().Nodes().Get(addr1).Microdelegations().Get(addr2).PendingDelegations().Get(20).Amount().Value()
-				if big.NewInt(expected).Cmp(amountStorage) != 0 {
-					t.Errorf(" length expected to be %v instead received %v", expected, amountStorage.Uint64())
+				storage.Pool().Nodes().Get(addr1).Microdelegations().Get(addr2).PendingDelegations().Get(20).Amount().Value()
+
+				expected := int64(21)
+				lengthStorage := storage.Pool().Nodes().Get(addr1).Microdelegations().Get(addr2).PendingDelegations().Length()
+				if big.NewInt(expected).Cmp(lengthStorage) != 0 {
+					t.Errorf(" length expected to be %v instead received %v", expected, lengthStorage.Uint64())
+				}
+
+				if int(expected) != len(global.Pool.Nodes[addr1].Microdelegations[addr2].PendingDelegations) {
+					t.Errorf(" length expected to be %v instead %v", expected, len(global.Pool.Nodes[addr1].Microdelegations[addr2].PendingDelegations))
+				}
+			}
+
+			// shrink
+			{
+				expected := int64(15)
+				storage.Pool().Nodes().Get(addr1).Microdelegations().Get(addr2).PendingDelegations().Resize(15)
+				lengthStorage := storage.Pool().Nodes().Get(addr1).Microdelegations().Get(addr2).PendingDelegations().Length()
+
+				if big.NewInt(expected).Cmp(lengthStorage) != 0 {
+					t.Errorf(" length expected to be %v instead received %v", expected, lengthStorage.Uint64())
+				}
+
+				if int(expected) != len(global.Pool.Nodes[addr1].Microdelegations[addr2].PendingDelegations) {
+					t.Errorf(" length expected to be %v instead %v", expected, len(global.Pool.Nodes[addr1].Microdelegations[addr2].PendingDelegations))
 				}
 			}
 

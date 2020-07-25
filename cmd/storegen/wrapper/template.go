@@ -306,20 +306,19 @@ func (s* Storage_{{.Name}}) Length() (*big.Int) {
 	return rv.Big()
 }
 
-func (s* Storage_{{.Name}}) Shrink(remain uint64) {
-	s.db.SetState(s.addr, common.BigToHash(s.slot), common.BigToHash(big.NewInt(0).SetUint64(remain)))
+func (s* Storage_{{.Name}}) Resize(length uint64) {	
+	s.db.SetState(s.addr, common.BigToHash(s.slot), common.BigToHash(big.NewInt(0).SetUint64(length)))
+
+	slice := make([]*{{$elem.Type}}, length, length+50)
+	copy(slice, *s.obj)
+	*s.obj = slice
 }
 
 func (s* Storage_{{.Name}}) Get(index uint64) ( *Storage_{{$elem.Type}} ) {
 	// Value: {{ printf "%#v" $elem }}
 	length := s.Length().Uint64()
 	if index >= length {
-		s.db.SetState(s.addr, common.BigToHash(s.slot), common.BigToHash(big.NewInt(0).SetUint64(index+1)))
-		if index >= uint64(cap(*s.obj)) {
-			slice := make([]*{{$elem.Type}}, index+1, index+50)
-			copy(slice, *s.obj)
-			*s.obj = slice
-		}
+		s.Resize(index+1)
 	}
 
 	hash := crypto.Keccak256Hash(common.BigToHash(s.slot).Bytes())
