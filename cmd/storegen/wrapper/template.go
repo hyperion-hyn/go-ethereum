@@ -144,19 +144,39 @@ func SetStateAsBytes(db *state.StateDB, addr common.Address, slot *big.Int, valu
 	}
 }
 
-
-{{range $basics}}
-type {{.Name}}={{.Type}}
-type Storage_{{.Name}} struct {
+{{define "storage_fields"}}
 {{- if eq .Name "BigInt"}}
-	obj    {{.Type}}
+	obj    {{.Name}}
+{{else if or (isptr .) (ismap .)}}
+	obj    {{.Name}}
 {{else}}
-	obj    *{{.Type}}
+	obj    *{{.Name}}
 {{end -}}
 	db     *state.StateDB
 	addr   common.Address
 	slot   *big.Int
 	dirty  StateValues	
+{{end}}{{/* storage_fields */}}
+
+
+{{define "new_instance"}}
+{{- if eq .Type "BigInt" }}
+		instance := big.NewInt(0)
+{{else if or (isptr .)}}
+		instance := new({{.Type}})
+{{else if or (isslice .)}}
+		hash := s.db.GetState(s.addr, common.BigToHash(actual))
+		instance := make({{.Type}}, hash.Big().Int64())
+{{else if or (ismap .)}}
+		instance := make({{.Type}})
+{{end -}}
+{{end}}{{/* new_instance */}}
+
+
+{{range $basics}}
+type {{.Name}}={{.Type}}
+type Storage_{{.Name}} struct {
+{{template "storage_fields" .}}
 }
 
 func (s *Storage_{{.Name}}) Value() {{.Type}} {
@@ -172,21 +192,24 @@ func (s *Storage_{{.Name}}) Value() {{.Type}} {
 	hash := s.db.GetState(s.addr, common.BigToHash(s.slot))
 	*s.obj = *hash.Big()
 	return s.obj
-{{else}}
+{{else if eq .Name "Uint8" "Uint16" "Uint32" "Uint64"}}
 	hash := s.db.GetState(s.addr, common.BigToHash(s.slot))
-{{- if eq .Name "Uint8" "Uint16" "Uint32" "Uint64"}}
-	*s.obj = {{.Type}}(hash.Big().Uint64())	
+	*s.obj = {{.Type}}(hash.Big().Uint64())
+	return *s.obj
 {{else if eq .Name "Int8" "Int16" "Int32" "Int64"}}
+	hash := s.db.GetState(s.addr, common.BigToHash(s.slot))
 	*s.obj = {{.Type}}(hash.Big().Int64())
+	return *s.obj
 {{else if eq .Name "Bool"}}
+	hash := s.db.GetState(s.addr, common.BigToHash(s.slot))
 	*s.obj = (hash.Big().Int64() != 0)
-{{else if eq .Name "BigInt"}}
+	return *s.obj
 {{else if eq .Name "Address"}}
+	hash := s.db.GetState(s.addr, common.BigToHash(s.slot))
 	*s.obj = common.BigToAddress(hash.Big())
+	return *s.obj
 {{else}}
 	UNSUPPORTED {{.Name}} {{.Type}}
-{{end -}}
-	return *s.obj
 {{end -}}
 }
 
@@ -197,6 +220,10 @@ func (s *Storage_{{.Name}}) SetValue(value {{.Type}}) {
 {{else if eq .Name "Bytes" }}
 	SetStateAsBytes(s.db, s.addr, s.slot, []byte(value))
 	*s.obj = value
+{{else if eq .Name "BigInt"}}
+	hash := value
+	s.db.SetState(s.addr, common.BigToHash(s.slot), common.BigToHash(hash))
+	*s.obj = *value
 {{else if eq .Name "Uint8" "Uint16" "Uint32" "Uint64"}}
 	hash := big.NewInt(0).SetUint64(uint64(value))
 	s.db.SetState(s.addr, common.BigToHash(s.slot), common.BigToHash(hash))
@@ -215,10 +242,6 @@ func (s *Storage_{{.Name}}) SetValue(value {{.Type}}) {
 	hash := big.NewInt(0).SetUint64(uint64(val))
 	s.db.SetState(s.addr, common.BigToHash(s.slot), common.BigToHash(hash))
 	*s.obj = value
-{{else if eq .Name "BigInt"}}
-	hash := value
-	s.db.SetState(s.addr, common.BigToHash(s.slot), common.BigToHash(hash))
-	*s.obj = *value
 {{else if eq .Name "Address"}}
 	hash := value.Hash()
 	s.db.SetState(s.addr, common.BigToHash(s.slot), hash)
@@ -227,7 +250,9 @@ func (s *Storage_{{.Name}}) SetValue(value {{.Type}}) {
 	UNSUPPORTED {{.Name}} {{.Type}}
 {{end -}}
 }
-{{end}}
+{{end}}{{/* basics */}}
+
+
 
 
 {{range $defines}}
@@ -236,15 +261,7 @@ func (s *Storage_{{.Name}}) SetValue(value {{.Type}}) {
 type {{.Name}} {{.Type}}
 
 type Storage_{{.Name}} struct {
-{{- if or (isptr .) (ismap .)}}
-	obj    {{.Name}}
-{{else}}
-	obj    *{{.Name}}
-{{end -}}
-	db     *state.StateDB
-	addr   common.Address
-	slot   *big.Int
-	dirty  StateValues	
+{{template "storage_fields" .}}
 }
 
 
@@ -260,18 +277,8 @@ func (s* Storage_{{.Name}}) Get(index uint64) ( *Storage_{{$elem.Type}} ) {
 
 {{- if or (isptr $elem) (isslice $elem) (ismap $elem) }}
 	if s.obj[index] == nil {
-{{- if eq $elem.Type "BigInt" }}
-		s.obj[index] = big.NewInt(0)
-{{else if or (isptr $elem)}}
-		s.obj[index] = new({{$elem.Type}})
-{{else if or (isslice $elem)}}
-		hash := s.db.GetState(s.addr, common.BigToHash(actual)) 
-		s.obj[index] = make({{$elem.Type}}, hash.Big().Int64())
-{{else if or (ismap $elem)}}
-		s.obj[index] = make({{$elem.Type}})
-{{else if or (isarray $elem)}}
-		
-{{end}}
+		{{template "new_instance" $elem}}
+		s.obj[index] = instance
 	}
 {{end}}
 
@@ -299,14 +306,29 @@ func (s* Storage_{{.Name}}) Length() (*big.Int) {
 	return rv.Big()
 }
 
+func (s* Storage_{{.Name}}) Shrink(remain uint64) {
+	s.db.SetState(s.addr, common.BigToHash(s.slot), common.BigToHash(big.NewInt(0).SetUint64(remain)))
+}
+
 func (s* Storage_{{.Name}}) Get(index uint64) ( *Storage_{{$elem.Type}} ) {
 	// Value: {{ printf "%#v" $elem }}
+	length := s.Length().Uint64()
+	if index >= length {
+		s.db.SetState(s.addr, common.BigToHash(s.slot), common.BigToHash(big.NewInt(0).SetUint64(index+1)))
+		if index >= uint64(cap(*s.obj)) {
+			slice := make([]*{{$elem.Type}}, index+1, index+50)
+			copy(slice, *s.obj)
+			*s.obj = slice
+		}
+	}
+
 	hash := crypto.Keccak256Hash(common.BigToHash(s.slot).Bytes())
 	actual := big.NewInt(0).Add(hash.Big(), big.NewInt(0).SetUint64(index*({{$elem.SolKind.NumberOfBytes}}/32)))
 
-{{if isptr $elem}}
+{{- if or (isptr $elem) (isslice $elem) (ismap $elem) }}
 	if (*s.obj)[index] == nil {
-		(*s.obj)[index] = new({{$elem.Type}})
+		{{template "new_instance" $elem}}
+		(*s.obj)[index] = instance
 	}
 {{end}}
 
@@ -349,19 +371,8 @@ func (s* Storage_{{.Name}}) Get(key {{$elemKey.Type}}) ( *Storage_{{$elemValue.T
 	
 {{- if or (isptr $elemValue) (isslice $elemValue) (ismap $elemValue) }}
 	if s.obj[key] == nil {
-{{- if eq $elemValue.Type "BigInt"}}
-		s.obj[key] = big.NewInt(0)
-{{else if isptr $elemValue}}
-		s.obj[key] = new({{$elemValue.Type}})
-{{else if or (isslice $elemValue)}}
-		hash := s.db.GetState(s.addr, common.BigToHash(actual)) 
-		s.obj[key] = make({{$elemValue.Type}}, hash.Big().Int64())
-{{else if or (ismap $elemValue)}}
-		s.obj[key] = make({{$elemValue.Type}})
-{{else if or (isarray $elemValue)}}
-{{else}}
-	here {{$elemValue.Type}}
-{{end}}
+		{{template "new_instance" $elemValue}}
+		s.obj[key] = instance
 	}
 {{end}}
 
@@ -380,7 +391,7 @@ func (s* Storage_{{.Name}}) Get(key {{$elemKey.Type}}) ( *Storage_{{$elemValue.T
 
 {{end}}
 
-{{end}}
+{{end}}{{/* defines */}}
 
 
 {{range $structs}}
@@ -427,18 +438,8 @@ func (s *Storage_{{ $typeName }}) {{$field.Name}}() (*Storage_{{$field.Type}}) {
 	var actual *big.Int = big.NewInt(0).Add(s.slot, slot)
 {{- if or (isptr $field) (isslice $field) (ismap $field) }}
 	if s.obj.{{$field.Name}} == nil {
-{{- if eq $field.Type "BigInt" }}
-		s.obj.{{$field.Name}} = big.NewInt(0)
-{{else if or (isptr $field)}}
-		s.obj.{{$field.Name}} = new({{$field.Type}})
-{{else if or (isslice $field)}}
-		hash := s.db.GetState(s.addr, common.BigToHash(actual)) 
-		s.obj.{{$field.Name}} = make({{$field.Type}}, hash.Big().Int64())
-{{else if or (ismap $field)}}
-		s.obj.{{$field.Name}} = make({{$field.Type}})
-{{else if or (isarray $field)}}
-		
-{{end -}}
+		{{template "new_instance" $field}}
+		s.obj.{{$field.Name}} = instance
 	}
 {{end}}
 	return &Storage_{{ $field.Type }} {
