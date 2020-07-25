@@ -353,16 +353,37 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 
 		// Set/Get
 		{
-			expected := 0x7788
 			addr1 := common.HexToAddress("A07306b4d845BD243Da172aeE557893172ccd04a")
 			addr2 := common.HexToAddress("3CB0B0B6D52885760A5404eb0A593B979c88BcEF")
-			amountStorage := storage.Pool().Nodes().Get(addr1).Microdelegations().Get(addr2).PendingDelegations().Get(5).Amount().Value()
-			if amountStorage.Cmp(big.NewInt(0).SetUint64(uint64(expected))) != 0 {
-				t.Errorf("response from calling contract was expected to be %v instead received %v", expected, amountStorage)
+
+			{
+				expected := int64(10)
+				lengthStorage := storage.Pool().Nodes().Get(addr1).Microdelegations().Get(addr2).PendingDelegations().Length()
+
+				if big.NewInt(expected).Cmp(lengthStorage) != 0 {
+					t.Errorf(" length expected to be %v instead received %v", expected, lengthStorage.Uint64())
+				}
 			}
 
-			if amountStorage.Cmp(global.Pool.Nodes[addr1].Microdelegations[addr2].PendingDelegations[5].Amount) != 0 {
-				t.Errorf(" field expected to be %v instead received %v", global.Pool.Nodes[addr1].Microdelegations[addr2].PendingDelegations[5].Amount, amountStorage)
+			{
+				expected := int64(0)
+				amountStorage := storage.Pool().Nodes().Get(addr1).Microdelegations().Get(addr2).PendingDelegations().Get(20).Amount().Value()
+				if big.NewInt(expected).Cmp(amountStorage) != 0 {
+					t.Errorf(" length expected to be %v instead received %v", expected, amountStorage.Uint64())
+				}
+			}
+
+			{
+				expected := 0x7788
+
+				amountStorage := storage.Pool().Nodes().Get(addr1).Microdelegations().Get(addr2).PendingDelegations().Get(5).Amount().Value()
+				if amountStorage.Cmp(big.NewInt(0).SetUint64(uint64(expected))) != 0 {
+					t.Errorf("response from calling contract was expected to be %v instead received %v", expected, amountStorage)
+				}
+
+				if amountStorage.Cmp(global.Pool.Nodes[addr1].Microdelegations[addr2].PendingDelegations[5].Amount) != 0 {
+					t.Errorf(" field expected to be %v instead received %v", global.Pool.Nodes[addr1].Microdelegations[addr2].PendingDelegations[5].Amount, amountStorage)
+				}
 			}
 		}
 	}
