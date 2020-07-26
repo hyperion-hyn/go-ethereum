@@ -24,6 +24,7 @@ var (
 	int64T    = reflect.TypeOf(int64(0))
 	addressT  = reflect.TypeOf(common.Address{})
 	stringT   = reflect.TypeOf("")
+	decimalT  = reflect.TypeOf(common.Dec{})
 )
 
 // U256 converts a big Int into a 256bit EVM number.

@@ -148,6 +148,40 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 		if rateStorage.Cmp(expected) != 0 {
 			t.Errorf("response from calling contract was expected to be %v instead received %v", expected, rateStorage)
 		}
+
+		if global.Node.Commission.CommissionRates.Rate.Cmp(expected) != 0 {
+			t.Errorf("field expected to be %v instead %v", expected, global.Node.Commission.CommissionRates.Rate)
+		}
+	}
+
+	{
+		{
+			// .Node.Commission.CommissionRates.MaxRate
+			expected, _ := common.NewDecFromStr("5.11")
+			rateStorage := storage.Node().Commission().CommissionRates().MaxRate().Value()
+			if !rateStorage.Equal(expected) {
+				t.Errorf("response from calling contract was expected to be %v instead received %v", expected, rateStorage)
+			}
+
+			if !global.Node.Commission.CommissionRates.MaxRate.Equal(expected) {
+				t.Errorf("field expected to be %v instead %v", expected, global.Node.Commission.CommissionRates.MaxRate)
+			}
+		}
+
+		{
+			// .Node.Commission.CommissionRates.MaxRate
+			expected, _ := common.NewDecFromStr("7.7")
+			storage.Node().Commission().CommissionRates().MaxRate().SetValue(expected)
+
+			rateStorage := storage.Node().Commission().CommissionRates().MaxRate().Value()
+			if !rateStorage.Equal(expected) {
+				t.Errorf("response from calling contract was expected to be %v instead received %v", expected, rateStorage)
+			}
+
+			if !global.Node.Commission.CommissionRates.MaxRate.Equal(expected) {
+				t.Errorf("field expected to be %v instead %v", expected, global.Node.Commission.CommissionRates.MaxRate)
+			}
+		}
 	}
 	
 	{
