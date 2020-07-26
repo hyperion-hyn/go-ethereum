@@ -3,9 +3,13 @@ pragma solidity ^0.6.10;
 pragma experimental ABIEncoderV2;
 
 contract Map3Pool {
+    struct Decimal {
+        uint256 f;
+    }
+
     struct CommissionRates_t {
         uint256 Rate;
-        uint256 MaxRate;
+        Decimal MaxRate;
         uint256 MaxChangeRate;
     }
 
@@ -101,6 +105,7 @@ contract Map3Pool {
         name = "Hyperion";
         node.NodeAddress = 0xA07306b4d845BD243Da172aeE557893172ccd04a;
         node.Commission.CommissionRates.Rate = 0x33 * (10**18);
+        node.Commission.CommissionRates.MaxRate.f = 5 * (10**18) + (11 * (10**18)/100);
         node.Description.Version[0]=0xbeef;
         node.Description.Version[1]=0xdead;
         node.Description.Name = "Hyperion - 海伯利安";

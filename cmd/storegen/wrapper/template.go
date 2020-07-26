@@ -208,6 +208,10 @@ func (s *Storage_{{.Name}}) Value() {{.Type}} {
 	hash := s.db.GetState(s.addr, common.BigToHash(s.slot))
 	*s.obj = common.BigToAddress(hash.Big())
 	return *s.obj
+{{else if eq .Name "Decimal"}}
+	hash := s.db.GetState(s.addr, common.BigToHash(s.slot))
+	*s.obj = common.NewDecFromBigIntWithPrec(hash.Big(), common.Precision)
+	return *s.obj
 {{else}}
 	UNSUPPORTED {{.Name}} {{.Type}}
 {{end -}}
@@ -245,6 +249,10 @@ func (s *Storage_{{.Name}}) SetValue(value {{.Type}}) {
 {{else if eq .Name "Address"}}
 	hash := value.Hash()
 	s.db.SetState(s.addr, common.BigToHash(s.slot), hash)
+	*s.obj = value
+{{else if eq .Name "Decimal"}}
+	hash := value.BigInt()
+	s.db.SetState(s.addr, common.BigToHash(s.slot), common.BigToHash(hash))
 	*s.obj = value
 {{else}}
 	UNSUPPORTED {{.Name}} {{.Type}}
@@ -361,6 +369,8 @@ func (s* Storage_{{.Name}}) Get(key {{$elemKey.Type}}) ( *Storage_{{$elemValue.T
 	keyBytes := key.Bytes()
 {{else if eq $elemKey.Type "Address"}}
 	keyBytes := key.Hash().Bytes()
+{{else if eq $elemKey.Type "Decimal"}}
+	keyBytes := key.BigInt().Bytes()
 {{else}}
 	UNSUPPORTED {{$elemKey.Type}}
 {{end -}}

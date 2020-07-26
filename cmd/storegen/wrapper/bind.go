@@ -43,6 +43,11 @@ func bindBasicTypeGo(kind abi.Type) (string, string) {
 		return "String", "string"
 	case abi.BoolTy:
 		return "Bool", "bool"
+	case abi.TupleTy:
+		if kind.TupleRawName == "Decimal" {
+			return "Decimal", "common.Dec"
+		}
+		return "", ""
 	default:
 		// string, bool types
 		return capitalise(kind.String()), kind.String()
@@ -93,6 +98,20 @@ func bindStructTypeGo(kind abi.Type, structs map[string]*tmplStruct) (string, er
 
 		if s, exist := structs[id]; exist {
 			return s.Name, nil
+		}
+
+		if kind.TupleRawName == "Decimal" {
+			name, typ := bindBasicTypeGo(kind)
+			kind.T = abi.FixedPointTy
+			kind.Type = decimalT
+			kind.Kind = kind.Type.Kind()
+			structs[name] = &tmplStruct{
+				Name:    name,
+				T:       kind.T,
+				Type:    typ,
+				SolKind: kind,
+			}
+			return name, nil
 		}
 
 		var fields []*tmplField
