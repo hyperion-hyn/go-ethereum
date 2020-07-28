@@ -5,7 +5,7 @@ struct Decimal {
     uint256 f;
 }
 
-struct Description_t {
+struct Description_ {
     string Name;
     string Identity;
     string WebSite;
@@ -13,26 +13,26 @@ struct Description_t {
     string Details;
 }
 
-struct CommissionRates_t {
+struct CommissionRates_ {
     Decimal Rate;
     Decimal MaxRate;
     Decimal MaxChangeRate;
 }
 
-struct Commission_t {
-    CommissionRates_t CommissionRates;
+struct Commission_ {
+    CommissionRates_ CommissionRates;
     uint256 UpdateHeight;
 }
 
-struct BLSPublicKey_t {
+struct BLSPublicKey_ {
     byte[48] Key;
 }
 
-struct BLSPublicKeys_t {
-    BLSPublicKey_t[] Keys;
+struct BLSPublicKeys_ {
+    BLSPublicKey_[] Keys;
 }
 
-struct Counters_t {
+struct Counters_ {
     // The number of blocks the validator
     // should've signed when in active mode (selected in committee)
     uint256 NumBlocksToSign;
@@ -40,18 +40,18 @@ struct Counters_t {
     uint256 NumBlocksSigned;
 }
 
-struct AddressSet_t {
+struct AddressSet_ {
     address[] Keys;
     mapping (address => bool) Set;
 }
 
-struct Validator_t {
+struct Validator_ {
     // ECDSA address of the validatorÒ
     address ValidatorAddress;
     // validator's operator (node address)
-    AddressSet_t OperatorAddresses;
+    AddressSet_ OperatorAddresses;
     // The BLS public key of the validator for consensus
-    BLSPublicKeys_t SlotPubKeys;
+    BLSPublicKeys_ SlotPubKeys;
     // The number of the last epoch this validator is
     // selected in committee (0 means never selected)
     uint256 LastEpochInCommittee;
@@ -59,68 +59,68 @@ struct Validator_t {
     // committee selection process or not
     uint256 Status;
     // commission parameters
-    Commission_t Commission;
+    Commission_ Commission;
     // description for the validator
-    Description_t Description;
+    Description_ Description;
     // CreationHeight is the height of creation
     uint256 CreationHeight;
 }
 
 // Undelegation represents one undelegation entry
-struct Undelegation_t {
+struct Undelegation_ {
     uint256 Amount;
     uint256 Epoch;
 }
 
-struct Redelegation_t {
+struct Redelegation_ {
     address DelegatorAddress;
     uint256 Amount;
     uint256 Reward;
-    Undelegation_t Undelegation;
+    Undelegation_ Undelegation;
 }
 
-struct RedelegationMap_t {
+struct RedelegationMap_ {
     address[] Keys;
-    mapping (address => Redelegation_t) Map;
+    mapping (address => Redelegation_) Map;
 }
 
 // ValidatorWrapper contains validator, its delegation information
-struct ValidatorWrapper_t {
-    Validator_t Validator;
-    RedelegationMap_t Redelegations;
-    Counters_t Counters;
+struct ValidatorWrapper_ {
+    Validator_ Validator;
+    RedelegationMap_ Redelegations;
+    Counters_ Counters;
     uint256 BlockReward;    // All the rewarded accumulated so far
     uint256 TotalDelegation;
     uint256 TotalDelegationByOperator;
 }
 
-struct ValidatorWrapperMap_t {
+struct ValidatorWrapperMap_ {
     address[] Keys;
-    mapping (address => ValidatorWrapper_t) Map;
+    mapping (address => ValidatorWrapper_) Map;
 }
 
-struct Slot_t {
+struct Slot_ {
     address EcdsaAddress;
-    BLSPublicKey_t BLSPublicKey;
+    BLSPublicKey_ BLSPublicKey;
     Decimal EffectiveStake;
 }
 
-struct Slots_t {
-    Slot_t[] Entrys;
+struct Slots_ {
+    Slot_[] Entrys;
 }
 
-struct Committee_t {
+struct Committee_ {
     uint256 Epoch;
-    Slots_t Slots;
+    Slots_ Slots;
 }
 
-struct ValidatorPool_t {
-    ValidatorWrapperMap_t Validators;
+struct ValidatorPool_ {
+    ValidatorWrapperMap_ Validators;
     mapping (string => bool) PublicKeySet;
     mapping (string => bool) DescriptionIdentitySet;
-    Committee_t Committee;
+    Committee_ Committee;
 }
 
 contract ValidatorPoolWrapper {
-    ValidatorPool_t ValidatorPool;
+    ValidatorPool_ ValidatorPool;
 }
