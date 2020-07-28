@@ -2,11 +2,9 @@ package common
 
 import (
     "bytes"
-    "encoding/hex"
     "math/big"
 
     "github.com/pkg/errors"
-    "golang.org/x/crypto/sha3"
 
     "github.com/ethereum/go-ethereum/common/bech32"
 )
@@ -35,24 +33,8 @@ func (a Address) Big() *big.Int { return new(big.Int).SetBytes(a[:]) }
 
 // Bech32 returns an bip0173-compliant string representation of the address.
 func (a Address) Bech32() string {
-    unchecksummed := hex.EncodeToString(a[:])
-    sha := sha3.NewLegacyKeccak256()
-    sha.Write([]byte(unchecksummed))
-    hash := sha.Sum(nil)
-
-    result := []byte(unchecksummed)
-    for i := 0; i < len(result); i++ {
-        hashByte := hash[i/2]
-        if i%2 == 0 {
-            hashByte = hashByte >> 4
-        } else {
-            hashByte &= 0xf
-        }
-        if result[i] > '9' && hashByte > 7 {
-            result[i] -= 32
-        }
-    }
-    return "0x" + string(result)
+    b32 := MustAddressToBech32(a)
+    return b32
 }
 
 // TODO ek – the following functions use Ethereum addresses until we have a
@@ -93,13 +75,14 @@ func MustBuildBech32Addr(hrp string, addr Address) string {
 // Bech32AddressHRP is the human-readable part of the Harmony address used by
 // this process.
 var Bech32AddressHRP = "hyn"
+var Bech32AddressHRPT = "thyn"
 
 // Bech32ToAddress decodes the given bech32 address.
 func Bech32ToAddress(b32 string) (addr Address, err error) {
     var hrp string
     err = ParseBech32Addr(b32, &hrp, &addr)
-    if err == nil && hrp != Bech32AddressHRP {
-        err = errors.Errorf("%#v is not a %#v address", b32, Bech32AddressHRP)
+    if err == nil && hrp != Bech32AddressHRP && hrp != Bech32AddressHRPT{
+        err = errors.Errorf("%#v is not a %#v/%#v address", b32, Bech32AddressHRP, Bech32AddressHRPT)
     }
     return
 }

@@ -268,6 +268,17 @@ func (a *Address) UnmarshalText(input []byte) error {
 
 // UnmarshalJSON parses a hash in hex syntax.
 func (a *Address) UnmarshalJSON(input []byte) error {
+	var value string
+	if err := json.Unmarshal(input, &value); err == nil {
+		var hrp string
+		var addr Address
+		err := ParseBech32Addr(value, &hrp, &addr)
+		if err == nil && (hrp == Bech32AddressHRP || hrp == Bech32AddressHRPT) {
+			copy(a[:], addr[:])
+			return nil
+		}
+	}
+
 	return hexutil.UnmarshalFixedJSON(addressT, input, a[:])
 }
 
