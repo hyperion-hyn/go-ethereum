@@ -5,7 +5,7 @@ import (
 	"crypto/sha256"
 	"testing"
 
-	"github.com/harmony-one/harmony/internal/bech32"
+	"github.com/ethereum/go-ethereum/common/bech32"
 )
 
 func TestEncodeAndDecode(t *testing.T) {
