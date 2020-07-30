@@ -215,16 +215,49 @@ var (
 	//
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
-	AllEthashProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, new(EthashConfig), nil}
+	AllEthashProtocolChanges = &ChainConfig{
+		ChainID: big.NewInt(1337),
+		HomesteadBlock: big.NewInt(0),
+		EIP150Block: big.NewInt(0),
+		EIP155Block: big.NewInt(0),
+		EIP158Block: big.NewInt(0),
+		ByzantiumBlock: big.NewInt(0),
+		ConstantinopleBlock: big.NewInt(0),
+		PetersburgBlock: big.NewInt(0),
+		IstanbulBlock: big.NewInt(0),
+		Ethash: new(EthashConfig),
+	}
 
 	// AllCliqueProtocolChanges contains every protocol change (EIPs) introduced
 	// and accepted by the Ethereum core developers into the Clique consensus.
 	//
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
-	AllCliqueProtocolChanges = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, nil, &CliqueConfig{Period: 0, Epoch: 30000}}
+	AllCliqueProtocolChanges = &ChainConfig{
+		ChainID: big.NewInt(1337),
+		HomesteadBlock: big.NewInt(0),
+		EIP150Block: big.NewInt(0),
+		EIP155Block: big.NewInt(0),
+		EIP158Block: big.NewInt(0),
+		ByzantiumBlock: big.NewInt(0),
+		ConstantinopleBlock: big.NewInt(0),
+		PetersburgBlock: big.NewInt(0),
+		IstanbulBlock: big.NewInt(0),
+		Clique: &CliqueConfig{Period: 0, Epoch: 30000},
+	}
 
-	TestChainConfig = &ChainConfig{big.NewInt(1), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, new(EthashConfig), nil}
+	TestChainConfig = &ChainConfig{
+		ChainID: big.NewInt(1),
+		HomesteadBlock: big.NewInt(0),
+		EIP150Block: big.NewInt(0),
+		EIP155Block: big.NewInt(0),
+		EIP158Block: big.NewInt(0),
+		ByzantiumBlock: big.NewInt(0),
+		ConstantinopleBlock: big.NewInt(0),
+		PetersburgBlock: big.NewInt(0),
+		IstanbulBlock: big.NewInt(0),
+		Ethash: new(EthashConfig),
+	}
 	TestRules       = TestChainConfig.Rules(new(big.Int))
 )
 
@@ -300,6 +333,9 @@ type ChainConfig struct {
 	// Various consensus engines
 	Ethash *EthashConfig `json:"ethash,omitempty"`
 	Clique *CliqueConfig `json:"clique,omitempty"`
+
+	// ATLAS config
+	Atlas *AtlasConfig `json:"atlas,omitempty"`
 }
 
 // EthashConfig is the consensus engine configs for proof-of-work based sealing.

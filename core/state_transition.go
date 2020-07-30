@@ -18,6 +18,7 @@ package core
 
 import (
 	"errors"
+	"github.com/ethereum/go-ethereum/core/types"
 	"math"
 	"math/big"
 
@@ -58,6 +59,7 @@ type StateTransition struct {
 	data       []byte
 	state      vm.StateDB
 	evm        *vm.EVM
+	bc         ChainContext	// ATLAS
 }
 
 // Message represents a message sent to a contract.
@@ -73,6 +75,7 @@ type Message interface {
 	Nonce() uint64
 	CheckNonce() bool
 	Data() []byte
+	Type() types.TransactionType	// ATLAS
 }
 
 // IntrinsicGas computes the 'intrinsic gas' for a message with the given data.

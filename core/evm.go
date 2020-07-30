@@ -17,6 +17,7 @@
 package core
 
 import (
+	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -33,6 +34,9 @@ type ChainContext interface {
 
 	// GetHeader returns the hash corresponding to their hash.
 	GetHeader(common.Hash, uint64) *types.Header
+
+	// ATLAS
+	ReadValidatorAtEpoch(*big.Int, common.Address) (*restaking.Storage_ValidatorWrapper_, error)
 }
 
 // NewEVMContext creates a new context for use in the EVM.

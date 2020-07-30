@@ -30,6 +30,7 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	"github.com/ethereum/go-ethereum/trie"
 )
 
@@ -103,6 +104,9 @@ type StateDB struct {
 	StorageHashes  time.Duration
 	StorageUpdates time.Duration
 	StorageCommits time.Duration
+
+	// ATLAS
+	validatorPool	*restaking.Storage_ValidatorPool_
 }
 
 // Create a new state from a given trie.

@@ -83,6 +83,9 @@ type Header struct {
 	Extra       []byte         `json:"extraData"        gencodec:"required"`
 	MixDigest   common.Hash    `json:"mixHash"`
 	Nonce       BlockNonce     `json:"nonce"`
+
+	// ATLAS
+	Epoch *big.Int	`json:"epoch"`		// TODO(ATLAS): header hash? difficulty?
 }
 
 // field type overrides for gencodec

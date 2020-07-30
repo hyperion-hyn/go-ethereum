@@ -18,6 +18,7 @@
 package consensus
 
 import (
+	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -47,6 +48,13 @@ type ChainReader interface {
 
 	// GetBlock retrieves a block from the database by hash and number.
 	GetBlock(hash common.Hash, number uint64) *types.Block
+
+	// ATLAS
+	Engine() Engine
+	ReadValidatorPoolAtBlock(blockNum *big.Int) *restaking.Storage_ValidatorPool_
+	ReadValidatorAtBlock(blockNum *big.Int, validatorAddress common.Address) (*restaking.Storage_ValidatorWrapper_, error)
+	ReadValidatorAtEpoch(epoch *big.Int, validatorAddress common.Address) (*restaking.Storage_ValidatorWrapper_, error)
+	ReadCommitteeAtEpoch(epoch *big.Int) (*restaking.Storage_Committee_, error)
 }
 
 // Engine is an algorithm agnostic consensus engine.

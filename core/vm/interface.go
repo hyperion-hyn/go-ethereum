@@ -17,6 +17,7 @@
 package vm
 
 import (
+	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -64,6 +65,11 @@ type StateDB interface {
 	AddPreimage(common.Hash, []byte)
 
 	ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) error
+
+	// ATLAS
+	ValidatorPool() *restaking.Storage_ValidatorPool_
+	ValidatorByAddress(validatorAddress common.Address) (*restaking.Storage_ValidatorWrapper_, error)
+	AddRedelegationReward(snapshot *restaking.Storage_ValidatorWrapper_, reward *big.Int, shareLookup map[common.Address]common.Dec) error
 }
 
 // CallContext provides a basic interface for the EVM calling conventions. The EVM

@@ -8,8 +8,8 @@ struct Decimal {
 struct Description_ {
     string Name;
     string Identity;
-    string WebSite;
-    string SecurityContract;
+    string Website;
+    string SecurityContact;
     string Details;
 }
 
@@ -79,9 +79,14 @@ struct Redelegation_ {
     Undelegation_ Undelegation;
 }
 
+struct RedelegationMapEntry_ {
+    Redelegation_ Entry;
+    uint256 Index;
+}
+
 struct RedelegationMap_ {
     address[] Keys;
-    mapping (address => Redelegation_) Map;
+    mapping (address => RedelegationMapEntry_) Map;
 }
 
 // ValidatorWrapper contains validator, its delegation information
@@ -94,9 +99,14 @@ struct ValidatorWrapper_ {
     uint256 TotalDelegationByOperator;
 }
 
+struct ValidatorWrapperMapEntry_ {
+    ValidatorWrapper_ Entry;
+    uint256 Index;
+}
+
 struct ValidatorWrapperMap_ {
     address[] Keys;
-    mapping (address => ValidatorWrapper_) Map;
+    mapping (address => ValidatorWrapperMapEntry_) Map;
 }
 
 struct Slot_ {
@@ -116,7 +126,7 @@ struct Committee_ {
 
 struct ValidatorPool_ {
     ValidatorWrapperMap_ Validators;
-    mapping (string => bool) PublicKeySet;
+    mapping (string => bool) SlotKeySet;
     mapping (string => bool) DescriptionIdentitySet;
     Committee_ Committee;
 }
