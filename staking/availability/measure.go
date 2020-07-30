@@ -4,6 +4,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto/bls"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/staking/effective"
+	"github.com/ethereum/go-ethereum/staking/types"
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	"math/big"
 
@@ -116,7 +117,7 @@ func IncrementValidatorSigningCounts(
 // ComputeCurrentSigning returns (signed, toSign, quotient, error)
 func ComputeCurrentSigning(
 	snapshot, wrapper *restaking.Storage_ValidatorWrapper_,
-) *restaking.Computed {
+) *types.Computed {
 	statsNow, snapSigned, snapToSign :=
 		wrapper.Counters(),
 		snapshot.Counters().NumBlocksSigned().Value(),
@@ -126,7 +127,7 @@ func ComputeCurrentSigning(
 		new(big.Int).Sub(statsNow.NumBlocksSigned().Value(), snapSigned),
 		new(big.Int).Sub(statsNow.NumBlocksToSign().Value(), snapToSign)
 
-	computed := restaking.NewComputed(
+	computed := types.NewComputed(
 		signed, toSign, 0, common.ZeroDec(), true,
 	)
 

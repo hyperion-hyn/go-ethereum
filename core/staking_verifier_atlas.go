@@ -89,11 +89,11 @@ func VerifyCreateValidatorMsg(stateDB vm.StateDB, blockNum *big.Int, msg *stakin
 	}
 
 	valAddress := crypto.CreateAddress(signer, stateDB.GetNonce(signer))
-	v, err := restaking.CreateValidatorFromNewMsg(msg, valAddress, blockNum)
+	v, err := staking.CreateValidatorFromNewMsg(msg, valAddress, blockNum)
 	if err != nil {
 		return nil, err
 	}
-	if err := v.SanityCheck(restaking.MaxPubKeyAllowed); err != nil {
+	if err := v.SanityCheck(staking.MaxPubKeyAllowed); err != nil {
 		return nil, err
 	}
 	return v, nil
@@ -132,10 +132,10 @@ func VerifyEditValidatorMsg(stateDB vm.StateDB, chainContext ChainContext, epoch
 	}
 	validator := wrapperSt.Validator().Load()
 
-	if err := restaking.UpdateValidatorFromEditMsg(validator, msg); err != nil {
+	if err := staking.UpdateValidatorFromEditMsg(validator, msg); err != nil {
 		return err
 	}
-	if err := validator.SanityCheck(restaking.MaxPubKeyAllowed); err != nil {
+	if err := validator.SanityCheck(staking.MaxPubKeyAllowed); err != nil {
 		return err
 	}
 
@@ -199,11 +199,11 @@ func VerifyUnredelegateMsg(stateDB vm.StateDB, epoch *big.Int, msg *staking.Unre
 	}
 	redelegation, ok := validator.Redelegations().Get(msg.DelegatorAddress)
 	if !ok {
-		return ErrRedelegationNotExist
+		return errRedelegationNotExist
 	}
 
 	if redelegation.Amount().Value().Cmp(common.Big0) == 0 {
-		return ErrRedelegationNotExist
+		return errRedelegationNotExist
 	}
 	return nil
 }
@@ -228,7 +228,7 @@ func VerifyCollectRedelRewardsMsg(stateDB vm.StateDB, msg *staking.CollectRedele
 	}
 	redelegation, ok := validator.Redelegations().Get(msg.DelegatorAddress)
 	if !ok {
-		return ErrRedelegationNotExist
+		return errRedelegationNotExist
 	}
 
 	if redelegation.Reward().Value().Cmp(common.Big0) == 0 {

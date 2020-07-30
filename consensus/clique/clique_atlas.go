@@ -26,7 +26,6 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/clique/reward"
 	"github.com/ethereum/go-ethereum/consensus/clique/votepower"
 	"github.com/ethereum/go-ethereum/consensus/misc"
-	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -44,6 +43,11 @@ import (
 	"math/rand"
 	"sync"
 	"time"
+)
+
+var (
+	errValidatorNotExist    = errors.New("staking validator does not exist")
+	errRedelegationNotExist = errors.New("no redelegation exists")
 )
 
 // Clique is the proof-of-authority consensus engine proposed to support the
@@ -642,14 +646,14 @@ func payoutUnredelegations(header *types.Header, stateDB *state.StateDB) error {
 	for _, validatorAddr := range validators.AllKeys() {
 		validator, ok := validators.Get(validatorAddr)
 		if !ok {
-			return state.ErrValidatorNotExist
+			return errValidatorNotExist
 		}
 
 		var toBeRemoved []common.Address
 		for _, delegator := range validator.Redelegations().AllKeys() {
 			redelegation, ok := validator.Redelegations().Get(delegator)
 			if !ok {
-				return core.ErrRedelegationNotExist
+				return errRedelegationNotExist
 			}
 
 			undelegation := redelegation.Undelegation()
@@ -859,7 +863,7 @@ func lookupDelegatorShares(
 			for _, key := range snapshot.Redelegations().AllKeys() {
 				delegation, ok := snapshot.Redelegations().Get(key)
 				if !ok {
-					return nil, state.ErrValidatorNotExist
+					return nil, errValidatorNotExist
 				}
 				// NOTE percentage = <this_delegator_amount>/<total_delegation>
 				percentage := common.NewDecFromBigInt(delegation.Amount().Value()).Quo(totalDelegationDec)

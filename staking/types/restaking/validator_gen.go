@@ -9,9 +9,7 @@ import (
 
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/event"
@@ -23,7 +21,7 @@ var (
 	_ = strings.NewReader
 	_ = ethereum.NotFound
 	_ = abi.U256
-	_ = bind.Bind
+	//_ = bind.Bind
 	_ = common.Big1
 	_ = types.BloomLookup
 	_ = event.NewSubscription
@@ -31,9 +29,13 @@ var (
 
 // use backtick in text/template: https://github.com/golang/go/issues/18221
 
+type StateDB interface {
+	GetState(addr common.Address, hash common.Hash) common.Hash
+	SetState(addr common.Address, key, value common.Hash)
+}
 type StateValues map[common.Hash]common.Hash
 
-func GetStateAsBytes(db *state.StateDB, addr common.Address, slot *big.Int) []byte {
+func GetStateAsBytes(db StateDB, addr common.Address, slot *big.Int) []byte {
 	var retval []byte
 
 	hash := db.GetState(addr, common.BigToHash(slot))
@@ -61,7 +63,7 @@ func GetStateAsBytes(db *state.StateDB, addr common.Address, slot *big.Int) []by
 	return retval
 }
 
-func SetStateAsBytes(db *state.StateDB, addr common.Address, slot *big.Int, value []byte) {
+func SetStateAsBytes(db StateDB, addr common.Address, slot *big.Int, value []byte) {
 	length := uint64(len(value))
 	if length < 32 {
 		// less than 32 bytes
@@ -90,7 +92,7 @@ func SetStateAsBytes(db *state.StateDB, addr common.Address, slot *big.Int, valu
 type Address = common.Address
 type Storage_Address struct {
 	obj   Address
-	db    *state.StateDB
+	db    StateDB
 	addr  common.Address
 	slot  *big.Int
 	dirty StateValues
@@ -111,7 +113,7 @@ func (s *Storage_Address) SetValue(value common.Address) {
 type BigInt = *big.Int
 type Storage_BigInt struct {
 	obj   BigInt
-	db    *state.StateDB
+	db    StateDB
 	addr  common.Address
 	slot  *big.Int
 	dirty StateValues
@@ -132,7 +134,7 @@ func (s *Storage_BigInt) SetValue(value *big.Int) {
 type Bool = bool
 type Storage_Bool struct {
 	obj   Bool
-	db    *state.StateDB
+	db    StateDB
 	addr  common.Address
 	slot  *big.Int
 	dirty StateValues
@@ -159,7 +161,7 @@ func (s *Storage_Bool) SetValue(value bool) {
 type Decimal = common.Dec
 type Storage_Decimal struct {
 	obj   *Decimal
-	db    *state.StateDB
+	db    StateDB
 	addr  common.Address
 	slot  *big.Int
 	dirty StateValues
@@ -180,7 +182,7 @@ func (s *Storage_Decimal) SetValue(value common.Dec) {
 type String = string
 type Storage_String struct {
 	obj   *String
-	db    *state.StateDB
+	db    StateDB
 	addr  common.Address
 	slot  *big.Int
 	dirty StateValues
@@ -200,7 +202,7 @@ func (s *Storage_String) SetValue(value string) {
 type Uint8 = uint8
 type Storage_Uint8 struct {
 	obj   *Uint8
-	db    *state.StateDB
+	db    StateDB
 	addr  common.Address
 	slot  *big.Int
 	dirty StateValues
@@ -224,7 +226,7 @@ type Array_aaa956d410fd [48]Uint8
 
 type Storage_Array_aaa956d410fd struct {
 	obj   *Array_aaa956d410fd
-	db    *state.StateDB
+	db    StateDB
 	addr  common.Address
 	slot  *big.Int
 	dirty StateValues
@@ -253,7 +255,7 @@ type Map_2732d5ca2110 map[Address]*RedelegationMapEntry_
 
 type Storage_Map_2732d5ca2110 struct {
 	obj   Map_2732d5ca2110
-	db    *state.StateDB
+	db    StateDB
 	addr  common.Address
 	slot  *big.Int
 	dirty StateValues
@@ -287,7 +289,7 @@ type Map_3783ff483121 map[Address]*Bool
 
 type Storage_Map_3783ff483121 struct {
 	obj   Map_3783ff483121
-	db    *state.StateDB
+	db    StateDB
 	addr  common.Address
 	slot  *big.Int
 	dirty StateValues
@@ -321,7 +323,7 @@ type Map_624bcc0df495 map[String]*Bool
 
 type Storage_Map_624bcc0df495 struct {
 	obj   Map_624bcc0df495
-	db    *state.StateDB
+	db    StateDB
 	addr  common.Address
 	slot  *big.Int
 	dirty StateValues
@@ -355,7 +357,7 @@ type Map_a0e4c1d65ac7 map[Address]*ValidatorWrapperMapEntry_
 
 type Storage_Map_a0e4c1d65ac7 struct {
 	obj   Map_a0e4c1d65ac7
-	db    *state.StateDB
+	db    StateDB
 	addr  common.Address
 	slot  *big.Int
 	dirty StateValues
@@ -389,7 +391,7 @@ type Slice_6bb0ade2b43c []*BLSPublicKey_
 
 type Storage_Slice_6bb0ade2b43c struct {
 	obj   *Slice_6bb0ade2b43c
-	db    *state.StateDB
+	db    StateDB
 	addr  common.Address
 	slot  *big.Int
 	dirty StateValues
@@ -439,7 +441,7 @@ type Slice_760032d9d704 []*Address
 
 type Storage_Slice_760032d9d704 struct {
 	obj   *Slice_760032d9d704
-	db    *state.StateDB
+	db    StateDB
 	addr  common.Address
 	slot  *big.Int
 	dirty StateValues
@@ -489,7 +491,7 @@ type Slice_eba64d7a7c55 []*Slot_
 
 type Storage_Slice_eba64d7a7c55 struct {
 	obj   *Slice_eba64d7a7c55
-	db    *state.StateDB
+	db    StateDB
 	addr  common.Address
 	slot  *big.Int
 	dirty StateValues
@@ -690,7 +692,7 @@ type Validator_ struct {
 
 type Storage_AddressSet_ struct {
 	obj   *AddressSet_
-	db    *state.StateDB
+	db    StateDB
 	addr  common.Address
 	slot  *big.Int
 	dirty StateValues
@@ -698,7 +700,7 @@ type Storage_AddressSet_ struct {
 
 type Storage_BLSPublicKey_ struct {
 	obj   *BLSPublicKey_
-	db    *state.StateDB
+	db    StateDB
 	addr  common.Address
 	slot  *big.Int
 	dirty StateValues
@@ -706,7 +708,7 @@ type Storage_BLSPublicKey_ struct {
 
 type Storage_BLSPublicKeys_ struct {
 	obj   *BLSPublicKeys_
-	db    *state.StateDB
+	db    StateDB
 	addr  common.Address
 	slot  *big.Int
 	dirty StateValues
@@ -714,7 +716,7 @@ type Storage_BLSPublicKeys_ struct {
 
 type Storage_CommissionRates_ struct {
 	obj   *CommissionRates_
-	db    *state.StateDB
+	db    StateDB
 	addr  common.Address
 	slot  *big.Int
 	dirty StateValues
@@ -722,7 +724,7 @@ type Storage_CommissionRates_ struct {
 
 type Storage_Commission_ struct {
 	obj   *Commission_
-	db    *state.StateDB
+	db    StateDB
 	addr  common.Address
 	slot  *big.Int
 	dirty StateValues
@@ -730,7 +732,7 @@ type Storage_Commission_ struct {
 
 type Storage_Committee_ struct {
 	obj   *Committee_
-	db    *state.StateDB
+	db    StateDB
 	addr  common.Address
 	slot  *big.Int
 	dirty StateValues
@@ -738,7 +740,7 @@ type Storage_Committee_ struct {
 
 type Storage_Counters_ struct {
 	obj   *Counters_
-	db    *state.StateDB
+	db    StateDB
 	addr  common.Address
 	slot  *big.Int
 	dirty StateValues
@@ -746,7 +748,7 @@ type Storage_Counters_ struct {
 
 type Storage_Description_ struct {
 	obj   *Description_
-	db    *state.StateDB
+	db    StateDB
 	addr  common.Address
 	slot  *big.Int
 	dirty StateValues
@@ -754,7 +756,7 @@ type Storage_Description_ struct {
 
 type Storage_Global_t struct {
 	obj   *Global_t
-	db    *state.StateDB
+	db    StateDB
 	addr  common.Address
 	slot  *big.Int
 	dirty StateValues
@@ -762,7 +764,7 @@ type Storage_Global_t struct {
 
 type Storage_RedelegationMapEntry_ struct {
 	obj   *RedelegationMapEntry_
-	db    *state.StateDB
+	db    StateDB
 	addr  common.Address
 	slot  *big.Int
 	dirty StateValues
@@ -770,7 +772,7 @@ type Storage_RedelegationMapEntry_ struct {
 
 type Storage_RedelegationMap_ struct {
 	obj   *RedelegationMap_
-	db    *state.StateDB
+	db    StateDB
 	addr  common.Address
 	slot  *big.Int
 	dirty StateValues
@@ -778,7 +780,7 @@ type Storage_RedelegationMap_ struct {
 
 type Storage_Redelegation_ struct {
 	obj   *Redelegation_
-	db    *state.StateDB
+	db    StateDB
 	addr  common.Address
 	slot  *big.Int
 	dirty StateValues
@@ -786,7 +788,7 @@ type Storage_Redelegation_ struct {
 
 type Storage_Slot_ struct {
 	obj   *Slot_
-	db    *state.StateDB
+	db    StateDB
 	addr  common.Address
 	slot  *big.Int
 	dirty StateValues
@@ -794,7 +796,7 @@ type Storage_Slot_ struct {
 
 type Storage_Slots_ struct {
 	obj   *Slots_
-	db    *state.StateDB
+	db    StateDB
 	addr  common.Address
 	slot  *big.Int
 	dirty StateValues
@@ -802,7 +804,7 @@ type Storage_Slots_ struct {
 
 type Storage_Undelegation_ struct {
 	obj   *Undelegation_
-	db    *state.StateDB
+	db    StateDB
 	addr  common.Address
 	slot  *big.Int
 	dirty StateValues
@@ -810,7 +812,7 @@ type Storage_Undelegation_ struct {
 
 type Storage_ValidatorPool_ struct {
 	obj   *ValidatorPool_
-	db    *state.StateDB
+	db    StateDB
 	addr  common.Address
 	slot  *big.Int
 	dirty StateValues
@@ -818,7 +820,7 @@ type Storage_ValidatorPool_ struct {
 
 type Storage_ValidatorWrapperMapEntry_ struct {
 	obj   *ValidatorWrapperMapEntry_
-	db    *state.StateDB
+	db    StateDB
 	addr  common.Address
 	slot  *big.Int
 	dirty StateValues
@@ -826,7 +828,7 @@ type Storage_ValidatorWrapperMapEntry_ struct {
 
 type Storage_ValidatorWrapperMap_ struct {
 	obj   *ValidatorWrapperMap_
-	db    *state.StateDB
+	db    StateDB
 	addr  common.Address
 	slot  *big.Int
 	dirty StateValues
@@ -834,7 +836,7 @@ type Storage_ValidatorWrapperMap_ struct {
 
 type Storage_ValidatorWrapper_ struct {
 	obj   *ValidatorWrapper_
-	db    *state.StateDB
+	db    StateDB
 	addr  common.Address
 	slot  *big.Int
 	dirty StateValues
@@ -842,13 +844,13 @@ type Storage_ValidatorWrapper_ struct {
 
 type Storage_Validator_ struct {
 	obj   *Validator_
-	db    *state.StateDB
+	db    StateDB
 	addr  common.Address
 	slot  *big.Int
 	dirty StateValues
 }
 
-func New(g *Global_t, db *state.StateDB, addr common.Address, slot *big.Int) *Storage_Global_t {
+func New(g *Global_t, db StateDB, addr common.Address, slot *big.Int) *Storage_Global_t {
 	return &Storage_Global_t{
 		obj:   g,
 		db:    db,
