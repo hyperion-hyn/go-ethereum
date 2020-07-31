@@ -7,6 +7,7 @@ import (
 )
 
 func (bc *BlockChain) ReadValidatorPoolAtBlock(blockNum *big.Int) *restaking.Storage_ValidatorPool_ {
+	// TODO(ATLAS): implement
 	return nil
 }
 

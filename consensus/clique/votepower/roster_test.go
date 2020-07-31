@@ -1,4 +1,6 @@
 package votepower
+
+// TODO(ATLAS): test
 //
 //import (
 //	"github.com/ethereum/go-ethereum/numeric"

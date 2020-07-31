@@ -57,7 +57,7 @@ func NewStakingEraRewardForRound(
 			Total: totalPayout,
 			Award: payouts,
 		},
-		missingSigners: mia,
+		missingSigners: *mia,
 	}
 }
 
@@ -72,5 +72,6 @@ func (r *stakingEra) ReadRoundResult() *reward.CompletedRound {
 }
 
 func CalcBlockReward(blockHeight *big.Int, config *params.ChainConfig) common.Dec {
+	// TODO(ATLAS): change block reward by time
 	return common.NewDecFromBigInt(BaseBlockReward)
 }
