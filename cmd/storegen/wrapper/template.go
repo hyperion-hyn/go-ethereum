@@ -59,11 +59,9 @@ import (
 
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/event"
 )
 
@@ -73,7 +71,6 @@ var (
 	_ = strings.NewReader
 	_ = ethereum.NotFound
 	_ = abi.U256
-	_ = bind.Bind
 	_ = common.Big1
 	_ = types.BloomLookup
 	_ = event.NewSubscription
@@ -81,6 +78,11 @@ var (
 
 // use backtick in text/template: https://github.com/golang/go/issues/18221
 {{ $tick := "`+"`"+`" }}
+
+type StateDB interface {
+	GetState(addr common.Address, hash common.Hash) common.Hash
+	SetState(addr common.Address, key, value common.Hash)
+}
 
 
 {{$basics := .Basics}}
@@ -90,7 +92,7 @@ var (
 
 type StateValues map[common.Hash]common.Hash
 
-func GetStateAsBytes(db *state.StateDB, addr common.Address, slot *big.Int) []byte{
+func GetStateAsBytes(db StateDB, addr common.Address, slot *big.Int) []byte{
 	var retval []byte
 
 	hash := db.GetState(addr, common.BigToHash(slot))
@@ -118,7 +120,7 @@ func GetStateAsBytes(db *state.StateDB, addr common.Address, slot *big.Int) []by
 	return retval
 }
 
-func SetStateAsBytes(db *state.StateDB, addr common.Address, slot *big.Int, value []byte) {
+func SetStateAsBytes(db StateDB, addr common.Address, slot *big.Int, value []byte) {
 	length := uint64(len(value))
 	if length < 32 {
 		// less than 32 bytes
@@ -152,7 +154,7 @@ func SetStateAsBytes(db *state.StateDB, addr common.Address, slot *big.Int, valu
 {{else}}
 	obj    *{{.Name}}
 {{end -}}
-	db     *state.StateDB
+	db     StateDB
 	addr   common.Address
 	slot   *big.Int
 	dirty  StateValues	
@@ -416,7 +418,7 @@ func (s* Storage_{{.Name}}) Get(key {{$elemKey.Type}}) ( *Storage_{{$elemValue.T
 {{range $structs}}
 type Storage_{{.Name}} struct {
 	obj *{{.Name}}
-	db     *state.StateDB
+	db     StateDB
 	addr common.Address
 	slot *big.Int
 	dirty StateValues
@@ -424,7 +426,7 @@ type Storage_{{.Name}} struct {
 {{end}}
 
 
-func New(g *Global_t, db *state.StateDB, addr common.Address, slot *big.Int) *Storage_Global_t {
+func New(g *Global_t, db StateDB, addr common.Address, slot *big.Int) *Storage_Global_t {
 	return &Storage_Global_t {
 		obj: g,
 		db: db,
