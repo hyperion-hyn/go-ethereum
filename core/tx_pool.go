@@ -566,6 +566,12 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	if tx.Gas() < intrGas {
 		return ErrIntrinsicGas
 	}
+
+	// ATLAS: Do more checks if it is a staking transaction
+	if tx.Type() != types.Normal {
+		return pool.validateStakingTx(tx)
+	}
+
 	return nil
 }
 

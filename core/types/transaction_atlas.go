@@ -33,3 +33,12 @@ func (txType TransactionType) String() string {
 	return "Normal"
 }
 
+func (tx *Transaction) SetType(txType TransactionType) {
+	tx.data.Type = txType
+}
+
+func (tx *Transaction) Type() TransactionType {
+	return tx.data.Type
+}
+
+func (m Message) Type() TransactionType { return m.txType }
