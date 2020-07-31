@@ -25,7 +25,6 @@ var (
 	errCommissionRateChangeTooFast = errors.New("change on commission rate can not be more than max change rate within the same epoch")
 	errDelegationTooSmall          = errors.New("delegation amount too small")
 	errNoRewardsToCollect          = errors.New("no rewards to collect")
-	errValidatorSnapshotNotExit    = errors.New("validator snapshot not found.")
 	errRedelegationNotExist        = errors.New("no redelegation exists")
 )
 
