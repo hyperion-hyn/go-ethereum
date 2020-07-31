@@ -147,6 +147,7 @@ func SetStateAsBytes(db StateDB, addr common.Address, slot *big.Int, value []byt
 }
 
 {{define "storage_fields"}}
+// {{ printf "%#v" . }}
 {{- if eq .Name "BigInt"}}
 	obj    {{.Name}}
 {{else if or (isptr .) (ismap .)}}

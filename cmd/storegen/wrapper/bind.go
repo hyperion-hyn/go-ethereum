@@ -257,6 +257,13 @@ func bindStructTypeGo(kind abi.Type, structs map[string]*tmplStruct) (string, er
 			return s.Name, nil
 		}
 
+		if name != "BigInt" {
+			if kind.Type.Kind() == reflect.Ptr {
+				kind.Type = kind.Type.Elem()
+				kind.Kind = kind.Type.Kind()
+			}
+		} 
+
 		structs[name] = &tmplStruct{
 			Name:    name,
 			T:       kind.T,
