@@ -231,22 +231,22 @@ func (st *StateTransition) verifyAndApplyCollectRedelRewards(msg *staking.Collec
 	validator, _ := st.state.ValidatorByAddress(msg.ValidatorAddress)
 	redelegation, _ := validator.Redelegations().Get(msg.DelegatorAddress)
 	reward := redelegation.Reward().Value()
-	handler := rewardToBalance{stateDB: st.state}
-	if err := handler.Handle(msg.DelegatorAddress, reward, st.evm.EpochNumber); err != nil {
+	handler := RewardToBalance{stateDB: st.state}
+	if err := handler.HandleReward(msg.DelegatorAddress, reward, st.evm.EpochNumber); err != nil {
 		return nil, err
 	}
 	return reward, nil
 }
 
 type RewardHandler interface {
-	Handle(delegator common.Address, amount, epoch *big.Int) error
+	HandleReward(delegator common.Address, amount, epoch *big.Int) error
 }
 
-type rewardToBalance struct {
+type RewardToBalance struct {
 	stateDB vm.StateDB
 }
 
-func (r *rewardToBalance) Handle(delegator common.Address, amount, epoch *big.Int) error {
+func (r *RewardToBalance) HandleReward(delegator common.Address, amount, epoch *big.Int) error {
 	r.stateDB.AddBalance(delegator, amount)
 	return nil
 }

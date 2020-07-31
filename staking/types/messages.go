@@ -4,7 +4,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/staking/effective"
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
-	"math/big"
 )
 
 // CreateValidator - type for creating a new validator
@@ -21,8 +20,6 @@ type EditValidator struct {
 	ValidatorAddress   common.Address           `json:"validator-address"`
 	Description        *restaking.Description_  `json:"description"`
 	CommissionRate     *common.Dec              `json:"commission-rate" rlp:"nil"`
-	MinSelfDelegation  *big.Int                 `json:"min-self-delegation" rlp:"nil"`
-	MaxTotalDelegation *big.Int                 `json:"max-total-delegation" rlp:"nil"`
 	SlotKeyToRemove    *restaking.BLSPublicKey_ `json:"slot-key-to_remove" rlp:"nil"`
 	SlotKeyToAdd       *restaking.BLSPublicKey_ `json:"slot-key-to_add" rlp:"nil"`
 	SlotKeyToAddSig    *BLSSignature            `json:"slot-key-to-add-sig" rlp:"nil"`
