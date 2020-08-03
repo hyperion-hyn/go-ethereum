@@ -56,7 +56,6 @@ func TestNewMaskWithAbsentPublicKey(test *testing.T) {
 }
 
 func TestThreshHoldPolicy(test *testing.T) {
-	test.Log("TestThreshHoldPolicy")
 	pubKey1 := RandPrivateKey().GetPublicKey()
 	pubKey2 := RandPrivateKey().GetPublicKey()
 	pubKey3 := RandPrivateKey().GetPublicKey()
