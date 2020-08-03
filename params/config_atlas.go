@@ -3,8 +3,9 @@ package params
 import "math"
 
 type AtlasConfig struct {
-	Period         uint64 `json:"period"` // Number of seconds between blocks to enforce
-	BlocksPerEpoch uint64 `json:"epoch"`  // Epoch length to reset votes and checkpoint
+	Period                uint64 `json:"period"` // Number of seconds between blocks to enforce
+	BlocksPerEpoch        uint64 `json:"epoch"`  // Epoch length to reset votes and checkpoint
+	BlocksPerHalfingCycle uint64 `json:"halfing_cycle"`
 }
 
 func (c *AtlasConfig) IsLastBlock(blockNum uint64) bool {
