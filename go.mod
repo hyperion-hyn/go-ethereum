@@ -68,3 +68,7 @@ require (
 	gopkg.in/urfave/cli.v1 v1.20.0
 	gotest.tools v2.2.0+incompatible // indirect
 )
+
+replace (
+    github.com/hyperion-hyn/bls v0.0.6 => ./third_party/bls
+)
