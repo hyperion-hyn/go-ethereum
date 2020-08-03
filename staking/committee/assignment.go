@@ -211,14 +211,17 @@ func eposStakedCommittee(epoch *big.Int, stakerReader DataProvider) (*restaking.
 }
 
 // ReadFromDB is a wrapper on GetCommitteeAtEpoch
-func (def stakingEnabled) ReadFromDB(epoch *big.Int, reader DataProvider) (newSuperComm *restaking.Committee_, err error) {
-	// TODO(storage): read committee by epoch from statedb
-	return reader.ReadCommitteeAtEpoch(epoch)
+func (def stakingEnabled) ReadFromDB(epoch *big.Int, reader DataProvider) (*restaking.Committee_, error) {
+	committee, err := reader.ReadCommitteeAtEpoch(epoch)
+	if err != nil {
+		return nil, err
+	}
+	return committee.Load(), err
 }
 
 // Compute is single entry point for
 // computing a new super committee, aka new shard state
-func (def stakingEnabled) Compute(epoch *big.Int, stakerReader DataProvider) (newSuperComm *restaking.Committee_, err error) {
+func (def stakingEnabled) Compute(epoch *big.Int, stakerReader DataProvider) (newComm *restaking.Committee_, err error) {
 	committee, err := eposStakedCommittee(epoch, stakerReader)
 	if err != nil {
 		return nil, err

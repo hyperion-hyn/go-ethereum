@@ -62,7 +62,7 @@ func BallotResult(
 
 type signerKind struct {
 	didSign   bool
-	committee restaking.Slots_
+	committee *restaking.Slots_
 }
 
 func bumpCount(
@@ -72,8 +72,8 @@ func bumpCount(
 	stakedAddrSet map[common.Address]struct{},
 ) error {
 	for _, subset := range signers {
-		for i := range subset.committee {
-			addr := subset.committee[i].EcdsaAddress
+		for i := range subset.committee.Entrys {
+			addr := subset.committee.Entrys[i].EcdsaAddress
 			// NOTE if the signer address is not part of the staked addrs,
 			// then it must be a harmony operated node running,
 			// hence keep on going
@@ -81,19 +81,19 @@ func bumpCount(
 				continue
 			}
 
-			wrapper, err := state.ValidatorWrapper(addr)
+			wrapper, err := state.ValidatorByAddress(addr)
 			if err != nil {
 				return err
 			}
 
-			wrapper.Counters.NumBlocksToSign.Add(
-				wrapper.Counters.NumBlocksToSign, common.Big1,
-			)
+			wrapper.Counters().NumBlocksToSign().SetValue(big.NewInt(0).Add(
+				wrapper.Counters().NumBlocksToSign().Value(), common.Big1,
+			))
 
 			if subset.didSign {
-				wrapper.Counters.NumBlocksSigned.Add(
-					wrapper.Counters.NumBlocksSigned, common.Big1,
-				)
+				wrapper.Counters().NumBlocksSigned().SetValue(big.NewInt(0).Add(
+					wrapper.Counters().NumBlocksSigned().Value(), common.Big1,
+				))
 			}
 		}
 	}
@@ -104,9 +104,9 @@ func bumpCount(
 // IncrementValidatorSigningCounts ..
 func IncrementValidatorSigningCounts(
 	bc Reader,
-	staked *shard.StakedSlots,
+	staked *restaking.StakedSlots,
 	state ValidatorState,
-	signers, missing committee.SlotList,
+	signers, missing *restaking.Slots_,
 ) error {
 	return bumpCount(
 		bc, state, []signerKind{{false, missing}, {true, signers}},

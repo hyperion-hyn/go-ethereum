@@ -2,8 +2,7 @@ package reward
 
 import (
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/staking/committee"
-	"github.com/ethereum/go-ethereum/staking/types"
+	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	"math/big"
 )
 
@@ -11,7 +10,7 @@ import (
 type Payout struct {
 	Addr        common.Address
 	NewlyEarned *big.Int
-	EarningKey  types.BLSPublicKey
+	EarningKey  restaking.BLSPublicKey_
 }
 
 // CompletedRound ..
@@ -23,5 +22,5 @@ type CompletedRound struct {
 // Reader ..
 type Reader interface {
 	ReadRoundResult() *CompletedRound
-	MissingSigners() committee.SlotList
+	MissingSigners() restaking.Slots_
 }
