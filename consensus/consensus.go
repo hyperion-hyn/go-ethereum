@@ -51,7 +51,7 @@ type ChainReader interface {
 
 	// ATLAS
 	Engine() Engine
-	ReadValidatorPoolAtBlock(blockNum *big.Int) *restaking.Storage_ValidatorPool_
+	ReadValidatorPoolAtBlock(blockNum *big.Int) (*restaking.Storage_ValidatorPool_, error)
 	ReadValidatorAtBlock(blockNum *big.Int, validatorAddress common.Address) (*restaking.Storage_ValidatorWrapper_, error)
 	ReadValidatorAtEpoch(epoch *big.Int, validatorAddress common.Address) (*restaking.Storage_ValidatorWrapper_, error)
 	ReadCommitteeAtEpoch(epoch *big.Int) (*restaking.Storage_Committee_, error)

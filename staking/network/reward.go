@@ -6,6 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/clique/reward"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
+	"math"
 	"math/big"
 )
 
@@ -57,7 +58,7 @@ func NewStakingEraRewardForRound(
 			Total: totalPayout,
 			Award: payouts,
 		},
-		missingSigners: mia,
+		missingSigners: *mia,
 	}
 }
 
@@ -71,6 +72,13 @@ func (r *stakingEra) ReadRoundResult() *reward.CompletedRound {
 	return &r.CompletedRound
 }
 
-func CalcBlockReward(blockHeight *big.Int, config *params.ChainConfig) common.Dec {
-	return common.NewDecFromBigInt(BaseBlockReward)
+func CalcBlockReward(blockHeight *big.Int, config *params.ChainConfig) *big.Int {
+	if blockHeight.Cmp(common.Big0) == 0 {
+		return BaseBlockReward
+	}
+
+	quo := big.NewInt(0).Quo(blockHeight, big.NewInt(int64(config.Atlas.BlocksPerHalfingCycle))).Uint64()
+	quoFloat64 := float64(quo)
+	r := big.NewInt(0).Mul(BaseBlockReward, big.NewInt(int64(math.Pow(3, quoFloat64))))
+	return r.Quo(r, big.NewInt(int64(math.Pow(4, quoFloat64))))
 }

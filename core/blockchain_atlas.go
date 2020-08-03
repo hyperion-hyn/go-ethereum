@@ -6,18 +6,40 @@ import (
 	"math/big"
 )
 
-func (bc *BlockChain) ReadValidatorPoolAtBlock(blockNum *big.Int) *restaking.Storage_ValidatorPool_ {
-	return nil
+func (bc *BlockChain) ReadValidatorPoolAtBlock(blockNum *big.Int) (*restaking.Storage_ValidatorPool_, error) {
+	header := bc.GetHeaderByNumber(blockNum.Uint64())
+	stateDB, err := bc.StateAt(header.Root)
+	if err != nil {
+		return nil, err
+	}
+	return stateDB.ValidatorPool(), nil
 }
 
 func (bc *BlockChain) ReadValidatorAtBlock(blockNum *big.Int, validatorAddress common.Address) (*restaking.Storage_ValidatorWrapper_, error) {
-	return nil, nil
+	header := bc.GetHeaderByNumber(blockNum.Uint64())
+	stateDB, err := bc.StateAt(header.Root)
+	if err != nil {
+		return nil, err
+	}
+	return stateDB.ValidatorByAddress(validatorAddress)
 }
 
 func (bc *BlockChain) ReadValidatorAtEpoch(epoch *big.Int, validatorAddress common.Address) (*restaking.Storage_ValidatorWrapper_, error) {
-	return nil, nil
+	blockNum := bc.Config().Atlas.EpochFirstBlock(epoch.Uint64())
+	if blockNum > 0 {
+		blockNum--
+	}
+	return bc.ReadValidatorAtBlock(big.NewInt(int64(blockNum)), validatorAddress)
 }
 
 func (bc *BlockChain) ReadCommitteeAtEpoch(epoch *big.Int) (*restaking.Storage_Committee_, error) {
-	return nil, nil
+	blockNum := bc.Config().Atlas.EpochFirstBlock(epoch.Uint64())
+	if blockNum > 0 {
+		blockNum--
+	}
+	pool, err := bc.ReadValidatorPoolAtBlock(big.NewInt(int64(blockNum)))
+	if err != nil {
+		return nil, err
+	}
+	return pool.Committee(), nil
 }

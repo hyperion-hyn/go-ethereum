@@ -58,6 +58,9 @@ type txdata struct {
 
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
+
+	// ATLAS: staking tx
+	Type		 TransactionType	// Default: normal tx
 }
 
 type txdataMarshaling struct {
@@ -226,6 +229,7 @@ func (tx *Transaction) AsMessage(s Signer) (Message, error) {
 		amount:     tx.data.Amount,
 		data:       tx.data.Payload,
 		checkNonce: true,
+		txType:     tx.data.Type,		// ATLAS
 	}
 
 	var err error
@@ -418,5 +422,3 @@ func (m Message) Gas() uint64          { return m.gasLimit }
 func (m Message) Nonce() uint64        { return m.nonce }
 func (m Message) Data() []byte         { return m.data }
 func (m Message) CheckNonce() bool     { return m.checkNonce }
-// ATLAS
-func (m Message) Type() TransactionType { return m.txType }
