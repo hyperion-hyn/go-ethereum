@@ -57,6 +57,19 @@ func (pk *BLSPublicKey_) ToLibBLSPublicKey(key *bls.PublicKey) error {
 	return key.Deserialize(pk.Key[:])
 }
 
+// FromLibBLSPublicKey replaces the key contents with the given key,
+func (pk *BLSPublicKey_) FromLibBLSPublicKey(key *bls.PublicKey) error {
+	bs := key.Serialize()
+	if len(bs) != len(pk.Key) {
+		return errors.Errorf(
+			"key size (BLS) size mismatch, expected %d have %d", len(pk.Key), len(bs),
+		)
+	}
+	copy(pk.Key[:], bs)
+	return nil
+}
+
+
 // EnsureLength ensures the length of a validator's description.
 func (d Description_) EnsureLength() (Description_, error) {
 	if len(d.Name) > MaxNameLength {
