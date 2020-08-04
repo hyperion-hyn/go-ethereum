@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/harmony-one/bls/ffi/go/bls"
+	"github.com/hyperion-hyn/bls/ffi/go/bls"
 )
 
 func init() {
