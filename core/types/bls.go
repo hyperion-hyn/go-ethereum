@@ -6,7 +6,7 @@ import (
     "encoding/hex"
     "math/big"
     "fmt"
-    "github.com/harmony-one/bls/ffi/go/bls"
+    "github.com/hyperion-hyn/bls/ffi/go/bls"
 )
 
 var (

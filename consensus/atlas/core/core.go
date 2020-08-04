@@ -23,7 +23,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/harmony-one/bls/ffi/go/bls"
+	"github.com/hyperion-hyn/bls/ffi/go/bls"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 
 	"github.com/ethereum/go-ethereum/common"

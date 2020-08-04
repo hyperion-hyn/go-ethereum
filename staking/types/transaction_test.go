@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/harmony-one/bls/ffi/go/bls"
+	"github.com/hyperion-hyn/bls/ffi/go/bls"
 	common "github.com/ethereum/go-ethereum/internal/common"
 	numeric "github.com/ethereum/go-ethereum/numeric"
 	"github.com/ethereum/go-ethereum/shard"

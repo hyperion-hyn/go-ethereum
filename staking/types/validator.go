@@ -9,7 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/harmony-one/bls/ffi/go/bls"
+	"github.com/hyperion-hyn/bls/ffi/go/bls"
 	"github.com/ethereum/go-ethereum/common/denominations"
 	"github.com/ethereum/go-ethereum/consensus/votepower"
 	"github.com/ethereum/go-ethereum/internal/genesis"
