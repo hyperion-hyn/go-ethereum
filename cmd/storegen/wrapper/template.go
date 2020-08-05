@@ -148,7 +148,7 @@ func SetStateAsBytes(db StateDB, addr common.Address, slot *big.Int, value []byt
 
 {{define "storage_fields"}}
 // {{ printf "%#v" . }}
-// {{ printf "%#v" .SolKind.Type.String }}
+
 {{- if eq .Name "BigInt"}}
 	obj    {{.Name}}
 {{else if or (isptr .) (ismap .)}}
@@ -159,6 +159,7 @@ func SetStateAsBytes(db StateDB, addr common.Address, slot *big.Int, value []byt
 	db     StateDB
 	addr   common.Address
 	slot   *big.Int
+	offset int
 	dirty  StateValues	
 {{end}}{{/* storage_fields */}}
 
@@ -186,6 +187,7 @@ type Storage_{{.Name}} struct {
 
 func (s *Storage_{{.Name}}) Value() {{.Type}} {
 // {{ printf "%#v" . }}
+// NumberOfBytes = {{ .SolKind.NumberOfBytes }}
 {{- if eq .Name "String"}}
 	rv := GetStateAsBytes(s.db, s.addr, s.slot)
 	*s.obj = {{.Type}}(rv)
@@ -200,11 +202,13 @@ func (s *Storage_{{.Name}}) Value() {{.Type}} {
 	return s.obj
 {{else if eq .Name "Uint8" "Uint16" "Uint32" "Uint64"}}
 	hash := s.db.GetState(s.addr, common.BigToHash(s.slot))
-	*s.obj = {{.Type}}(hash.Big().Uint64())
+	data := hash.Bytes()[s.offset:s.offset + {{.SolKind.NumberOfBytes}}]
+	*s.obj = {{.Type}}(big.NewInt(0).SetBytes(data).Uint64())
 	return *s.obj
 {{else if eq .Name "Int8" "Int16" "Int32" "Int64"}}
 	hash := s.db.GetState(s.addr, common.BigToHash(s.slot))
-	*s.obj = {{.Type}}(hash.Big().Int64())
+	data := hash.Bytes()[s.offset:s.offset + {{.SolKind.NumberOfBytes}}]
+	*s.obj = {{.Type}}(big.NewInt(0).SetBytes(data).Int64())
 	return *s.obj
 {{else if eq .Name "Bool"}}
 	hash := s.db.GetState(s.addr, common.BigToHash(s.slot))
@@ -241,12 +245,20 @@ func (s *Storage_{{.Name}}) SetValue(value {{.Type}}) {
 	s.db.SetState(s.addr, common.BigToHash(s.slot), common.BigToHash(hash))
 	*s.obj = *value
 {{else if eq .Name "Uint8" "Uint16" "Uint32" "Uint64"}}
-	hash := big.NewInt(0).SetUint64(uint64(value))
-	s.db.SetState(s.addr, common.BigToHash(s.slot), common.BigToHash(hash))
+	hash := s.db.GetState(s.addr, common.BigToHash(s.slot))
+	val := big.NewInt(0).SetUint64(uint64(value))	
+	data := hash.Bytes()
+	copy(data[s.offset:s.offset + {{.SolKind.NumberOfBytes}}], val.Bytes()[len(val.Bytes()) - {{.SolKind.NumberOfBytes}}:])
+	hash.SetBytes(data)
+	s.db.SetState(s.addr, common.BigToHash(s.slot), hash)
 	*s.obj = value
 {{else if eq .Name "Int8" "Int16" "Int32" "Int64"}}
-	hash := big.NewInt(0).SetInt64(int64(value))
-	s.db.SetState(s.addr, common.BigToHash(s.slot), common.BigToHash(hash))
+	hash := s.db.GetState(s.addr, common.BigToHash(s.slot))
+	val := big.NewInt(0).SetInt64(int64(value))	
+	data := hash.Bytes()
+	copy(data[s.offset:s.offset + {{.SolKind.NumberOfBytes}}], val.Bytes()[len(val.Bytes()) - {{.SolKind.NumberOfBytes}}:])
+	hash.SetBytes(data)
+	s.db.SetState(s.addr, common.BigToHash(s.slot), hash)
 	*s.obj = value
 {{else if eq .Name "Bool"}}
 	var val uint
@@ -345,8 +357,8 @@ func (s* Storage_{{.Name}}) Length() int {
 
 func (s* Storage_{{.Name}}) Get(index uint64) ( *Storage_{{$elem.Type}} ) {
 	// Value: {{ printf "%#v" $elem }}
-	actual := big.NewInt(0).Add(s.slot, big.NewInt(0).SetUint64(index*({{$elem.SolKind.NumberOfBytes}}/32)))
-
+	actual := big.NewInt(0).Add(s.slot, big.NewInt(0).SetUint64(index*{{$elem.SolKind.NumberOfBytes}}/32))
+	offset := 32 - int((index+1)* {{$elem.SolKind.NumberOfBytes}} % 32)
 {{- if or (isptr $elem) (isslice $elem) (ismap $elem) }}
 	if s.obj[index] == nil {
 		{{template "new_instance" $elem}}
@@ -363,6 +375,7 @@ func (s* Storage_{{.Name}}) Get(index uint64) ( *Storage_{{$elem.Type}} ) {
 		db: s.db,
 		addr: s.addr,
 		slot: actual,
+		offset: offset,
 		dirty: s.dirty,
 	}
 }
@@ -480,11 +493,7 @@ func (s* Storage_{{.Name}}) Get(key {{$elemKey.Type}}) ( *Storage_{{$elemValue.T
 
 {{range $structs}}
 type Storage_{{.Name}} struct {
-	obj *{{.Name}}
-	db     StateDB
-	addr common.Address
-	slot *big.Int
-	dirty StateValues
+{{template "storage_fields" .}}
 }
 {{end}}
 
