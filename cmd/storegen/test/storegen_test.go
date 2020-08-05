@@ -4,6 +4,7 @@ package test
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"io/ioutil"
 	"math/big"
@@ -131,7 +132,7 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 			t.Errorf(" field expected to be %v instead received %v", global.Name, nameStorage)
 		}
 	}
-	
+
 	{
 		// .Node.NodeAddress
 		nodeAddressStorage := storage.Node().NodeAddress().Value()
@@ -183,7 +184,25 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 			}
 		}
 	}
-	
+
+	{
+		// .Node.Serial
+		serialStorage := storage.Node().Description().Serial().Value()
+		expected, _ := hex.DecodeString("123456789a")
+		if bytes.Compare(serialStorage[:], expected) != 0 {
+			t.Errorf("response from calling contract was expected to be %v instead received %v", expected, serialStorage)
+		}
+
+		expected, _ = hex.DecodeString("deadbeef00")
+		copy(serialStorage[:], expected)
+		storage.Node().Description().Serial().SetValue(serialStorage)
+
+		serialStorage = storage.Node().Description().Serial().Value()
+		if bytes.Compare(serialStorage[:], expected) != 0 {
+			t.Errorf("response from calling contract was expected to be %v instead received %v", expected, serialStorage)
+		}
+	}
+
 	{
 		// .Node.Description.Version[0]
 		versionStorage := storage.Node().Description().Version().Get(0).Value()

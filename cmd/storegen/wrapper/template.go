@@ -183,6 +183,7 @@ type Storage_{{.Name}} struct {
 }
 
 func (s *Storage_{{.Name}}) Value() {{.Type}} {
+// {{ printf "%#v" . }}
 {{- if eq .Name "String"}}
 	rv := GetStateAsBytes(s.db, s.addr, s.slot)
 	*s.obj = {{.Type}}(rv)
@@ -215,12 +216,20 @@ func (s *Storage_{{.Name}}) Value() {{.Type}} {
 	hash := s.db.GetState(s.addr, common.BigToHash(s.slot))
 	*s.obj = common.NewDecFromBigIntWithPrec(hash.Big(), common.Precision)
 	return *s.obj
+{{else if isFixedByteArray .Name}}
+	hash := s.db.GetState(s.addr, common.BigToHash(s.slot))
+	length := len(*s.obj)
+	if length <= 32 {
+		copy((*s.obj)[:], hash.Bytes()[32-length:])
+	}
+	return *s.obj
 {{else}}
 	UNSUPPORTED {{.Name}} {{.Type}}
 {{end -}}
 }
 
 func (s *Storage_{{.Name}}) SetValue(value {{.Type}}) {
+// {{ printf "%#v" . }}
 {{- if eq .Name "String"}}
 	SetStateAsBytes(s.db, s.addr, s.slot, []byte(value))
 	*s.obj = value
@@ -257,6 +266,13 @@ func (s *Storage_{{.Name}}) SetValue(value {{.Type}}) {
 	hash := value.BigInt()
 	s.db.SetState(s.addr, common.BigToHash(s.slot), common.BigToHash(hash))
 	*s.obj = value
+{{else if isFixedByteArray .Name}}
+	length := len(*s.obj)
+	if length <= 32 {
+		hash := common.BytesToHash(value[:])
+		s.db.SetState(s.addr, common.BigToHash(s.slot), hash)
+		copy((*s.obj)[:], value[:])
+	}
 {{else}}
 	UNSUPPORTED {{.Name}} {{.Type}}
 {{end -}}
