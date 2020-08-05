@@ -1,6 +1,5 @@
 package test
 
-
 import (
 	"bytes"
 	"context"
@@ -21,18 +20,17 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 )
 
-
 type BuiltContract struct {
-	ABI interface{}				`json:"abi"`
-	Bytecode string			`json:"bytecode"`
-	DeployedBytecode string	`json:"deployedBytecode"`
+	ABI              interface{} `json:"abi"`
+	Bytecode         string      `json:"bytecode"`
+	DeployedBytecode string      `json:"deployedBytecode"`
 }
 
 var testKey, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 
 var (
-	abiJSON string
-	abiBin string
+	abiJSON      string
+	abiBin       string
 	deployedCode string
 )
 
@@ -91,7 +89,6 @@ func setupBlockchain(t *testing.T, abiJSON string, abiBin string) (common.Addres
 	return addr, sim, bgCtx
 }
 
-
 func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.SimulatedBackend, addr common.Address) {
 	state, err := sim.Blockchain().State()
 	if err != nil {
@@ -127,7 +124,7 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 		if nameStorage != expected {
 			t.Errorf("response from calling contract was expected to be '%v' %d instead received '%v' %d", expected, len(expected), nameStorage, len(nameStorage))
 		}
-	
+
 		if nameStorage != global.Name {
 			t.Errorf(" field expected to be %v instead received %v", global.Name, nameStorage)
 		}
@@ -141,7 +138,7 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 			t.Errorf("response from calling contract was expected to be %v instead received %v", expected, nodeAddressStorage)
 		}
 	}
-	
+
 	{
 		// .Node.Commission.CommissionRates.Rate
 		rateStorage := storage.Node().Commission().CommissionRates().Rate().Value()
@@ -186,7 +183,7 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 	}
 
 	{
-		// .Node.Serial
+		// .Node.Description.Serial
 		serialStorage := storage.Node().Description().Serial().Value()
 		expected, _ := hex.DecodeString("123456789a")
 		if bytes.Compare(serialStorage[:], expected) != 0 {
@@ -204,18 +201,92 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 	}
 
 	{
+		// .Node.Description.Symbol
+		var expected [9]byte
+		for i := 0; i < len(expected); i++ {
+			expected[i] = byte(i & 0xff)
+		}
+
+		signatureStorage := storage.Node().Description().Symbol().Value()
+		if bytes.Compare(signatureStorage[:], expected[:]) != 0 {
+			t.Errorf("response from calling contract was expected to be %v instead received %v", expected, signatureStorage)
+		}
+
+		for i := 0; i < len(expected); i++ {
+			expected[i] = byte(255 - i)
+		}
+		storage.Node().Description().Symbol().SetValue(expected)
+
+		signatureStorage = storage.Node().Description().Symbol().Value()
+		if bytes.Compare(signatureStorage[:], expected[:]) != 0 {
+			t.Errorf("response from calling contract was expected to be %v instead received %v", expected, signatureStorage)
+		}
+	}
+
+	{
+		// .Node.Description.Signature
+		var expected [300]byte
+		for i := 0; i < len(expected); i++ {
+			expected[i] = byte(i & 0xff)
+		}
+
+		signatureStorage := storage.Node().Description().Signature().Value()
+		if bytes.Compare(signatureStorage[:], expected[:]) != 0 {
+			t.Errorf("response from calling contract was expected to be %v instead received %v", expected, signatureStorage)
+		}
+
+		for i := 0; i < len(expected); i++ {
+			expected[i] = byte(255 - i)
+		}
+		storage.Node().Description().Signature().SetValue(expected)
+
+		signatureStorage = storage.Node().Description().Signature().Value()
+		if bytes.Compare(signatureStorage[:], expected[:]) != 0 {
+			t.Errorf("response from calling contract was expected to be %v instead received %v", expected, signatureStorage)
+		}
+	}
+
+	{
+		// .Node.Description.Feature
+		var expected [4]uint32
+		expected[0] = 0xdeadbeef
+		expected[1] = 0xbeeddeed
+		expected[2] = 0xfacecafe
+		expected[3] = 0xfeedc0de
+
+		for i := 0; i < len(expected); i++ {
+			featureStorage := storage.Node().Description().Feature().Get(uint64(i)).Value()
+			if featureStorage != expected[i] {
+				t.Errorf("response from calling contract was expected to be %x instead received %x", expected[i], featureStorage)
+			}
+		}
+
+		expected[0], expected[3] = expected[3], expected[0]
+		for i := 0; i < len(expected); i++ {
+			storage.Node().Description().Feature().Get(uint64(i)).SetValue(expected[i])
+		}
+
+		for i := 0; i < len(expected); i++ {
+			featureStorage := storage.Node().Description().Feature().Get(uint64(i)).Value()
+			if featureStorage != expected[i] {
+				t.Errorf("response from calling contract was expected to be %x instead received %x", expected[i], featureStorage)
+			}
+		}
+	}
+
+	{
 		// .Node.Description.Version[0]
 		versionStorage := storage.Node().Description().Version().Get(0).Value()
 		expected := big.NewInt(0xbeef)
 		if versionStorage.Cmp(expected) != 0 {
 			t.Errorf("response from calling contract was expected to be %v instead received %v", expected, versionStorage)
 		}
-	
+
 		if versionStorage.Cmp(global.Node.Description.Version[0]) != 0 {
 			t.Errorf(" field expected to be %v instead received %v", global.Node.Description.Version[0], versionStorage)
 		}
 	}
-	
+
 	{
 		// .Node.Description.Version[1]
 		versionStorage := storage.Node().Description().Version().Get(1).Value()
@@ -223,13 +294,12 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 		if versionStorage.Cmp(expected) != 0 {
 			t.Errorf("response from calling contract was expected to be %v instead received %v", expected, versionStorage)
 		}
-	
+
 		if versionStorage.Cmp(global.Node.Description.Version[1]) != 0 {
 			t.Errorf(" field expected to be %v instead received %v", global.Node.Description.Version[1], versionStorage)
 		}
 	}
-	
-	
+
 	{
 		// .Node.Description.Name
 		nameStorage := storage.Node().Description().Name().Value()
@@ -237,12 +307,12 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 		if nameStorage != expected {
 			t.Errorf("response from calling contract was expected to be %v instead received %v", expected, nameStorage)
 		}
-	
+
 		if nameStorage != global.Node.Description.Name {
 			t.Errorf(" field expected to be %v instead received %v", global.Node.Description.Name, nameStorage)
 		}
 	}
-	
+
 	{
 		// .Node.Description.Name
 		// Set/Get
@@ -251,17 +321,17 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 		if expected != global.Node.Description.Name {
 			t.Errorf(" field expected to be %v instead received %v", expected, global.Node.Description.Name)
 		}
-	
+
 		nameStorage := storage.Node().Description().Name().Value()
 		if nameStorage != expected {
 			t.Errorf("response from calling contract was expected to be %v instead received %v", expected, nameStorage)
 		}
-	
+
 		if nameStorage != global.Node.Description.Name {
 			t.Errorf(" field expected to be %v instead received %v", global.Node.Description.Name, nameStorage)
 		}
 	}
-	
+
 	{
 		// .Node.Description.Details
 		nameStorage := storage.Node().Description().Details().Value()
@@ -269,12 +339,12 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 		if nameStorage != expected {
 			t.Errorf("response from calling contract was expected to be %v instead received %v", expected, nameStorage)
 		}
-	
+
 		if nameStorage != global.Node.Description.Details {
 			t.Errorf(" field expected to be %v instead received %v", global.Node.Description.Details, nameStorage)
 		}
 	}
-	
+
 	{
 		// .Node.Description.Details
 		// Set/Get
@@ -283,12 +353,12 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 		if expected != global.Node.Description.Details {
 			t.Errorf(" field expected to be %v instead received %v", expected, global.Node.Description.Details)
 		}
-	
+
 		nameStorage := storage.Node().Description().Details().Value()
 		if nameStorage != expected {
 			t.Errorf("response from calling contract was expected to be %v instead received %v", expected, nameStorage)
 		}
-	
+
 		if nameStorage != global.Node.Description.Details {
 			t.Errorf(" field expected to be %v instead received %v", global.Node.Description.Details, nameStorage)
 		}
@@ -301,26 +371,26 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 		if bytes.Compare(nodeKeysStorage, expected) != 0 {
 			t.Errorf("response from calling contract was expected to be %v instead received %v", expected, nodeKeysStorage)
 		}
-	
+
 		if bytes.Compare(nodeKeysStorage, global.Node.NodeKeys) != 0 {
 			t.Errorf(" field expected to be %v instead received %v", global.Node.NodeKeys, nodeKeysStorage)
 		}
 	}
-	
+
 	{
 		// .Node.NodeKeys
 		// Set/Get
 		expected := []byte("MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCRRM4LWDW6x/8rHP0yte94a2LG17+6niq0uBq8h5AnwB5v6N0tHOoAA5nz18EkD4Lvp/NyUPCaAmWZyFQ3eHR5iv4bUItt5PJWbFGXSMWOxZyeoZjylK+V8fpbgjHq9a4JlMLzWtGJ/6f5/49uVXaUsfSiDL+zJawrdAjiM5/xyQIDAQAB")
 		storage.Node().NodeKeys().SetValue(expected)
-		if bytes.Compare(expected,global.Node.NodeKeys) != 0 {
+		if bytes.Compare(expected, global.Node.NodeKeys) != 0 {
 			t.Errorf(" field expected to be %v instead received %v", expected, global.Node.NodeKeys)
 		}
-	
+
 		nodeKeysStorage := storage.Node().NodeKeys().Value()
 		if bytes.Compare(nodeKeysStorage, expected) != 0 {
 			t.Errorf("response from calling contract was expected to be %v instead received %v", expected, nodeKeysStorage)
 		}
-	
+
 		if bytes.Compare(nodeKeysStorage, global.Node.NodeKeys) != 0 {
 			t.Errorf(" field expected to be %v instead received %v", global.Node.NodeKeys, nodeKeysStorage)
 		}
@@ -379,7 +449,6 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 			}
 		}
 	}
-
 
 	{
 		// .Version
@@ -465,7 +534,6 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 	}
 
 }
-
 
 // Tests that storage manipulation
 func TestStorageManipulation(t *testing.T) {
