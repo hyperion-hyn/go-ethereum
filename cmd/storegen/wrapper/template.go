@@ -148,6 +148,7 @@ func SetStateAsBytes(db StateDB, addr common.Address, slot *big.Int, value []byt
 
 {{define "storage_fields"}}
 // {{ printf "%#v" . }}
+// {{ printf "%#v" .SolKind.Type.String }}
 {{- if eq .Name "BigInt"}}
 	obj    {{.Name}}
 {{else if or (isptr .) (ismap .)}}
@@ -179,6 +180,7 @@ func SetStateAsBytes(db StateDB, addr common.Address, slot *big.Int, value []byt
 {{range $basics}}
 type {{.Name}}={{.Type}}
 type Storage_{{.Name}} struct {
+// Builtin-Type
 {{template "storage_fields" .}}
 }
 
@@ -216,12 +218,10 @@ func (s *Storage_{{.Name}}) Value() {{.Type}} {
 	hash := s.db.GetState(s.addr, common.BigToHash(s.slot))
 	*s.obj = common.NewDecFromBigIntWithPrec(hash.Big(), common.Precision)
 	return *s.obj
-{{else if isFixedByteArray .Name}}
+{{else if match .Name "Bytes([1-9]|[12][0-9]|3[0-2])" }}
 	hash := s.db.GetState(s.addr, common.BigToHash(s.slot))
 	length := len(*s.obj)
-	if length <= 32 {
-		copy((*s.obj)[:], hash.Bytes()[32-length:])
-	}
+	copy((*s.obj)[:], hash.Bytes()[32-length:])
 	return *s.obj
 {{else}}
 	UNSUPPORTED {{.Name}} {{.Type}}
@@ -266,13 +266,10 @@ func (s *Storage_{{.Name}}) SetValue(value {{.Type}}) {
 	hash := value.BigInt()
 	s.db.SetState(s.addr, common.BigToHash(s.slot), common.BigToHash(hash))
 	*s.obj = value
-{{else if isFixedByteArray .Name}}
-	length := len(*s.obj)
-	if length <= 32 {
-		hash := common.BytesToHash(value[:])
-		s.db.SetState(s.addr, common.BigToHash(s.slot), hash)
-		copy((*s.obj)[:], value[:])
-	}
+{{else if match .Name "Bytes([1-9]|[12][0-9]|3[0-2])" }}
+	hash := common.BytesToHash(value[:])
+	s.db.SetState(s.addr, common.BigToHash(s.slot), hash)
+	copy((*s.obj)[:], value[:])
 {{else}}
 	UNSUPPORTED {{.Name}} {{.Type}}
 {{end -}}
@@ -280,11 +277,10 @@ func (s *Storage_{{.Name}}) SetValue(value {{.Type}}) {
 {{end}}{{/* basics */}}
 
 
-
-
 {{range $defines}}
 // {{.Name}} is an auto generated low-level Go binding around an user-defined struct.
 // {{ printf "%#v" . }}
+// {{ printf "%#v" .SolKind.Type.String }}
 type {{.Name}} {{.Type}}
 
 type Storage_{{.Name}} struct {
@@ -293,7 +289,56 @@ type Storage_{{.Name}} struct {
 
 
 {{- if isarray .}}
+
 {{$elem := index .Fields 0}}
+{{ if isFixedSizeByteArray .SolKind.Type }}
+
+func (s* Storage_{{.Name}}) Value() {{.Type}} {
+	// {{ printf "%#v" . }}
+	length := len(*s.obj)
+	base := s.slot
+	for offset, i := 0, uint64(0); offset < length; offset, i = offset+32, i+1 {
+		var available int
+		h := s.db.GetState(s.addr, common.BigToHash(big.NewInt(0).Add(base, big.NewInt(0).SetUint64(i))))
+		remaining := length - offset
+		if remaining >= 32 {
+			available = 32
+		} else {
+			available = remaining
+		}
+
+		data := h.Bytes()
+		for j := 0; j < available; j++ {
+			(*s.obj)[offset + j] = data[31-j]
+		}
+	}
+	return *s.obj
+}
+
+func (s *Storage_{{.Name}}) SetValue(value {{.Type}}) {
+	// {{ printf "%#v" . }}
+	length := len(*s.obj)
+	base := s.slot
+	for offset, i := 0, uint64(0); offset < length; offset, i = offset+32, i+1 {
+		var available int
+		var val [32]byte
+
+		remaining := length - offset
+		if remaining >= 32 {
+			available = 32
+		} else {
+			available = remaining
+		}
+
+		for j := 0; j < available; j++ {
+			val[31-j] = value[offset+j]
+		}
+
+		s.db.SetState(s.addr, common.BigToHash(big.NewInt(0).Add(base, big.NewInt(0).SetUint64(i))), common.BytesToHash(val[:]))
+	}
+}
+
+{{ else }}
 func (s* Storage_{{.Name}}) Length() int {
 	return len(s.obj)
 }
@@ -322,7 +367,8 @@ func (s* Storage_{{.Name}}) Get(index uint64) ( *Storage_{{$elem.Type}} ) {
 	}
 }
 
-{{end}}
+{{end}} {{/* fixed-size byte array */}}
+{{end}} {{/* array */}}
 
 
 {{- if isslice .}}
@@ -367,7 +413,7 @@ func (s* Storage_{{.Name}}) Get(index uint64) ( *Storage_{{$elem.Type}} ) {
 	}
 }
 
-{{end}}
+{{end}} {{/* slice */}}
 
 
 {{- if ismap . }}
@@ -417,7 +463,7 @@ func (s* Storage_{{.Name}}) Get(key {{$elemKey.Type}}) ( *Storage_{{$elemValue.T
 	}
 }
 
-{{end}}
+{{end}} {{/* map */}}
 
 {{end}}{{/* defines */}}
 

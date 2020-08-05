@@ -274,8 +274,8 @@ func bindStructTypeGo(kind abi.Type, structs map[string]*tmplStruct) (string, er
 	}
 }
 
-func isFixedLengthByteArray(name string) bool {
-	re := regexp.MustCompile("Bytes[0-9]+")
+func isBytes(name string) bool {
+	re := regexp.MustCompile("(Bytes|Bytes([1-9]|[12][0-9]|3[0-2]))")
 	return re.MatchString(name)
 }
 
@@ -291,7 +291,7 @@ func isBuiltinType(name string) bool {
 		"Bytes":
 		return true
 	default:
-		if isFixedLengthByteArray(name) {
+		if isBytes(name) {
 			return true
 		}
 		return false
