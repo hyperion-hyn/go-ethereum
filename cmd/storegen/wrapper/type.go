@@ -142,12 +142,12 @@ func newType(t string, definition Type, types map[string]Type) (typ abi.Type, er
 				cType.Type = reflect.PtrTo(cType.Type)
 				cType.Kind = cType.Type.Kind()
 			}
-			typ.Type = reflect.SliceOf(reflect.TypeOf(cType.Type))
+			typ.Type = reflect.SliceOf(cType.Type)
 		} else {
 			typ.T = abi.ArrayTy
 			typ.Kind = reflect.Array
 			typ.Size = varSize
-			typ.Type = reflect.ArrayOf(varSize, reflect.TypeOf(cType.Type))
+			typ.Type = reflect.ArrayOf(varSize, cType.Type)
 		}
 
 	case "struct":
