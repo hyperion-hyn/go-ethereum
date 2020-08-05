@@ -75,6 +75,7 @@ func Store(types []string, layouts []string, pkg string, lang bind.Lang) (string
 		"isarray":      isarray,
 		"isslice":      isslice,
 		"ismap":        ismap,
+		"isFixedByteArray": isFixedLengthByteArray,
 	}
 	tmpl := template.Must(template.New("").Funcs(funcs).Parse(tmplSource[lang]))
 	if err := tmpl.Execute(buffer, data); err != nil {
