@@ -29,26 +29,62 @@ func (s *Storage_BLSPublicKeys_) Length() int {
 	return int(s.Keys().Length().Int64())
 }
 
+func (s *Storage_BLSPublicKeys_) Save(keys *BLSPublicKeys_) {
+	length := len(keys.Keys)
+	s.Keys().Resize(uint64(length))
+	for i := 0; i < length; i++ {
+		s.Keys().Get(uint64(i)).Key().SetValue(keys.Keys[i].Key)
+	}
+}
+
 func (s *Storage_BLSPublicKeys_) Get(index int) *BLSPublicKey_ {
-	return nil
+	s.Keys().Get(uint64(index)).Key().Value()
+	return s.Keys().Get(uint64(index)).obj
 }
 
 func (s *Storage_BLSPublicKeys_) Set(index int, key *BLSPublicKey_) {
+	s.Keys().Get(uint64(index)).Key().SetValue(key.Key)
 }
 
 func (s *Storage_BLSPublicKeys_) Remove(index int, keepOrder bool) {
+
+	//remove current
+	length := s.Length()
+	lastOneStorage := s.Keys().Get(uint64(length - 1))
+	//remove lastOne
+	s.Keys().Get(uint64(length - 1)).Key().SetValue([48]uint8{})
+	//replace lastOne to index
+	s.Keys().Get(uint64(index)).Key().SetValue(lastOneStorage.Key().Value())
+	//resize length
+	s.Keys().Resize(uint64(length - 1))
 }
 
 func (s *Storage_BLSPublicKeys_) Push(key *BLSPublicKey_) {
-	s.Keys()
+	length := s.Length()
+
+	//over length will auto resize , not resize again
+	s.Keys().Get(uint64(length)).Key().SetValue(key.Key)
 }
 
 func (s *Storage_BLSPublicKeys_) Pop() *BLSPublicKey_ {
-	return nil
+
+	length := s.Length()
+
+	blsPublicKeyTemp :=
+		BLSPublicKey_{Key: s.Keys().Get(uint64(length - 1)).Key().Value()}
+
+	s.Keys().Get(uint64(length - 1)).Key().SetValue([48]uint8{})
+	s.Keys().Resize(uint64(length - 1))
+	return &blsPublicKeyTemp
 }
 
 func (s *Storage_BLSPublicKeys_) Load() *BLSPublicKeys_ {
-	return nil
+	length := s.Length()
+
+	for i := 0; i < length; i++ {
+		s.Keys().Get(uint64(i)).Key().Value()
+	}
+	return s.obj
 }
 
 // Storage_AddressSet_
@@ -86,7 +122,7 @@ func (s *Storage_Validator_) Load() *Validator_ {
 func (s *Storage_Validator_) Save(validator *Validator_) {
 
 	s.ValidatorAddress().SetValue(validator.ValidatorAddress)
-	s.SlotPubKeys().Load() // todo modify
+	s.SlotPubKeys().Save(&validator.SlotPubKeys)
 	s.LastEpochInCommittee().SetValue(validator.LastEpochInCommittee)
 	s.Status().SetValue(validator.Status)
 	s.Commission().CommissionRates().Rate().SetValue(validator.Commission.CommissionRates.Rate)
@@ -106,7 +142,7 @@ func (s *Storage_Validator_) Save(validator *Validator_) {
 func (s *Storage_ValidatorWrapper_) Save(validatorWrapper *ValidatorWrapper_) {
 
 	s.Validator().Save(&validatorWrapper.Validator)
-	s.Redelegations() // todo put RedelegationMap_
+	s.Redelegations().Save(validatorWrapper.Redelegations)
 	s.Counters().NumBlocksSigned().SetValue(validatorWrapper.Counters.NumBlocksSigned)
 	s.Counters().NumBlocksToSign().SetValue(validatorWrapper.Counters.NumBlocksToSign)
 	s.BlockReward().SetValue(validatorWrapper.BlockReward)
@@ -280,6 +316,17 @@ func (s *Storage_RedelegationMap_) Remove(key common.Address) {
 
 }
 
+func (s *Storage_RedelegationMap_) Save(relegationMap RedelegationMap_) {
+
+	relegationKeys := relegationMap.Keys
+	s.Keys().Resize(uint64(len(relegationKeys)))
+	for i := 0; i < len(relegationKeys); i++ {
+		addressTemp := relegationKeys[i]
+		s.Keys().Get(uint64(i)).SetValue(*addressTemp)
+		s.Map().Get(*addressTemp).Entry().Save(relegationMap.Map[*addressTemp].Entry)
+	}
+}
+
 // Storage_Slots_
 
 func (s *Storage_Slots_) Length() int {
@@ -310,14 +357,13 @@ func (s *Storage_Slots_) Remove(index int, keepOrder bool) {
 
 	oldEntriesLength := s.Entrys().Length()
 
-	uintArray := [48]uint8{}
 	//set lastEntity to index
 	lastEntry := s.Entrys().Get(oldEntriesLength.Uint64() - 1)
 	s.Entrys().Get(uint64(index)).Save(&Slot_{
 		EcdsaAddress: lastEntry.EcdsaAddress().Value(),
 		BLSPublicKey: BLSPublicKey_{
-			Key: uintArray,
-		}, //todo modify this
+			Key: lastEntry.BLSPublicKey().Key().Value(),
+		},
 		EffectiveStake: lastEntry.EffectiveStake().Value(),
 	})
 
@@ -360,19 +406,19 @@ func (s *Storage_Slot_) SetNil() {
 
 	s.EffectiveStake().SetValue(common.NewDec(int64(0)))
 	s.EcdsaAddress().SetValue(common.BigToAddress(big.NewInt(0)))
-	s.BLSPublicKey() // todo set value
+	s.BLSPublicKey().Key().SetValue([48]uint8{})
 }
 
 func (s *Storage_Slot_) Save(key *Slot_) {
 
-	s.BLSPublicKey() // todo update uint array
+	s.BLSPublicKey().Key().SetValue(key.BLSPublicKey.Key)
 	s.EcdsaAddress().SetValue(key.EcdsaAddress)
 	s.EffectiveStake().SetValue(key.EffectiveStake)
 }
 
 func (s *Storage_Slot_) Load() *Slot_ {
 
-	s.BLSPublicKey() // todo update uint array
+	s.BLSPublicKey().Key().Value()
 	s.EcdsaAddress().Value()
 	s.EffectiveStake().Value()
 	return s.obj
