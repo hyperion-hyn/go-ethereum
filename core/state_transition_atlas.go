@@ -135,7 +135,9 @@ func (st *StateTransition) verifyAndApplyCreateValidatorTx(msg *staking.CreateVa
 	for _, key := range wrapper.Validator.SlotPubKeys.Keys {
 		keySet.Get(key.Hex()).SetValue(true)
 	}
-	validatorPool.DescriptionIdentitySet().Get(msg.Description.Identity).SetValue(true)
+	if msg.Description.Identity != "" {
+		validatorPool.DescriptionIdentitySet().Get(msg.Description.Identity).SetValue(true)
+	}
 
 	st.state.SubBalance(msg.OperatorAddress, defaultStakingAmount)
 
