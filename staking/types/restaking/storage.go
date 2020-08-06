@@ -104,6 +104,7 @@ func (s *Storage_Validator_) Load() *Validator_ {
 	s.ValidatorAddress().Value()
 	s.SlotPubKeys().Load() // need check
 	s.LastEpochInCommittee().Value()
+	s.MaxTotalDelegation().Value()
 	s.Status().Value()
 	s.Commission().CommissionRates().Rate().Value()
 	s.Commission().CommissionRates().MaxChangeRate().Value()
@@ -124,6 +125,7 @@ func (s *Storage_Validator_) Save(validator *Validator_) {
 	s.ValidatorAddress().SetValue(validator.ValidatorAddress)
 	s.SlotPubKeys().Save(&validator.SlotPubKeys)
 	s.LastEpochInCommittee().SetValue(validator.LastEpochInCommittee)
+	s.MaxTotalDelegation().SetValue(validator.MaxTotalDelegation)
 	s.Status().SetValue(validator.Status)
 	s.Commission().CommissionRates().Rate().SetValue(validator.Commission.CommissionRates.Rate)
 	s.Commission().CommissionRates().MaxChangeRate().SetValue(validator.Commission.CommissionRates.MaxChangeRate)

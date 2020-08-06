@@ -26,12 +26,13 @@ const (
 var (
 	emptyBLSPubKey = BLSPublicKey_{}
 
-	errCommissionRateTooLarge  = errors.New("commission rate and change rate can not be larger than max commission rate")
-	errInvalidCommissionRate   = errors.New("commission rate, change rate and max rate should be a value ranging from 0.0 to 1.0")
-	errNeedAtLeastOneSlotKey   = errors.New("need at least one slot key")
-	ErrExcessiveBLSKeys        = errors.New("more slot keys provided than allowed")
-	errDuplicateSlotKeys       = errors.New("slot keys can not have duplicates")
-	ErrCommitteeNil            = errors.New("subcommittee is nil pointer")
+	errCommissionRateTooLarge = errors.New("commission rate and change rate can not be larger than max commission rate")
+	errInvalidCommissionRate  = errors.New("commission rate, change rate and max rate should be a value ranging from 0.0 to 1.0")
+	errNeedAtLeastOneSlotKey  = errors.New("need at least one slot key")
+	ErrExcessiveBLSKeys       = errors.New("more slot keys provided than allowed")
+	errDuplicateSlotKeys      = errors.New("slot keys can not have duplicates")
+	ErrCommitteeNil           = errors.New("subcommittee is nil pointer")
+	errNilMaxTotalDelegation  = errors.New("MaxTotalDelegation can not be nil")
 )
 
 // BLSSignature defines the bls signature
@@ -68,7 +69,6 @@ func (pk *BLSPublicKey_) FromLibBLSPublicKey(key *bls.PublicKey) error {
 	copy(pk.Key[:], bs)
 	return nil
 }
-
 
 // EnsureLength ensures the length of a validator's description.
 func (d Description_) EnsureLength() (Description_, error) {
@@ -123,6 +123,11 @@ func (v *Validator_) SanityCheck(maxSlotKeyAllowed int) error {
 			c, maxSlotKeyAllowed,
 		)
 	}
+
+	if v.MaxTotalDelegation == nil {
+		return errNilMaxTotalDelegation
+	}
+	// TODO(ATLAS): minimal delegation?
 
 	if v.Commission.CommissionRates.Rate.LT(zeroPercent) || v.Commission.CommissionRates.Rate.GT(hundredPercent) {
 		return errors.Wrapf(

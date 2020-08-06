@@ -27,6 +27,7 @@ var (
 	errNoRewardsToCollect          = errors.New("no rewards to collect")
 	errRedelegationNotExist        = errors.New("redelegation does not exist")
 	errValidatorOperatorNotExist   = errors.New("validator operator does not exist")
+	errInvalidTotalDelegation      = errors.New("total delegation can not be bigger than max_total_delegation", )
 )
 
 var (
@@ -165,6 +166,11 @@ func VerifyCreateValidatorMsg(stateDB vm.StateDB, blockNum *big.Int, msg *stakin
 	if err := v.SanityCheck(staking.MaxPubKeyAllowed); err != nil {
 		return nil, err
 	}
+
+	if err = delegationSanityCheck(msg.MaxTotalDelegation, common.Big0, defaultStakingAmount); err != nil {
+		return nil, err
+	}
+
 	return v, nil
 }
 
@@ -222,6 +228,12 @@ func VerifyEditValidatorMsg(stateDB vm.StateDB, chainContext ChainContext, epoch
 	if newRate.Sub(rateAtBeginningOfEpoch).Abs().GT(validator.Commission.CommissionRates.MaxChangeRate, ) {
 		return errCommissionRateChangeTooFast
 	}
+
+	if msg.MaxTotalDelegation != nil {
+		if err = delegationSanityCheck(msg.MaxTotalDelegation, validator.MaxTotalDelegation, common.Big0); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -242,6 +254,9 @@ func VerifyRedelegateMsg(stateDB vm.StateDB, msg *staking.Redelegate, signer com
 	if _, err := stateDB.ValidatorByAddress(msg.ValidatorAddress); err != nil {
 		return err
 	}
+
+	// TODO(ATLAS): max total delegation && min delegation
+
 	return nil
 }
 
@@ -302,6 +317,19 @@ func VerifyCollectRedelRewardsMsg(stateDB vm.StateDB, msg *staking.CollectRedele
 
 	if redelegation.Reward().Value().Cmp(common.Big0) == 0 {
 		return errNoRewardsToCollect
+	}
+	return nil
+}
+
+func delegationSanityCheck(maxTotalTotalDelegation, currentTotalDelegation, incrementalDelegation *big.Int) error {
+	total := big.NewInt(0).Add(currentTotalDelegation, incrementalDelegation)
+	if total.Cmp(maxTotalTotalDelegation) > 0 {
+		return errors.Wrapf(
+			errInvalidTotalDelegation,
+			"total %s max-total %s",
+			total.String(),
+			maxTotalTotalDelegation.String(),
+		)
 	}
 	return nil
 }

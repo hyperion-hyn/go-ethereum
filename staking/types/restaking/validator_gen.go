@@ -93,7 +93,7 @@ type Address = common.Address
 type Storage_Address struct {
 	// Builtin-Type
 
-	// &wrapper.tmplStruct{T:0x7, Name:"Address", Fields:[]*wrapper.tmplField(nil), Type:"common.Address", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x11, Type:(*reflect.rtype)(0x48bfac0), Size:20, T:0x7, NumberOfBytes:0x14, StringKind:"t_address", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0x7, Name:"Address", Fields:[]*wrapper.tmplField(nil), Type:"common.Address", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x11, Type:(*reflect.rtype)(0x48bf8e0), Size:20, T:0x7, NumberOfBytes:0x14, StringKind:"t_address", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 	obj    *Address
 	db     StateDB
 	addr   common.Address
@@ -103,7 +103,7 @@ type Storage_Address struct {
 }
 
 func (s *Storage_Address) Value() common.Address {
-	// &wrapper.tmplStruct{T:0x7, Name:"Address", Fields:[]*wrapper.tmplField(nil), Type:"common.Address", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x11, Type:(*reflect.rtype)(0x48bfac0), Size:20, T:0x7, NumberOfBytes:0x14, StringKind:"t_address", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0x7, Name:"Address", Fields:[]*wrapper.tmplField(nil), Type:"common.Address", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x11, Type:(*reflect.rtype)(0x48bf8e0), Size:20, T:0x7, NumberOfBytes:0x14, StringKind:"t_address", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 	// NumberOfBytes = 20
 	hash := s.db.GetState(s.addr, common.BigToHash(s.slot))
 	*s.obj = common.BigToAddress(hash.Big())
@@ -111,7 +111,7 @@ func (s *Storage_Address) Value() common.Address {
 }
 
 func (s *Storage_Address) SetValue(value common.Address) {
-	// &wrapper.tmplStruct{T:0x7, Name:"Address", Fields:[]*wrapper.tmplField(nil), Type:"common.Address", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x11, Type:(*reflect.rtype)(0x48bfac0), Size:20, T:0x7, NumberOfBytes:0x14, StringKind:"t_address", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0x7, Name:"Address", Fields:[]*wrapper.tmplField(nil), Type:"common.Address", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x11, Type:(*reflect.rtype)(0x48bf8e0), Size:20, T:0x7, NumberOfBytes:0x14, StringKind:"t_address", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 	hash := value.Hash()
 	s.db.SetState(s.addr, common.BigToHash(s.slot), hash)
 	*s.obj = value
@@ -121,7 +121,7 @@ type BigInt = *big.Int
 type Storage_BigInt struct {
 	// Builtin-Type
 
-	// &wrapper.tmplStruct{T:0x1, Name:"BigInt", Fields:[]*wrapper.tmplField(nil), Type:"*big.Int", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x492a7a0), Size:256, T:0x1, NumberOfBytes:0x20, StringKind:"t_uint256", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0x1, Name:"BigInt", Fields:[]*wrapper.tmplField(nil), Type:"*big.Int", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x492a900), Size:256, T:0x1, NumberOfBytes:0x20, StringKind:"t_uint256", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 	obj    BigInt
 	db     StateDB
 	addr   common.Address
@@ -131,7 +131,7 @@ type Storage_BigInt struct {
 }
 
 func (s *Storage_BigInt) Value() *big.Int {
-	// &wrapper.tmplStruct{T:0x1, Name:"BigInt", Fields:[]*wrapper.tmplField(nil), Type:"*big.Int", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x492a7a0), Size:256, T:0x1, NumberOfBytes:0x20, StringKind:"t_uint256", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0x1, Name:"BigInt", Fields:[]*wrapper.tmplField(nil), Type:"*big.Int", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x492a900), Size:256, T:0x1, NumberOfBytes:0x20, StringKind:"t_uint256", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 	// NumberOfBytes = 32
 	hash := s.db.GetState(s.addr, common.BigToHash(s.slot))
 	*s.obj = *hash.Big()
@@ -139,7 +139,7 @@ func (s *Storage_BigInt) Value() *big.Int {
 }
 
 func (s *Storage_BigInt) SetValue(value *big.Int) {
-	// &wrapper.tmplStruct{T:0x1, Name:"BigInt", Fields:[]*wrapper.tmplField(nil), Type:"*big.Int", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x492a7a0), Size:256, T:0x1, NumberOfBytes:0x20, StringKind:"t_uint256", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0x1, Name:"BigInt", Fields:[]*wrapper.tmplField(nil), Type:"*big.Int", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x492a900), Size:256, T:0x1, NumberOfBytes:0x20, StringKind:"t_uint256", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 	hash := value
 	s.db.SetState(s.addr, common.BigToHash(s.slot), common.BigToHash(hash))
 	*s.obj = *value
@@ -149,7 +149,7 @@ type Bool = bool
 type Storage_Bool struct {
 	// Builtin-Type
 
-	// &wrapper.tmplStruct{T:0x2, Name:"Bool", Fields:[]*wrapper.tmplField(nil), Type:"bool", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x1, Type:(*reflect.rtype)(0x47eb100), Size:0, T:0x2, NumberOfBytes:0x1, StringKind:"t_bool", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0x2, Name:"Bool", Fields:[]*wrapper.tmplField(nil), Type:"bool", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x1, Type:(*reflect.rtype)(0x47eaf80), Size:0, T:0x2, NumberOfBytes:0x1, StringKind:"t_bool", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 	obj    *Bool
 	db     StateDB
 	addr   common.Address
@@ -159,7 +159,7 @@ type Storage_Bool struct {
 }
 
 func (s *Storage_Bool) Value() bool {
-	// &wrapper.tmplStruct{T:0x2, Name:"Bool", Fields:[]*wrapper.tmplField(nil), Type:"bool", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x1, Type:(*reflect.rtype)(0x47eb100), Size:0, T:0x2, NumberOfBytes:0x1, StringKind:"t_bool", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0x2, Name:"Bool", Fields:[]*wrapper.tmplField(nil), Type:"bool", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x1, Type:(*reflect.rtype)(0x47eaf80), Size:0, T:0x2, NumberOfBytes:0x1, StringKind:"t_bool", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 	// NumberOfBytes = 1
 	hash := s.db.GetState(s.addr, common.BigToHash(s.slot))
 	*s.obj = (hash.Big().Int64() != 0)
@@ -167,7 +167,7 @@ func (s *Storage_Bool) Value() bool {
 }
 
 func (s *Storage_Bool) SetValue(value bool) {
-	// &wrapper.tmplStruct{T:0x2, Name:"Bool", Fields:[]*wrapper.tmplField(nil), Type:"bool", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x1, Type:(*reflect.rtype)(0x47eb100), Size:0, T:0x2, NumberOfBytes:0x1, StringKind:"t_bool", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0x2, Name:"Bool", Fields:[]*wrapper.tmplField(nil), Type:"bool", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x1, Type:(*reflect.rtype)(0x47eaf80), Size:0, T:0x2, NumberOfBytes:0x1, StringKind:"t_bool", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 	var val uint
 	if value {
 		val = 1
@@ -183,7 +183,7 @@ type Decimal = common.Dec
 type Storage_Decimal struct {
 	// Builtin-Type
 
-	// &wrapper.tmplStruct{T:0xb, Name:"Decimal", Fields:[]*wrapper.tmplField(nil), Type:"common.Dec", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0x4922a80), Size:0, T:0xb, NumberOfBytes:0x20, StringKind:"t_struct(Decimal)4_storage", TupleRawName:"Decimal", TupleElems:[]*abi.Type{(*abi.Type)(0xc000499c20)}, TupleRawNames:[]string{"f"}}}
+	// &wrapper.tmplStruct{T:0xb, Name:"Decimal", Fields:[]*wrapper.tmplField(nil), Type:"common.Dec", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0x4922be0), Size:0, T:0xb, NumberOfBytes:0x20, StringKind:"t_struct(Decimal)4_storage", TupleRawName:"Decimal", TupleElems:[]*abi.Type{(*abi.Type)(0xc00045a750)}, TupleRawNames:[]string{"f"}}}
 	obj    *Decimal
 	db     StateDB
 	addr   common.Address
@@ -193,7 +193,7 @@ type Storage_Decimal struct {
 }
 
 func (s *Storage_Decimal) Value() common.Dec {
-	// &wrapper.tmplStruct{T:0xb, Name:"Decimal", Fields:[]*wrapper.tmplField(nil), Type:"common.Dec", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0x4922a80), Size:0, T:0xb, NumberOfBytes:0x20, StringKind:"t_struct(Decimal)4_storage", TupleRawName:"Decimal", TupleElems:[]*abi.Type{(*abi.Type)(0xc000499c20)}, TupleRawNames:[]string{"f"}}}
+	// &wrapper.tmplStruct{T:0xb, Name:"Decimal", Fields:[]*wrapper.tmplField(nil), Type:"common.Dec", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0x4922be0), Size:0, T:0xb, NumberOfBytes:0x20, StringKind:"t_struct(Decimal)4_storage", TupleRawName:"Decimal", TupleElems:[]*abi.Type{(*abi.Type)(0xc00045a750)}, TupleRawNames:[]string{"f"}}}
 	// NumberOfBytes = 32
 	hash := s.db.GetState(s.addr, common.BigToHash(s.slot))
 	*s.obj = common.NewDecFromBigIntWithPrec(hash.Big(), common.Precision)
@@ -201,7 +201,7 @@ func (s *Storage_Decimal) Value() common.Dec {
 }
 
 func (s *Storage_Decimal) SetValue(value common.Dec) {
-	// &wrapper.tmplStruct{T:0xb, Name:"Decimal", Fields:[]*wrapper.tmplField(nil), Type:"common.Dec", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0x4922a80), Size:0, T:0xb, NumberOfBytes:0x20, StringKind:"t_struct(Decimal)4_storage", TupleRawName:"Decimal", TupleElems:[]*abi.Type{(*abi.Type)(0xc000499c20)}, TupleRawNames:[]string{"f"}}}
+	// &wrapper.tmplStruct{T:0xb, Name:"Decimal", Fields:[]*wrapper.tmplField(nil), Type:"common.Dec", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0x4922be0), Size:0, T:0xb, NumberOfBytes:0x20, StringKind:"t_struct(Decimal)4_storage", TupleRawName:"Decimal", TupleElems:[]*abi.Type{(*abi.Type)(0xc00045a750)}, TupleRawNames:[]string{"f"}}}
 	hash := value.BigInt()
 	s.db.SetState(s.addr, common.BigToHash(s.slot), common.BigToHash(hash))
 	*s.obj = value
@@ -211,7 +211,7 @@ type String = string
 type Storage_String struct {
 	// Builtin-Type
 
-	// &wrapper.tmplStruct{T:0x3, Name:"String", Fields:[]*wrapper.tmplField(nil), Type:"string", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x18, Type:(*reflect.rtype)(0x47f59c0), Size:0, T:0x3, NumberOfBytes:0x20, StringKind:"t_string_memory_ptr", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0x3, Name:"String", Fields:[]*wrapper.tmplField(nil), Type:"string", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x18, Type:(*reflect.rtype)(0x47f58c0), Size:0, T:0x3, NumberOfBytes:0x20, StringKind:"t_string_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 	obj    *String
 	db     StateDB
 	addr   common.Address
@@ -221,7 +221,7 @@ type Storage_String struct {
 }
 
 func (s *Storage_String) Value() string {
-	// &wrapper.tmplStruct{T:0x3, Name:"String", Fields:[]*wrapper.tmplField(nil), Type:"string", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x18, Type:(*reflect.rtype)(0x47f59c0), Size:0, T:0x3, NumberOfBytes:0x20, StringKind:"t_string_memory_ptr", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0x3, Name:"String", Fields:[]*wrapper.tmplField(nil), Type:"string", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x18, Type:(*reflect.rtype)(0x47f58c0), Size:0, T:0x3, NumberOfBytes:0x20, StringKind:"t_string_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 	// NumberOfBytes = 32
 	rv := GetStateAsBytes(s.db, s.addr, s.slot)
 	*s.obj = string(rv)
@@ -229,7 +229,7 @@ func (s *Storage_String) Value() string {
 }
 
 func (s *Storage_String) SetValue(value string) {
-	// &wrapper.tmplStruct{T:0x3, Name:"String", Fields:[]*wrapper.tmplField(nil), Type:"string", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x18, Type:(*reflect.rtype)(0x47f59c0), Size:0, T:0x3, NumberOfBytes:0x20, StringKind:"t_string_memory_ptr", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0x3, Name:"String", Fields:[]*wrapper.tmplField(nil), Type:"string", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x18, Type:(*reflect.rtype)(0x47f58c0), Size:0, T:0x3, NumberOfBytes:0x20, StringKind:"t_string_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 	SetStateAsBytes(s.db, s.addr, s.slot, []byte(value))
 	*s.obj = value
 }
@@ -238,7 +238,7 @@ type Uint8 = uint8
 type Storage_Uint8 struct {
 	// Builtin-Type
 
-	// &wrapper.tmplStruct{T:0x1, Name:"Uint8", Fields:[]*wrapper.tmplField(nil), Type:"uint8", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x8, Type:(*reflect.rtype)(0x47f5c80), Size:0, T:0x1, NumberOfBytes:0x1, StringKind:"uint8", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0x1, Name:"Uint8", Fields:[]*wrapper.tmplField(nil), Type:"uint8", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x8, Type:(*reflect.rtype)(0x47f5b80), Size:0, T:0x1, NumberOfBytes:0x1, StringKind:"uint8", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 	obj    *Uint8
 	db     StateDB
 	addr   common.Address
@@ -248,7 +248,7 @@ type Storage_Uint8 struct {
 }
 
 func (s *Storage_Uint8) Value() uint8 {
-	// &wrapper.tmplStruct{T:0x1, Name:"Uint8", Fields:[]*wrapper.tmplField(nil), Type:"uint8", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x8, Type:(*reflect.rtype)(0x47f5c80), Size:0, T:0x1, NumberOfBytes:0x1, StringKind:"uint8", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0x1, Name:"Uint8", Fields:[]*wrapper.tmplField(nil), Type:"uint8", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x8, Type:(*reflect.rtype)(0x47f5b80), Size:0, T:0x1, NumberOfBytes:0x1, StringKind:"uint8", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 	// NumberOfBytes = 1
 	hash := s.db.GetState(s.addr, common.BigToHash(s.slot))
 	data := hash.Bytes()[s.offset : s.offset+1]
@@ -257,7 +257,7 @@ func (s *Storage_Uint8) Value() uint8 {
 }
 
 func (s *Storage_Uint8) SetValue(value uint8) {
-	// &wrapper.tmplStruct{T:0x1, Name:"Uint8", Fields:[]*wrapper.tmplField(nil), Type:"uint8", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x8, Type:(*reflect.rtype)(0x47f5c80), Size:0, T:0x1, NumberOfBytes:0x1, StringKind:"uint8", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0x1, Name:"Uint8", Fields:[]*wrapper.tmplField(nil), Type:"uint8", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x8, Type:(*reflect.rtype)(0x47f5b80), Size:0, T:0x1, NumberOfBytes:0x1, StringKind:"uint8", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 	hash := s.db.GetState(s.addr, common.BigToHash(s.slot))
 	val := big.NewInt(0).SetUint64(uint64(value))
 	data := hash.Bytes()
@@ -268,13 +268,13 @@ func (s *Storage_Uint8) SetValue(value uint8) {
 }
 
 // Array_aaa956d410fd is an auto generated low-level Go binding around an user-defined struct.
-// &wrapper.tmplStruct{T:0x5, Name:"Array_aaa956d410fd", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000412620)}, Type:"[48]Uint8", SolKind:abi.Type{Elem:(*abi.Type)(0xc000499950), Kind:0x11, Type:(*reflect.rtype)(0x4802880), Size:48, T:0x5, NumberOfBytes:0x40, StringKind:"t_array(t_bytes1)48_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+// &wrapper.tmplStruct{T:0x5, Name:"Array_aaa956d410fd", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000100fc0)}, Type:"[48]Uint8", SolKind:abi.Type{Elem:(*abi.Type)(0xc00045ad80), Kind:0x11, Type:(*reflect.rtype)(0x4802780), Size:48, T:0x5, NumberOfBytes:0x40, StringKind:"t_array(t_bytes1)48_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 // "[48]uint8"
 type Array_aaa956d410fd [48]Uint8
 
 type Storage_Array_aaa956d410fd struct {
 
-	// &wrapper.tmplStruct{T:0x5, Name:"Array_aaa956d410fd", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000412620)}, Type:"[48]Uint8", SolKind:abi.Type{Elem:(*abi.Type)(0xc000499950), Kind:0x11, Type:(*reflect.rtype)(0x4802880), Size:48, T:0x5, NumberOfBytes:0x40, StringKind:"t_array(t_bytes1)48_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0x5, Name:"Array_aaa956d410fd", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000100fc0)}, Type:"[48]Uint8", SolKind:abi.Type{Elem:(*abi.Type)(0xc00045ad80), Kind:0x11, Type:(*reflect.rtype)(0x4802780), Size:48, T:0x5, NumberOfBytes:0x40, StringKind:"t_array(t_bytes1)48_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 	obj    *Array_aaa956d410fd
 	db     StateDB
 	addr   common.Address
@@ -284,7 +284,7 @@ type Storage_Array_aaa956d410fd struct {
 }
 
 func (s *Storage_Array_aaa956d410fd) Value() [48]Uint8 {
-	// &wrapper.tmplStruct{T:0x5, Name:"Array_aaa956d410fd", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000412620)}, Type:"[48]Uint8", SolKind:abi.Type{Elem:(*abi.Type)(0xc000499950), Kind:0x11, Type:(*reflect.rtype)(0x4802880), Size:48, T:0x5, NumberOfBytes:0x40, StringKind:"t_array(t_bytes1)48_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0x5, Name:"Array_aaa956d410fd", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000100fc0)}, Type:"[48]Uint8", SolKind:abi.Type{Elem:(*abi.Type)(0xc00045ad80), Kind:0x11, Type:(*reflect.rtype)(0x4802780), Size:48, T:0x5, NumberOfBytes:0x40, StringKind:"t_array(t_bytes1)48_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 	length := len(*s.obj)
 	base := s.slot
 	for offset, i := 0, uint64(0); offset < length; offset, i = offset+32, i+1 {
@@ -306,7 +306,7 @@ func (s *Storage_Array_aaa956d410fd) Value() [48]Uint8 {
 }
 
 func (s *Storage_Array_aaa956d410fd) SetValue(value [48]Uint8) {
-	// &wrapper.tmplStruct{T:0x5, Name:"Array_aaa956d410fd", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000412620)}, Type:"[48]Uint8", SolKind:abi.Type{Elem:(*abi.Type)(0xc000499950), Kind:0x11, Type:(*reflect.rtype)(0x4802880), Size:48, T:0x5, NumberOfBytes:0x40, StringKind:"t_array(t_bytes1)48_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0x5, Name:"Array_aaa956d410fd", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000100fc0)}, Type:"[48]Uint8", SolKind:abi.Type{Elem:(*abi.Type)(0xc00045ad80), Kind:0x11, Type:(*reflect.rtype)(0x4802780), Size:48, T:0x5, NumberOfBytes:0x40, StringKind:"t_array(t_bytes1)48_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 	length := len(*s.obj)
 	base := s.slot
 	for offset, i := 0, uint64(0); offset < length; offset, i = offset+32, i+1 {
@@ -328,15 +328,15 @@ func (s *Storage_Array_aaa956d410fd) SetValue(value [48]Uint8) {
 	}
 }
 
-// Map_2732d5ca2110 is an auto generated low-level Go binding around an user-defined struct.
-// &wrapper.tmplStruct{T:0xd, Name:"Map_2732d5ca2110", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000101ce0), (*wrapper.tmplField)(0xc000101dc0)}, Type:"map[Address]*RedelegationMapEntry_", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x15, Type:(*reflect.rtype)(0xc0003a2b40), Size:0, T:0xd, NumberOfBytes:0x20, StringKind:"t_mapping(t_address,t_struct(RedelegationMapEntry_)85_storage)", TupleRawName:"", TupleElems:[]*abi.Type{(*abi.Type)(0xc0004b1290), (*abi.Type)(0xc0004b1320)}, TupleRawNames:[]string(nil)}}
-// "map[common.Address]*struct { Entry struct { DelegatorAddress common.Address \"json:\\\"DelegatorAddress\\\" storage:\\\"slot=0,offset=0\\\"\"; Amount *big.Int \"json:\\\"Amount\\\" storage:\\\"slot=1,offset=0\\\"\"; Reward *big.Int \"json:\\\"Reward\\\" storage:\\\"slot=2,offset=0\\\"\"; Undelegation struct { Amount *big.Int \"json:\\\"Amount\\\" storage:\\\"slot=0,offset=0\\\"\"; Epoch *big.Int \"json:\\\"Epoch\\\" storage:\\\"slot=1,offset=0\\\"\" } \"json:\\\"Undelegation\\\" storage:\\\"slot=3,offset=0\\\"\" } \"json:\\\"Entry\\\" storage:\\\"slot=0,offset=0\\\"\"; Index *big.Int \"json:\\\"Index\\\" storage:\\\"slot=5,offset=0\\\"\" }"
-type Map_2732d5ca2110 map[Address]*RedelegationMapEntry_
+// Map_11675a09c025 is an auto generated low-level Go binding around an user-defined struct.
+// &wrapper.tmplStruct{T:0xd, Name:"Map_11675a09c025", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0004c4380), (*wrapper.tmplField)(0xc00057e0e0)}, Type:"map[Address]*ValidatorWrapperMapEntry_", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x15, Type:(*reflect.rtype)(0xc00043e370), Size:0, T:0xd, NumberOfBytes:0x20, StringKind:"t_mapping(t_address,t_struct(ValidatorWrapperMapEntry_)113_storage)", TupleRawName:"", TupleElems:[]*abi.Type{(*abi.Type)(0xc00046cfc0), (*abi.Type)(0xc00046d050)}, TupleRawNames:[]string(nil)}}
+// "map[common.Address]*struct { Entry struct { Validator struct { ValidatorAddress common.Address \"json:\\\"ValidatorAddress\\\" storage:\\\"slot=0,offset=0\\\"\"; OperatorAddresses struct { Keys []*common.Address \"json:\\\"Keys\\\" storage:\\\"slot=0,offset=0\\\"\"; Set map[common.Address]*bool \"json:\\\"Set\\\" storage:\\\"slot=1,offset=0\\\"\" } \"json:\\\"OperatorAddresses\\\" storage:\\\"slot=1,offset=0\\\"\"; SlotPubKeys struct { Keys []*struct { Key [48]uint8 \"json:\\\"Key\\\" storage:\\\"slot=0,offset=0\\\"\" } \"json:\\\"Keys\\\" storage:\\\"slot=0,offset=0\\\"\" } \"json:\\\"SlotPubKeys\\\" storage:\\\"slot=3,offset=0\\\"\"; LastEpochInCommittee *big.Int \"json:\\\"LastEpochInCommittee\\\" storage:\\\"slot=4,offset=0\\\"\"; MaxTotalDelegation *big.Int \"json:\\\"MaxTotalDelegation\\\" storage:\\\"slot=5,offset=0\\\"\"; Status *big.Int \"json:\\\"Status\\\" storage:\\\"slot=6,offset=0\\\"\"; Commission struct { CommissionRates struct { Rate struct { F *big.Int \"json:\\\"f\\\" storage:\\\"slot=0,offset=0\\\"\" } \"json:\\\"Rate\\\" storage:\\\"slot=0,offset=0\\\"\"; MaxRate struct { F *big.Int \"json:\\\"f\\\" storage:\\\"slot=0,offset=0\\\"\" } \"json:\\\"MaxRate\\\" storage:\\\"slot=1,offset=0\\\"\"; MaxChangeRate struct { F *big.Int \"json:\\\"f\\\" storage:\\\"slot=0,offset=0\\\"\" } \"json:\\\"MaxChangeRate\\\" storage:\\\"slot=2,offset=0\\\"\" } \"json:\\\"CommissionRates\\\" storage:\\\"slot=0,offset=0\\\"\"; UpdateHeight *big.Int \"json:\\\"UpdateHeight\\\" storage:\\\"slot=3,offset=0\\\"\" } \"json:\\\"Commission\\\" storage:\\\"slot=7,offset=0\\\"\"; Description struct { Name string \"json:\\\"Name\\\" storage:\\\"slot=0,offset=0\\\"\"; Identity string \"json:\\\"Identity\\\" storage:\\\"slot=1,offset=0\\\"\"; Website string \"json:\\\"Website\\\" storage:\\\"slot=2,offset=0\\\"\"; SecurityContact string \"json:\\\"SecurityContact\\\" storage:\\\"slot=3,offset=0\\\"\"; Details string \"json:\\\"Details\\\" storage:\\\"slot=4,offset=0\\\"\" } \"json:\\\"Description\\\" storage:\\\"slot=11,offset=0\\\"\"; CreationHeight *big.Int \"json:\\\"CreationHeight\\\" storage:\\\"slot=16,offset=0\\\"\" } \"json:\\\"Validator\\\" storage:\\\"slot=0,offset=0\\\"\"; Redelegations struct { Keys []*common.Address \"json:\\\"Keys\\\" storage:\\\"slot=0,offset=0\\\"\"; Map map[common.Address]*struct { Entry struct { DelegatorAddress common.Address \"json:\\\"DelegatorAddress\\\" storage:\\\"slot=0,offset=0\\\"\"; Amount *big.Int \"json:\\\"Amount\\\" storage:\\\"slot=1,offset=0\\\"\"; Reward *big.Int \"json:\\\"Reward\\\" storage:\\\"slot=2,offset=0\\\"\"; Undelegation struct { Amount *big.Int \"json:\\\"Amount\\\" storage:\\\"slot=0,offset=0\\\"\"; Epoch *big.Int \"json:\\\"Epoch\\\" storage:\\\"slot=1,offset=0\\\"\" } \"json:\\\"Undelegation\\\" storage:\\\"slot=3,offset=0\\\"\" } \"json:\\\"Entry\\\" storage:\\\"slot=0,offset=0\\\"\"; Index *big.Int \"json:\\\"Index\\\" storage:\\\"slot=5,offset=0\\\"\" } \"json:\\\"Map\\\" storage:\\\"slot=1,offset=0\\\"\" } \"json:\\\"Redelegations\\\" storage:\\\"slot=17,offset=0\\\"\"; Counters struct { NumBlocksToSign *big.Int \"json:\\\"NumBlocksToSign\\\" storage:\\\"slot=0,offset=0\\\"\"; NumBlocksSigned *big.Int \"json:\\\"NumBlocksSigned\\\" storage:\\\"slot=1,offset=0\\\"\" } \"json:\\\"Counters\\\" storage:\\\"slot=19,offset=0\\\"\"; BlockReward *big.Int \"json:\\\"BlockReward\\\" storage:\\\"slot=21,offset=0\\\"\"; TotalDelegation *big.Int \"json:\\\"TotalDelegation\\\" storage:\\\"slot=22,offset=0\\\"\"; TotalDelegationByOperator *big.Int \"json:\\\"TotalDelegationByOperator\\\" storage:\\\"slot=23,offset=0\\\"\" } \"json:\\\"Entry\\\" storage:\\\"slot=0,offset=0\\\"\"; Index *big.Int \"json:\\\"Index\\\" storage:\\\"slot=24,offset=0\\\"\" }"
+type Map_11675a09c025 map[Address]*ValidatorWrapperMapEntry_
 
-type Storage_Map_2732d5ca2110 struct {
+type Storage_Map_11675a09c025 struct {
 
-	// &wrapper.tmplStruct{T:0xd, Name:"Map_2732d5ca2110", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000101ce0), (*wrapper.tmplField)(0xc000101dc0)}, Type:"map[Address]*RedelegationMapEntry_", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x15, Type:(*reflect.rtype)(0xc0003a2b40), Size:0, T:0xd, NumberOfBytes:0x20, StringKind:"t_mapping(t_address,t_struct(RedelegationMapEntry_)85_storage)", TupleRawName:"", TupleElems:[]*abi.Type{(*abi.Type)(0xc0004b1290), (*abi.Type)(0xc0004b1320)}, TupleRawNames:[]string(nil)}}
-	obj    Map_2732d5ca2110
+	// &wrapper.tmplStruct{T:0xd, Name:"Map_11675a09c025", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0004c4380), (*wrapper.tmplField)(0xc00057e0e0)}, Type:"map[Address]*ValidatorWrapperMapEntry_", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x15, Type:(*reflect.rtype)(0xc00043e370), Size:0, T:0xd, NumberOfBytes:0x20, StringKind:"t_mapping(t_address,t_struct(ValidatorWrapperMapEntry_)113_storage)", TupleRawName:"", TupleElems:[]*abi.Type{(*abi.Type)(0xc00046cfc0), (*abi.Type)(0xc00046d050)}, TupleRawNames:[]string(nil)}}
+	obj    Map_11675a09c025
 	db     StateDB
 	addr   common.Address
 	slot   *big.Int
@@ -344,9 +344,47 @@ type Storage_Map_2732d5ca2110 struct {
 	dirty  StateValues
 }
 
-func (s *Storage_Map_2732d5ca2110) Get(key Address) *Storage_RedelegationMapEntry_ {
-	// Key:	&wrapper.tmplField{Type:"Address", ElemType:"", Name:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x11, Type:(*reflect.rtype)(0x48bfac0), Size:20, T:0x7, NumberOfBytes:0x14, StringKind:"t_address", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"", Slot:<nil>, Offset:0}
-	// Value: &wrapper.tmplField{Type:"RedelegationMapEntry_", ElemType:"", Name:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0xc000371b40), Size:0, T:0x6, NumberOfBytes:0xc0, StringKind:"t_struct(RedelegationMapEntry_)85_storage", TupleRawName:"RedelegationMapEntry_", TupleElems:[]*abi.Type{(*abi.Type)(0xc0004b13b0), (*abi.Type)(0xc0004b18c0)}, TupleRawNames:[]string{"Entry", "Index"}}, Tag:"", Slot:<nil>, Offset:0}
+func (s *Storage_Map_11675a09c025) Get(key Address) *Storage_ValidatorWrapperMapEntry_ {
+	// Key:	&wrapper.tmplField{Type:"Address", ElemType:"", Name:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x11, Type:(*reflect.rtype)(0x48bf8e0), Size:20, T:0x7, NumberOfBytes:0x14, StringKind:"t_address", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"", Slot:<nil>, Offset:0}
+	// Value: &wrapper.tmplField{Type:"ValidatorWrapperMapEntry_", ElemType:"", Name:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0xc000433640), Size:0, T:0x6, NumberOfBytes:0x320, StringKind:"t_struct(ValidatorWrapperMapEntry_)113_storage", TupleRawName:"ValidatorWrapperMapEntry_", TupleElems:[]*abi.Type{(*abi.Type)(0xc00045b290), (*abi.Type)(0xc00046cd80)}, TupleRawNames:[]string{"Entry", "Index"}}, Tag:"", Slot:<nil>, Offset:0}
+	keyBytes := key.Hash().Bytes()
+	hash := crypto.Keccak256Hash(append(keyBytes, common.BigToHash(s.slot).Bytes()...))
+	actual := hash.Big()
+	if s.obj[key] == nil {
+
+		instance := new(ValidatorWrapperMapEntry_)
+
+		s.obj[key] = instance
+	}
+
+	return &Storage_ValidatorWrapperMapEntry_{
+		obj:   s.obj[key],
+		db:    s.db,
+		addr:  s.addr,
+		slot:  actual,
+		dirty: s.dirty,
+	}
+}
+
+// Map_1e3b3171b974 is an auto generated low-level Go binding around an user-defined struct.
+// &wrapper.tmplStruct{T:0xd, Name:"Map_1e3b3171b974", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0004c4620), (*wrapper.tmplField)(0xc0004c4e00)}, Type:"map[Address]*RedelegationMapEntry_", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x15, Type:(*reflect.rtype)(0xc00043e230), Size:0, T:0xd, NumberOfBytes:0x20, StringKind:"t_mapping(t_address,t_struct(RedelegationMapEntry_)87_storage)", TupleRawName:"", TupleElems:[]*abi.Type{(*abi.Type)(0xc000453cb0), (*abi.Type)(0xc000453dd0)}, TupleRawNames:[]string(nil)}}
+// "map[common.Address]*struct { Entry struct { DelegatorAddress common.Address \"json:\\\"DelegatorAddress\\\" storage:\\\"slot=0,offset=0\\\"\"; Amount *big.Int \"json:\\\"Amount\\\" storage:\\\"slot=1,offset=0\\\"\"; Reward *big.Int \"json:\\\"Reward\\\" storage:\\\"slot=2,offset=0\\\"\"; Undelegation struct { Amount *big.Int \"json:\\\"Amount\\\" storage:\\\"slot=0,offset=0\\\"\"; Epoch *big.Int \"json:\\\"Epoch\\\" storage:\\\"slot=1,offset=0\\\"\" } \"json:\\\"Undelegation\\\" storage:\\\"slot=3,offset=0\\\"\" } \"json:\\\"Entry\\\" storage:\\\"slot=0,offset=0\\\"\"; Index *big.Int \"json:\\\"Index\\\" storage:\\\"slot=5,offset=0\\\"\" }"
+type Map_1e3b3171b974 map[Address]*RedelegationMapEntry_
+
+type Storage_Map_1e3b3171b974 struct {
+
+	// &wrapper.tmplStruct{T:0xd, Name:"Map_1e3b3171b974", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0004c4620), (*wrapper.tmplField)(0xc0004c4e00)}, Type:"map[Address]*RedelegationMapEntry_", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x15, Type:(*reflect.rtype)(0xc00043e230), Size:0, T:0xd, NumberOfBytes:0x20, StringKind:"t_mapping(t_address,t_struct(RedelegationMapEntry_)87_storage)", TupleRawName:"", TupleElems:[]*abi.Type{(*abi.Type)(0xc000453cb0), (*abi.Type)(0xc000453dd0)}, TupleRawNames:[]string(nil)}}
+	obj    Map_1e3b3171b974
+	db     StateDB
+	addr   common.Address
+	slot   *big.Int
+	offset int
+	dirty  StateValues
+}
+
+func (s *Storage_Map_1e3b3171b974) Get(key Address) *Storage_RedelegationMapEntry_ {
+	// Key:	&wrapper.tmplField{Type:"Address", ElemType:"", Name:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x11, Type:(*reflect.rtype)(0x48bf8e0), Size:20, T:0x7, NumberOfBytes:0x14, StringKind:"t_address", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"", Slot:<nil>, Offset:0}
+	// Value: &wrapper.tmplField{Type:"RedelegationMapEntry_", ElemType:"", Name:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0xc0004332c0), Size:0, T:0x6, NumberOfBytes:0xc0, StringKind:"t_struct(RedelegationMapEntry_)87_storage", TupleRawName:"RedelegationMapEntry_", TupleElems:[]*abi.Type{(*abi.Type)(0xc000453e60), (*abi.Type)(0xc00045a480)}, TupleRawNames:[]string{"Entry", "Index"}}, Tag:"", Slot:<nil>, Offset:0}
 	keyBytes := key.Hash().Bytes()
 	hash := crypto.Keccak256Hash(append(keyBytes, common.BigToHash(s.slot).Bytes()...))
 	actual := hash.Big()
@@ -367,13 +405,13 @@ func (s *Storage_Map_2732d5ca2110) Get(key Address) *Storage_RedelegationMapEntr
 }
 
 // Map_3783ff483121 is an auto generated low-level Go binding around an user-defined struct.
-// &wrapper.tmplStruct{T:0xd, Name:"Map_3783ff483121", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0001001c0), (*wrapper.tmplField)(0xc000100700)}, Type:"map[Address]*Bool", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x15, Type:(*reflect.rtype)(0xc0003a2aa0), Size:0, T:0xd, NumberOfBytes:0x20, StringKind:"t_mapping(t_address,t_bool)", TupleRawName:"", TupleElems:[]*abi.Type{(*abi.Type)(0xc0004b0240), (*abi.Type)(0xc0004b02d0)}, TupleRawNames:[]string(nil)}}
+// &wrapper.tmplStruct{T:0xd, Name:"Map_3783ff483121", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000100c40), (*wrapper.tmplField)(0xc000100d20)}, Type:"map[Address]*Bool", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x15, Type:(*reflect.rtype)(0xc00043e320), Size:0, T:0xd, NumberOfBytes:0x20, StringKind:"t_mapping(t_address,t_bool)", TupleRawName:"", TupleElems:[]*abi.Type{(*abi.Type)(0xc00045b710), (*abi.Type)(0xc00045b7a0)}, TupleRawNames:[]string(nil)}}
 // "map[common.Address]*bool"
 type Map_3783ff483121 map[Address]*Bool
 
 type Storage_Map_3783ff483121 struct {
 
-	// &wrapper.tmplStruct{T:0xd, Name:"Map_3783ff483121", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0001001c0), (*wrapper.tmplField)(0xc000100700)}, Type:"map[Address]*Bool", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x15, Type:(*reflect.rtype)(0xc0003a2aa0), Size:0, T:0xd, NumberOfBytes:0x20, StringKind:"t_mapping(t_address,t_bool)", TupleRawName:"", TupleElems:[]*abi.Type{(*abi.Type)(0xc0004b0240), (*abi.Type)(0xc0004b02d0)}, TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0xd, Name:"Map_3783ff483121", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000100c40), (*wrapper.tmplField)(0xc000100d20)}, Type:"map[Address]*Bool", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x15, Type:(*reflect.rtype)(0xc00043e320), Size:0, T:0xd, NumberOfBytes:0x20, StringKind:"t_mapping(t_address,t_bool)", TupleRawName:"", TupleElems:[]*abi.Type{(*abi.Type)(0xc00045b710), (*abi.Type)(0xc00045b7a0)}, TupleRawNames:[]string(nil)}}
 	obj    Map_3783ff483121
 	db     StateDB
 	addr   common.Address
@@ -383,8 +421,8 @@ type Storage_Map_3783ff483121 struct {
 }
 
 func (s *Storage_Map_3783ff483121) Get(key Address) *Storage_Bool {
-	// Key:	&wrapper.tmplField{Type:"Address", ElemType:"", Name:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x11, Type:(*reflect.rtype)(0x48bfac0), Size:20, T:0x7, NumberOfBytes:0x14, StringKind:"t_address", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"", Slot:<nil>, Offset:0}
-	// Value: &wrapper.tmplField{Type:"Bool", ElemType:"", Name:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x47c82a0), Size:0, T:0x2, NumberOfBytes:0x1, StringKind:"t_bool", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"", Slot:<nil>, Offset:0}
+	// Key:	&wrapper.tmplField{Type:"Address", ElemType:"", Name:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x11, Type:(*reflect.rtype)(0x48bf8e0), Size:20, T:0x7, NumberOfBytes:0x14, StringKind:"t_address", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"", Slot:<nil>, Offset:0}
+	// Value: &wrapper.tmplField{Type:"Bool", ElemType:"", Name:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x47c8120), Size:0, T:0x2, NumberOfBytes:0x1, StringKind:"t_bool", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"", Slot:<nil>, Offset:0}
 	keyBytes := key.Hash().Bytes()
 	hash := crypto.Keccak256Hash(append(keyBytes, common.BigToHash(s.slot).Bytes()...))
 	actual := hash.Big()
@@ -405,13 +443,13 @@ func (s *Storage_Map_3783ff483121) Get(key Address) *Storage_Bool {
 }
 
 // Map_624bcc0df495 is an auto generated low-level Go binding around an user-defined struct.
-// &wrapper.tmplStruct{T:0xd, Name:"Map_624bcc0df495", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000100540), (*wrapper.tmplField)(0xc000100620)}, Type:"map[String]*Bool", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x15, Type:(*reflect.rtype)(0xc0003a2be0), Size:0, T:0xd, NumberOfBytes:0x20, StringKind:"t_mapping(t_string_memory_ptr,t_bool)", TupleRawName:"", TupleElems:[]*abi.Type{(*abi.Type)(0xc0004d26c0), (*abi.Type)(0xc0004d27e0)}, TupleRawNames:[]string(nil)}}
+// &wrapper.tmplStruct{T:0xd, Name:"Map_624bcc0df495", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc00057e2a0), (*wrapper.tmplField)(0xc00057e380)}, Type:"map[String]*Bool", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x15, Type:(*reflect.rtype)(0xc00043e3c0), Size:0, T:0xd, NumberOfBytes:0x20, StringKind:"t_mapping(t_string_memory_ptr,t_bool)", TupleRawName:"", TupleElems:[]*abi.Type{(*abi.Type)(0xc00046d560), (*abi.Type)(0xc00046d680)}, TupleRawNames:[]string(nil)}}
 // "map[string]*bool"
 type Map_624bcc0df495 map[String]*Bool
 
 type Storage_Map_624bcc0df495 struct {
 
-	// &wrapper.tmplStruct{T:0xd, Name:"Map_624bcc0df495", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000100540), (*wrapper.tmplField)(0xc000100620)}, Type:"map[String]*Bool", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x15, Type:(*reflect.rtype)(0xc0003a2be0), Size:0, T:0xd, NumberOfBytes:0x20, StringKind:"t_mapping(t_string_memory_ptr,t_bool)", TupleRawName:"", TupleElems:[]*abi.Type{(*abi.Type)(0xc0004d26c0), (*abi.Type)(0xc0004d27e0)}, TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0xd, Name:"Map_624bcc0df495", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc00057e2a0), (*wrapper.tmplField)(0xc00057e380)}, Type:"map[String]*Bool", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x15, Type:(*reflect.rtype)(0xc00043e3c0), Size:0, T:0xd, NumberOfBytes:0x20, StringKind:"t_mapping(t_string_memory_ptr,t_bool)", TupleRawName:"", TupleElems:[]*abi.Type{(*abi.Type)(0xc00046d560), (*abi.Type)(0xc00046d680)}, TupleRawNames:[]string(nil)}}
 	obj    Map_624bcc0df495
 	db     StateDB
 	addr   common.Address
@@ -421,8 +459,8 @@ type Storage_Map_624bcc0df495 struct {
 }
 
 func (s *Storage_Map_624bcc0df495) Get(key String) *Storage_Bool {
-	// Key:	&wrapper.tmplField{Type:"String", ElemType:"", Name:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x18, Type:(*reflect.rtype)(0x47f59c0), Size:0, T:0x3, NumberOfBytes:0x20, StringKind:"t_string_memory_ptr", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"", Slot:<nil>, Offset:0}
-	// Value: &wrapper.tmplField{Type:"Bool", ElemType:"", Name:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x47c82a0), Size:0, T:0x2, NumberOfBytes:0x1, StringKind:"t_bool", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"", Slot:<nil>, Offset:0}
+	// Key:	&wrapper.tmplField{Type:"String", ElemType:"", Name:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x18, Type:(*reflect.rtype)(0x47f58c0), Size:0, T:0x3, NumberOfBytes:0x20, StringKind:"t_string_memory_ptr", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"", Slot:<nil>, Offset:0}
+	// Value: &wrapper.tmplField{Type:"Bool", ElemType:"", Name:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x47c8120), Size:0, T:0x2, NumberOfBytes:0x1, StringKind:"t_bool", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"", Slot:<nil>, Offset:0}
 	keyBytes := []byte(key)
 	hash := crypto.Keccak256Hash(append(keyBytes, common.BigToHash(s.slot).Bytes()...))
 	actual := hash.Big()
@@ -442,52 +480,14 @@ func (s *Storage_Map_624bcc0df495) Get(key String) *Storage_Bool {
 	}
 }
 
-// Map_a0e4c1d65ac7 is an auto generated low-level Go binding around an user-defined struct.
-// &wrapper.tmplStruct{T:0xd, Name:"Map_a0e4c1d65ac7", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000101a40), (*wrapper.tmplField)(0xc0005bc8c0)}, Type:"map[Address]*ValidatorWrapperMapEntry_", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x15, Type:(*reflect.rtype)(0xc0003a2b90), Size:0, T:0xd, NumberOfBytes:0x20, StringKind:"t_mapping(t_address,t_struct(ValidatorWrapperMapEntry_)111_storage)", TupleRawName:"", TupleElems:[]*abi.Type{(*abi.Type)(0xc0004d23f0), (*abi.Type)(0xc0004d2480)}, TupleRawNames:[]string(nil)}}
-// "map[common.Address]*struct { Entry struct { Validator struct { ValidatorAddress common.Address \"json:\\\"ValidatorAddress\\\" storage:\\\"slot=0,offset=0\\\"\"; OperatorAddresses struct { Keys []*common.Address \"json:\\\"Keys\\\" storage:\\\"slot=0,offset=0\\\"\"; Set map[common.Address]*bool \"json:\\\"Set\\\" storage:\\\"slot=1,offset=0\\\"\" } \"json:\\\"OperatorAddresses\\\" storage:\\\"slot=1,offset=0\\\"\"; SlotPubKeys struct { Keys []*struct { Key [48]uint8 \"json:\\\"Key\\\" storage:\\\"slot=0,offset=0\\\"\" } \"json:\\\"Keys\\\" storage:\\\"slot=0,offset=0\\\"\" } \"json:\\\"SlotPubKeys\\\" storage:\\\"slot=3,offset=0\\\"\"; LastEpochInCommittee *big.Int \"json:\\\"LastEpochInCommittee\\\" storage:\\\"slot=4,offset=0\\\"\"; Status *big.Int \"json:\\\"Status\\\" storage:\\\"slot=5,offset=0\\\"\"; Commission struct { CommissionRates struct { Rate struct { F *big.Int \"json:\\\"f\\\" storage:\\\"slot=0,offset=0\\\"\" } \"json:\\\"Rate\\\" storage:\\\"slot=0,offset=0\\\"\"; MaxRate struct { F *big.Int \"json:\\\"f\\\" storage:\\\"slot=0,offset=0\\\"\" } \"json:\\\"MaxRate\\\" storage:\\\"slot=1,offset=0\\\"\"; MaxChangeRate struct { F *big.Int \"json:\\\"f\\\" storage:\\\"slot=0,offset=0\\\"\" } \"json:\\\"MaxChangeRate\\\" storage:\\\"slot=2,offset=0\\\"\" } \"json:\\\"CommissionRates\\\" storage:\\\"slot=0,offset=0\\\"\"; UpdateHeight *big.Int \"json:\\\"UpdateHeight\\\" storage:\\\"slot=3,offset=0\\\"\" } \"json:\\\"Commission\\\" storage:\\\"slot=6,offset=0\\\"\"; Description struct { Name string \"json:\\\"Name\\\" storage:\\\"slot=0,offset=0\\\"\"; Identity string \"json:\\\"Identity\\\" storage:\\\"slot=1,offset=0\\\"\"; Website string \"json:\\\"Website\\\" storage:\\\"slot=2,offset=0\\\"\"; SecurityContact string \"json:\\\"SecurityContact\\\" storage:\\\"slot=3,offset=0\\\"\"; Details string \"json:\\\"Details\\\" storage:\\\"slot=4,offset=0\\\"\" } \"json:\\\"Description\\\" storage:\\\"slot=10,offset=0\\\"\"; CreationHeight *big.Int \"json:\\\"CreationHeight\\\" storage:\\\"slot=15,offset=0\\\"\" } \"json:\\\"Validator\\\" storage:\\\"slot=0,offset=0\\\"\"; Redelegations struct { Keys []*common.Address \"json:\\\"Keys\\\" storage:\\\"slot=0,offset=0\\\"\"; Map map[common.Address]*struct { Entry struct { DelegatorAddress common.Address \"json:\\\"DelegatorAddress\\\" storage:\\\"slot=0,offset=0\\\"\"; Amount *big.Int \"json:\\\"Amount\\\" storage:\\\"slot=1,offset=0\\\"\"; Reward *big.Int \"json:\\\"Reward\\\" storage:\\\"slot=2,offset=0\\\"\"; Undelegation struct { Amount *big.Int \"json:\\\"Amount\\\" storage:\\\"slot=0,offset=0\\\"\"; Epoch *big.Int \"json:\\\"Epoch\\\" storage:\\\"slot=1,offset=0\\\"\" } \"json:\\\"Undelegation\\\" storage:\\\"slot=3,offset=0\\\"\" } \"json:\\\"Entry\\\" storage:\\\"slot=0,offset=0\\\"\"; Index *big.Int \"json:\\\"Index\\\" storage:\\\"slot=5,offset=0\\\"\" } \"json:\\\"Map\\\" storage:\\\"slot=1,offset=0\\\"\" } \"json:\\\"Redelegations\\\" storage:\\\"slot=16,offset=0\\\"\"; Counters struct { NumBlocksToSign *big.Int \"json:\\\"NumBlocksToSign\\\" storage:\\\"slot=0,offset=0\\\"\"; NumBlocksSigned *big.Int \"json:\\\"NumBlocksSigned\\\" storage:\\\"slot=1,offset=0\\\"\" } \"json:\\\"Counters\\\" storage:\\\"slot=18,offset=0\\\"\"; BlockReward *big.Int \"json:\\\"BlockReward\\\" storage:\\\"slot=20,offset=0\\\"\"; TotalDelegation *big.Int \"json:\\\"TotalDelegation\\\" storage:\\\"slot=21,offset=0\\\"\"; TotalDelegationByOperator *big.Int \"json:\\\"TotalDelegationByOperator\\\" storage:\\\"slot=22,offset=0\\\"\" } \"json:\\\"Entry\\\" storage:\\\"slot=0,offset=0\\\"\"; Index *big.Int \"json:\\\"Index\\\" storage:\\\"slot=23,offset=0\\\"\" }"
-type Map_a0e4c1d65ac7 map[Address]*ValidatorWrapperMapEntry_
-
-type Storage_Map_a0e4c1d65ac7 struct {
-
-	// &wrapper.tmplStruct{T:0xd, Name:"Map_a0e4c1d65ac7", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000101a40), (*wrapper.tmplField)(0xc0005bc8c0)}, Type:"map[Address]*ValidatorWrapperMapEntry_", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x15, Type:(*reflect.rtype)(0xc0003a2b90), Size:0, T:0xd, NumberOfBytes:0x20, StringKind:"t_mapping(t_address,t_struct(ValidatorWrapperMapEntry_)111_storage)", TupleRawName:"", TupleElems:[]*abi.Type{(*abi.Type)(0xc0004d23f0), (*abi.Type)(0xc0004d2480)}, TupleRawNames:[]string(nil)}}
-	obj    Map_a0e4c1d65ac7
-	db     StateDB
-	addr   common.Address
-	slot   *big.Int
-	offset int
-	dirty  StateValues
-}
-
-func (s *Storage_Map_a0e4c1d65ac7) Get(key Address) *Storage_ValidatorWrapperMapEntry_ {
-	// Key:	&wrapper.tmplField{Type:"Address", ElemType:"", Name:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x11, Type:(*reflect.rtype)(0x48bfac0), Size:20, T:0x7, NumberOfBytes:0x14, StringKind:"t_address", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"", Slot:<nil>, Offset:0}
-	// Value: &wrapper.tmplField{Type:"ValidatorWrapperMapEntry_", ElemType:"", Name:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0xc000371c00), Size:0, T:0x6, NumberOfBytes:0x300, StringKind:"t_struct(ValidatorWrapperMapEntry_)111_storage", TupleRawName:"ValidatorWrapperMapEntry_", TupleElems:[]*abi.Type{(*abi.Type)(0xc0004b0fc0), (*abi.Type)(0xc0004b1e60)}, TupleRawNames:[]string{"Entry", "Index"}}, Tag:"", Slot:<nil>, Offset:0}
-	keyBytes := key.Hash().Bytes()
-	hash := crypto.Keccak256Hash(append(keyBytes, common.BigToHash(s.slot).Bytes()...))
-	actual := hash.Big()
-	if s.obj[key] == nil {
-
-		instance := new(ValidatorWrapperMapEntry_)
-
-		s.obj[key] = instance
-	}
-
-	return &Storage_ValidatorWrapperMapEntry_{
-		obj:   s.obj[key],
-		db:    s.db,
-		addr:  s.addr,
-		slot:  actual,
-		dirty: s.dirty,
-	}
-}
-
 // Slice_6bb0ade2b43c is an auto generated low-level Go binding around an user-defined struct.
-// &wrapper.tmplStruct{T:0x4, Name:"Slice_6bb0ade2b43c", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0001009a0)}, Type:"[]*BLSPublicKey_", SolKind:abi.Type{Elem:(*abi.Type)(0xc0004b0630), Kind:0x17, Type:(*reflect.rtype)(0xc000371a00), Size:0, T:0x4, NumberOfBytes:0x20, StringKind:"t_array(t_struct(BLSPublicKey_)32_storage)dyn_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+// &wrapper.tmplStruct{T:0x4, Name:"Slice_6bb0ade2b43c", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000101180)}, Type:"[]*BLSPublicKey_", SolKind:abi.Type{Elem:(*abi.Type)(0xc00045ba70), Kind:0x17, Type:(*reflect.rtype)(0xc000433480), Size:0, T:0x4, NumberOfBytes:0x20, StringKind:"t_array(t_struct(BLSPublicKey_)32_storage)dyn_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 // "[]*struct { Key [48]uint8 \"json:\\\"Key\\\" storage:\\\"slot=0,offset=0\\\"\" }"
 type Slice_6bb0ade2b43c []*BLSPublicKey_
 
 type Storage_Slice_6bb0ade2b43c struct {
 
-	// &wrapper.tmplStruct{T:0x4, Name:"Slice_6bb0ade2b43c", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0001009a0)}, Type:"[]*BLSPublicKey_", SolKind:abi.Type{Elem:(*abi.Type)(0xc0004b0630), Kind:0x17, Type:(*reflect.rtype)(0xc000371a00), Size:0, T:0x4, NumberOfBytes:0x20, StringKind:"t_array(t_struct(BLSPublicKey_)32_storage)dyn_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0x4, Name:"Slice_6bb0ade2b43c", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000101180)}, Type:"[]*BLSPublicKey_", SolKind:abi.Type{Elem:(*abi.Type)(0xc00045ba70), Kind:0x17, Type:(*reflect.rtype)(0xc000433480), Size:0, T:0x4, NumberOfBytes:0x20, StringKind:"t_array(t_struct(BLSPublicKey_)32_storage)dyn_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 	obj    *Slice_6bb0ade2b43c
 	db     StateDB
 	addr   common.Address
@@ -510,7 +510,7 @@ func (s *Storage_Slice_6bb0ade2b43c) Resize(length uint64) {
 }
 
 func (s *Storage_Slice_6bb0ade2b43c) Get(index uint64) *Storage_BLSPublicKey_ {
-	// Value: &wrapper.tmplField{Type:"BLSPublicKey_", ElemType:"", Name:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0xc0003719c0), Size:0, T:0x6, NumberOfBytes:0x40, StringKind:"t_struct(BLSPublicKey_)32_storage", TupleRawName:"BLSPublicKey_", TupleElems:[]*abi.Type{(*abi.Type)(0xc0004998c0)}, TupleRawNames:[]string{"Key"}}, Tag:"", Slot:<nil>, Offset:0}
+	// Value: &wrapper.tmplField{Type:"BLSPublicKey_", ElemType:"", Name:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0xc000433440), Size:0, T:0x6, NumberOfBytes:0x40, StringKind:"t_struct(BLSPublicKey_)32_storage", TupleRawName:"BLSPublicKey_", TupleElems:[]*abi.Type{(*abi.Type)(0xc00045acf0)}, TupleRawNames:[]string{"Key"}}, Tag:"", Slot:<nil>, Offset:0}
 	length := s.Length().Uint64()
 	if index >= length {
 		s.Resize(index + 1)
@@ -535,13 +535,13 @@ func (s *Storage_Slice_6bb0ade2b43c) Get(index uint64) *Storage_BLSPublicKey_ {
 }
 
 // Slice_760032d9d704 is an auto generated low-level Go binding around an user-defined struct.
-// &wrapper.tmplStruct{T:0x4, Name:"Slice_760032d9d704", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000100000)}, Type:"[]*Address", SolKind:abi.Type{Elem:(*abi.Type)(0xc0004b0090), Kind:0x17, Type:(*reflect.rtype)(0xc000371980), Size:0, T:0x4, NumberOfBytes:0x20, StringKind:"t_array(t_address)dyn_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+// &wrapper.tmplStruct{T:0x4, Name:"Slice_760032d9d704", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000100a80)}, Type:"[]*Address", SolKind:abi.Type{Elem:(*abi.Type)(0xc00045b560), Kind:0x17, Type:(*reflect.rtype)(0xc000433400), Size:0, T:0x4, NumberOfBytes:0x20, StringKind:"t_array(t_address)dyn_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 // "[]*common.Address"
 type Slice_760032d9d704 []*Address
 
 type Storage_Slice_760032d9d704 struct {
 
-	// &wrapper.tmplStruct{T:0x4, Name:"Slice_760032d9d704", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000100000)}, Type:"[]*Address", SolKind:abi.Type{Elem:(*abi.Type)(0xc0004b0090), Kind:0x17, Type:(*reflect.rtype)(0xc000371980), Size:0, T:0x4, NumberOfBytes:0x20, StringKind:"t_array(t_address)dyn_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0x4, Name:"Slice_760032d9d704", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000100a80)}, Type:"[]*Address", SolKind:abi.Type{Elem:(*abi.Type)(0xc00045b560), Kind:0x17, Type:(*reflect.rtype)(0xc000433400), Size:0, T:0x4, NumberOfBytes:0x20, StringKind:"t_array(t_address)dyn_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 	obj    *Slice_760032d9d704
 	db     StateDB
 	addr   common.Address
@@ -564,7 +564,7 @@ func (s *Storage_Slice_760032d9d704) Resize(length uint64) {
 }
 
 func (s *Storage_Slice_760032d9d704) Get(index uint64) *Storage_Address {
-	// Value: &wrapper.tmplField{Type:"Address", ElemType:"", Name:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x48da280), Size:20, T:0x7, NumberOfBytes:0x14, StringKind:"t_address", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"", Slot:<nil>, Offset:0}
+	// Value: &wrapper.tmplField{Type:"Address", ElemType:"", Name:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x48da3e0), Size:20, T:0x7, NumberOfBytes:0x14, StringKind:"t_address", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"", Slot:<nil>, Offset:0}
 	length := s.Length().Uint64()
 	if index >= length {
 		s.Resize(index + 1)
@@ -588,15 +588,15 @@ func (s *Storage_Slice_760032d9d704) Get(index uint64) *Storage_Address {
 	}
 }
 
-// Slice_eba64d7a7c55 is an auto generated low-level Go binding around an user-defined struct.
-// &wrapper.tmplStruct{T:0x4, Name:"Slice_eba64d7a7c55", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0005bd0a0)}, Type:"[]*Slot_", SolKind:abi.Type{Elem:(*abi.Type)(0xc0004d2bd0), Kind:0x17, Type:(*reflect.rtype)(0xc000371cc0), Size:0, T:0x4, NumberOfBytes:0x20, StringKind:"t_array(t_struct(Slot_)126_storage)dyn_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+// Slice_ed073f3f1ff1 is an auto generated low-level Go binding around an user-defined struct.
+// &wrapper.tmplStruct{T:0x4, Name:"Slice_ed073f3f1ff1", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0004c5880)}, Type:"[]*Slot_", SolKind:abi.Type{Elem:(*abi.Type)(0xc00045ab40), Kind:0x17, Type:(*reflect.rtype)(0xc0004333c0), Size:0, T:0x4, NumberOfBytes:0x20, StringKind:"t_array(t_struct(Slot_)128_storage)dyn_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 // "[]*struct { EcdsaAddress common.Address \"json:\\\"EcdsaAddress\\\" storage:\\\"slot=0,offset=0\\\"\"; BLSPublicKey struct { Key [48]uint8 \"json:\\\"Key\\\" storage:\\\"slot=0,offset=0\\\"\" } \"json:\\\"BLSPublicKey\\\" storage:\\\"slot=1,offset=0\\\"\"; EffectiveStake struct { F *big.Int \"json:\\\"f\\\" storage:\\\"slot=0,offset=0\\\"\" } \"json:\\\"EffectiveStake\\\" storage:\\\"slot=3,offset=0\\\"\" }"
-type Slice_eba64d7a7c55 []*Slot_
+type Slice_ed073f3f1ff1 []*Slot_
 
-type Storage_Slice_eba64d7a7c55 struct {
+type Storage_Slice_ed073f3f1ff1 struct {
 
-	// &wrapper.tmplStruct{T:0x4, Name:"Slice_eba64d7a7c55", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0005bd0a0)}, Type:"[]*Slot_", SolKind:abi.Type{Elem:(*abi.Type)(0xc0004d2bd0), Kind:0x17, Type:(*reflect.rtype)(0xc000371cc0), Size:0, T:0x4, NumberOfBytes:0x20, StringKind:"t_array(t_struct(Slot_)126_storage)dyn_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
-	obj    *Slice_eba64d7a7c55
+	// &wrapper.tmplStruct{T:0x4, Name:"Slice_ed073f3f1ff1", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0004c5880)}, Type:"[]*Slot_", SolKind:abi.Type{Elem:(*abi.Type)(0xc00045ab40), Kind:0x17, Type:(*reflect.rtype)(0xc0004333c0), Size:0, T:0x4, NumberOfBytes:0x20, StringKind:"t_array(t_struct(Slot_)128_storage)dyn_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	obj    *Slice_ed073f3f1ff1
 	db     StateDB
 	addr   common.Address
 	slot   *big.Int
@@ -604,12 +604,12 @@ type Storage_Slice_eba64d7a7c55 struct {
 	dirty  StateValues
 }
 
-func (s *Storage_Slice_eba64d7a7c55) Length() *big.Int {
+func (s *Storage_Slice_ed073f3f1ff1) Length() *big.Int {
 	rv := s.db.GetState(s.addr, common.BigToHash(s.slot))
 	return rv.Big()
 }
 
-func (s *Storage_Slice_eba64d7a7c55) Resize(length uint64) {
+func (s *Storage_Slice_ed073f3f1ff1) Resize(length uint64) {
 	s.db.SetState(s.addr, common.BigToHash(s.slot), common.BigToHash(big.NewInt(0).SetUint64(length)))
 
 	slice := make([]*Slot_, length, length+50)
@@ -617,8 +617,8 @@ func (s *Storage_Slice_eba64d7a7c55) Resize(length uint64) {
 	*s.obj = slice
 }
 
-func (s *Storage_Slice_eba64d7a7c55) Get(index uint64) *Storage_Slot_ {
-	// Value: &wrapper.tmplField{Type:"Slot_", ElemType:"", Name:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0xc000371c80), Size:0, T:0x6, NumberOfBytes:0x80, StringKind:"t_struct(Slot_)126_storage", TupleRawName:"Slot_", TupleElems:[]*abi.Type{(*abi.Type)(0xc000499710), (*abi.Type)(0xc000499830), (*abi.Type)(0xc000499b90)}, TupleRawNames:[]string{"EcdsaAddress", "BLSPublicKey", "EffectiveStake"}}, Tag:"", Slot:<nil>, Offset:0}
+func (s *Storage_Slice_ed073f3f1ff1) Get(index uint64) *Storage_Slot_ {
+	// Value: &wrapper.tmplField{Type:"Slot_", ElemType:"", Name:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0xc000433380), Size:0, T:0x6, NumberOfBytes:0x80, StringKind:"t_struct(Slot_)128_storage", TupleRawName:"Slot_", TupleElems:[]*abi.Type{(*abi.Type)(0xc00045abd0), (*abi.Type)(0xc00045ac60), (*abi.Type)(0xc00045afc0)}, TupleRawNames:[]string{"EcdsaAddress", "BLSPublicKey", "EffectiveStake"}}, Tag:"", Slot:<nil>, Offset:0}
 	length := s.Length().Uint64()
 	if index >= length {
 		s.Resize(index + 1)
@@ -643,26 +643,26 @@ func (s *Storage_Slice_eba64d7a7c55) Get(index uint64) *Storage_Slot_ {
 }
 
 // AddressSet_ is an auto generated low-level Go binding around an user-defined struct.
-// &wrapper.tmplStruct{T:0x6, Name:"AddressSet_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0001000e0), (*wrapper.tmplField)(0xc0001007e0)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+// &wrapper.tmplStruct{T:0x6, Name:"AddressSet_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000100b60), (*wrapper.tmplField)(0xc000100e00)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 type AddressSet_ struct {
 	Keys Slice_760032d9d704 `json:"Keys" storage:"slot=0,offset=0"`
 	Set  Map_3783ff483121   `json:"Set" storage:"slot=1,offset=0"`
 }
 
 // BLSPublicKey_ is an auto generated low-level Go binding around an user-defined struct.
-// &wrapper.tmplStruct{T:0x6, Name:"BLSPublicKey_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000412700)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+// &wrapper.tmplStruct{T:0x6, Name:"BLSPublicKey_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0001010a0)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 type BLSPublicKey_ struct {
 	Key Array_aaa956d410fd `json:"Key" storage:"slot=0,offset=0"`
 }
 
 // BLSPublicKeys_ is an auto generated low-level Go binding around an user-defined struct.
-// &wrapper.tmplStruct{T:0x6, Name:"BLSPublicKeys_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000100a80)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+// &wrapper.tmplStruct{T:0x6, Name:"BLSPublicKeys_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000101260)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 type BLSPublicKeys_ struct {
 	Keys Slice_6bb0ade2b43c `json:"Keys" storage:"slot=0,offset=0"`
 }
 
 // CommissionRates_ is an auto generated low-level Go binding around an user-defined struct.
-// &wrapper.tmplStruct{T:0x6, Name:"CommissionRates_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000100e00), (*wrapper.tmplField)(0xc000100ee0), (*wrapper.tmplField)(0xc000100fc0)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+// &wrapper.tmplStruct{T:0x6, Name:"CommissionRates_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0001016c0), (*wrapper.tmplField)(0xc0001017a0), (*wrapper.tmplField)(0xc000101880)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 type CommissionRates_ struct {
 	Rate          Decimal `json:"Rate" storage:"slot=0,offset=0"`
 	MaxRate       Decimal `json:"MaxRate" storage:"slot=1,offset=0"`
@@ -670,28 +670,28 @@ type CommissionRates_ struct {
 }
 
 // Commission_ is an auto generated low-level Go binding around an user-defined struct.
-// &wrapper.tmplStruct{T:0x6, Name:"Commission_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0001010a0), (*wrapper.tmplField)(0xc000101180)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+// &wrapper.tmplStruct{T:0x6, Name:"Commission_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000101960), (*wrapper.tmplField)(0xc000101a40)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 type Commission_ struct {
 	CommissionRates CommissionRates_ `json:"CommissionRates" storage:"slot=0,offset=0"`
 	UpdateHeight    BigInt           `json:"UpdateHeight" storage:"slot=3,offset=0"`
 }
 
 // Committee_ is an auto generated low-level Go binding around an user-defined struct.
-// &wrapper.tmplStruct{T:0x6, Name:"Committee_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0005bcd20), (*wrapper.tmplField)(0xc0005bd260)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+// &wrapper.tmplStruct{T:0x6, Name:"Committee_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0004c5a40), (*wrapper.tmplField)(0xc0004c5b20)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 type Committee_ struct {
 	Epoch BigInt `json:"Epoch" storage:"slot=0,offset=0"`
 	Slots Slots_ `json:"Slots" storage:"slot=1,offset=0"`
 }
 
 // Counters_ is an auto generated low-level Go binding around an user-defined struct.
-// &wrapper.tmplStruct{T:0x6, Name:"Counters_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0005bc1c0), (*wrapper.tmplField)(0xc0005bc2a0)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+// &wrapper.tmplStruct{T:0x6, Name:"Counters_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0004c50a0), (*wrapper.tmplField)(0xc0004c5180)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 type Counters_ struct {
 	NumBlocksToSign BigInt `json:"NumBlocksToSign" storage:"slot=0,offset=0"`
 	NumBlocksSigned BigInt `json:"NumBlocksSigned" storage:"slot=1,offset=0"`
 }
 
 // Description_ is an auto generated low-level Go binding around an user-defined struct.
-// &wrapper.tmplStruct{T:0x6, Name:"Description_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000101340), (*wrapper.tmplField)(0xc000101420), (*wrapper.tmplField)(0xc000101500), (*wrapper.tmplField)(0xc0001015e0), (*wrapper.tmplField)(0xc0001016c0)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+// &wrapper.tmplStruct{T:0x6, Name:"Description_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000101c00), (*wrapper.tmplField)(0xc000101ce0), (*wrapper.tmplField)(0xc000101dc0), (*wrapper.tmplField)(0xc000101ea0), (*wrapper.tmplField)(0xc0004c4000)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 type Description_ struct {
 	Name            String `json:"Name" storage:"slot=0,offset=0"`
 	Identity        String `json:"Identity" storage:"slot=1,offset=0"`
@@ -701,27 +701,27 @@ type Description_ struct {
 }
 
 // Global_t is an auto generated low-level Go binding around an user-defined struct.
-// &wrapper.tmplStruct{T:0x6, Name:"Global_t", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0005bd420)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+// &wrapper.tmplStruct{T:0x6, Name:"Global_t", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000100000)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 type Global_t struct {
 	ValidatorPool ValidatorPool_ `json:"ValidatorPool" storage:"slot=0,offset=0"`
 }
 
 // RedelegationMapEntry_ is an auto generated low-level Go binding around an user-defined struct.
-// &wrapper.tmplStruct{T:0x6, Name:"RedelegationMapEntry_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000100380), (*wrapper.tmplField)(0xc000100460)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+// &wrapper.tmplStruct{T:0x6, Name:"RedelegationMapEntry_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0004c4c40), (*wrapper.tmplField)(0xc0004c4d20)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 type RedelegationMapEntry_ struct {
 	Entry Redelegation_ `json:"Entry" storage:"slot=0,offset=0"`
 	Index BigInt        `json:"Index" storage:"slot=5,offset=0"`
 }
 
 // RedelegationMap_ is an auto generated low-level Go binding around an user-defined struct.
-// &wrapper.tmplStruct{T:0x6, Name:"RedelegationMap_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000101c00), (*wrapper.tmplField)(0xc000101ea0)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+// &wrapper.tmplStruct{T:0x6, Name:"RedelegationMap_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0004c4540), (*wrapper.tmplField)(0xc0004c4ee0)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 type RedelegationMap_ struct {
 	Keys Slice_760032d9d704 `json:"Keys" storage:"slot=0,offset=0"`
-	Map  Map_2732d5ca2110   `json:"Map" storage:"slot=1,offset=0"`
+	Map  Map_1e3b3171b974   `json:"Map" storage:"slot=1,offset=0"`
 }
 
 // Redelegation_ is an auto generated low-level Go binding around an user-defined struct.
-// &wrapper.tmplStruct{T:0x6, Name:"Redelegation_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0004127e0), (*wrapper.tmplField)(0xc0004128c0), (*wrapper.tmplField)(0xc0004129a0), (*wrapper.tmplField)(0xc0001002a0)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+// &wrapper.tmplStruct{T:0x6, Name:"Redelegation_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0004c4700), (*wrapper.tmplField)(0xc0004c47e0), (*wrapper.tmplField)(0xc0004c48c0), (*wrapper.tmplField)(0xc0004c4b60)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 type Redelegation_ struct {
 	DelegatorAddress Address       `json:"DelegatorAddress" storage:"slot=0,offset=0"`
 	Amount           BigInt        `json:"Amount" storage:"slot=1,offset=0"`
@@ -730,7 +730,7 @@ type Redelegation_ struct {
 }
 
 // Slot_ is an auto generated low-level Go binding around an user-defined struct.
-// &wrapper.tmplStruct{T:0x6, Name:"Slot_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0005bce00), (*wrapper.tmplField)(0xc0005bcee0), (*wrapper.tmplField)(0xc0005bcfc0)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+// &wrapper.tmplStruct{T:0x6, Name:"Slot_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc00057e460), (*wrapper.tmplField)(0xc0004c56c0), (*wrapper.tmplField)(0xc0004c57a0)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 type Slot_ struct {
 	EcdsaAddress   Address       `json:"EcdsaAddress" storage:"slot=0,offset=0"`
 	BLSPublicKey   BLSPublicKey_ `json:"BLSPublicKey" storage:"slot=1,offset=0"`
@@ -738,20 +738,20 @@ type Slot_ struct {
 }
 
 // Slots_ is an auto generated low-level Go binding around an user-defined struct.
-// &wrapper.tmplStruct{T:0x6, Name:"Slots_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0005bd180)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+// &wrapper.tmplStruct{T:0x6, Name:"Slots_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0004c5960)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 type Slots_ struct {
-	Entrys Slice_eba64d7a7c55 `json:"Entrys" storage:"slot=0,offset=0"`
+	Entrys Slice_ed073f3f1ff1 `json:"Entrys" storage:"slot=0,offset=0"`
 }
 
 // Undelegation_ is an auto generated low-level Go binding around an user-defined struct.
-// &wrapper.tmplStruct{T:0x6, Name:"Undelegation_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000412a80), (*wrapper.tmplField)(0xc000412b60)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+// &wrapper.tmplStruct{T:0x6, Name:"Undelegation_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0004c49a0), (*wrapper.tmplField)(0xc0004c4a80)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 type Undelegation_ struct {
 	Amount BigInt `json:"Amount" storage:"slot=0,offset=0"`
 	Epoch  BigInt `json:"Epoch" storage:"slot=1,offset=0"`
 }
 
 // ValidatorPool_ is an auto generated low-level Go binding around an user-defined struct.
-// &wrapper.tmplStruct{T:0x6, Name:"ValidatorPool_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0005bca80), (*wrapper.tmplField)(0xc0005bcb60), (*wrapper.tmplField)(0xc0005bcc40), (*wrapper.tmplField)(0xc0005bd340)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+// &wrapper.tmplStruct{T:0x6, Name:"ValidatorPool_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0004c5c00), (*wrapper.tmplField)(0xc0004c5ce0), (*wrapper.tmplField)(0xc0004c5dc0), (*wrapper.tmplField)(0xc0004c5ea0)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 type ValidatorPool_ struct {
 	Validators             ValidatorWrapperMap_ `json:"Validators" storage:"slot=0,offset=0"`
 	SlotKeySet             Map_624bcc0df495     `json:"SlotKeySet" storage:"slot=2,offset=0"`
@@ -760,46 +760,47 @@ type ValidatorPool_ struct {
 }
 
 // ValidatorWrapperMapEntry_ is an auto generated low-level Go binding around an user-defined struct.
-// &wrapper.tmplStruct{T:0x6, Name:"ValidatorWrapperMapEntry_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0005bc700), (*wrapper.tmplField)(0xc0005bc7e0)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+// &wrapper.tmplStruct{T:0x6, Name:"ValidatorWrapperMapEntry_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0004c55e0), (*wrapper.tmplField)(0xc00057e000)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 type ValidatorWrapperMapEntry_ struct {
 	Entry ValidatorWrapper_ `json:"Entry" storage:"slot=0,offset=0"`
-	Index BigInt            `json:"Index" storage:"slot=23,offset=0"`
+	Index BigInt            `json:"Index" storage:"slot=24,offset=0"`
 }
 
 // ValidatorWrapperMap_ is an auto generated low-level Go binding around an user-defined struct.
-// &wrapper.tmplStruct{T:0x6, Name:"ValidatorWrapperMap_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000101960), (*wrapper.tmplField)(0xc0005bc9a0)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+// &wrapper.tmplStruct{T:0x6, Name:"ValidatorWrapperMap_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0004c42a0), (*wrapper.tmplField)(0xc00057e1c0)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 type ValidatorWrapperMap_ struct {
 	Keys Slice_760032d9d704 `json:"Keys" storage:"slot=0,offset=0"`
-	Map  Map_a0e4c1d65ac7   `json:"Map" storage:"slot=1,offset=0"`
+	Map  Map_11675a09c025   `json:"Map" storage:"slot=1,offset=0"`
 }
 
 // ValidatorWrapper_ is an auto generated low-level Go binding around an user-defined struct.
-// &wrapper.tmplStruct{T:0x6, Name:"ValidatorWrapper_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000101b20), (*wrapper.tmplField)(0xc0005bc0e0), (*wrapper.tmplField)(0xc0005bc380), (*wrapper.tmplField)(0xc0005bc460), (*wrapper.tmplField)(0xc0005bc540), (*wrapper.tmplField)(0xc0005bc620)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+// &wrapper.tmplStruct{T:0x6, Name:"ValidatorWrapper_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0004c4460), (*wrapper.tmplField)(0xc0004c4fc0), (*wrapper.tmplField)(0xc0004c5260), (*wrapper.tmplField)(0xc0004c5340), (*wrapper.tmplField)(0xc0004c5420), (*wrapper.tmplField)(0xc0004c5500)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 type ValidatorWrapper_ struct {
 	Validator                 Validator_       `json:"Validator" storage:"slot=0,offset=0"`
-	Redelegations             RedelegationMap_ `json:"Redelegations" storage:"slot=16,offset=0"`
-	Counters                  Counters_        `json:"Counters" storage:"slot=18,offset=0"`
-	BlockReward               BigInt           `json:"BlockReward" storage:"slot=20,offset=0"`
-	TotalDelegation           BigInt           `json:"TotalDelegation" storage:"slot=21,offset=0"`
-	TotalDelegationByOperator BigInt           `json:"TotalDelegationByOperator" storage:"slot=22,offset=0"`
+	Redelegations             RedelegationMap_ `json:"Redelegations" storage:"slot=17,offset=0"`
+	Counters                  Counters_        `json:"Counters" storage:"slot=19,offset=0"`
+	BlockReward               BigInt           `json:"BlockReward" storage:"slot=21,offset=0"`
+	TotalDelegation           BigInt           `json:"TotalDelegation" storage:"slot=22,offset=0"`
+	TotalDelegationByOperator BigInt           `json:"TotalDelegationByOperator" storage:"slot=23,offset=0"`
 }
 
 // Validator_ is an auto generated low-level Go binding around an user-defined struct.
-// &wrapper.tmplStruct{T:0x6, Name:"Validator_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0005bc000), (*wrapper.tmplField)(0xc0001008c0), (*wrapper.tmplField)(0xc000100b60), (*wrapper.tmplField)(0xc000100c40), (*wrapper.tmplField)(0xc000100d20), (*wrapper.tmplField)(0xc000101260), (*wrapper.tmplField)(0xc0001017a0), (*wrapper.tmplField)(0xc000101880)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+// &wrapper.tmplStruct{T:0x6, Name:"Validator_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0001009a0), (*wrapper.tmplField)(0xc000100ee0), (*wrapper.tmplField)(0xc000101340), (*wrapper.tmplField)(0xc000101420), (*wrapper.tmplField)(0xc000101500), (*wrapper.tmplField)(0xc0001015e0), (*wrapper.tmplField)(0xc000101b20), (*wrapper.tmplField)(0xc0004c40e0), (*wrapper.tmplField)(0xc0004c41c0)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 type Validator_ struct {
 	ValidatorAddress     Address        `json:"ValidatorAddress" storage:"slot=0,offset=0"`
 	OperatorAddresses    AddressSet_    `json:"OperatorAddresses" storage:"slot=1,offset=0"`
 	SlotPubKeys          BLSPublicKeys_ `json:"SlotPubKeys" storage:"slot=3,offset=0"`
 	LastEpochInCommittee BigInt         `json:"LastEpochInCommittee" storage:"slot=4,offset=0"`
-	Status               BigInt         `json:"Status" storage:"slot=5,offset=0"`
-	Commission           Commission_    `json:"Commission" storage:"slot=6,offset=0"`
-	Description          Description_   `json:"Description" storage:"slot=10,offset=0"`
-	CreationHeight       BigInt         `json:"CreationHeight" storage:"slot=15,offset=0"`
+	MaxTotalDelegation   BigInt         `json:"MaxTotalDelegation" storage:"slot=5,offset=0"`
+	Status               BigInt         `json:"Status" storage:"slot=6,offset=0"`
+	Commission           Commission_    `json:"Commission" storage:"slot=7,offset=0"`
+	Description          Description_   `json:"Description" storage:"slot=11,offset=0"`
+	CreationHeight       BigInt         `json:"CreationHeight" storage:"slot=16,offset=0"`
 }
 
 type Storage_AddressSet_ struct {
 
-	// &wrapper.tmplStruct{T:0x6, Name:"AddressSet_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0001000e0), (*wrapper.tmplField)(0xc0001007e0)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0x6, Name:"AddressSet_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000100b60), (*wrapper.tmplField)(0xc000100e00)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 	obj    *AddressSet_
 	db     StateDB
 	addr   common.Address
@@ -810,7 +811,7 @@ type Storage_AddressSet_ struct {
 
 type Storage_BLSPublicKey_ struct {
 
-	// &wrapper.tmplStruct{T:0x6, Name:"BLSPublicKey_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000412700)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0x6, Name:"BLSPublicKey_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0001010a0)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 	obj    *BLSPublicKey_
 	db     StateDB
 	addr   common.Address
@@ -821,7 +822,7 @@ type Storage_BLSPublicKey_ struct {
 
 type Storage_BLSPublicKeys_ struct {
 
-	// &wrapper.tmplStruct{T:0x6, Name:"BLSPublicKeys_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000100a80)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0x6, Name:"BLSPublicKeys_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000101260)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 	obj    *BLSPublicKeys_
 	db     StateDB
 	addr   common.Address
@@ -832,7 +833,7 @@ type Storage_BLSPublicKeys_ struct {
 
 type Storage_CommissionRates_ struct {
 
-	// &wrapper.tmplStruct{T:0x6, Name:"CommissionRates_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000100e00), (*wrapper.tmplField)(0xc000100ee0), (*wrapper.tmplField)(0xc000100fc0)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0x6, Name:"CommissionRates_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0001016c0), (*wrapper.tmplField)(0xc0001017a0), (*wrapper.tmplField)(0xc000101880)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 	obj    *CommissionRates_
 	db     StateDB
 	addr   common.Address
@@ -843,7 +844,7 @@ type Storage_CommissionRates_ struct {
 
 type Storage_Commission_ struct {
 
-	// &wrapper.tmplStruct{T:0x6, Name:"Commission_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0001010a0), (*wrapper.tmplField)(0xc000101180)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0x6, Name:"Commission_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000101960), (*wrapper.tmplField)(0xc000101a40)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 	obj    *Commission_
 	db     StateDB
 	addr   common.Address
@@ -854,7 +855,7 @@ type Storage_Commission_ struct {
 
 type Storage_Committee_ struct {
 
-	// &wrapper.tmplStruct{T:0x6, Name:"Committee_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0005bcd20), (*wrapper.tmplField)(0xc0005bd260)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0x6, Name:"Committee_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0004c5a40), (*wrapper.tmplField)(0xc0004c5b20)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 	obj    *Committee_
 	db     StateDB
 	addr   common.Address
@@ -865,7 +866,7 @@ type Storage_Committee_ struct {
 
 type Storage_Counters_ struct {
 
-	// &wrapper.tmplStruct{T:0x6, Name:"Counters_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0005bc1c0), (*wrapper.tmplField)(0xc0005bc2a0)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0x6, Name:"Counters_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0004c50a0), (*wrapper.tmplField)(0xc0004c5180)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 	obj    *Counters_
 	db     StateDB
 	addr   common.Address
@@ -876,7 +877,7 @@ type Storage_Counters_ struct {
 
 type Storage_Description_ struct {
 
-	// &wrapper.tmplStruct{T:0x6, Name:"Description_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000101340), (*wrapper.tmplField)(0xc000101420), (*wrapper.tmplField)(0xc000101500), (*wrapper.tmplField)(0xc0001015e0), (*wrapper.tmplField)(0xc0001016c0)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0x6, Name:"Description_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000101c00), (*wrapper.tmplField)(0xc000101ce0), (*wrapper.tmplField)(0xc000101dc0), (*wrapper.tmplField)(0xc000101ea0), (*wrapper.tmplField)(0xc0004c4000)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 	obj    *Description_
 	db     StateDB
 	addr   common.Address
@@ -887,7 +888,7 @@ type Storage_Description_ struct {
 
 type Storage_Global_t struct {
 
-	// &wrapper.tmplStruct{T:0x6, Name:"Global_t", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0005bd420)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0x6, Name:"Global_t", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000100000)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 	obj    *Global_t
 	db     StateDB
 	addr   common.Address
@@ -898,7 +899,7 @@ type Storage_Global_t struct {
 
 type Storage_RedelegationMapEntry_ struct {
 
-	// &wrapper.tmplStruct{T:0x6, Name:"RedelegationMapEntry_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000100380), (*wrapper.tmplField)(0xc000100460)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0x6, Name:"RedelegationMapEntry_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0004c4c40), (*wrapper.tmplField)(0xc0004c4d20)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 	obj    *RedelegationMapEntry_
 	db     StateDB
 	addr   common.Address
@@ -909,7 +910,7 @@ type Storage_RedelegationMapEntry_ struct {
 
 type Storage_RedelegationMap_ struct {
 
-	// &wrapper.tmplStruct{T:0x6, Name:"RedelegationMap_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000101c00), (*wrapper.tmplField)(0xc000101ea0)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0x6, Name:"RedelegationMap_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0004c4540), (*wrapper.tmplField)(0xc0004c4ee0)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 	obj    *RedelegationMap_
 	db     StateDB
 	addr   common.Address
@@ -920,7 +921,7 @@ type Storage_RedelegationMap_ struct {
 
 type Storage_Redelegation_ struct {
 
-	// &wrapper.tmplStruct{T:0x6, Name:"Redelegation_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0004127e0), (*wrapper.tmplField)(0xc0004128c0), (*wrapper.tmplField)(0xc0004129a0), (*wrapper.tmplField)(0xc0001002a0)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0x6, Name:"Redelegation_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0004c4700), (*wrapper.tmplField)(0xc0004c47e0), (*wrapper.tmplField)(0xc0004c48c0), (*wrapper.tmplField)(0xc0004c4b60)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 	obj    *Redelegation_
 	db     StateDB
 	addr   common.Address
@@ -931,7 +932,7 @@ type Storage_Redelegation_ struct {
 
 type Storage_Slot_ struct {
 
-	// &wrapper.tmplStruct{T:0x6, Name:"Slot_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0005bce00), (*wrapper.tmplField)(0xc0005bcee0), (*wrapper.tmplField)(0xc0005bcfc0)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0x6, Name:"Slot_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc00057e460), (*wrapper.tmplField)(0xc0004c56c0), (*wrapper.tmplField)(0xc0004c57a0)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 	obj    *Slot_
 	db     StateDB
 	addr   common.Address
@@ -942,7 +943,7 @@ type Storage_Slot_ struct {
 
 type Storage_Slots_ struct {
 
-	// &wrapper.tmplStruct{T:0x6, Name:"Slots_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0005bd180)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0x6, Name:"Slots_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0004c5960)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 	obj    *Slots_
 	db     StateDB
 	addr   common.Address
@@ -953,7 +954,7 @@ type Storage_Slots_ struct {
 
 type Storage_Undelegation_ struct {
 
-	// &wrapper.tmplStruct{T:0x6, Name:"Undelegation_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000412a80), (*wrapper.tmplField)(0xc000412b60)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0x6, Name:"Undelegation_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0004c49a0), (*wrapper.tmplField)(0xc0004c4a80)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 	obj    *Undelegation_
 	db     StateDB
 	addr   common.Address
@@ -964,7 +965,7 @@ type Storage_Undelegation_ struct {
 
 type Storage_ValidatorPool_ struct {
 
-	// &wrapper.tmplStruct{T:0x6, Name:"ValidatorPool_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0005bca80), (*wrapper.tmplField)(0xc0005bcb60), (*wrapper.tmplField)(0xc0005bcc40), (*wrapper.tmplField)(0xc0005bd340)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0x6, Name:"ValidatorPool_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0004c5c00), (*wrapper.tmplField)(0xc0004c5ce0), (*wrapper.tmplField)(0xc0004c5dc0), (*wrapper.tmplField)(0xc0004c5ea0)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 	obj    *ValidatorPool_
 	db     StateDB
 	addr   common.Address
@@ -975,7 +976,7 @@ type Storage_ValidatorPool_ struct {
 
 type Storage_ValidatorWrapperMapEntry_ struct {
 
-	// &wrapper.tmplStruct{T:0x6, Name:"ValidatorWrapperMapEntry_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0005bc700), (*wrapper.tmplField)(0xc0005bc7e0)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0x6, Name:"ValidatorWrapperMapEntry_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0004c55e0), (*wrapper.tmplField)(0xc00057e000)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 	obj    *ValidatorWrapperMapEntry_
 	db     StateDB
 	addr   common.Address
@@ -986,7 +987,7 @@ type Storage_ValidatorWrapperMapEntry_ struct {
 
 type Storage_ValidatorWrapperMap_ struct {
 
-	// &wrapper.tmplStruct{T:0x6, Name:"ValidatorWrapperMap_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000101960), (*wrapper.tmplField)(0xc0005bc9a0)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0x6, Name:"ValidatorWrapperMap_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0004c42a0), (*wrapper.tmplField)(0xc00057e1c0)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 	obj    *ValidatorWrapperMap_
 	db     StateDB
 	addr   common.Address
@@ -997,7 +998,7 @@ type Storage_ValidatorWrapperMap_ struct {
 
 type Storage_ValidatorWrapper_ struct {
 
-	// &wrapper.tmplStruct{T:0x6, Name:"ValidatorWrapper_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc000101b20), (*wrapper.tmplField)(0xc0005bc0e0), (*wrapper.tmplField)(0xc0005bc380), (*wrapper.tmplField)(0xc0005bc460), (*wrapper.tmplField)(0xc0005bc540), (*wrapper.tmplField)(0xc0005bc620)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0x6, Name:"ValidatorWrapper_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0004c4460), (*wrapper.tmplField)(0xc0004c4fc0), (*wrapper.tmplField)(0xc0004c5260), (*wrapper.tmplField)(0xc0004c5340), (*wrapper.tmplField)(0xc0004c5420), (*wrapper.tmplField)(0xc0004c5500)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 	obj    *ValidatorWrapper_
 	db     StateDB
 	addr   common.Address
@@ -1008,7 +1009,7 @@ type Storage_ValidatorWrapper_ struct {
 
 type Storage_Validator_ struct {
 
-	// &wrapper.tmplStruct{T:0x6, Name:"Validator_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0005bc000), (*wrapper.tmplField)(0xc0001008c0), (*wrapper.tmplField)(0xc000100b60), (*wrapper.tmplField)(0xc000100c40), (*wrapper.tmplField)(0xc000100d20), (*wrapper.tmplField)(0xc000101260), (*wrapper.tmplField)(0xc0001017a0), (*wrapper.tmplField)(0xc000101880)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
+	// &wrapper.tmplStruct{T:0x6, Name:"Validator_", Fields:[]*wrapper.tmplField{(*wrapper.tmplField)(0xc0001009a0), (*wrapper.tmplField)(0xc000100ee0), (*wrapper.tmplField)(0xc000101340), (*wrapper.tmplField)(0xc000101420), (*wrapper.tmplField)(0xc000101500), (*wrapper.tmplField)(0xc0001015e0), (*wrapper.tmplField)(0xc000101b20), (*wrapper.tmplField)(0xc0004c40e0), (*wrapper.tmplField)(0xc0004c41c0)}, Type:"", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x0, Type:reflect.Type(nil), Size:0, T:0x0, NumberOfBytes:0x0, StringKind:"", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}}
 	obj    *Validator_
 	db     StateDB
 	addr   common.Address
@@ -1029,7 +1030,7 @@ func New(g *Global_t, db StateDB, addr common.Address, slot *big.Int) *Storage_G
 
 // Keys is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_AddressSet_) Keys() *Storage_Slice_760032d9d704 {
-	// Field: &wrapper.tmplField{Type:"Slice_760032d9d704", ElemType:"Slice_760032d9d704", Name:"Keys", SolKind:abi.Type{Elem:(*abi.Type)(0xc0004b0090), Kind:0x17, Type:(*reflect.rtype)(0xc000371980), Size:0, T:0x4, NumberOfBytes:0x20, StringKind:"t_array(t_address)dyn_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"Keys\" storage:\"slot=0,offset=0\"", Slot:0, Offset:0}
+	// Field: &wrapper.tmplField{Type:"Slice_760032d9d704", ElemType:"Slice_760032d9d704", Name:"Keys", SolKind:abi.Type{Elem:(*abi.Type)(0xc00045b560), Kind:0x17, Type:(*reflect.rtype)(0xc000433400), Size:0, T:0x4, NumberOfBytes:0x20, StringKind:"t_array(t_address)dyn_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"Keys\" storage:\"slot=0,offset=0\"", Slot:0, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("0", 10)
 
@@ -1053,7 +1054,7 @@ func (s *Storage_AddressSet_) Keys() *Storage_Slice_760032d9d704 {
 
 // Set is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_AddressSet_) Set() *Storage_Map_3783ff483121 {
-	// Field: &wrapper.tmplField{Type:"Map_3783ff483121", ElemType:"Map_3783ff483121", Name:"Set", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x15, Type:(*reflect.rtype)(0xc0003a2aa0), Size:0, T:0xd, NumberOfBytes:0x20, StringKind:"t_mapping(t_address,t_bool)", TupleRawName:"", TupleElems:[]*abi.Type{(*abi.Type)(0xc0004b0240), (*abi.Type)(0xc0004b02d0)}, TupleRawNames:[]string(nil)}, Tag:"json:\"Set\" storage:\"slot=1,offset=0\"", Slot:1, Offset:0}
+	// Field: &wrapper.tmplField{Type:"Map_3783ff483121", ElemType:"Map_3783ff483121", Name:"Set", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x15, Type:(*reflect.rtype)(0xc00043e320), Size:0, T:0xd, NumberOfBytes:0x20, StringKind:"t_mapping(t_address,t_bool)", TupleRawName:"", TupleElems:[]*abi.Type{(*abi.Type)(0xc00045b710), (*abi.Type)(0xc00045b7a0)}, TupleRawNames:[]string(nil)}, Tag:"json:\"Set\" storage:\"slot=1,offset=0\"", Slot:1, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("1", 10)
 
@@ -1076,7 +1077,7 @@ func (s *Storage_AddressSet_) Set() *Storage_Map_3783ff483121 {
 
 // Key is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_BLSPublicKey_) Key() *Storage_Array_aaa956d410fd {
-	// Field: &wrapper.tmplField{Type:"Array_aaa956d410fd", ElemType:"Array_aaa956d410fd", Name:"Key", SolKind:abi.Type{Elem:(*abi.Type)(0xc000499950), Kind:0x11, Type:(*reflect.rtype)(0x4802880), Size:48, T:0x5, NumberOfBytes:0x40, StringKind:"t_array(t_bytes1)48_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"Key\" storage:\"slot=0,offset=0\"", Slot:0, Offset:0}
+	// Field: &wrapper.tmplField{Type:"Array_aaa956d410fd", ElemType:"Array_aaa956d410fd", Name:"Key", SolKind:abi.Type{Elem:(*abi.Type)(0xc00045ad80), Kind:0x11, Type:(*reflect.rtype)(0x4802780), Size:48, T:0x5, NumberOfBytes:0x40, StringKind:"t_array(t_bytes1)48_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"Key\" storage:\"slot=0,offset=0\"", Slot:0, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("0", 10)
 
@@ -1092,7 +1093,7 @@ func (s *Storage_BLSPublicKey_) Key() *Storage_Array_aaa956d410fd {
 
 // Keys is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_BLSPublicKeys_) Keys() *Storage_Slice_6bb0ade2b43c {
-	// Field: &wrapper.tmplField{Type:"Slice_6bb0ade2b43c", ElemType:"Slice_6bb0ade2b43c", Name:"Keys", SolKind:abi.Type{Elem:(*abi.Type)(0xc0004b0630), Kind:0x17, Type:(*reflect.rtype)(0xc000371a00), Size:0, T:0x4, NumberOfBytes:0x20, StringKind:"t_array(t_struct(BLSPublicKey_)32_storage)dyn_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"Keys\" storage:\"slot=0,offset=0\"", Slot:0, Offset:0}
+	// Field: &wrapper.tmplField{Type:"Slice_6bb0ade2b43c", ElemType:"Slice_6bb0ade2b43c", Name:"Keys", SolKind:abi.Type{Elem:(*abi.Type)(0xc00045ba70), Kind:0x17, Type:(*reflect.rtype)(0xc000433480), Size:0, T:0x4, NumberOfBytes:0x20, StringKind:"t_array(t_struct(BLSPublicKey_)32_storage)dyn_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"Keys\" storage:\"slot=0,offset=0\"", Slot:0, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("0", 10)
 
@@ -1116,7 +1117,7 @@ func (s *Storage_BLSPublicKeys_) Keys() *Storage_Slice_6bb0ade2b43c {
 
 // Rate is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_CommissionRates_) Rate() *Storage_Decimal {
-	// Field: &wrapper.tmplField{Type:"Decimal", ElemType:"Decimal", Name:"Rate", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0xc000113920), Size:0, T:0x6, NumberOfBytes:0x20, StringKind:"t_struct(Decimal)4_storage", TupleRawName:"Decimal", TupleElems:[]*abi.Type{(*abi.Type)(0xc000499c20)}, TupleRawNames:[]string{"f"}}, Tag:"json:\"Rate\" storage:\"slot=0,offset=0\"", Slot:0, Offset:0}
+	// Field: &wrapper.tmplField{Type:"Decimal", ElemType:"Decimal", Name:"Rate", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0xc00043c9c0), Size:0, T:0x6, NumberOfBytes:0x20, StringKind:"t_struct(Decimal)4_storage", TupleRawName:"Decimal", TupleElems:[]*abi.Type{(*abi.Type)(0xc00045a750)}, TupleRawNames:[]string{"f"}}, Tag:"json:\"Rate\" storage:\"slot=0,offset=0\"", Slot:0, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("0", 10)
 
@@ -1132,7 +1133,7 @@ func (s *Storage_CommissionRates_) Rate() *Storage_Decimal {
 
 // MaxRate is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_CommissionRates_) MaxRate() *Storage_Decimal {
-	// Field: &wrapper.tmplField{Type:"Decimal", ElemType:"Decimal", Name:"MaxRate", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0xc000113920), Size:0, T:0x6, NumberOfBytes:0x20, StringKind:"t_struct(Decimal)4_storage", TupleRawName:"Decimal", TupleElems:[]*abi.Type{(*abi.Type)(0xc000499c20)}, TupleRawNames:[]string{"f"}}, Tag:"json:\"MaxRate\" storage:\"slot=1,offset=0\"", Slot:1, Offset:0}
+	// Field: &wrapper.tmplField{Type:"Decimal", ElemType:"Decimal", Name:"MaxRate", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0xc00043c9c0), Size:0, T:0x6, NumberOfBytes:0x20, StringKind:"t_struct(Decimal)4_storage", TupleRawName:"Decimal", TupleElems:[]*abi.Type{(*abi.Type)(0xc00045a750)}, TupleRawNames:[]string{"f"}}, Tag:"json:\"MaxRate\" storage:\"slot=1,offset=0\"", Slot:1, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("1", 10)
 
@@ -1148,7 +1149,7 @@ func (s *Storage_CommissionRates_) MaxRate() *Storage_Decimal {
 
 // MaxChangeRate is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_CommissionRates_) MaxChangeRate() *Storage_Decimal {
-	// Field: &wrapper.tmplField{Type:"Decimal", ElemType:"Decimal", Name:"MaxChangeRate", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0xc000113920), Size:0, T:0x6, NumberOfBytes:0x20, StringKind:"t_struct(Decimal)4_storage", TupleRawName:"Decimal", TupleElems:[]*abi.Type{(*abi.Type)(0xc000499c20)}, TupleRawNames:[]string{"f"}}, Tag:"json:\"MaxChangeRate\" storage:\"slot=2,offset=0\"", Slot:2, Offset:0}
+	// Field: &wrapper.tmplField{Type:"Decimal", ElemType:"Decimal", Name:"MaxChangeRate", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0xc00043c9c0), Size:0, T:0x6, NumberOfBytes:0x20, StringKind:"t_struct(Decimal)4_storage", TupleRawName:"Decimal", TupleElems:[]*abi.Type{(*abi.Type)(0xc00045a750)}, TupleRawNames:[]string{"f"}}, Tag:"json:\"MaxChangeRate\" storage:\"slot=2,offset=0\"", Slot:2, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("2", 10)
 
@@ -1164,7 +1165,7 @@ func (s *Storage_CommissionRates_) MaxChangeRate() *Storage_Decimal {
 
 // CommissionRates is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_Commission_) CommissionRates() *Storage_CommissionRates_ {
-	// Field: &wrapper.tmplField{Type:"CommissionRates_", ElemType:"CommissionRates_", Name:"CommissionRates", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0xc000113e00), Size:0, T:0x6, NumberOfBytes:0x60, StringKind:"t_struct(CommissionRates_)22_storage", TupleRawName:"CommissionRates_", TupleElems:[]*abi.Type{(*abi.Type)(0xc0004b0a20), (*abi.Type)(0xc0004b0ab0), (*abi.Type)(0xc0004b0b40)}, TupleRawNames:[]string{"Rate", "MaxRate", "MaxChangeRate"}}, Tag:"json:\"CommissionRates\" storage:\"slot=0,offset=0\"", Slot:0, Offset:0}
+	// Field: &wrapper.tmplField{Type:"CommissionRates_", ElemType:"CommissionRates_", Name:"CommissionRates", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0xc00043ca20), Size:0, T:0x6, NumberOfBytes:0x60, StringKind:"t_struct(CommissionRates_)22_storage", TupleRawName:"CommissionRates_", TupleElems:[]*abi.Type{(*abi.Type)(0xc00045a6c0), (*abi.Type)(0xc00045a870), (*abi.Type)(0xc00045a900)}, TupleRawNames:[]string{"Rate", "MaxRate", "MaxChangeRate"}}, Tag:"json:\"CommissionRates\" storage:\"slot=0,offset=0\"", Slot:0, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("0", 10)
 
@@ -1180,7 +1181,7 @@ func (s *Storage_Commission_) CommissionRates() *Storage_CommissionRates_ {
 
 // UpdateHeight is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_Commission_) UpdateHeight() *Storage_BigInt {
-	// Field: &wrapper.tmplField{Type:"BigInt", ElemType:"BigInt", Name:"UpdateHeight", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x492a7a0), Size:256, T:0x1, NumberOfBytes:0x20, StringKind:"t_uint256", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"UpdateHeight\" storage:\"slot=3,offset=0\"", Slot:3, Offset:0}
+	// Field: &wrapper.tmplField{Type:"BigInt", ElemType:"BigInt", Name:"UpdateHeight", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x492a900), Size:256, T:0x1, NumberOfBytes:0x20, StringKind:"t_uint256", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"UpdateHeight\" storage:\"slot=3,offset=0\"", Slot:3, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("3", 10)
 
@@ -1203,7 +1204,7 @@ func (s *Storage_Commission_) UpdateHeight() *Storage_BigInt {
 
 // Epoch is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_Committee_) Epoch() *Storage_BigInt {
-	// Field: &wrapper.tmplField{Type:"BigInt", ElemType:"BigInt", Name:"Epoch", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x492a7a0), Size:256, T:0x1, NumberOfBytes:0x20, StringKind:"t_uint256", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"Epoch\" storage:\"slot=0,offset=0\"", Slot:0, Offset:0}
+	// Field: &wrapper.tmplField{Type:"BigInt", ElemType:"BigInt", Name:"Epoch", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x492a900), Size:256, T:0x1, NumberOfBytes:0x20, StringKind:"t_uint256", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"Epoch\" storage:\"slot=0,offset=0\"", Slot:0, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("0", 10)
 
@@ -1226,7 +1227,7 @@ func (s *Storage_Committee_) Epoch() *Storage_BigInt {
 
 // Slots is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_Committee_) Slots() *Storage_Slots_ {
-	// Field: &wrapper.tmplField{Type:"Slots_", ElemType:"Slots_", Name:"Slots", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0xc0004c47e0), Size:0, T:0x6, NumberOfBytes:0x20, StringKind:"t_struct(Slots_)130_storage", TupleRawName:"Slots_", TupleElems:[]*abi.Type{(*abi.Type)(0xc0004d2b40)}, TupleRawNames:[]string{"Entrys"}}, Tag:"json:\"Slots\" storage:\"slot=1,offset=0\"", Slot:1, Offset:0}
+	// Field: &wrapper.tmplField{Type:"Slots_", ElemType:"Slots_", Name:"Slots", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0xc00043cd80), Size:0, T:0x6, NumberOfBytes:0x20, StringKind:"t_struct(Slots_)132_storage", TupleRawName:"Slots_", TupleElems:[]*abi.Type{(*abi.Type)(0xc00045aab0)}, TupleRawNames:[]string{"Entrys"}}, Tag:"json:\"Slots\" storage:\"slot=1,offset=0\"", Slot:1, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("1", 10)
 
@@ -1242,7 +1243,7 @@ func (s *Storage_Committee_) Slots() *Storage_Slots_ {
 
 // NumBlocksToSign is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_Counters_) NumBlocksToSign() *Storage_BigInt {
-	// Field: &wrapper.tmplField{Type:"BigInt", ElemType:"BigInt", Name:"NumBlocksToSign", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x492a7a0), Size:256, T:0x1, NumberOfBytes:0x20, StringKind:"t_uint256", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"NumBlocksToSign\" storage:\"slot=0,offset=0\"", Slot:0, Offset:0}
+	// Field: &wrapper.tmplField{Type:"BigInt", ElemType:"BigInt", Name:"NumBlocksToSign", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x492a900), Size:256, T:0x1, NumberOfBytes:0x20, StringKind:"t_uint256", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"NumBlocksToSign\" storage:\"slot=0,offset=0\"", Slot:0, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("0", 10)
 
@@ -1265,7 +1266,7 @@ func (s *Storage_Counters_) NumBlocksToSign() *Storage_BigInt {
 
 // NumBlocksSigned is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_Counters_) NumBlocksSigned() *Storage_BigInt {
-	// Field: &wrapper.tmplField{Type:"BigInt", ElemType:"BigInt", Name:"NumBlocksSigned", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x492a7a0), Size:256, T:0x1, NumberOfBytes:0x20, StringKind:"t_uint256", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"NumBlocksSigned\" storage:\"slot=1,offset=0\"", Slot:1, Offset:0}
+	// Field: &wrapper.tmplField{Type:"BigInt", ElemType:"BigInt", Name:"NumBlocksSigned", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x492a900), Size:256, T:0x1, NumberOfBytes:0x20, StringKind:"t_uint256", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"NumBlocksSigned\" storage:\"slot=1,offset=0\"", Slot:1, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("1", 10)
 
@@ -1288,7 +1289,7 @@ func (s *Storage_Counters_) NumBlocksSigned() *Storage_BigInt {
 
 // Name is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_Description_) Name() *Storage_String {
-	// Field: &wrapper.tmplField{Type:"String", ElemType:"String", Name:"Name", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x18, Type:(*reflect.rtype)(0x47f59c0), Size:0, T:0x3, NumberOfBytes:0x20, StringKind:"t_string_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"Name\" storage:\"slot=0,offset=0\"", Slot:0, Offset:0}
+	// Field: &wrapper.tmplField{Type:"String", ElemType:"String", Name:"Name", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x18, Type:(*reflect.rtype)(0x47f58c0), Size:0, T:0x3, NumberOfBytes:0x20, StringKind:"t_string_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"Name\" storage:\"slot=0,offset=0\"", Slot:0, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("0", 10)
 
@@ -1304,7 +1305,7 @@ func (s *Storage_Description_) Name() *Storage_String {
 
 // Identity is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_Description_) Identity() *Storage_String {
-	// Field: &wrapper.tmplField{Type:"String", ElemType:"String", Name:"Identity", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x18, Type:(*reflect.rtype)(0x47f59c0), Size:0, T:0x3, NumberOfBytes:0x20, StringKind:"t_string_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"Identity\" storage:\"slot=1,offset=0\"", Slot:1, Offset:0}
+	// Field: &wrapper.tmplField{Type:"String", ElemType:"String", Name:"Identity", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x18, Type:(*reflect.rtype)(0x47f58c0), Size:0, T:0x3, NumberOfBytes:0x20, StringKind:"t_string_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"Identity\" storage:\"slot=1,offset=0\"", Slot:1, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("1", 10)
 
@@ -1320,7 +1321,7 @@ func (s *Storage_Description_) Identity() *Storage_String {
 
 // Website is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_Description_) Website() *Storage_String {
-	// Field: &wrapper.tmplField{Type:"String", ElemType:"String", Name:"Website", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x18, Type:(*reflect.rtype)(0x47f59c0), Size:0, T:0x3, NumberOfBytes:0x20, StringKind:"t_string_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"Website\" storage:\"slot=2,offset=0\"", Slot:2, Offset:0}
+	// Field: &wrapper.tmplField{Type:"String", ElemType:"String", Name:"Website", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x18, Type:(*reflect.rtype)(0x47f58c0), Size:0, T:0x3, NumberOfBytes:0x20, StringKind:"t_string_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"Website\" storage:\"slot=2,offset=0\"", Slot:2, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("2", 10)
 
@@ -1336,7 +1337,7 @@ func (s *Storage_Description_) Website() *Storage_String {
 
 // SecurityContact is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_Description_) SecurityContact() *Storage_String {
-	// Field: &wrapper.tmplField{Type:"String", ElemType:"String", Name:"SecurityContact", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x18, Type:(*reflect.rtype)(0x47f59c0), Size:0, T:0x3, NumberOfBytes:0x20, StringKind:"t_string_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"SecurityContact\" storage:\"slot=3,offset=0\"", Slot:3, Offset:0}
+	// Field: &wrapper.tmplField{Type:"String", ElemType:"String", Name:"SecurityContact", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x18, Type:(*reflect.rtype)(0x47f58c0), Size:0, T:0x3, NumberOfBytes:0x20, StringKind:"t_string_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"SecurityContact\" storage:\"slot=3,offset=0\"", Slot:3, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("3", 10)
 
@@ -1352,7 +1353,7 @@ func (s *Storage_Description_) SecurityContact() *Storage_String {
 
 // Details is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_Description_) Details() *Storage_String {
-	// Field: &wrapper.tmplField{Type:"String", ElemType:"String", Name:"Details", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x18, Type:(*reflect.rtype)(0x47f59c0), Size:0, T:0x3, NumberOfBytes:0x20, StringKind:"t_string_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"Details\" storage:\"slot=4,offset=0\"", Slot:4, Offset:0}
+	// Field: &wrapper.tmplField{Type:"String", ElemType:"String", Name:"Details", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x18, Type:(*reflect.rtype)(0x47f58c0), Size:0, T:0x3, NumberOfBytes:0x20, StringKind:"t_string_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"Details\" storage:\"slot=4,offset=0\"", Slot:4, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("4", 10)
 
@@ -1368,7 +1369,7 @@ func (s *Storage_Description_) Details() *Storage_String {
 
 // ValidatorPool is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_Global_t) ValidatorPool() *Storage_ValidatorPool_ {
-	// Field: &wrapper.tmplField{Type:"ValidatorPool_", ElemType:"ValidatorPool_", Name:"ValidatorPool", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0xc0004c4900), Size:0, T:0x6, NumberOfBytes:0xc0, StringKind:"t_struct(ValidatorPool_)148_storage", TupleRawName:"ValidatorPool_", TupleElems:[]*abi.Type{(*abi.Type)(0xc0004d2240), (*abi.Type)(0xc0004d2630), (*abi.Type)(0xc0004d2900), (*abi.Type)(0xc0004d2990)}, TupleRawNames:[]string{"Validators", "SlotKeySet", "DescriptionIdentitySet", "Committee"}}, Tag:"json:\"ValidatorPool\" storage:\"slot=0,offset=0\"", Slot:0, Offset:0}
+	// Field: &wrapper.tmplField{Type:"ValidatorPool_", ElemType:"ValidatorPool_", Name:"ValidatorPool", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0xc00043d980), Size:0, T:0x6, NumberOfBytes:0xc0, StringKind:"t_struct(ValidatorPool_)150_storage", TupleRawName:"ValidatorPool_", TupleElems:[]*abi.Type{(*abi.Type)(0xc00046d290), (*abi.Type)(0xc00046d4d0), (*abi.Type)(0xc00046d7a0), (*abi.Type)(0xc00046d830)}, TupleRawNames:[]string{"Validators", "SlotKeySet", "DescriptionIdentitySet", "Committee"}}, Tag:"json:\"ValidatorPool\" storage:\"slot=0,offset=0\"", Slot:0, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("0", 10)
 
@@ -1384,7 +1385,7 @@ func (s *Storage_Global_t) ValidatorPool() *Storage_ValidatorPool_ {
 
 // Entry is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_RedelegationMapEntry_) Entry() *Storage_Redelegation_ {
-	// Field: &wrapper.tmplField{Type:"Redelegation_", ElemType:"Redelegation_", Name:"Entry", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0xc0004c42a0), Size:0, T:0x6, NumberOfBytes:0xa0, StringKind:"t_struct(Redelegation_)80_storage", TupleRawName:"Redelegation_", TupleElems:[]*abi.Type{(*abi.Type)(0xc0004b1440), (*abi.Type)(0xc0004b14d0), (*abi.Type)(0xc0004b1560), (*abi.Type)(0xc0004b15f0)}, TupleRawNames:[]string{"DelegatorAddress", "Amount", "Reward", "Undelegation"}}, Tag:"json:\"Entry\" storage:\"slot=0,offset=0\"", Slot:0, Offset:0}
+	// Field: &wrapper.tmplField{Type:"Redelegation_", ElemType:"Redelegation_", Name:"Entry", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0xc00043c840), Size:0, T:0x6, NumberOfBytes:0xa0, StringKind:"t_struct(Redelegation_)82_storage", TupleRawName:"Redelegation_", TupleElems:[]*abi.Type{(*abi.Type)(0xc000453ef0), (*abi.Type)(0xc00045a000), (*abi.Type)(0xc00045a120), (*abi.Type)(0xc00045a1b0)}, TupleRawNames:[]string{"DelegatorAddress", "Amount", "Reward", "Undelegation"}}, Tag:"json:\"Entry\" storage:\"slot=0,offset=0\"", Slot:0, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("0", 10)
 
@@ -1400,7 +1401,7 @@ func (s *Storage_RedelegationMapEntry_) Entry() *Storage_Redelegation_ {
 
 // Index is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_RedelegationMapEntry_) Index() *Storage_BigInt {
-	// Field: &wrapper.tmplField{Type:"BigInt", ElemType:"BigInt", Name:"Index", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x492a7a0), Size:256, T:0x1, NumberOfBytes:0x20, StringKind:"t_uint256", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"Index\" storage:\"slot=5,offset=0\"", Slot:5, Offset:0}
+	// Field: &wrapper.tmplField{Type:"BigInt", ElemType:"BigInt", Name:"Index", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x492a900), Size:256, T:0x1, NumberOfBytes:0x20, StringKind:"t_uint256", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"Index\" storage:\"slot=5,offset=0\"", Slot:5, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("5", 10)
 
@@ -1423,7 +1424,7 @@ func (s *Storage_RedelegationMapEntry_) Index() *Storage_BigInt {
 
 // Keys is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_RedelegationMap_) Keys() *Storage_Slice_760032d9d704 {
-	// Field: &wrapper.tmplField{Type:"Slice_760032d9d704", ElemType:"Slice_760032d9d704", Name:"Keys", SolKind:abi.Type{Elem:(*abi.Type)(0xc0004b0090), Kind:0x17, Type:(*reflect.rtype)(0xc000371980), Size:0, T:0x4, NumberOfBytes:0x20, StringKind:"t_array(t_address)dyn_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"Keys\" storage:\"slot=0,offset=0\"", Slot:0, Offset:0}
+	// Field: &wrapper.tmplField{Type:"Slice_760032d9d704", ElemType:"Slice_760032d9d704", Name:"Keys", SolKind:abi.Type{Elem:(*abi.Type)(0xc00045b560), Kind:0x17, Type:(*reflect.rtype)(0xc000433400), Size:0, T:0x4, NumberOfBytes:0x20, StringKind:"t_array(t_address)dyn_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"Keys\" storage:\"slot=0,offset=0\"", Slot:0, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("0", 10)
 
@@ -1446,20 +1447,20 @@ func (s *Storage_RedelegationMap_) Keys() *Storage_Slice_760032d9d704 {
 }
 
 // Map is an auto generated low-level Go binding around an user-defined struct.
-func (s *Storage_RedelegationMap_) Map() *Storage_Map_2732d5ca2110 {
-	// Field: &wrapper.tmplField{Type:"Map_2732d5ca2110", ElemType:"Map_2732d5ca2110", Name:"Map", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x15, Type:(*reflect.rtype)(0xc0003a2b40), Size:0, T:0xd, NumberOfBytes:0x20, StringKind:"t_mapping(t_address,t_struct(RedelegationMapEntry_)85_storage)", TupleRawName:"", TupleElems:[]*abi.Type{(*abi.Type)(0xc0004b1290), (*abi.Type)(0xc0004b1320)}, TupleRawNames:[]string(nil)}, Tag:"json:\"Map\" storage:\"slot=1,offset=0\"", Slot:1, Offset:0}
+func (s *Storage_RedelegationMap_) Map() *Storage_Map_1e3b3171b974 {
+	// Field: &wrapper.tmplField{Type:"Map_1e3b3171b974", ElemType:"Map_1e3b3171b974", Name:"Map", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x15, Type:(*reflect.rtype)(0xc00043e230), Size:0, T:0xd, NumberOfBytes:0x20, StringKind:"t_mapping(t_address,t_struct(RedelegationMapEntry_)87_storage)", TupleRawName:"", TupleElems:[]*abi.Type{(*abi.Type)(0xc000453cb0), (*abi.Type)(0xc000453dd0)}, TupleRawNames:[]string(nil)}, Tag:"json:\"Map\" storage:\"slot=1,offset=0\"", Slot:1, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("1", 10)
 
 	var actual *big.Int = big.NewInt(0).Add(s.slot, slot)
 	if s.obj.Map == nil {
 
-		instance := make(Map_2732d5ca2110)
+		instance := make(Map_1e3b3171b974)
 
 		s.obj.Map = instance
 	}
 
-	return &Storage_Map_2732d5ca2110{
+	return &Storage_Map_1e3b3171b974{
 		obj:   s.obj.Map,
 		db:    s.db,
 		addr:  s.addr,
@@ -1470,7 +1471,7 @@ func (s *Storage_RedelegationMap_) Map() *Storage_Map_2732d5ca2110 {
 
 // DelegatorAddress is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_Redelegation_) DelegatorAddress() *Storage_Address {
-	// Field: &wrapper.tmplField{Type:"Address", ElemType:"Address", Name:"DelegatorAddress", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x11, Type:(*reflect.rtype)(0x48bfac0), Size:20, T:0x7, NumberOfBytes:0x14, StringKind:"t_address", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"DelegatorAddress\" storage:\"slot=0,offset=0\"", Slot:0, Offset:0}
+	// Field: &wrapper.tmplField{Type:"Address", ElemType:"Address", Name:"DelegatorAddress", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x11, Type:(*reflect.rtype)(0x48bf8e0), Size:20, T:0x7, NumberOfBytes:0x14, StringKind:"t_address", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"DelegatorAddress\" storage:\"slot=0,offset=0\"", Slot:0, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("0", 10)
 
@@ -1486,7 +1487,7 @@ func (s *Storage_Redelegation_) DelegatorAddress() *Storage_Address {
 
 // Amount is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_Redelegation_) Amount() *Storage_BigInt {
-	// Field: &wrapper.tmplField{Type:"BigInt", ElemType:"BigInt", Name:"Amount", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x492a7a0), Size:256, T:0x1, NumberOfBytes:0x20, StringKind:"t_uint256", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"Amount\" storage:\"slot=1,offset=0\"", Slot:1, Offset:0}
+	// Field: &wrapper.tmplField{Type:"BigInt", ElemType:"BigInt", Name:"Amount", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x492a900), Size:256, T:0x1, NumberOfBytes:0x20, StringKind:"t_uint256", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"Amount\" storage:\"slot=1,offset=0\"", Slot:1, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("1", 10)
 
@@ -1509,7 +1510,7 @@ func (s *Storage_Redelegation_) Amount() *Storage_BigInt {
 
 // Reward is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_Redelegation_) Reward() *Storage_BigInt {
-	// Field: &wrapper.tmplField{Type:"BigInt", ElemType:"BigInt", Name:"Reward", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x492a7a0), Size:256, T:0x1, NumberOfBytes:0x20, StringKind:"t_uint256", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"Reward\" storage:\"slot=2,offset=0\"", Slot:2, Offset:0}
+	// Field: &wrapper.tmplField{Type:"BigInt", ElemType:"BigInt", Name:"Reward", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x492a900), Size:256, T:0x1, NumberOfBytes:0x20, StringKind:"t_uint256", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"Reward\" storage:\"slot=2,offset=0\"", Slot:2, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("2", 10)
 
@@ -1532,7 +1533,7 @@ func (s *Storage_Redelegation_) Reward() *Storage_BigInt {
 
 // Undelegation is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_Redelegation_) Undelegation() *Storage_Undelegation_ {
-	// Field: &wrapper.tmplField{Type:"Undelegation_", ElemType:"Undelegation_", Name:"Undelegation", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0xc0004c41e0), Size:0, T:0x6, NumberOfBytes:0x40, StringKind:"t_struct(Undelegation_)71_storage", TupleRawName:"Undelegation_", TupleElems:[]*abi.Type{(*abi.Type)(0xc0004b1680), (*abi.Type)(0xc0004b1710)}, TupleRawNames:[]string{"Amount", "Epoch"}}, Tag:"json:\"Undelegation\" storage:\"slot=3,offset=0\"", Slot:3, Offset:0}
+	// Field: &wrapper.tmplField{Type:"Undelegation_", ElemType:"Undelegation_", Name:"Undelegation", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0xc00043c780), Size:0, T:0x6, NumberOfBytes:0x40, StringKind:"t_struct(Undelegation_)73_storage", TupleRawName:"Undelegation_", TupleElems:[]*abi.Type{(*abi.Type)(0xc00045a240), (*abi.Type)(0xc00045a2d0)}, TupleRawNames:[]string{"Amount", "Epoch"}}, Tag:"json:\"Undelegation\" storage:\"slot=3,offset=0\"", Slot:3, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("3", 10)
 
@@ -1548,7 +1549,7 @@ func (s *Storage_Redelegation_) Undelegation() *Storage_Undelegation_ {
 
 // EcdsaAddress is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_Slot_) EcdsaAddress() *Storage_Address {
-	// Field: &wrapper.tmplField{Type:"Address", ElemType:"Address", Name:"EcdsaAddress", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x11, Type:(*reflect.rtype)(0x48bfac0), Size:20, T:0x7, NumberOfBytes:0x14, StringKind:"t_address", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"EcdsaAddress\" storage:\"slot=0,offset=0\"", Slot:0, Offset:0}
+	// Field: &wrapper.tmplField{Type:"Address", ElemType:"Address", Name:"EcdsaAddress", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x11, Type:(*reflect.rtype)(0x48bf8e0), Size:20, T:0x7, NumberOfBytes:0x14, StringKind:"t_address", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"EcdsaAddress\" storage:\"slot=0,offset=0\"", Slot:0, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("0", 10)
 
@@ -1564,7 +1565,7 @@ func (s *Storage_Slot_) EcdsaAddress() *Storage_Address {
 
 // BLSPublicKey is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_Slot_) BLSPublicKey() *Storage_BLSPublicKey_ {
-	// Field: &wrapper.tmplField{Type:"BLSPublicKey_", ElemType:"BLSPublicKey_", Name:"BLSPublicKey", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0xc000113860), Size:0, T:0x6, NumberOfBytes:0x40, StringKind:"t_struct(BLSPublicKey_)32_storage", TupleRawName:"BLSPublicKey_", TupleElems:[]*abi.Type{(*abi.Type)(0xc0004998c0)}, TupleRawNames:[]string{"Key"}}, Tag:"json:\"BLSPublicKey\" storage:\"slot=1,offset=0\"", Slot:1, Offset:0}
+	// Field: &wrapper.tmplField{Type:"BLSPublicKey_", ElemType:"BLSPublicKey_", Name:"BLSPublicKey", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0xc00043ccc0), Size:0, T:0x6, NumberOfBytes:0x40, StringKind:"t_struct(BLSPublicKey_)32_storage", TupleRawName:"BLSPublicKey_", TupleElems:[]*abi.Type{(*abi.Type)(0xc00045acf0)}, TupleRawNames:[]string{"Key"}}, Tag:"json:\"BLSPublicKey\" storage:\"slot=1,offset=0\"", Slot:1, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("1", 10)
 
@@ -1580,7 +1581,7 @@ func (s *Storage_Slot_) BLSPublicKey() *Storage_BLSPublicKey_ {
 
 // EffectiveStake is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_Slot_) EffectiveStake() *Storage_Decimal {
-	// Field: &wrapper.tmplField{Type:"Decimal", ElemType:"Decimal", Name:"EffectiveStake", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0xc000113920), Size:0, T:0x6, NumberOfBytes:0x20, StringKind:"t_struct(Decimal)4_storage", TupleRawName:"Decimal", TupleElems:[]*abi.Type{(*abi.Type)(0xc000499c20)}, TupleRawNames:[]string{"f"}}, Tag:"json:\"EffectiveStake\" storage:\"slot=3,offset=0\"", Slot:3, Offset:0}
+	// Field: &wrapper.tmplField{Type:"Decimal", ElemType:"Decimal", Name:"EffectiveStake", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0xc00043c9c0), Size:0, T:0x6, NumberOfBytes:0x20, StringKind:"t_struct(Decimal)4_storage", TupleRawName:"Decimal", TupleElems:[]*abi.Type{(*abi.Type)(0xc00045a750)}, TupleRawNames:[]string{"f"}}, Tag:"json:\"EffectiveStake\" storage:\"slot=3,offset=0\"", Slot:3, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("3", 10)
 
@@ -1595,8 +1596,8 @@ func (s *Storage_Slot_) EffectiveStake() *Storage_Decimal {
 }
 
 // Entrys is an auto generated low-level Go binding around an user-defined struct.
-func (s *Storage_Slots_) Entrys() *Storage_Slice_eba64d7a7c55 {
-	// Field: &wrapper.tmplField{Type:"Slice_eba64d7a7c55", ElemType:"Slice_eba64d7a7c55", Name:"Entrys", SolKind:abi.Type{Elem:(*abi.Type)(0xc0004d2bd0), Kind:0x17, Type:(*reflect.rtype)(0xc000371cc0), Size:0, T:0x4, NumberOfBytes:0x20, StringKind:"t_array(t_struct(Slot_)126_storage)dyn_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"Entrys\" storage:\"slot=0,offset=0\"", Slot:0, Offset:0}
+func (s *Storage_Slots_) Entrys() *Storage_Slice_ed073f3f1ff1 {
+	// Field: &wrapper.tmplField{Type:"Slice_ed073f3f1ff1", ElemType:"Slice_ed073f3f1ff1", Name:"Entrys", SolKind:abi.Type{Elem:(*abi.Type)(0xc00045ab40), Kind:0x17, Type:(*reflect.rtype)(0xc0004333c0), Size:0, T:0x4, NumberOfBytes:0x20, StringKind:"t_array(t_struct(Slot_)128_storage)dyn_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"Entrys\" storage:\"slot=0,offset=0\"", Slot:0, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("0", 10)
 
@@ -1604,12 +1605,12 @@ func (s *Storage_Slots_) Entrys() *Storage_Slice_eba64d7a7c55 {
 	if s.obj.Entrys == nil {
 
 		hash := s.db.GetState(s.addr, common.BigToHash(actual))
-		instance := make(Slice_eba64d7a7c55, hash.Big().Int64())
+		instance := make(Slice_ed073f3f1ff1, hash.Big().Int64())
 
 		s.obj.Entrys = instance
 	}
 
-	return &Storage_Slice_eba64d7a7c55{
+	return &Storage_Slice_ed073f3f1ff1{
 		obj:   &s.obj.Entrys,
 		db:    s.db,
 		addr:  s.addr,
@@ -1620,7 +1621,7 @@ func (s *Storage_Slots_) Entrys() *Storage_Slice_eba64d7a7c55 {
 
 // Amount is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_Undelegation_) Amount() *Storage_BigInt {
-	// Field: &wrapper.tmplField{Type:"BigInt", ElemType:"BigInt", Name:"Amount", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x492a7a0), Size:256, T:0x1, NumberOfBytes:0x20, StringKind:"t_uint256", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"Amount\" storage:\"slot=0,offset=0\"", Slot:0, Offset:0}
+	// Field: &wrapper.tmplField{Type:"BigInt", ElemType:"BigInt", Name:"Amount", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x492a900), Size:256, T:0x1, NumberOfBytes:0x20, StringKind:"t_uint256", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"Amount\" storage:\"slot=0,offset=0\"", Slot:0, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("0", 10)
 
@@ -1643,7 +1644,7 @@ func (s *Storage_Undelegation_) Amount() *Storage_BigInt {
 
 // Epoch is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_Undelegation_) Epoch() *Storage_BigInt {
-	// Field: &wrapper.tmplField{Type:"BigInt", ElemType:"BigInt", Name:"Epoch", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x492a7a0), Size:256, T:0x1, NumberOfBytes:0x20, StringKind:"t_uint256", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"Epoch\" storage:\"slot=1,offset=0\"", Slot:1, Offset:0}
+	// Field: &wrapper.tmplField{Type:"BigInt", ElemType:"BigInt", Name:"Epoch", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x492a900), Size:256, T:0x1, NumberOfBytes:0x20, StringKind:"t_uint256", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"Epoch\" storage:\"slot=1,offset=0\"", Slot:1, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("1", 10)
 
@@ -1666,7 +1667,7 @@ func (s *Storage_Undelegation_) Epoch() *Storage_BigInt {
 
 // Validators is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_ValidatorPool_) Validators() *Storage_ValidatorWrapperMap_ {
-	// Field: &wrapper.tmplField{Type:"ValidatorWrapperMap_", ElemType:"ValidatorWrapperMap_", Name:"Validators", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0xc0004c45a0), Size:0, T:0x6, NumberOfBytes:0x40, StringKind:"t_struct(ValidatorWrapperMap_)119_storage", TupleRawName:"ValidatorWrapperMap_", TupleElems:[]*abi.Type{(*abi.Type)(0xc0004d22d0), (*abi.Type)(0xc0004d2360)}, TupleRawNames:[]string{"Keys", "Map"}}, Tag:"json:\"Validators\" storage:\"slot=0,offset=0\"", Slot:0, Offset:0}
+	// Field: &wrapper.tmplField{Type:"ValidatorWrapperMap_", ElemType:"ValidatorWrapperMap_", Name:"Validators", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0xc00043d740), Size:0, T:0x6, NumberOfBytes:0x40, StringKind:"t_struct(ValidatorWrapperMap_)121_storage", TupleRawName:"ValidatorWrapperMap_", TupleElems:[]*abi.Type{(*abi.Type)(0xc00046d320), (*abi.Type)(0xc00046d3b0)}, TupleRawNames:[]string{"Keys", "Map"}}, Tag:"json:\"Validators\" storage:\"slot=0,offset=0\"", Slot:0, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("0", 10)
 
@@ -1682,7 +1683,7 @@ func (s *Storage_ValidatorPool_) Validators() *Storage_ValidatorWrapperMap_ {
 
 // SlotKeySet is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_ValidatorPool_) SlotKeySet() *Storage_Map_624bcc0df495 {
-	// Field: &wrapper.tmplField{Type:"Map_624bcc0df495", ElemType:"Map_624bcc0df495", Name:"SlotKeySet", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x15, Type:(*reflect.rtype)(0xc0003a2be0), Size:0, T:0xd, NumberOfBytes:0x20, StringKind:"t_mapping(t_string_memory_ptr,t_bool)", TupleRawName:"", TupleElems:[]*abi.Type{(*abi.Type)(0xc0004d26c0), (*abi.Type)(0xc0004d27e0)}, TupleRawNames:[]string(nil)}, Tag:"json:\"SlotKeySet\" storage:\"slot=2,offset=0\"", Slot:2, Offset:0}
+	// Field: &wrapper.tmplField{Type:"Map_624bcc0df495", ElemType:"Map_624bcc0df495", Name:"SlotKeySet", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x15, Type:(*reflect.rtype)(0xc00043e3c0), Size:0, T:0xd, NumberOfBytes:0x20, StringKind:"t_mapping(t_string_memory_ptr,t_bool)", TupleRawName:"", TupleElems:[]*abi.Type{(*abi.Type)(0xc00046d560), (*abi.Type)(0xc00046d680)}, TupleRawNames:[]string(nil)}, Tag:"json:\"SlotKeySet\" storage:\"slot=2,offset=0\"", Slot:2, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("2", 10)
 
@@ -1705,7 +1706,7 @@ func (s *Storage_ValidatorPool_) SlotKeySet() *Storage_Map_624bcc0df495 {
 
 // DescriptionIdentitySet is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_ValidatorPool_) DescriptionIdentitySet() *Storage_Map_624bcc0df495 {
-	// Field: &wrapper.tmplField{Type:"Map_624bcc0df495", ElemType:"Map_624bcc0df495", Name:"DescriptionIdentitySet", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x15, Type:(*reflect.rtype)(0xc0003a2be0), Size:0, T:0xd, NumberOfBytes:0x20, StringKind:"t_mapping(t_string_memory_ptr,t_bool)", TupleRawName:"", TupleElems:[]*abi.Type{(*abi.Type)(0xc0004d26c0), (*abi.Type)(0xc0004d27e0)}, TupleRawNames:[]string(nil)}, Tag:"json:\"DescriptionIdentitySet\" storage:\"slot=3,offset=0\"", Slot:3, Offset:0}
+	// Field: &wrapper.tmplField{Type:"Map_624bcc0df495", ElemType:"Map_624bcc0df495", Name:"DescriptionIdentitySet", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x15, Type:(*reflect.rtype)(0xc00043e3c0), Size:0, T:0xd, NumberOfBytes:0x20, StringKind:"t_mapping(t_string_memory_ptr,t_bool)", TupleRawName:"", TupleElems:[]*abi.Type{(*abi.Type)(0xc00046d560), (*abi.Type)(0xc00046d680)}, TupleRawNames:[]string(nil)}, Tag:"json:\"DescriptionIdentitySet\" storage:\"slot=3,offset=0\"", Slot:3, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("3", 10)
 
@@ -1728,7 +1729,7 @@ func (s *Storage_ValidatorPool_) DescriptionIdentitySet() *Storage_Map_624bcc0df
 
 // Committee is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_ValidatorPool_) Committee() *Storage_Committee_ {
-	// Field: &wrapper.tmplField{Type:"Committee_", ElemType:"Committee_", Name:"Committee", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0xc0004c4840), Size:0, T:0x6, NumberOfBytes:0x40, StringKind:"t_struct(Committee_)135_storage", TupleRawName:"Committee_", TupleElems:[]*abi.Type{(*abi.Type)(0xc0004d2a20), (*abi.Type)(0xc0004d2ab0)}, TupleRawNames:[]string{"Epoch", "Slots"}}, Tag:"json:\"Committee\" storage:\"slot=4,offset=0\"", Slot:4, Offset:0}
+	// Field: &wrapper.tmplField{Type:"Committee_", ElemType:"Committee_", Name:"Committee", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0xc00043d8c0), Size:0, T:0x6, NumberOfBytes:0x40, StringKind:"t_struct(Committee_)137_storage", TupleRawName:"Committee_", TupleElems:[]*abi.Type{(*abi.Type)(0xc00046d8c0), (*abi.Type)(0xc00046d950)}, TupleRawNames:[]string{"Epoch", "Slots"}}, Tag:"json:\"Committee\" storage:\"slot=4,offset=0\"", Slot:4, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("4", 10)
 
@@ -1744,7 +1745,7 @@ func (s *Storage_ValidatorPool_) Committee() *Storage_Committee_ {
 
 // Entry is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_ValidatorWrapperMapEntry_) Entry() *Storage_ValidatorWrapper_ {
-	// Field: &wrapper.tmplField{Type:"ValidatorWrapper_", ElemType:"ValidatorWrapper_", Name:"Entry", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0xc0004c43c0), Size:0, T:0x6, NumberOfBytes:0x2e0, StringKind:"t_struct(ValidatorWrapper_)106_storage", TupleRawName:"ValidatorWrapper_", TupleElems:[]*abi.Type{(*abi.Type)(0xc0004b1050), (*abi.Type)(0xc0004b10e0), (*abi.Type)(0xc0004b1b00), (*abi.Type)(0xc0004b1b90), (*abi.Type)(0xc0004b1c20), (*abi.Type)(0xc0004b1cb0)}, TupleRawNames:[]string{"Validator", "Redelegations", "Counters", "BlockReward", "TotalDelegation", "TotalDelegationByOperator"}}, Tag:"json:\"Entry\" storage:\"slot=0,offset=0\"", Slot:0, Offset:0}
+	// Field: &wrapper.tmplField{Type:"ValidatorWrapper_", ElemType:"ValidatorWrapper_", Name:"Entry", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0xc00043d560), Size:0, T:0x6, NumberOfBytes:0x300, StringKind:"t_struct(ValidatorWrapper_)108_storage", TupleRawName:"ValidatorWrapper_", TupleElems:[]*abi.Type{(*abi.Type)(0xc00045b320), (*abi.Type)(0xc00046c630), (*abi.Type)(0xc00046c870), (*abi.Type)(0xc00046cab0), (*abi.Type)(0xc00046cb40), (*abi.Type)(0xc00046cbd0)}, TupleRawNames:[]string{"Validator", "Redelegations", "Counters", "BlockReward", "TotalDelegation", "TotalDelegationByOperator"}}, Tag:"json:\"Entry\" storage:\"slot=0,offset=0\"", Slot:0, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("0", 10)
 
@@ -1760,9 +1761,9 @@ func (s *Storage_ValidatorWrapperMapEntry_) Entry() *Storage_ValidatorWrapper_ {
 
 // Index is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_ValidatorWrapperMapEntry_) Index() *Storage_BigInt {
-	// Field: &wrapper.tmplField{Type:"BigInt", ElemType:"BigInt", Name:"Index", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x492a7a0), Size:256, T:0x1, NumberOfBytes:0x20, StringKind:"t_uint256", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"Index\" storage:\"slot=23,offset=0\"", Slot:23, Offset:0}
+	// Field: &wrapper.tmplField{Type:"BigInt", ElemType:"BigInt", Name:"Index", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x492a900), Size:256, T:0x1, NumberOfBytes:0x20, StringKind:"t_uint256", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"Index\" storage:\"slot=24,offset=0\"", Slot:24, Offset:0}
 	var slot *big.Int
-	slot, _ = big.NewInt(0).SetString("23", 10)
+	slot, _ = big.NewInt(0).SetString("24", 10)
 
 	var actual *big.Int = big.NewInt(0).Add(s.slot, slot)
 	if s.obj.Index == nil {
@@ -1783,7 +1784,7 @@ func (s *Storage_ValidatorWrapperMapEntry_) Index() *Storage_BigInt {
 
 // Keys is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_ValidatorWrapperMap_) Keys() *Storage_Slice_760032d9d704 {
-	// Field: &wrapper.tmplField{Type:"Slice_760032d9d704", ElemType:"Slice_760032d9d704", Name:"Keys", SolKind:abi.Type{Elem:(*abi.Type)(0xc0004b0090), Kind:0x17, Type:(*reflect.rtype)(0xc000371980), Size:0, T:0x4, NumberOfBytes:0x20, StringKind:"t_array(t_address)dyn_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"Keys\" storage:\"slot=0,offset=0\"", Slot:0, Offset:0}
+	// Field: &wrapper.tmplField{Type:"Slice_760032d9d704", ElemType:"Slice_760032d9d704", Name:"Keys", SolKind:abi.Type{Elem:(*abi.Type)(0xc00045b560), Kind:0x17, Type:(*reflect.rtype)(0xc000433400), Size:0, T:0x4, NumberOfBytes:0x20, StringKind:"t_array(t_address)dyn_storage", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"Keys\" storage:\"slot=0,offset=0\"", Slot:0, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("0", 10)
 
@@ -1806,20 +1807,20 @@ func (s *Storage_ValidatorWrapperMap_) Keys() *Storage_Slice_760032d9d704 {
 }
 
 // Map is an auto generated low-level Go binding around an user-defined struct.
-func (s *Storage_ValidatorWrapperMap_) Map() *Storage_Map_a0e4c1d65ac7 {
-	// Field: &wrapper.tmplField{Type:"Map_a0e4c1d65ac7", ElemType:"Map_a0e4c1d65ac7", Name:"Map", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x15, Type:(*reflect.rtype)(0xc0003a2b90), Size:0, T:0xd, NumberOfBytes:0x20, StringKind:"t_mapping(t_address,t_struct(ValidatorWrapperMapEntry_)111_storage)", TupleRawName:"", TupleElems:[]*abi.Type{(*abi.Type)(0xc0004d23f0), (*abi.Type)(0xc0004d2480)}, TupleRawNames:[]string(nil)}, Tag:"json:\"Map\" storage:\"slot=1,offset=0\"", Slot:1, Offset:0}
+func (s *Storage_ValidatorWrapperMap_) Map() *Storage_Map_11675a09c025 {
+	// Field: &wrapper.tmplField{Type:"Map_11675a09c025", ElemType:"Map_11675a09c025", Name:"Map", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x15, Type:(*reflect.rtype)(0xc00043e370), Size:0, T:0xd, NumberOfBytes:0x20, StringKind:"t_mapping(t_address,t_struct(ValidatorWrapperMapEntry_)113_storage)", TupleRawName:"", TupleElems:[]*abi.Type{(*abi.Type)(0xc00046cfc0), (*abi.Type)(0xc00046d050)}, TupleRawNames:[]string(nil)}, Tag:"json:\"Map\" storage:\"slot=1,offset=0\"", Slot:1, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("1", 10)
 
 	var actual *big.Int = big.NewInt(0).Add(s.slot, slot)
 	if s.obj.Map == nil {
 
-		instance := make(Map_a0e4c1d65ac7)
+		instance := make(Map_11675a09c025)
 
 		s.obj.Map = instance
 	}
 
-	return &Storage_Map_a0e4c1d65ac7{
+	return &Storage_Map_11675a09c025{
 		obj:   s.obj.Map,
 		db:    s.db,
 		addr:  s.addr,
@@ -1830,7 +1831,7 @@ func (s *Storage_ValidatorWrapperMap_) Map() *Storage_Map_a0e4c1d65ac7 {
 
 // Validator is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_ValidatorWrapper_) Validator() *Storage_Validator_ {
-	// Field: &wrapper.tmplField{Type:"Validator_", ElemType:"Validator_", Name:"Validator", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0xc000113ec0), Size:0, T:0x6, NumberOfBytes:0x200, StringKind:"t_struct(Validator_)66_storage", TupleRawName:"Validator_", TupleElems:[]*abi.Type{(*abi.Type)(0xc000499e60), (*abi.Type)(0xc000499ef0), (*abi.Type)(0xc0004b0510), (*abi.Type)(0xc0004b07e0), (*abi.Type)(0xc0004b0870), (*abi.Type)(0xc0004b0900), (*abi.Type)(0xc0004b0d80), (*abi.Type)(0xc0004b0e10)}, TupleRawNames:[]string{"ValidatorAddress", "OperatorAddresses", "SlotPubKeys", "LastEpochInCommittee", "Status", "Commission", "Description", "CreationHeight"}}, Tag:"json:\"Validator\" storage:\"slot=0,offset=0\"", Slot:0, Offset:0}
+	// Field: &wrapper.tmplField{Type:"Validator_", ElemType:"Validator_", Name:"Validator", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0xc00043d380), Size:0, T:0x6, NumberOfBytes:0x220, StringKind:"t_struct(Validator_)68_storage", TupleRawName:"Validator_", TupleElems:[]*abi.Type{(*abi.Type)(0xc00045b3b0), (*abi.Type)(0xc00045b440), (*abi.Type)(0xc00045b950), (*abi.Type)(0xc00045bc20), (*abi.Type)(0xc00045bcb0), (*abi.Type)(0xc00045bd40), (*abi.Type)(0xc00045bdd0), (*abi.Type)(0xc00046c090), (*abi.Type)(0xc00046c510)}, TupleRawNames:[]string{"ValidatorAddress", "OperatorAddresses", "SlotPubKeys", "LastEpochInCommittee", "MaxTotalDelegation", "Status", "Commission", "Description", "CreationHeight"}}, Tag:"json:\"Validator\" storage:\"slot=0,offset=0\"", Slot:0, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("0", 10)
 
@@ -1846,9 +1847,9 @@ func (s *Storage_ValidatorWrapper_) Validator() *Storage_Validator_ {
 
 // Redelegations is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_ValidatorWrapper_) Redelegations() *Storage_RedelegationMap_ {
-	// Field: &wrapper.tmplField{Type:"RedelegationMap_", ElemType:"RedelegationMap_", Name:"Redelegations", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0xc0004c4360), Size:0, T:0x6, NumberOfBytes:0x40, StringKind:"t_struct(RedelegationMap_)93_storage", TupleRawName:"RedelegationMap_", TupleElems:[]*abi.Type{(*abi.Type)(0xc0004b1170), (*abi.Type)(0xc0004b1200)}, TupleRawNames:[]string{"Keys", "Map"}}, Tag:"json:\"Redelegations\" storage:\"slot=16,offset=0\"", Slot:16, Offset:0}
+	// Field: &wrapper.tmplField{Type:"RedelegationMap_", ElemType:"RedelegationMap_", Name:"Redelegations", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0xc00043d440), Size:0, T:0x6, NumberOfBytes:0x40, StringKind:"t_struct(RedelegationMap_)95_storage", TupleRawName:"RedelegationMap_", TupleElems:[]*abi.Type{(*abi.Type)(0xc00046c6c0), (*abi.Type)(0xc00046c750)}, TupleRawNames:[]string{"Keys", "Map"}}, Tag:"json:\"Redelegations\" storage:\"slot=17,offset=0\"", Slot:17, Offset:0}
 	var slot *big.Int
-	slot, _ = big.NewInt(0).SetString("16", 10)
+	slot, _ = big.NewInt(0).SetString("17", 10)
 
 	var actual *big.Int = big.NewInt(0).Add(s.slot, slot)
 	return &Storage_RedelegationMap_{
@@ -1862,9 +1863,9 @@ func (s *Storage_ValidatorWrapper_) Redelegations() *Storage_RedelegationMap_ {
 
 // Counters is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_ValidatorWrapper_) Counters() *Storage_Counters_ {
-	// Field: &wrapper.tmplField{Type:"Counters_", ElemType:"Counters_", Name:"Counters", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0xc000113500), Size:0, T:0x6, NumberOfBytes:0x40, StringKind:"t_struct(Counters_)41_storage", TupleRawName:"Counters_", TupleElems:[]*abi.Type{(*abi.Type)(0xc000498fc0), (*abi.Type)(0xc0004990e0)}, TupleRawNames:[]string{"NumBlocksToSign", "NumBlocksSigned"}}, Tag:"json:\"Counters\" storage:\"slot=18,offset=0\"", Slot:18, Offset:0}
+	// Field: &wrapper.tmplField{Type:"Counters_", ElemType:"Counters_", Name:"Counters", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0xc00043d500), Size:0, T:0x6, NumberOfBytes:0x40, StringKind:"t_struct(Counters_)41_storage", TupleRawName:"Counters_", TupleElems:[]*abi.Type{(*abi.Type)(0xc00046c900), (*abi.Type)(0xc00046c990)}, TupleRawNames:[]string{"NumBlocksToSign", "NumBlocksSigned"}}, Tag:"json:\"Counters\" storage:\"slot=19,offset=0\"", Slot:19, Offset:0}
 	var slot *big.Int
-	slot, _ = big.NewInt(0).SetString("18", 10)
+	slot, _ = big.NewInt(0).SetString("19", 10)
 
 	var actual *big.Int = big.NewInt(0).Add(s.slot, slot)
 	return &Storage_Counters_{
@@ -1878,9 +1879,9 @@ func (s *Storage_ValidatorWrapper_) Counters() *Storage_Counters_ {
 
 // BlockReward is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_ValidatorWrapper_) BlockReward() *Storage_BigInt {
-	// Field: &wrapper.tmplField{Type:"BigInt", ElemType:"BigInt", Name:"BlockReward", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x492a7a0), Size:256, T:0x1, NumberOfBytes:0x20, StringKind:"t_uint256", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"BlockReward\" storage:\"slot=20,offset=0\"", Slot:20, Offset:0}
+	// Field: &wrapper.tmplField{Type:"BigInt", ElemType:"BigInt", Name:"BlockReward", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x492a900), Size:256, T:0x1, NumberOfBytes:0x20, StringKind:"t_uint256", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"BlockReward\" storage:\"slot=21,offset=0\"", Slot:21, Offset:0}
 	var slot *big.Int
-	slot, _ = big.NewInt(0).SetString("20", 10)
+	slot, _ = big.NewInt(0).SetString("21", 10)
 
 	var actual *big.Int = big.NewInt(0).Add(s.slot, slot)
 	if s.obj.BlockReward == nil {
@@ -1901,9 +1902,9 @@ func (s *Storage_ValidatorWrapper_) BlockReward() *Storage_BigInt {
 
 // TotalDelegation is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_ValidatorWrapper_) TotalDelegation() *Storage_BigInt {
-	// Field: &wrapper.tmplField{Type:"BigInt", ElemType:"BigInt", Name:"TotalDelegation", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x492a7a0), Size:256, T:0x1, NumberOfBytes:0x20, StringKind:"t_uint256", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"TotalDelegation\" storage:\"slot=21,offset=0\"", Slot:21, Offset:0}
+	// Field: &wrapper.tmplField{Type:"BigInt", ElemType:"BigInt", Name:"TotalDelegation", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x492a900), Size:256, T:0x1, NumberOfBytes:0x20, StringKind:"t_uint256", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"TotalDelegation\" storage:\"slot=22,offset=0\"", Slot:22, Offset:0}
 	var slot *big.Int
-	slot, _ = big.NewInt(0).SetString("21", 10)
+	slot, _ = big.NewInt(0).SetString("22", 10)
 
 	var actual *big.Int = big.NewInt(0).Add(s.slot, slot)
 	if s.obj.TotalDelegation == nil {
@@ -1924,9 +1925,9 @@ func (s *Storage_ValidatorWrapper_) TotalDelegation() *Storage_BigInt {
 
 // TotalDelegationByOperator is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_ValidatorWrapper_) TotalDelegationByOperator() *Storage_BigInt {
-	// Field: &wrapper.tmplField{Type:"BigInt", ElemType:"BigInt", Name:"TotalDelegationByOperator", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x492a7a0), Size:256, T:0x1, NumberOfBytes:0x20, StringKind:"t_uint256", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"TotalDelegationByOperator\" storage:\"slot=22,offset=0\"", Slot:22, Offset:0}
+	// Field: &wrapper.tmplField{Type:"BigInt", ElemType:"BigInt", Name:"TotalDelegationByOperator", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x492a900), Size:256, T:0x1, NumberOfBytes:0x20, StringKind:"t_uint256", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"TotalDelegationByOperator\" storage:\"slot=23,offset=0\"", Slot:23, Offset:0}
 	var slot *big.Int
-	slot, _ = big.NewInt(0).SetString("22", 10)
+	slot, _ = big.NewInt(0).SetString("23", 10)
 
 	var actual *big.Int = big.NewInt(0).Add(s.slot, slot)
 	if s.obj.TotalDelegationByOperator == nil {
@@ -1947,7 +1948,7 @@ func (s *Storage_ValidatorWrapper_) TotalDelegationByOperator() *Storage_BigInt 
 
 // ValidatorAddress is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_Validator_) ValidatorAddress() *Storage_Address {
-	// Field: &wrapper.tmplField{Type:"Address", ElemType:"Address", Name:"ValidatorAddress", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x11, Type:(*reflect.rtype)(0x48bfac0), Size:20, T:0x7, NumberOfBytes:0x14, StringKind:"t_address", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"ValidatorAddress\" storage:\"slot=0,offset=0\"", Slot:0, Offset:0}
+	// Field: &wrapper.tmplField{Type:"Address", ElemType:"Address", Name:"ValidatorAddress", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x11, Type:(*reflect.rtype)(0x48bf8e0), Size:20, T:0x7, NumberOfBytes:0x14, StringKind:"t_address", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"ValidatorAddress\" storage:\"slot=0,offset=0\"", Slot:0, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("0", 10)
 
@@ -1963,7 +1964,7 @@ func (s *Storage_Validator_) ValidatorAddress() *Storage_Address {
 
 // OperatorAddresses is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_Validator_) OperatorAddresses() *Storage_AddressSet_ {
-	// Field: &wrapper.tmplField{Type:"AddressSet_", ElemType:"AddressSet_", Name:"OperatorAddresses", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0xc000113bc0), Size:0, T:0x6, NumberOfBytes:0x40, StringKind:"t_struct(AddressSet_)49_storage", TupleRawName:"AddressSet_", TupleElems:[]*abi.Type{(*abi.Type)(0xc0004b0000), (*abi.Type)(0xc0004b01b0)}, TupleRawNames:[]string{"Keys", "Set"}}, Tag:"json:\"OperatorAddresses\" storage:\"slot=1,offset=0\"", Slot:1, Offset:0}
+	// Field: &wrapper.tmplField{Type:"AddressSet_", ElemType:"AddressSet_", Name:"OperatorAddresses", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0xc00043d020), Size:0, T:0x6, NumberOfBytes:0x40, StringKind:"t_struct(AddressSet_)49_storage", TupleRawName:"AddressSet_", TupleElems:[]*abi.Type{(*abi.Type)(0xc00045b4d0), (*abi.Type)(0xc00045b680)}, TupleRawNames:[]string{"Keys", "Set"}}, Tag:"json:\"OperatorAddresses\" storage:\"slot=1,offset=0\"", Slot:1, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("1", 10)
 
@@ -1979,7 +1980,7 @@ func (s *Storage_Validator_) OperatorAddresses() *Storage_AddressSet_ {
 
 // SlotPubKeys is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_Validator_) SlotPubKeys() *Storage_BLSPublicKeys_ {
-	// Field: &wrapper.tmplField{Type:"BLSPublicKeys_", ElemType:"BLSPublicKeys_", Name:"SlotPubKeys", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0xc000113ce0), Size:0, T:0x6, NumberOfBytes:0x20, StringKind:"t_struct(BLSPublicKeys_)36_storage", TupleRawName:"BLSPublicKeys_", TupleElems:[]*abi.Type{(*abi.Type)(0xc0004b05a0)}, TupleRawNames:[]string{"Keys"}}, Tag:"json:\"SlotPubKeys\" storage:\"slot=3,offset=0\"", Slot:3, Offset:0}
+	// Field: &wrapper.tmplField{Type:"BLSPublicKeys_", ElemType:"BLSPublicKeys_", Name:"SlotPubKeys", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0xc00043d140), Size:0, T:0x6, NumberOfBytes:0x20, StringKind:"t_struct(BLSPublicKeys_)36_storage", TupleRawName:"BLSPublicKeys_", TupleElems:[]*abi.Type{(*abi.Type)(0xc00045b9e0)}, TupleRawNames:[]string{"Keys"}}, Tag:"json:\"SlotPubKeys\" storage:\"slot=3,offset=0\"", Slot:3, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("3", 10)
 
@@ -1995,7 +1996,7 @@ func (s *Storage_Validator_) SlotPubKeys() *Storage_BLSPublicKeys_ {
 
 // LastEpochInCommittee is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_Validator_) LastEpochInCommittee() *Storage_BigInt {
-	// Field: &wrapper.tmplField{Type:"BigInt", ElemType:"BigInt", Name:"LastEpochInCommittee", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x492a7a0), Size:256, T:0x1, NumberOfBytes:0x20, StringKind:"t_uint256", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"LastEpochInCommittee\" storage:\"slot=4,offset=0\"", Slot:4, Offset:0}
+	// Field: &wrapper.tmplField{Type:"BigInt", ElemType:"BigInt", Name:"LastEpochInCommittee", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x492a900), Size:256, T:0x1, NumberOfBytes:0x20, StringKind:"t_uint256", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"LastEpochInCommittee\" storage:\"slot=4,offset=0\"", Slot:4, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("4", 10)
 
@@ -2016,11 +2017,34 @@ func (s *Storage_Validator_) LastEpochInCommittee() *Storage_BigInt {
 	}
 }
 
-// Status is an auto generated low-level Go binding around an user-defined struct.
-func (s *Storage_Validator_) Status() *Storage_BigInt {
-	// Field: &wrapper.tmplField{Type:"BigInt", ElemType:"BigInt", Name:"Status", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x492a7a0), Size:256, T:0x1, NumberOfBytes:0x20, StringKind:"t_uint256", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"Status\" storage:\"slot=5,offset=0\"", Slot:5, Offset:0}
+// MaxTotalDelegation is an auto generated low-level Go binding around an user-defined struct.
+func (s *Storage_Validator_) MaxTotalDelegation() *Storage_BigInt {
+	// Field: &wrapper.tmplField{Type:"BigInt", ElemType:"BigInt", Name:"MaxTotalDelegation", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x492a900), Size:256, T:0x1, NumberOfBytes:0x20, StringKind:"t_uint256", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"MaxTotalDelegation\" storage:\"slot=5,offset=0\"", Slot:5, Offset:0}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("5", 10)
+
+	var actual *big.Int = big.NewInt(0).Add(s.slot, slot)
+	if s.obj.MaxTotalDelegation == nil {
+
+		instance := big.NewInt(0)
+
+		s.obj.MaxTotalDelegation = instance
+	}
+
+	return &Storage_BigInt{
+		obj:   s.obj.MaxTotalDelegation,
+		db:    s.db,
+		addr:  s.addr,
+		slot:  actual,
+		dirty: s.dirty,
+	}
+}
+
+// Status is an auto generated low-level Go binding around an user-defined struct.
+func (s *Storage_Validator_) Status() *Storage_BigInt {
+	// Field: &wrapper.tmplField{Type:"BigInt", ElemType:"BigInt", Name:"Status", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x492a900), Size:256, T:0x1, NumberOfBytes:0x20, StringKind:"t_uint256", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"Status\" storage:\"slot=6,offset=0\"", Slot:6, Offset:0}
+	var slot *big.Int
+	slot, _ = big.NewInt(0).SetString("6", 10)
 
 	var actual *big.Int = big.NewInt(0).Add(s.slot, slot)
 	if s.obj.Status == nil {
@@ -2041,9 +2065,9 @@ func (s *Storage_Validator_) Status() *Storage_BigInt {
 
 // Commission is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_Validator_) Commission() *Storage_Commission_ {
-	// Field: &wrapper.tmplField{Type:"Commission_", ElemType:"Commission_", Name:"Commission", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0xc000113e60), Size:0, T:0x6, NumberOfBytes:0x80, StringKind:"t_struct(Commission_)27_storage", TupleRawName:"Commission_", TupleElems:[]*abi.Type{(*abi.Type)(0xc0004b0990), (*abi.Type)(0xc0004b0c60)}, TupleRawNames:[]string{"CommissionRates", "UpdateHeight"}}, Tag:"json:\"Commission\" storage:\"slot=6,offset=0\"", Slot:6, Offset:0}
+	// Field: &wrapper.tmplField{Type:"Commission_", ElemType:"Commission_", Name:"Commission", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0xc00043d200), Size:0, T:0x6, NumberOfBytes:0x80, StringKind:"t_struct(Commission_)27_storage", TupleRawName:"Commission_", TupleElems:[]*abi.Type{(*abi.Type)(0xc00045be60), (*abi.Type)(0xc00045bef0)}, TupleRawNames:[]string{"CommissionRates", "UpdateHeight"}}, Tag:"json:\"Commission\" storage:\"slot=7,offset=0\"", Slot:7, Offset:0}
 	var slot *big.Int
-	slot, _ = big.NewInt(0).SetString("6", 10)
+	slot, _ = big.NewInt(0).SetString("7", 10)
 
 	var actual *big.Int = big.NewInt(0).Add(s.slot, slot)
 	return &Storage_Commission_{
@@ -2057,9 +2081,9 @@ func (s *Storage_Validator_) Commission() *Storage_Commission_ {
 
 // Description is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_Validator_) Description() *Storage_Description_ {
-	// Field: &wrapper.tmplField{Type:"Description_", ElemType:"Description_", Name:"Description", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0xc000113620), Size:0, T:0x6, NumberOfBytes:0xa0, StringKind:"t_struct(Description_)15_storage", TupleRawName:"Description_", TupleElems:[]*abi.Type{(*abi.Type)(0xc000499290), (*abi.Type)(0xc0004993b0), (*abi.Type)(0xc000499440), (*abi.Type)(0xc0004994d0), (*abi.Type)(0xc000499560)}, TupleRawNames:[]string{"Name", "Identity", "Website", "SecurityContact", "Details"}}, Tag:"json:\"Description\" storage:\"slot=10,offset=0\"", Slot:10, Offset:0}
+	// Field: &wrapper.tmplField{Type:"Description_", ElemType:"Description_", Name:"Description", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x19, Type:(*reflect.rtype)(0xc00043d320), Size:0, T:0x6, NumberOfBytes:0xa0, StringKind:"t_struct(Description_)15_storage", TupleRawName:"Description_", TupleElems:[]*abi.Type{(*abi.Type)(0xc00046c120), (*abi.Type)(0xc00046c240), (*abi.Type)(0xc00046c2d0), (*abi.Type)(0xc00046c360), (*abi.Type)(0xc00046c3f0)}, TupleRawNames:[]string{"Name", "Identity", "Website", "SecurityContact", "Details"}}, Tag:"json:\"Description\" storage:\"slot=11,offset=0\"", Slot:11, Offset:0}
 	var slot *big.Int
-	slot, _ = big.NewInt(0).SetString("10", 10)
+	slot, _ = big.NewInt(0).SetString("11", 10)
 
 	var actual *big.Int = big.NewInt(0).Add(s.slot, slot)
 	return &Storage_Description_{
@@ -2073,9 +2097,9 @@ func (s *Storage_Validator_) Description() *Storage_Description_ {
 
 // CreationHeight is an auto generated low-level Go binding around an user-defined struct.
 func (s *Storage_Validator_) CreationHeight() *Storage_BigInt {
-	// Field: &wrapper.tmplField{Type:"BigInt", ElemType:"BigInt", Name:"CreationHeight", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x492a7a0), Size:256, T:0x1, NumberOfBytes:0x20, StringKind:"t_uint256", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"CreationHeight\" storage:\"slot=15,offset=0\"", Slot:15, Offset:0}
+	// Field: &wrapper.tmplField{Type:"BigInt", ElemType:"BigInt", Name:"CreationHeight", SolKind:abi.Type{Elem:(*abi.Type)(nil), Kind:0x16, Type:(*reflect.rtype)(0x492a900), Size:256, T:0x1, NumberOfBytes:0x20, StringKind:"t_uint256", TupleRawName:"", TupleElems:[]*abi.Type(nil), TupleRawNames:[]string(nil)}, Tag:"json:\"CreationHeight\" storage:\"slot=16,offset=0\"", Slot:16, Offset:0}
 	var slot *big.Int
-	slot, _ = big.NewInt(0).SetString("15", 10)
+	slot, _ = big.NewInt(0).SetString("16", 10)
 
 	var actual *big.Int = big.NewInt(0).Add(s.slot, slot)
 	if s.obj.CreationHeight == nil {

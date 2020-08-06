@@ -89,6 +89,7 @@ func CreateValidatorFromNewMsg(msg *CreateValidator, valAddr common.Address, blo
 		},
 		SlotPubKeys:          msg.SlotPubKeys,
 		LastEpochInCommittee: new(big.Int),
+		MaxTotalDelegation:   msg.MaxTotalDelegation,
 		Status:               big.NewInt(int64(effective.Active)),
 		Commission:           commission,
 		Description:          desc,
