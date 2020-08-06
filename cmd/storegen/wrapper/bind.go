@@ -257,6 +257,13 @@ func bindStructTypeGo(kind abi.Type, structs map[string]*tmplStruct) (string, er
 			return s.Name, nil
 		}
 
+		if name != "BigInt" {
+			if kind.Type.Kind() == reflect.Ptr {
+				kind.Type = kind.Type.Elem()
+				kind.Kind = kind.Type.Kind()
+			}
+		} 
+
 		structs[name] = &tmplStruct{
 			Name:    name,
 			T:       kind.T,
@@ -265,6 +272,11 @@ func bindStructTypeGo(kind abi.Type, structs map[string]*tmplStruct) (string, er
 		}
 		return name, nil
 	}
+}
+
+func isBytes(name string) bool {
+	re := regexp.MustCompile("(Bytes|Bytes([1-9]|[12][0-9]|3[0-2]))")
+	return re.MatchString(name)
 }
 
 func isBuiltinType(name string) bool {
@@ -279,6 +291,9 @@ func isBuiltinType(name string) bool {
 		"Bytes":
 		return true
 	default:
+		if isBytes(name) {
+			return true
+		}
 		return false
 	}
 }

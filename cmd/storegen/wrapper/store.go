@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"go/format"
 	"reflect"
+	"regexp"
 	"strings"
 	"text/template"
 
@@ -67,14 +68,16 @@ func Store(types []string, layouts []string, pkg string, lang bind.Lang) (string
 	buffer := new(bytes.Buffer)
 
 	funcs := map[string]interface{}{
-		"bindtype":     bindType[lang],
-		"capitalise":   capitalise,
-		"decapitalise": decapitalise,
-		"sha1":         sha1,
-		"isptr":        isptr,
-		"isarray":      isarray,
-		"isslice":      isslice,
-		"ismap":        ismap,
+		"bindtype":             bindType[lang],
+		"capitalise":           capitalise,
+		"decapitalise":         decapitalise,
+		"sha1":                 sha1,
+		"isptr":                isptr,
+		"isarray":              isarray,
+		"isslice":              isslice,
+		"ismap":                ismap,
+		"isFixedSizeByteArray": isFixedSizeByteArray,
+		"match":                match,
 	}
 	tmpl := template.Must(template.New("").Funcs(funcs).Parse(tmplSource[lang]))
 	if err := tmpl.Execute(buffer, data); err != nil {
@@ -153,4 +156,26 @@ func isslice(val interface{}) bool {
 
 func ismap(val interface{}) bool {
 	return isKind(val, reflect.Map)
+}
+
+func isFixedSizeByteArray(val interface{}) bool {
+	switch v := val.(type) {
+	case reflect.Type:
+		if v.Kind() == reflect.Array {
+			switch v.Elem().Kind() {
+			case reflect.Uint8, reflect.Uint16, reflect.Uint64:
+				return true
+			case reflect.Int8, reflect.Int16, reflect.Int64:
+				return true
+			}
+		}
+		return false
+	default:
+		return false
+	}
+}
+
+func match(value string, pattern string) bool {
+	re := regexp.MustCompile(pattern)
+	return re.MatchString(value)
 }

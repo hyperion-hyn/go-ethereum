@@ -24,6 +24,11 @@ contract Map3Pool {
         string WebSite;
         string SecurityContract;
         string Details;
+        bytes5 Serial;
+        byte[1] Flag;
+        byte[9] Symbol;
+        byte[300] Signature;
+        uint32[4] Feature;
         uint256[2] Version; // FOR TEST;
     }
 
@@ -106,6 +111,20 @@ contract Map3Pool {
         node.NodeAddress = 0xA07306b4d845BD243Da172aeE557893172ccd04a;
         node.Commission.CommissionRates.Rate = 0x33 * (10**18);
         node.Commission.CommissionRates.MaxRate.f = 5 * (10**18) + (11 * (10**18)/100);
+        node.Description.Serial = 0x123456789A;
+        for (uint i = 0; i < node.Description.Symbol.length; i++) {
+            node.Description.Symbol[i] = byte(uint8(i & 0xff));
+        }
+
+        for (uint i = 0; i < node.Description.Signature.length; i++) {
+            node.Description.Signature[i] = byte(uint8(i & 0xff));
+        }
+
+        node.Description.Feature[0] = 0xdeadbeef;
+        node.Description.Feature[1] = 0xbeeddeed;
+        node.Description.Feature[2] = 0xfacecafe;
+        node.Description.Feature[3] = 0xfeedc0de;
+
         node.Description.Version[0]=0xbeef;
         node.Description.Version[1]=0xdead;
         node.Description.Name = "Hyperion - 海伯利安";
