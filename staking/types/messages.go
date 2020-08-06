@@ -17,13 +17,14 @@ type CreateValidator struct {
 
 // EditValidator - type for edit existing validator
 type EditValidator struct {
-	ValidatorAddress   common.Address           `json:"validator-address"`
-	Description        *restaking.Description_  `json:"description"`
-	CommissionRate     *common.Dec              `json:"commission-rate" rlp:"nil"`
-	SlotKeyToRemove    *restaking.BLSPublicKey_ `json:"slot-key-to_remove" rlp:"nil"`
-	SlotKeyToAdd       *restaking.BLSPublicKey_ `json:"slot-key-to_add" rlp:"nil"`
-	SlotKeyToAddSig    *BLSSignature            `json:"slot-key-to-add-sig" rlp:"nil"`
-	EPOSStatus         effective.Eligibility    `json:"epos-eligibility-status" rlp:"nil"`
+	ValidatorAddress common.Address           `json:"validator-address"`
+	OperatorAddress  common.Address           `json:"operator-address"`
+	Description      *restaking.Description_  `json:"description"`
+	CommissionRate   *common.Dec              `json:"commission-rate" rlp:"nil"`
+	SlotKeyToRemove  *restaking.BLSPublicKey_ `json:"slot-key-to_remove" rlp:"nil"`
+	SlotKeyToAdd     *restaking.BLSPublicKey_ `json:"slot-key-to_add" rlp:"nil"`
+	SlotKeyToAddSig  *BLSSignature            `json:"slot-key-to-add-sig" rlp:"nil"`
+	EPOSStatus       effective.Eligibility    `json:"epos-eligibility-status" rlp:"nil"`
 }
 
 // Redelegate - type for delegating to a validator

@@ -25,7 +25,8 @@ var (
 	errCommissionRateChangeTooFast = errors.New("change on commission rate can not be more than max change rate within the same epoch")
 	errDelegationTooSmall          = errors.New("delegation amount too small")
 	errNoRewardsToCollect          = errors.New("no rewards to collect")
-	errRedelegationNotExist        = errors.New("no redelegation exists")
+	errRedelegationNotExist        = errors.New("redelegation does not exist")
+	errValidatorOperatorNotExist   = errors.New("validator operator does not exist")
 )
 
 var (
@@ -59,8 +60,12 @@ func (s signerVerifierForTokenHolder) VerifyEditValidatorMsg(stateDB vm.StateDB,
 	if err != nil {
 		return err
 	}
-	if !validator.Validator().OperatorAddresses().Set().Get(signer).Value() {
+	if signer != msg.OperatorAddress {
 		return errInvalidSigner
+	}
+
+	if !validator.Validator().OperatorAddresses().Set().Get(msg.OperatorAddress).Value() {
+		return errValidatorOperatorNotExist
 	}
 	return nil
 }
