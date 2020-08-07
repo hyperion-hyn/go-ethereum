@@ -63,6 +63,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
+	"github.com/ethereum/go-ethereum/common/math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -160,6 +161,7 @@ func SetStateAsBytes(db StateDB, addr common.Address, slot *big.Int, value []byt
 	addr   common.Address
 	slot   *big.Int
 	offset int
+	numberOfBytes int
 	dirty  StateValues	
 {{end}}{{/* storage_fields */}}
 
@@ -177,6 +179,18 @@ func SetStateAsBytes(db StateDB, addr common.Address, slot *big.Int, value []byt
 {{end -}}
 {{end}}{{/* new_instance */}}
 
+{{define "getBytes"}}
+	hash := s.db.GetState(s.addr, common.BigToHash(s.slot))
+	data := hash.Bytes()[32 - (s.offset + s.numberOfBytes) : 32 - s.offset]
+{{end}}{{/* getBytes */}}
+
+{{define "setBytes"}}
+	hash := s.db.GetState(s.addr, common.BigToHash(s.slot))
+	data := hash.Bytes()
+	copy(data[32 - (s.offset + s.numberOfBytes) : 32 - s.offset], val[len(val) - s.numberOfBytes:])
+	hash.SetBytes(data)
+	s.db.SetState(s.addr, common.BigToHash(s.slot), hash)
+{{end}}{{/* setBytes */}}
 
 {{range $basics}}
 type {{.Name}}={{.Type}}
@@ -187,7 +201,6 @@ type Storage_{{.Name}} struct {
 
 func (s *Storage_{{.Name}}) Value() {{.Type}} {
 // {{ printf "%#v" . }}
-// NumberOfBytes = {{ .SolKind.NumberOfBytes }}
 {{- if eq .Name "String"}}
 	rv := GetStateAsBytes(s.db, s.addr, s.slot)
 	*s.obj = {{.Type}}(rv)
@@ -197,35 +210,32 @@ func (s *Storage_{{.Name}}) Value() {{.Type}} {
 	*s.obj = {{.Type}}(rv)
 	return *s.obj
 {{else if eq .Name "BigInt"}}
-	hash := s.db.GetState(s.addr, common.BigToHash(s.slot))
-	*s.obj = *hash.Big()
+	{{template "getBytes" .}}
+	*s.obj = *(big.NewInt(0).SetBytes(data))
 	return s.obj
 {{else if eq .Name "Uint8" "Uint16" "Uint32" "Uint64"}}
-	hash := s.db.GetState(s.addr, common.BigToHash(s.slot))
-	data := hash.Bytes()[s.offset:s.offset + {{.SolKind.NumberOfBytes}}]
+	{{template "getBytes" .}}
 	*s.obj = {{.Type}}(big.NewInt(0).SetBytes(data).Uint64())
 	return *s.obj
 {{else if eq .Name "Int8" "Int16" "Int32" "Int64"}}
-	hash := s.db.GetState(s.addr, common.BigToHash(s.slot))
-	data := hash.Bytes()[s.offset:s.offset + {{.SolKind.NumberOfBytes}}]
+	{{template "getBytes" .}}
 	*s.obj = {{.Type}}(big.NewInt(0).SetBytes(data).Int64())
 	return *s.obj
 {{else if eq .Name "Bool"}}
-	hash := s.db.GetState(s.addr, common.BigToHash(s.slot))
-	*s.obj = (hash.Big().Int64() != 0)
+	{{template "getBytes" .}}
+	*s.obj = {{.Type}}(big.NewInt(0).SetBytes(data).Int64() != 0)
 	return *s.obj
 {{else if eq .Name "Address"}}
-	hash := s.db.GetState(s.addr, common.BigToHash(s.slot))
-	*s.obj = common.BigToAddress(hash.Big())
+	{{template "getBytes" .}}
+	*s.obj = common.BytesToAddress(data)
 	return *s.obj
 {{else if eq .Name "Decimal"}}
 	hash := s.db.GetState(s.addr, common.BigToHash(s.slot))
 	*s.obj = common.NewDecFromBigIntWithPrec(hash.Big(), common.Precision)
 	return *s.obj
 {{else if match .Name "Bytes([1-9]|[12][0-9]|3[0-2])" }}
-	hash := s.db.GetState(s.addr, common.BigToHash(s.slot))
-	length := len(*s.obj)
-	copy((*s.obj)[:], hash.Bytes()[32-length:])
+	{{template "getBytes" .}}
+	copy((*s.obj)[:], data[:])
 	return *s.obj
 {{else}}
 	UNSUPPORTED {{.Name}} {{.Type}}
@@ -241,46 +251,39 @@ func (s *Storage_{{.Name}}) SetValue(value {{.Type}}) {
 	SetStateAsBytes(s.db, s.addr, s.slot, []byte(value))
 	*s.obj = value
 {{else if eq .Name "BigInt"}}
-	hash := value
-	s.db.SetState(s.addr, common.BigToHash(s.slot), common.BigToHash(hash))
-	*s.obj = *value
+	val := math.PaddedBigBytes(value, 32)
+	{{template "setBytes" .}}
+	*s.obj = *(hash.Big())
 {{else if eq .Name "Uint8" "Uint16" "Uint32" "Uint64"}}
-	hash := s.db.GetState(s.addr, common.BigToHash(s.slot))
-	val := big.NewInt(0).SetUint64(uint64(value))	
-	data := hash.Bytes()
-	copy(data[s.offset:s.offset + {{.SolKind.NumberOfBytes}}], val.Bytes()[len(val.Bytes()) - {{.SolKind.NumberOfBytes}}:])
-	hash.SetBytes(data)
-	s.db.SetState(s.addr, common.BigToHash(s.slot), hash)
+	val := math.PaddedBigBytes(big.NewInt(0).SetUint64(uint64(value)), 32)
+	{{template "setBytes" .}}
 	*s.obj = value
 {{else if eq .Name "Int8" "Int16" "Int32" "Int64"}}
-	hash := s.db.GetState(s.addr, common.BigToHash(s.slot))
-	val := big.NewInt(0).SetInt64(int64(value))	
-	data := hash.Bytes()
-	copy(data[s.offset:s.offset + {{.SolKind.NumberOfBytes}}], val.Bytes()[len(val.Bytes()) - {{.SolKind.NumberOfBytes}}:])
-	hash.SetBytes(data)
-	s.db.SetState(s.addr, common.BigToHash(s.slot), hash)
+	val := math.PaddedBigBytes(big.NewInt(0).SetInt64(int64(value)), 32)
+	{{template "setBytes" .}}
 	*s.obj = value
 {{else if eq .Name "Bool"}}
-	var val uint
+	var flag uint
 	if value {
-		val = 1
+		flag = 1
 	} else {
-		val = 0
+		flag = 0
 	}
-	hash := big.NewInt(0).SetUint64(uint64(val))
-	s.db.SetState(s.addr, common.BigToHash(s.slot), common.BigToHash(hash))
+
+	val := math.PaddedBigBytes(big.NewInt(0).SetInt64(int64(flag)), 32)
+	{{template "setBytes" .}}
 	*s.obj = value
 {{else if eq .Name "Address"}}
-	hash := value.Hash()
-	s.db.SetState(s.addr, common.BigToHash(s.slot), hash)
+	val := value
+	{{template "setBytes" .}}
 	*s.obj = value
 {{else if eq .Name "Decimal"}}
 	hash := value.BigInt()
 	s.db.SetState(s.addr, common.BigToHash(s.slot), common.BigToHash(hash))
 	*s.obj = value
 {{else if match .Name "Bytes([1-9]|[12][0-9]|3[0-2])" }}
-	hash := common.BytesToHash(value[:])
-	s.db.SetState(s.addr, common.BigToHash(s.slot), hash)
+	val := value
+	{{template "setBytes" .}}
 	copy((*s.obj)[:], value[:])
 {{else}}
 	UNSUPPORTED {{.Name}} {{.Type}}
@@ -351,14 +354,21 @@ func (s *Storage_{{.Name}}) SetValue(value {{.Type}}) {
 }
 
 {{ else }}
-func (s* Storage_{{.Name}}) Length() int {
-	return len(s.obj)
+func (s* Storage_{{.Name}}) Length() (*big.Int) {
+	return big.NewInt(0).SetUint64(uint64(len(s.obj)))
 }
 
-func (s* Storage_{{.Name}}) Get(index uint64) ( *Storage_{{$elem.Type}} ) {
+func (s* Storage_{{.Name}}) Get(index int) ( *Storage_{{$elem.Type}} ) {
 	// Value: {{ printf "%#v" $elem }}
-	actual := big.NewInt(0).Add(s.slot, big.NewInt(0).SetUint64(index*{{$elem.SolKind.NumberOfBytes}}/32))
-	offset := 32 - int((index+1)* {{$elem.SolKind.NumberOfBytes}} % 32)
+{{ if le $elem.SolKind.NumberOfBytes 32 }}
+	itemsPerSlot := 32/{{$elem.SolKind.NumberOfBytes}}
+	actual := big.NewInt(0).Add(s.slot, big.NewInt(0).SetUint64(uint64(index/itemsPerSlot)))
+	offset := ((index % itemsPerSlot) * {{$elem.SolKind.NumberOfBytes}})
+{{else}}
+	slotsPerItem := ({{$elem.SolKind.NumberOfBytes}} + 31)/32
+	actual := big.NewInt(0).Add(s.slot, big.NewInt(0).SetUint64(uint64(index * slotsPerItem)))
+	offset := 0
+{{end}}
 {{- if or (isptr $elem) (isslice $elem) (ismap $elem) }}
 	if s.obj[index] == nil {
 		{{template "new_instance" $elem}}
@@ -376,6 +386,7 @@ func (s* Storage_{{.Name}}) Get(index uint64) ( *Storage_{{$elem.Type}} ) {
 		addr: s.addr,
 		slot: actual,
 		offset: offset,
+		numberOfBytes: {{$elem.SolKind.NumberOfBytes}},
 		dirty: s.dirty,
 	}
 }
@@ -400,15 +411,15 @@ func (s* Storage_{{.Name}}) Resize(length uint64) {
 	*s.obj = slice
 }
 
-func (s* Storage_{{.Name}}) Get(index uint64) ( *Storage_{{$elem.Type}} ) {
+func (s* Storage_{{.Name}}) Get(index int) ( *Storage_{{$elem.Type}} ) {
 	// Value: {{ printf "%#v" $elem }}
-	length := s.Length().Uint64()
-	if index >= length {
-		s.Resize(index+1)
+	length := s.Length()
+	if length.Cmp(big.NewInt(0).SetUint64(uint64(index))) < 0 {
+		s.Resize(uint64(index+1))
 	}
 
 	hash := crypto.Keccak256Hash(common.BigToHash(s.slot).Bytes())
-	actual := big.NewInt(0).Add(hash.Big(), big.NewInt(0).SetUint64(index*({{$elem.SolKind.NumberOfBytes}}/32)))
+	actual := big.NewInt(0).Add(hash.Big(), big.NewInt(0).SetUint64(uint64(index*({{$elem.SolKind.NumberOfBytes}}/32))))
 
 {{- if or (isptr $elem) (isslice $elem) (ismap $elem) }}
 	if (*s.obj)[index] == nil {
@@ -517,6 +528,7 @@ func (s *Storage_{{ $typeName }}) {{$field.Name}}() (*Storage_{{$field.Type}}) {
 	// Field: {{ printf "%#v" $field }}
 	var slot *big.Int
 	slot, _ = big.NewInt(0).SetString("{{$field.Slot}}", 10)
+	offset := {{$field.Offset}}
 	
 	var actual *big.Int = big.NewInt(0).Add(s.slot, slot)
 {{- if or (isptr $field) (isslice $field) (ismap $field) }}
@@ -534,6 +546,8 @@ func (s *Storage_{{ $typeName }}) {{$field.Name}}() (*Storage_{{$field.Type}}) {
 		db: s.db,
 		addr: s.addr,
 		slot: actual,
+		offset: offset,
+		numberOfBytes: {{$field.SolKind.NumberOfBytes}},
 		dirty: s.dirty,
 	}
 }

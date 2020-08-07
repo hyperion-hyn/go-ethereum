@@ -132,8 +132,16 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 
 	{
 		// .Node.NodeAddress
-		nodeAddressStorage := storage.Node().NodeAddress().Value()
 		expected := common.HexToAddress("0xA07306b4d845BD243Da172aeE557893172ccd04a")
+		nodeAddressStorage := storage.Node().NodeAddress().Value()
+		if nodeAddressStorage != expected {
+			t.Errorf("response from calling contract was expected to be %v instead received %v", expected, nodeAddressStorage)
+		}
+
+		expected = common.HexToAddress("0x1656F14B6A34C7f46fB6Bba6D62FD6079e06eb95")
+		storage.Node().NodeAddress().SetValue(expected)
+
+		nodeAddressStorage = storage.Node().NodeAddress().Value()
 		if nodeAddressStorage != expected {
 			t.Errorf("response from calling contract was expected to be %v instead received %v", expected, nodeAddressStorage)
 		}
@@ -201,6 +209,41 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 	}
 
 	{
+		// NOTE: test Destroyed before Frozen to make sure slot will not be set incorrectly.
+		// .Node.Description.Destroyed
+		destroyedStorage := storage.Node().Description().Destroyed().Value()
+		expected := true
+		if destroyedStorage != expected {
+			t.Errorf("response from calling contract was expected to be %v instead received %v", expected, destroyedStorage)
+		}
+
+		expected = false
+		storage.Node().Description().Destroyed().SetValue(expected)
+
+		destroyedStorage = storage.Node().Description().Destroyed().Value()
+		if destroyedStorage != expected {
+			t.Errorf("response from calling contract was expected to be %v instead received %v", expected, destroyedStorage)
+		}
+	}
+
+	{
+		// .Node.Description.Frozen
+		frozenStorage := storage.Node().Description().Frozen().Value()
+		expected := uint8(0xee)
+		if frozenStorage != expected {
+			t.Errorf("response from calling contract was expected to be %v instead received %v", expected, frozenStorage)
+		}
+
+		expected = uint8(0xaa)
+		storage.Node().Description().Frozen().SetValue(expected)
+
+		frozenStorage = storage.Node().Description().Frozen().Value()
+		if frozenStorage != expected {
+			t.Errorf("response from calling contract was expected to be %v instead received %v", expected, frozenStorage)
+		}
+	}
+
+	{
 		// .Node.Description.Symbol
 		var expected [9]byte
 		for i := 0; i < len(expected); i++ {
@@ -255,21 +298,49 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 		expected[3] = 0xfeedc0de
 
 		for i := 0; i < len(expected); i++ {
-			featureStorage := storage.Node().Description().Feature().Get(uint64(i)).Value()
+			featureStorage := storage.Node().Description().Feature().Get(i).Value()
 			if featureStorage != expected[i] {
-				t.Errorf("response from calling contract was expected to be %x instead received %x", expected[i], featureStorage)
+				t.Errorf("response %d from calling contract was expected to be %x instead received %x", i, expected[i], featureStorage)
 			}
 		}
 
 		expected[0], expected[3] = expected[3], expected[0]
 		for i := 0; i < len(expected); i++ {
-			storage.Node().Description().Feature().Get(uint64(i)).SetValue(expected[i])
+			storage.Node().Description().Feature().Get(i).SetValue(expected[i])
 		}
 
 		for i := 0; i < len(expected); i++ {
-			featureStorage := storage.Node().Description().Feature().Get(uint64(i)).Value()
+			featureStorage := storage.Node().Description().Feature().Get(i).Value()
 			if featureStorage != expected[i] {
-				t.Errorf("response from calling contract was expected to be %x instead received %x", expected[i], featureStorage)
+				t.Errorf("response %d from calling contract was expected to be %x instead received %x", i, expected[i], featureStorage)
+			}
+		}
+	}
+
+	{
+		// .Node.Description.Mac
+		var expected [12]*big.Int
+		for i := 0; i < len(expected); i++ {
+			expected[i] = big.NewInt(0)
+		}
+		expected[5] = big.NewInt(0xee61f99c1c04)
+
+		for i := 0; i < len(expected); i++ {
+			featureStorage := storage.Node().Description().Mac().Get(i).Value()
+			if featureStorage.Cmp(expected[i]) != 0 {
+				t.Errorf("response %d from calling contract was expected to be %x instead received %x", i, expected[i], featureStorage)
+			}
+		}
+
+		expected[5], expected[11] = expected[11], expected[5]
+		for i := 0; i < len(expected); i++ {
+			storage.Node().Description().Mac().Get(i).SetValue(expected[i])
+		}
+
+		for i := 0; i < len(expected); i++ {
+			featureStorage := storage.Node().Description().Mac().Get(i).Value()
+			if featureStorage.Cmp(expected[i]) != 0 {
+				t.Errorf("response %d from calling contract was expected to be %x instead received %x", i, expected[i], featureStorage)
 			}
 		}
 	}
