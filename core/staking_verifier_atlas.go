@@ -19,7 +19,7 @@ var (
 	errNegativeAmount              = errors.New("amount can not be negative")
 	errInvalidSigner               = errors.New("invalid signer for staking transaction")
 	errDupIdentity                 = errors.New("validator identity exists")
-	errDupPubKey                   = errors.New("public key exists")
+	errDuplicateSlotKeys           = errors.New("slot keys can not have duplicates")
 	errInsufficientBalanceForStake = errors.New("insufficient balance to stake")
 	errCommissionRateChangeTooHigh = errors.New("commission rate can not be higher than maximum commission rate")
 	errCommissionRateChangeTooFast = errors.New("change on commission rate can not be more than max change rate within the same epoch")
@@ -124,7 +124,7 @@ func checkValidatorDuplicatedFields(state vm.StateDB, identity string, keys rest
 		slotKeySet := validatorPool.SlotKeySet()
 		for _, key := range keys.Keys {
 			if slotKeySet.Get(key.Hex()).Value() {
-				return errors.Wrapf(errDupPubKey, "duplicate public key %x", key.Hex())
+				return errors.Wrapf(errDuplicateSlotKeys, "duplicate public key %x", key.Hex())
 			}
 		}
 	}
