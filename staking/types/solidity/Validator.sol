@@ -55,6 +55,8 @@ struct Validator_ {
     // The number of the last epoch this validator is
     // selected in committee (0 means never selected)
     uint256 LastEpochInCommittee;
+    // maximum total delegation allowed
+    uint256 MaxTotalDelegation;
     // Is the validator active in participating
     // committee selection process or not
     uint256 Status;

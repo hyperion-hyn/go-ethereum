@@ -24,15 +24,19 @@ contract Map3Pool {
         string WebSite;
         string SecurityContract;
         string Details;
+        byte Frozen;
         bytes5 Serial;
+        bool Destroyed;
         byte[1] Flag;
         byte[9] Symbol;
         byte[300] Signature;
         uint32[4] Feature;
+        uint48[12] Mac;
         uint256[2] Version; // FOR TEST;
     }
 
     struct Map3Node_t  {
+        bool Actived;
         address NodeAddress;
         address InitiatorAddress;
         bytes NodeKeys;
@@ -108,10 +112,13 @@ contract Map3Pool {
     constructor() public {
         version = 666;
         name = "Hyperion";
+        node.Actived = true;
         node.NodeAddress = 0xA07306b4d845BD243Da172aeE557893172ccd04a;
         node.Commission.CommissionRates.Rate = 0x33 * (10**18);
         node.Commission.CommissionRates.MaxRate.f = 5 * (10**18) + (11 * (10**18)/100);
+        node.Description.Frozen = 0xee;
         node.Description.Serial = 0x123456789A;
+        node.Description.Destroyed = true;
         for (uint i = 0; i < node.Description.Symbol.length; i++) {
             node.Description.Symbol[i] = byte(uint8(i & 0xff));
         }
@@ -124,6 +131,8 @@ contract Map3Pool {
         node.Description.Feature[1] = 0xbeeddeed;
         node.Description.Feature[2] = 0xfacecafe;
         node.Description.Feature[3] = 0xfeedc0de;
+
+        node.Description.Mac[5] = 0xee61f99c1c04;
 
         node.Description.Version[0]=0xbeef;
         node.Description.Version[1]=0xdead;

@@ -11,7 +11,7 @@ import (
 
 var (
 	errValidatorNotExist    = errors.New("staking validator does not exist")
-	errRedelegationNotExist = errors.New("no redelegation exists")
+	errRedelegationNotExist = errors.New("redelegation does not exist")
 
 	ValidatorStorageAddress = common.Address{}
 )

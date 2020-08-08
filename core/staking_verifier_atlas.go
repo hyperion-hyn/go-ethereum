@@ -19,13 +19,15 @@ var (
 	errNegativeAmount              = errors.New("amount can not be negative")
 	errInvalidSigner               = errors.New("invalid signer for staking transaction")
 	errDupIdentity                 = errors.New("validator identity exists")
-	errDupPubKey                   = errors.New("public key exists")
+	errDuplicateSlotKeys           = errors.New("slot keys can not have duplicates")
 	errInsufficientBalanceForStake = errors.New("insufficient balance to stake")
 	errCommissionRateChangeTooHigh = errors.New("commission rate can not be higher than maximum commission rate")
 	errCommissionRateChangeTooFast = errors.New("change on commission rate can not be more than max change rate within the same epoch")
 	errDelegationTooSmall          = errors.New("delegation amount too small")
 	errNoRewardsToCollect          = errors.New("no rewards to collect")
-	errRedelegationNotExist        = errors.New("no redelegation exists")
+	errRedelegationNotExist        = errors.New("redelegation does not exist")
+	errValidatorOperatorNotExist   = errors.New("validator operator does not exist")
+	errInvalidTotalDelegation      = errors.New("total delegation can not be bigger than max_total_delegation", )
 )
 
 var (
@@ -59,8 +61,12 @@ func (s signerVerifierForTokenHolder) VerifyEditValidatorMsg(stateDB vm.StateDB,
 	if err != nil {
 		return err
 	}
-	if !validator.Validator().OperatorAddresses().Set().Get(signer).Value() {
+	if signer != msg.OperatorAddress {
 		return errInvalidSigner
+	}
+
+	if !validator.Validator().OperatorAddresses().Set().Get(msg.OperatorAddress).Value() {
+		return errValidatorOperatorNotExist
 	}
 	return nil
 }
@@ -118,7 +124,7 @@ func checkValidatorDuplicatedFields(state vm.StateDB, identity string, keys rest
 		slotKeySet := validatorPool.SlotKeySet()
 		for _, key := range keys.Keys {
 			if slotKeySet.Get(key.Hex()).Value() {
-				return errors.Wrapf(errDupPubKey, "duplicate public key %x", key.Hex())
+				return errors.Wrapf(errDuplicateSlotKeys, "duplicate public key %x", key.Hex())
 			}
 		}
 	}
@@ -160,6 +166,11 @@ func VerifyCreateValidatorMsg(stateDB vm.StateDB, blockNum *big.Int, msg *stakin
 	if err := v.SanityCheck(staking.MaxPubKeyAllowed); err != nil {
 		return nil, err
 	}
+
+	if err = delegationSanityCheck(msg.MaxTotalDelegation, common.Big0, defaultStakingAmount); err != nil {
+		return nil, err
+	}
+
 	return v, nil
 }
 
@@ -217,6 +228,12 @@ func VerifyEditValidatorMsg(stateDB vm.StateDB, chainContext ChainContext, epoch
 	if newRate.Sub(rateAtBeginningOfEpoch).Abs().GT(validator.Commission.CommissionRates.MaxChangeRate, ) {
 		return errCommissionRateChangeTooFast
 	}
+
+	if msg.MaxTotalDelegation != nil {
+		if err = delegationSanityCheck(msg.MaxTotalDelegation, validator.MaxTotalDelegation, common.Big0); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -237,6 +254,9 @@ func VerifyRedelegateMsg(stateDB vm.StateDB, msg *staking.Redelegate, signer com
 	if _, err := stateDB.ValidatorByAddress(msg.ValidatorAddress); err != nil {
 		return err
 	}
+
+	// TODO(ATLAS): max total delegation && min delegation
+
 	return nil
 }
 
@@ -297,6 +317,19 @@ func VerifyCollectRedelRewardsMsg(stateDB vm.StateDB, msg *staking.CollectRedele
 
 	if redelegation.Reward().Value().Cmp(common.Big0) == 0 {
 		return errNoRewardsToCollect
+	}
+	return nil
+}
+
+func delegationSanityCheck(maxTotalTotalDelegation, currentTotalDelegation, incrementalDelegation *big.Int) error {
+	total := big.NewInt(0).Add(currentTotalDelegation, incrementalDelegation)
+	if total.Cmp(maxTotalTotalDelegation) > 0 {
+		return errors.Wrapf(
+			errInvalidTotalDelegation,
+			"total %s max-total %s",
+			total.String(),
+			maxTotalTotalDelegation.String(),
+		)
 	}
 	return nil
 }
