@@ -98,6 +98,19 @@ func (s *Storage_AddressSet_) AllKeys() []common.Address {
 	return addressSlice
 }
 
+func (s *Storage_AddressSet_) Save(addressSet AddressSet_) {
+
+	keysLength := len(addressSet.Keys)
+	if keysLength != 0 {
+		s.Keys().Resize(uint64(keysLength))
+		for i := 0; i < keysLength; i++ {
+			keyTemp := addressSet.Keys[i]
+			s.Keys().Get(uint64(i)).SetValue(*keyTemp)
+			s.Set().Get(*keyTemp).SetValue(*addressSet.Set[*keyTemp])
+		}
+	}
+}
+
 // Storage_Validator_
 func (s *Storage_Validator_) Load() *Validator_ {
 
@@ -121,20 +134,56 @@ func (s *Storage_Validator_) Load() *Validator_ {
 
 func (s *Storage_Validator_) Save(validator *Validator_) {
 
-	s.ValidatorAddress().SetValue(validator.ValidatorAddress)
-	s.SlotPubKeys().Save(&validator.SlotPubKeys)
-	s.LastEpochInCommittee().SetValue(validator.LastEpochInCommittee)
-	s.Status().SetValue(validator.Status)
-	s.Commission().CommissionRates().Rate().SetValue(validator.Commission.CommissionRates.Rate)
-	s.Commission().CommissionRates().MaxChangeRate().SetValue(validator.Commission.CommissionRates.MaxChangeRate)
-	s.Commission().CommissionRates().MaxRate().SetValue(validator.Commission.CommissionRates.MaxRate)
-	s.Commission().UpdateHeight().SetValue(validator.Commission.UpdateHeight)
-	s.Description().Name().SetValue(validator.Description.Name)
-	s.Description().Identity().SetValue(validator.Description.Identity)
-	s.Description().Website().SetValue(validator.Description.Website)
-	s.Description().SecurityContact().SetValue(validator.Description.SecurityContact)
-	s.Description().Details().SetValue(validator.Description.Details)
-	s.CreationHeight().SetValue(validator.CreationHeight)
+	if validator.ValidatorAddress != common.BigToAddress(common.Big0) {
+		s.ValidatorAddress().SetValue(validator.ValidatorAddress)
+	}
+	if len(validator.OperatorAddresses.Keys) != 0 {
+		s.OperatorAddresses().Save(validator.OperatorAddresses)
+	}
+	if len(validator.SlotPubKeys.Keys) != 0 {
+		s.SlotPubKeys().Save(&validator.SlotPubKeys)
+	}
+
+	if validator.LastEpochInCommittee != nil {
+		s.LastEpochInCommittee().SetValue(validator.LastEpochInCommittee)
+	}
+	if validator.Status != nil {
+		s.Status().SetValue(validator.Status)
+	}
+
+	if !validator.Commission.CommissionRates.Rate.IsNil() {
+		s.Commission().CommissionRates().Rate().SetValue(validator.Commission.CommissionRates.Rate)
+	}
+	if !validator.Commission.CommissionRates.MaxChangeRate.IsNil() {
+		s.Commission().CommissionRates().MaxChangeRate().SetValue(validator.Commission.CommissionRates.MaxChangeRate)
+	}
+	if !validator.Commission.CommissionRates.MaxRate.IsNil() {
+		s.Commission().CommissionRates().MaxRate().SetValue(validator.Commission.CommissionRates.MaxRate)
+	}
+	if validator.Commission.UpdateHeight != nil {
+		s.Commission().UpdateHeight().SetValue(validator.Commission.UpdateHeight)
+	}
+
+	if validator.Description.Name != "" {
+		s.Description().Name().SetValue(validator.Description.Name)
+	}
+	if validator.Description.Identity != "" {
+		s.Description().Identity().SetValue(validator.Description.Identity)
+	}
+	if validator.Description.Website != "" {
+		s.Description().Website().SetValue(validator.Description.Website)
+	}
+	if validator.Description.SecurityContact != "" {
+		s.Description().SecurityContact().SetValue(validator.Description.SecurityContact)
+	}
+	if validator.Description.Details != "" {
+		s.Description().Details().SetValue(validator.Description.Details)
+	}
+
+	if validator.CreationHeight != nil {
+		s.CreationHeight().SetValue(validator.CreationHeight)
+	}
+
 }
 
 // Storage_ValidatorWrapper_
@@ -143,11 +192,21 @@ func (s *Storage_ValidatorWrapper_) Save(validatorWrapper *ValidatorWrapper_) {
 
 	s.Validator().Save(&validatorWrapper.Validator)
 	s.Redelegations().Save(validatorWrapper.Redelegations)
-	s.Counters().NumBlocksSigned().SetValue(validatorWrapper.Counters.NumBlocksSigned)
-	s.Counters().NumBlocksToSign().SetValue(validatorWrapper.Counters.NumBlocksToSign)
-	s.BlockReward().SetValue(validatorWrapper.BlockReward)
-	s.TotalDelegation().SetValue(validatorWrapper.TotalDelegation)
-	s.TotalDelegationByOperator().SetValue(validatorWrapper.TotalDelegationByOperator)
+	if validatorWrapper.Counters.NumBlocksSigned != nil {
+		s.Counters().NumBlocksSigned().SetValue(validatorWrapper.Counters.NumBlocksSigned)
+	}
+	if validatorWrapper.Counters.NumBlocksToSign != nil {
+		s.Counters().NumBlocksToSign().SetValue(validatorWrapper.Counters.NumBlocksToSign)
+	}
+	if validatorWrapper.BlockReward != nil {
+		s.BlockReward().SetValue(validatorWrapper.BlockReward)
+	}
+	if validatorWrapper.TotalDelegation != nil {
+		s.TotalDelegation().SetValue(validatorWrapper.TotalDelegation)
+	}
+	if validatorWrapper.TotalDelegationByOperator != nil {
+		s.TotalDelegationByOperator().SetValue(validatorWrapper.TotalDelegationByOperator)
+	}
 
 }
 
@@ -240,10 +299,19 @@ func (s *Storage_Redelegation_) AddAmount(amount *big.Int) {
 func (s *Storage_Redelegation_) Save(redelegation Redelegation_) {
 
 	s.DelegatorAddress().SetValue(redelegation.DelegatorAddress)
-	s.Amount().SetValue(redelegation.Amount)
-	s.Reward().SetValue(redelegation.Reward)
-	s.Undelegation().Amount().SetValue(redelegation.Undelegation.Amount)
-	s.Undelegation().Epoch().SetValue(redelegation.Undelegation.Epoch)
+	if redelegation.Amount != nil {
+		s.Amount().SetValue(redelegation.Amount)
+	}
+	if redelegation.Reward != nil {
+		s.Reward().SetValue(redelegation.Reward)
+	}
+	if redelegation.Undelegation.Amount != nil {
+		s.Undelegation().Amount().SetValue(redelegation.Undelegation.Amount)
+	}
+	if redelegation.Undelegation.Epoch != nil {
+		s.Undelegation().Epoch().SetValue(redelegation.Undelegation.Epoch)
+	}
+
 }
 func (s *Storage_Redelegation_) SetNil() {
 
@@ -413,7 +481,10 @@ func (s *Storage_Slot_) Save(key *Slot_) {
 
 	s.BLSPublicKey().Key().SetValue(key.BLSPublicKey.Key)
 	s.EcdsaAddress().SetValue(key.EcdsaAddress)
-	s.EffectiveStake().SetValue(key.EffectiveStake)
+	if !key.EffectiveStake.IsNil() {
+		s.EffectiveStake().SetValue(key.EffectiveStake)
+	}
+
 }
 
 func (s *Storage_Slot_) Load() *Slot_ {
