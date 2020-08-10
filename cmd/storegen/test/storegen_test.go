@@ -551,11 +551,11 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 
 			// length
 			{
-				expected := int64(10)
+				expected := int(10)
 				lengthStorage := storage.Pool().Nodes().Get(addr1).Microdelegations().Get(addr2).PendingDelegations().Length()
 
-				if big.NewInt(expected).Cmp(lengthStorage) != 0 {
-					t.Errorf(" length expected to be %v instead received %v", expected, lengthStorage.Uint64())
+				if lengthStorage != expected {
+					t.Errorf(" length expected to be %v instead received %v", expected, lengthStorage)
 				}
 			}
 
@@ -563,10 +563,10 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 			{
 				storage.Pool().Nodes().Get(addr1).Microdelegations().Get(addr2).PendingDelegations().Get(20).Amount().Value()
 
-				expected := int64(21)
+				expected := int(21)
 				lengthStorage := storage.Pool().Nodes().Get(addr1).Microdelegations().Get(addr2).PendingDelegations().Length()
-				if big.NewInt(expected).Cmp(lengthStorage) != 0 {
-					t.Errorf(" length expected to be %v instead received %v", expected, lengthStorage.Uint64())
+				if lengthStorage != expected {
+					t.Errorf(" length expected to be %v instead received %v", expected, lengthStorage)
 				}
 
 				if int(expected) != len(global.Pool.Nodes[addr1].Microdelegations[addr2].PendingDelegations) {
@@ -576,12 +576,12 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 
 			// shrink
 			{
-				expected := int64(15)
+				expected := int(15)
 				storage.Pool().Nodes().Get(addr1).Microdelegations().Get(addr2).PendingDelegations().Resize(15)
 				lengthStorage := storage.Pool().Nodes().Get(addr1).Microdelegations().Get(addr2).PendingDelegations().Length()
 
-				if big.NewInt(expected).Cmp(lengthStorage) != 0 {
-					t.Errorf(" length expected to be %v instead received %v", expected, lengthStorage.Uint64())
+				if lengthStorage != expected {
+					t.Errorf(" length expected to be %v instead received %v", expected, lengthStorage)
 				}
 
 				if int(expected) != len(global.Pool.Nodes[addr1].Microdelegations[addr2].PendingDelegations) {
