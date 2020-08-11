@@ -35,6 +35,19 @@ var (
 	errNilMaxTotalDelegation  = errors.New("MaxTotalDelegation can not be nil")
 )
 
+func (a *AddressSet_) Contain(address common.Address) bool {
+	return *a.Set[address]
+}
+
+func (a *AddressSet_) Put(address common.Address) {
+	if a.Contain(address) {
+		return
+	}
+	a.Keys = append(a.Keys, &address)
+	a.Set[address] = func() *bool {t := true; return &t}()
+}
+
+
 // BLSSignature defines the bls signature
 type BLSSignature [BLSSignatureSizeInBytes]byte
 
@@ -70,36 +83,69 @@ func (pk *BLSPublicKey_) FromLibBLSPublicKey(key *bls.PublicKey) error {
 	return nil
 }
 
+// UpdateDescription returns a new Description object with d1 as the base and the fields that's not empty in d2 updated
+// accordingly. An error is returned if the resulting description fields have invalid length.
+func (d *Description_) UpdateFrom(other *Description_) error {
+	if other.Name != "" {
+		d.Name = other.Name
+	}
+	if other.Identity != "" {
+		d.Identity = other.Identity
+	}
+	if other.Website != "" {
+		d.Website = other.Website
+	}
+	if other.SecurityContact != "" {
+		d.SecurityContact = other.SecurityContact
+	}
+	if other.Details != "" {
+		d.Details = other.Details
+	}
+	return d.EnsureLength()
+}
+
 // EnsureLength ensures the length of a validator's description.
-func (d Description_) EnsureLength() (Description_, error) {
+func (d *Description_) EnsureLength() error {
 	if len(d.Name) > MaxNameLength {
-		return d, errors.Errorf(
+		return errors.Errorf(
 			"exceed maximum name length %d %d", len(d.Name), MaxNameLength,
 		)
 	}
 	if len(d.Identity) > MaxIdentityLength {
-		return d, errors.Errorf(
+		return errors.Errorf(
 			"exceed Maximum Length identity %d %d", len(d.Identity), MaxIdentityLength,
 		)
 	}
 	if len(d.Website) > MaxWebsiteLength {
-		return d, errors.Errorf(
+		return errors.Errorf(
 			"exceed Maximum Length website %d %d", len(d.Website), MaxWebsiteLength,
 		)
 	}
 	if len(d.SecurityContact) > MaxSecurityContactLength {
-		return d, errors.Errorf(
+		return errors.Errorf(
 			"exceed Maximum Length %d %d", len(d.SecurityContact), MaxSecurityContactLength,
 		)
 	}
 	if len(d.Details) > MaxDetailsLength {
-		return d, errors.Errorf(
+		return errors.Errorf(
 			"exceed Maximum Length for details %d %d", len(d.Details), MaxDetailsLength,
 		)
 	}
-
-	return d, nil
+	return nil
 }
+
+
+// Copy deep copies the staking.CommissionRates
+func (cr *CommissionRates_) Copy() CommissionRates_ {
+	return CommissionRates_{
+		Rate:          cr.Rate.Copy(),
+		MaxRate:       cr.MaxRate.Copy(),
+		MaxChangeRate: cr.MaxChangeRate.Copy(),
+	}
+}
+
+
+
 
 var (
 	hundredPercent = common.OneDec()
@@ -108,7 +154,7 @@ var (
 
 // SanityCheck checks basic requirements of a validator
 func (v *Validator_) SanityCheck(maxSlotKeyAllowed int) error {
-	if _, err := v.Description.EnsureLength(); err != nil {
+	if err := v.Description.EnsureLength(); err != nil {
 		return err
 	}
 
@@ -176,24 +222,20 @@ func (v *Validator_) SanityCheck(maxSlotKeyAllowed int) error {
 	return nil
 }
 
-// Computed represents current epoch
-// availability measures, mostly for RPC
-type Computed struct {
-	Signed            *big.Int   `json:"current-epoch-signed"`
-	ToSign            *big.Int   `json:"current-epoch-to-sign"`
-	BlocksLeftInEpoch uint64     `json:"-"`
-	Percentage        common.Dec `json:"current-epoch-signing-percentage"`
-	IsBelowThreshold  bool       `json:"-"`
+func (r *RedelegationMap_) Contain(delegator Address) bool {
+	return false
 }
 
-// NewComputed ..
-func NewComputed(
-	signed, toSign *big.Int,
-	blocksLeft uint64,
-	percent common.Dec,
-	isBelowNow bool) *Computed {
-	return &Computed{signed, toSign, blocksLeft, percent, isBelowNow}
+func (r *RedelegationMap_) Put(delegator Address, redelegation *Redelegation_) {
 }
+
+func (r *RedelegationMap_) Remove(delegator Address) {
+}
+
+func (r *RedelegationMap_) Get(delegator Address) *Redelegation_ {
+	return nil
+}
+
 
 // BLSPublicKeys ..
 func (c *Committee_) BLSPublicKeys() ([]*bls.PublicKey, error) {

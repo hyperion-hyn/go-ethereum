@@ -25,8 +25,9 @@ var (
 	errCommissionRateChangeTooFast = errors.New("change on commission rate can not be more than max change rate within the same epoch")
 	errDelegationTooSmall          = errors.New("delegation amount too small")
 	errNoRewardsToCollect          = errors.New("no rewards to collect")
+	errValidatorNotExist           = errors.New("staking validator does not exist")
 	errRedelegationNotExist        = errors.New("redelegation does not exist")
-	errValidatorOperatorNotExist   = errors.New("validator operator does not exist")
+	errInvalidValidatorOperator    = errors.New("invalid validator operator")
 	errInvalidTotalDelegation      = errors.New("total delegation can not be bigger than max_total_delegation", )
 )
 
@@ -66,7 +67,7 @@ func (s signerVerifierForTokenHolder) VerifyEditValidatorMsg(stateDB vm.StateDB,
 	}
 
 	if !validator.Validator().OperatorAddresses().Set().Get(msg.OperatorAddress).Value() {
-		return errValidatorOperatorNotExist
+		return errInvalidValidatorOperator
 	}
 	return nil
 }
@@ -159,11 +160,11 @@ func VerifyCreateValidatorMsg(stateDB vm.StateDB, blockNum *big.Int, msg *stakin
 	}
 
 	valAddress := crypto.CreateAddress(signer, stateDB.GetNonce(signer))
-	v, err := staking.CreateValidatorFromNewMsg(msg, valAddress, blockNum)
+	v, err := restaking.CreateValidatorFromNewMsg(msg, valAddress, blockNum)
 	if err != nil {
 		return nil, err
 	}
-	if err := v.SanityCheck(staking.MaxPubKeyAllowed); err != nil {
+	if err := v.SanityCheck(restaking.MaxPubKeyAllowed); err != nil {
 		return nil, err
 	}
 
@@ -182,6 +183,9 @@ func VerifyEditValidatorMsg(stateDB vm.StateDB, chainContext ChainContext, epoch
 	msg *staking.EditValidator, signer common.Address) error {
 	if stateDB == nil {
 		return errStateDBIsMissing
+	}
+	if chainContext == nil {
+		return errChainContextMissing
 	}
 	if epoch == nil {
 		return errEpochMissing
@@ -207,10 +211,10 @@ func VerifyEditValidatorMsg(stateDB vm.StateDB, chainContext ChainContext, epoch
 	}
 	validator := wrapperSt.Validator().Load()
 
-	if err := staking.UpdateValidatorFromEditMsg(validator, msg); err != nil {
+	if err := restaking.UpdateValidatorFromEditMsg(validator, msg); err != nil {
 		return err
 	}
-	if err := validator.SanityCheck(staking.MaxPubKeyAllowed); err != nil {
+	if err := validator.SanityCheck(restaking.MaxPubKeyAllowed); err != nil {
 		return err
 	}
 

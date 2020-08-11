@@ -1,17 +1,16 @@
-package types
+package restaking
 
 import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/staking/effective"
-	"github.com/ethereum/go-ethereum/staking/types/restaking"
+	"github.com/ethereum/go-ethereum/staking/types"
 	"github.com/harmony-one/bls/ffi/go/bls"
 	"github.com/pkg/errors"
 	"math/big"
 )
 
 const (
-	BLSSignatureSizeInBytes  = 96
 	BLSVerificationStr       = "hyperion-hyn"
 	MaxPubKeyAllowed         = 1
 )
@@ -24,12 +23,9 @@ var (
 	errCannotChangeBannedTrait = errors.New("cannot change validator banned status")
 )
 
-// BLSSignature defines the bls signature
-type BLSSignature [BLSSignatureSizeInBytes]byte
-
 // VerifyBLSKeys checks if the public BLS key at index i of pubKeys matches the
 // BLS key signature at index i of pubKeysSigs.
-func VerifyBLSKeys(pubKeys restaking.BLSPublicKeys_, pubKeySigs []BLSSignature) error {
+func VerifyBLSKeys(pubKeys BLSPublicKeys_, pubKeySigs []BLSSignature) error {
 	if len(pubKeys.Keys) != len(pubKeySigs) {
 		return errBLSKeysNotMatchSigs
 	}
@@ -44,7 +40,7 @@ func VerifyBLSKeys(pubKeys restaking.BLSPublicKeys_, pubKeySigs []BLSSignature) 
 }
 
 // VerifyBLSKey checks if the public BLS key matches the BLS signature
-func VerifyBLSKey(pubKey *restaking.BLSPublicKey_, pubKeySig *BLSSignature) error {
+func VerifyBLSKey(pubKey *BLSPublicKey_, pubKeySig *BLSSignature) error {
 	if len(pubKeySig) == 0 {
 		return errBLSKeysNotMatchSigs
 	}
@@ -69,45 +65,51 @@ func VerifyBLSKey(pubKey *restaking.BLSPublicKey_, pubKeySig *BLSSignature) erro
 }
 
 // CreateValidatorFromNewMsg creates validator from NewValidator message
-func CreateValidatorFromNewMsg(msg *CreateValidator, valAddr common.Address, blockNum *big.Int) (*restaking.Validator_, error) {
-	desc, err := msg.Description.EnsureLength()
-	if err != nil {
+func CreateValidatorFromNewMsg(msg *types.CreateValidator, valAddr common.Address, blockNum *big.Int) (*Validator_, error) {
+	if err := msg.Description.EnsureLength(); err != nil {
 		return nil, err
 	}
-	commission := restaking.Commission_{msg.CommissionRates, blockNum}
+	commission := Commission_{msg.CommissionRates, blockNum}
 
-	if err = VerifyBLSKeys(msg.SlotPubKeys, msg.SlotKeySigs); err != nil {
+	if err := VerifyBLSKeys(msg.SlotPubKeys, msg.SlotKeySigs); err != nil {
 		return nil, err
 	}
 
-	exist := true
-	v := restaking.Validator_{
+	v := Validator_{
 		ValidatorAddress: valAddr,
-		OperatorAddresses: restaking.AddressSet_{
-			Keys: []*restaking.Address{&msg.OperatorAddress},
-			Set:  map[restaking.Address]*restaking.Bool{msg.OperatorAddress: &exist},
-		},
+		OperatorAddresses: NewAddressSetWithAddress(msg.OperatorAddress),
 		SlotPubKeys:          msg.SlotPubKeys,
 		LastEpochInCommittee: new(big.Int),
 		MaxTotalDelegation:   msg.MaxTotalDelegation,
 		Status:               big.NewInt(int64(effective.Active)),
 		Commission:           commission,
-		Description:          desc,
+		Description:          msg.Description,
 		CreationHeight:       blockNum,
 	}
 	return &v, nil
 }
 
+func NewAddressSet() AddressSet_ {
+	return AddressSet_{
+		Keys: []*Address{},
+		Set:  map[Address]*Bool{},
+	}
+}
+
+func NewAddressSetWithAddress(address common.Address) AddressSet_ {
+	set := NewAddressSet()
+	set.Put(address)
+	return set
+}
+
 // UpdateValidatorFromEditMsg updates validator from EditValidator message
-func UpdateValidatorFromEditMsg(validator *restaking.Validator_, edit *EditValidator) error {
+func UpdateValidatorFromEditMsg(validator *Validator_, edit *types.EditValidator) error {
 	if validator.ValidatorAddress != edit.ValidatorAddress {
 		return errAddressNotMatch
 	}
-	desc, err := UpdateDescription(validator.Description, *edit.Description)
-	if err != nil {
+	if err := validator.Description.UpdateFrom(edit.Description); err != nil {
 		return err
 	}
-	validator.Description = desc
 
 	if edit.CommissionRate != nil {
 		validator.Commission.CommissionRates.Rate = *edit.CommissionRate
@@ -162,34 +164,19 @@ func UpdateValidatorFromEditMsg(validator *restaking.Validator_, edit *EditValid
 	return nil
 }
 
-// UpdateDescription returns a new Description object with d1 as the base and the fields that's not empty in d2 updated
-// accordingly. An error is returned if the resulting description fields have invalid length.
-func UpdateDescription(d1, d2 restaking.Description_) (restaking.Description_, error) {
-	newDesc := d1
-	if d2.Name != "" {
-		newDesc.Name = d2.Name
-	}
-	if d2.Identity != "" {
-		newDesc.Identity = d2.Identity
-	}
-	if d2.Website != "" {
-		newDesc.Website = d2.Website
-	}
-	if d2.SecurityContact != "" {
-		newDesc.SecurityContact = d2.SecurityContact
-	}
-	if d2.Details != "" {
-		newDesc.Details = d2.Details
-	}
-	return newDesc.EnsureLength()
-}
-
 // NewDelegation creates a new delegation object
-func NewRedelegation(delegatorAddr common.Address, amount *big.Int) *restaking.Redelegation_ {
-	return &restaking.Redelegation_{
+func NewRedelegation(delegatorAddr common.Address, amount *big.Int) *Redelegation_ {
+	return &Redelegation_{
 		DelegatorAddress: delegatorAddr,
 		Amount:           amount,
 		Reward:           big.NewInt(0),
+	}
+}
+
+func NewRelegationMap() RedelegationMap_ {
+	return RedelegationMap_{
+		Keys: []*Address{},
+		Map:  map[Address]*RedelegationMapEntry_{},
 	}
 }
 

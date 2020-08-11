@@ -123,7 +123,7 @@ func TestBallotResult(t *testing.T) {
 			}
 			continue
 		}
-		if !reflect.DeepEqual(slots, comm.Slots) {
+		if !reflect.DeepEqual(*slots, comm.Slots) {
 			t.Errorf("Test %v: Ballot result slots not expected", i)
 		}
 		if len(payable.Entrys) != test.expNumPayable {
@@ -474,10 +474,14 @@ type computeEPOSTestCtx struct {
 // makeStateAndReader compute for state and reader given the input arguments
 func (ctx *computeEPOSTestCtx) makeStateAndReader() {
 	ctx.reader = newTestReader()
+	ctx.epoch = big.NewInt(1)
+	fmt.Println(ctx.epoch.Uint64())
 	if ctx.snapEli != effective.Nil {
 		wrapper := makeTestWrapper(ctx.addr, ctx.snapSigned, ctx.snapToSign)
 		wrapper.Validator.Status = big.NewInt(int64(ctx.curEli))
-		ctx.reader[ctx.epoch.Uint64()].ValidatorPool().Validators().Put(ctx.addr, &wrapper)
+		stateDB := newTestStateDB()
+		stateDB.ValidatorPool().Validators().Put(ctx.addr, &wrapper)
+		ctx.reader[ctx.epoch.Uint64()] = stateDB
 	}
 	ctx.stateDB = newTestStateDB()
 	if ctx.curEli != effective.Nil {
@@ -527,7 +531,7 @@ func (th *testHeader) LastCommitBitmap() []byte {
 
 
 // testReader is the fake Reader for testing
-type testReader map[uint64]state.StateDB
+type testReader map[uint64]*state.StateDB
 
 func (reader testReader) ReadValidatorAtEpoch(epoch *big.Int, validatorAddress common.Address) (*restaking.Storage_ValidatorWrapper_, error) {
 	stateDB := reader[epoch.Uint64()]

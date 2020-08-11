@@ -14,7 +14,7 @@ type CreateValidator struct {
 	CommissionRates    restaking.CommissionRates_ `json:"commission"`
 	MaxTotalDelegation *big.Int                   `json:"max-total-delegation"`
 	SlotPubKeys        restaking.BLSPublicKeys_   `json:"slot-pub-keys"`
-	SlotKeySigs        []BLSSignature             `json:"slot-key-sigs"`
+	SlotKeySigs        []restaking.BLSSignature   `json:"slot-key-sigs"`
 }
 
 // EditValidator - type for edit existing validator
@@ -26,7 +26,7 @@ type EditValidator struct {
 	MaxTotalDelegation *big.Int                 `json:"max-total-delegation"`
 	SlotKeyToRemove    *restaking.BLSPublicKey_ `json:"slot-key-to_remove" rlp:"nil"`
 	SlotKeyToAdd       *restaking.BLSPublicKey_ `json:"slot-key-to_add" rlp:"nil"`
-	SlotKeyToAddSig    *BLSSignature            `json:"slot-key-to-add-sig" rlp:"nil"`
+	SlotKeyToAddSig    *restaking.BLSSignature  `json:"slot-key-to-add-sig" rlp:"nil"`
 	EPOSStatus         effective.Eligibility    `json:"epos-eligibility-status" rlp:"nil"`
 }
 
