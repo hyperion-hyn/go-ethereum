@@ -29,6 +29,8 @@ import (
 var (
 	testAddress  = "70524d664ffe731100208a0154e556f9bb679ae6"
 	testAddress2 = "b37866a925bccd69cfa98d43b510f1d23d78a851"
+	testSigner   = ""
+	testSigner2 =  ""
 )
 
 func TestValidatorSet(t *testing.T) {
@@ -47,14 +49,18 @@ func testNewValidatorSet(t *testing.T) {
 	b := []byte{}
 	for i := 0; i < ValCnt; i++ {
 		key, _ := crypto.GenerateKey()
-		addr := crypto.PubkeyToAddress(key.PublicKey)
-		val := New(addr)
+		coinbase := crypto.PubkeyToAddress(key.PublicKey)
+		blsKey, _ := crypto.GenerateBLSKey()
+		val, err := New(coinbase, blsKey.GetPublicKey().Serialize())
+		if err != nil {
+			t.Errorf("failed to new a validator: %v", err)
+		}
 		validators = append(validators, val)
 		b = append(b, val.Address().Bytes()...)
 	}
 
 	// Create ValidatorSet
-	valSet := NewSet(ExtractValidators(b), atlas.RoundRobin)
+	valSet := NewSet(validators, atlas.RoundRobin)
 	if valSet == nil {
 		t.Errorf("the validator byte array cannot be parsed")
 		t.FailNow()
@@ -75,10 +81,12 @@ func testNormalValSet(t *testing.T) {
 	b2 := common.Hex2Bytes(testAddress2)
 	addr1 := common.BytesToAddress(b1)
 	addr2 := common.BytesToAddress(b2)
-	val1 := New(addr1)
-	val2 := New(addr2)
+	s1 := common.Hex2Bytes(testSigner)
+	s2 := common.Hex2Bytes(testSigner2)
+	val1, _ := New(addr1, s1)
+	val2, _:= New(addr2, s2)
 
-	valSet := newDefaultSet([]common.Address{addr1, addr2}, atlas.RoundRobin)
+	valSet := newDefaultSet([]atlas.Validator {val1, val2}, atlas.RoundRobin)
 	if valSet == nil {
 		t.Errorf("the format of validator set is invalid")
 		t.FailNow()
@@ -128,22 +136,34 @@ func testNormalValSet(t *testing.T) {
 }
 
 func testEmptyValSet(t *testing.T) {
-	valSet := NewSet(ExtractValidators([]byte{}), atlas.RoundRobin)
+	valSet := NewSet([]atlas.Validator{}, atlas.RoundRobin)
 	if valSet == nil {
 		t.Errorf("validator set should not be nil")
 	}
 }
 
 func testAddAndRemoveValidator(t *testing.T) {
-	valSet := NewSet(ExtractValidators([]byte{}), atlas.RoundRobin)
-	if !valSet.AddValidator(common.StringToAddress(string(2))) {
-		t.Error("the validator should be added")
+	valSet := NewSet([]atlas.Validator{}, atlas.RoundRobin)
+	{
+		blsKey, _ := crypto.GenerateBLSKey()
+		validator, _ := New(common.StringToAddress(string(2)), blsKey.GetPublicKey().Serialize())
+		if !valSet.AddValidator(validator) {
+			t.Error("the validator should be added")
+		}
+		if valSet.AddValidator(validator) {
+			t.Error("the existing validator should not be added")
+		}
 	}
-	if valSet.AddValidator(common.StringToAddress(string(2))) {
-		t.Error("the existing validator should not be added")
+	{
+		blsKey, _ := crypto.GenerateBLSKey()
+		validator, _ := New(common.StringToAddress(string(1)), blsKey.GetPublicKey().Serialize())
+		valSet.AddValidator(validator)
 	}
-	valSet.AddValidator(common.StringToAddress(string(1)))
-	valSet.AddValidator(common.StringToAddress(string(0)))
+	{
+		blsKey, _ := crypto.GenerateBLSKey()
+		validator, _ := New(common.StringToAddress(string(0)), blsKey.GetPublicKey().Serialize())
+		valSet.AddValidator(validator)
+	}
 	if len(valSet.List()) != 3 {
 		t.Error("the size of validator set should be 3")
 	}
@@ -179,10 +199,14 @@ func testStickyProposer(t *testing.T) {
 	b2 := common.Hex2Bytes(testAddress2)
 	addr1 := common.BytesToAddress(b1)
 	addr2 := common.BytesToAddress(b2)
-	val1 := New(addr1)
-	val2 := New(addr2)
+	blsKey1, _ := crypto.GenerateBLSKey()
+	s1 := blsKey1.GetPublicKey().Serialize()
+	blsKey2, _ := crypto.GenerateBLSKey()
+	s2 := blsKey2.GetPublicKey().Serialize()
+	val1, _ := New(addr1, s1)
+	val2, _ := New(addr2, s2)
 
-	valSet := newDefaultSet([]common.Address{addr1, addr2}, atlas.Sticky)
+	valSet := newDefaultSet([]atlas.Validator{val1, val2}, atlas.Sticky)
 
 	// test get proposer
 	if val := valSet.GetProposer(); !reflect.DeepEqual(val, val1) {

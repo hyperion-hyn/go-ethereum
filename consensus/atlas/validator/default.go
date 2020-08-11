@@ -68,7 +68,7 @@ func newDefaultSet(addrs []atlas.Validator, policy atlas.ProposerPolicy) *defaul
 	// init validators
 	valSet.validators = make([]atlas.Validator, len(addrs))
 	for i, addr := range addrs {
-		valSet.validators[i] = New(addr)
+		valSet.validators[i] = addr
 	}
 	// sort validator
 	sort.Sort(valSet.validators)
@@ -178,16 +178,16 @@ func stickyProposer(valSet atlas.ValidatorSet, proposer common.Address, round ui
 	return valSet.GetByIndex(pick)
 }
 
-func (valSet *defaultSet) AddValidator(address common.Address) bool {
+func (valSet *defaultSet) AddValidator(validator atlas.Validator) bool {
 	// ATLAS(zgx): should change AddValidator function signature
 	valSet.validatorMu.Lock()
 	defer valSet.validatorMu.Unlock()
 	for _, v := range valSet.validators {
-		if v.Address() == address {
+		if v.Address() == validator.Address() {
 			return false
 		}
 	}
-	valSet.validators = append(valSet.validators, New(address))
+	valSet.validators = append(valSet.validators, validator)
 	// TODO: we may not need to re-sort it again
 	// sort validator
 	// ATLAS(zgx): should implement Validator.String to make sure sort by signer's id
@@ -212,9 +212,9 @@ func (valSet *defaultSet) Copy() atlas.ValidatorSet {
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()
 
-	addresses := make([]common.Address, 0, len(valSet.validators))
+	addresses := make([]atlas.Validator, 0, len(valSet.validators))
 	for _, v := range valSet.validators {
-		addresses = append(addresses, v.Address())
+		addresses = append(addresses, v)
 	}
 	return NewSet(addresses, valSet.policy)
 }

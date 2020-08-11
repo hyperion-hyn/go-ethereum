@@ -17,21 +17,25 @@
 package validator
 
 import (
+
 	"github.com/hyperion-hyn/bls/ffi/go/bls"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
-func New(validator atlas.Validator) atlas.Validator {
-	var pubKey bls.PublicKey
-	if err := pubKey.Deserialize(validator.PublicKey().Serialize()); err != nil {
-		// ATLAS(zgx): what if validator's public key is invalid?
+func New(coinbase common.Address, publicKey []byte) (atlas.Validator, error) {
+	var blsPublicKey bls.PublicKey
+	if err := blsPublicKey.Deserialize(publicKey); err != nil {
+		return &defaultValidator{}, err
 	}
+
+	signer := crypto.PubkeyToSigner(&blsPublicKey)
 	return &defaultValidator{
-		address:  validator.Address(),
-		coinbase: validator.Coinbase(),
-		pubKey: pubKey,
-	}
+		address:  signer,
+		coinbase: coinbase,
+		pubKey:   blsPublicKey,
+	}, nil
 }
 
 func NewSet(addrs []atlas.Validator, policy atlas.ProposerPolicy) atlas.ValidatorSet {
