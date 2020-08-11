@@ -9,40 +9,39 @@ import (
 
 // tmplData is the data structure required to fill the binding template.
 type tmplData struct {
-	Package   string                   // Name of the package to place the generated file in
-	Defines map[string]*tmplStruct
-	Structs   map[string]*tmplStruct   // Contract struct type definitions
-	Basics   map[string]*tmplStruct   // Contract struct type definitions
-	Variables   map[string]abi.Type   // Contract struct type definitions
+	Package   string // Name of the package to place the generated file in
+	Defines   map[string]*tmplStruct
+	Structs   map[string]*tmplStruct // Contract struct type definitions
+	Basics    map[string]*tmplStruct // Contract struct type definitions
+	Variables map[string]abi.Type    // Contract struct type definitions
 }
-
 
 // tmplField is a wrapper around a struct field with binding language
 // struct type definition and relative filed name.
 type tmplField struct {
-	Type    string   // Field type representation depends on target binding language
+	Type     string // Field type representation depends on target binding language
 	ElemType string
-	Name    string   // Field name converted from the raw user-defined field name
-	SolKind abi.Type // Raw abi type information
-	Tag     string
-	Slot    *big.Int
-	Offset  int
+	Name     string   // Field name converted from the raw user-defined field name
+	SolKind  abi.Type // Raw abi type information
+	Tag      string
+	Slot     *big.Int
+	Offset   int
 }
 
 // tmplStruct is a wrapper around an abi.tuple contains a auto-generated
 // struct name.
 type tmplStruct struct {
-	T   byte
-	Name   string       // Auto-generated struct name(before solidity v0.5.11) or raw name.
-	Fields []*tmplField // Struct fields definition depends on the binding language.
-	Type  string
+	T       byte
+	Name    string       // Auto-generated struct name(before solidity v0.5.11) or raw name.
+	Fields  []*tmplField // Struct fields definition depends on the binding language.
+	Type    string
 	SolKind abi.Type
 }
 
 // tmplSource is language to template mapping containing all the supported
 // programming languages the package can generate to.
 var tmplSource = map[bind.Lang]string{
-	bind.LangGo:   tmplSourceGo,
+	bind.LangGo: tmplSourceGo,
 }
 
 // tmplSourceGo is the Go source template use to generate the contract binding
@@ -78,7 +77,7 @@ var (
 )
 
 // use backtick in text/template: https://github.com/golang/go/issues/18221
-{{ $tick := "`+"`"+`" }}
+{{ $tick := "` + "`" + `" }}
 
 type StateDB interface {
 	GetState(addr common.Address, hash common.Hash) common.Hash
@@ -354,8 +353,8 @@ func (s *Storage_{{.Name}}) SetValue(value {{.Type}}) {
 }
 
 {{ else }}
-func (s* Storage_{{.Name}}) Length() (*big.Int) {
-	return big.NewInt(0).SetUint64(uint64(len(s.obj)))
+func (s* Storage_{{.Name}}) Length() (int) {
+	return len(s.obj)
 }
 
 func (s* Storage_{{.Name}}) Get(index int) ( *Storage_{{$elem.Type}} ) {
@@ -398,9 +397,9 @@ func (s* Storage_{{.Name}}) Get(index int) ( *Storage_{{$elem.Type}} ) {
 {{- if isslice .}}
 {{$elem := index .Fields 0}}
 
-func (s* Storage_{{.Name}}) Length() (*big.Int) {
+func (s* Storage_{{.Name}}) Length() (int) {
 	rv := s.db.GetState(s.addr, common.BigToHash(s.slot))
-	return rv.Big()
+	return int(rv.Big().Int64())
 }
 
 func (s* Storage_{{.Name}}) Resize(length uint64) {	
@@ -414,7 +413,7 @@ func (s* Storage_{{.Name}}) Resize(length uint64) {
 func (s* Storage_{{.Name}}) Get(index int) ( *Storage_{{$elem.Type}} ) {
 	// Value: {{ printf "%#v" $elem }}
 	length := s.Length()
-	if length.Cmp(big.NewInt(0).SetUint64(uint64(index))) < 0 {
+	if length < index {
 		s.Resize(uint64(index+1))
 	}
 
@@ -556,4 +555,3 @@ func (s *Storage_{{ $typeName }}) {{$field.Name}}() (*Storage_{{$field.Type}}) {
 
 
 `
-
