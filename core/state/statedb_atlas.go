@@ -3,7 +3,6 @@ package state
 import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/staking/effective"
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	"github.com/pkg/errors"
 	"math/big"
@@ -51,7 +50,7 @@ func (s *StateDB) AddRedelegationReward(snapshot *restaking.Storage_ValidatorWra
 		return errors.Wrapf(err, "failed to distribute rewards: validator does not exist")
 	}
 
-	if curValidator.Validator().Status().Value().Uint64() == uint64(effective.Banned) {
+	if curValidator.Validator().Status().Value() == uint8(restaking.Banned) {
 		log.Info("cannot add reward to banned validator", "validator", valAddr)
 		return nil
 	}

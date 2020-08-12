@@ -4,7 +4,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
-	staking "github.com/ethereum/go-ethereum/staking/types"
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	"github.com/pkg/errors"
 	"math/big"
@@ -36,17 +35,17 @@ var (
 )
 
 type RestakingSignerQualificationVerifier interface {
-	VerifyCreateValidatorMsg(stateDB vm.StateDB, msg *staking.CreateValidator, signer common.Address) error
-	VerifyEditValidatorMsg(stateDB vm.StateDB, msg *staking.EditValidator, signer common.Address) error
-	VerifyRedelegateMsg(stateDB vm.StateDB, msg *staking.Redelegate, signer common.Address) error
-	VerifyUnredelegateMsg(stateDB vm.StateDB, msg *staking.Unredelegate, signer common.Address) error
-	VerifyCollectRedelRewardsMsg(stateDB vm.StateDB, msg *staking.CollectRedelegationRewards, signer common.Address) error
+	VerifyCreateValidatorMsg(stateDB vm.StateDB, msg *restaking.CreateValidator, signer common.Address) error
+	VerifyEditValidatorMsg(stateDB vm.StateDB, msg *restaking.EditValidator, signer common.Address) error
+	VerifyRedelegateMsg(stateDB vm.StateDB, msg *restaking.Redelegate, signer common.Address) error
+	VerifyUnredelegateMsg(stateDB vm.StateDB, msg *restaking.Unredelegate, signer common.Address) error
+	VerifyCollectRedelRewardsMsg(stateDB vm.StateDB, msg *restaking.CollectRedelegationRewards, signer common.Address) error
 }
 
 type signerVerifierForTokenHolder struct {
 }
 
-func (s signerVerifierForTokenHolder) VerifyCreateValidatorMsg(stateDB vm.StateDB, msg *staking.CreateValidator, signer common.Address) error {
+func (s signerVerifierForTokenHolder) VerifyCreateValidatorMsg(stateDB vm.StateDB, msg *restaking.CreateValidator, signer common.Address) error {
 	if msg.OperatorAddress != signer {
 		return errInvalidSigner
 	}
@@ -57,7 +56,7 @@ func (s signerVerifierForTokenHolder) VerifyCreateValidatorMsg(stateDB vm.StateD
 	return nil
 }
 
-func (s signerVerifierForTokenHolder) VerifyEditValidatorMsg(stateDB vm.StateDB, msg *staking.EditValidator, signer common.Address) error {
+func (s signerVerifierForTokenHolder) VerifyEditValidatorMsg(stateDB vm.StateDB, msg *restaking.EditValidator, signer common.Address) error {
 	validator, err := stateDB.ValidatorByAddress(msg.ValidatorAddress)
 	if err != nil {
 		return err
@@ -72,7 +71,7 @@ func (s signerVerifierForTokenHolder) VerifyEditValidatorMsg(stateDB vm.StateDB,
 	return nil
 }
 
-func (s signerVerifierForTokenHolder) VerifyRedelegateMsg(stateDB vm.StateDB, msg *staking.Redelegate, signer common.Address) error {
+func (s signerVerifierForTokenHolder) VerifyRedelegateMsg(stateDB vm.StateDB, msg *restaking.Redelegate, signer common.Address) error {
 	if msg.DelegatorAddress != signer {
 		return errInvalidSigner
 	}
@@ -83,7 +82,7 @@ func (s signerVerifierForTokenHolder) VerifyRedelegateMsg(stateDB vm.StateDB, ms
 	return nil
 }
 
-func (s signerVerifierForTokenHolder) VerifyUnredelegateMsg(stateDB vm.StateDB, msg *staking.Unredelegate, signer common.Address) error {
+func (s signerVerifierForTokenHolder) VerifyUnredelegateMsg(stateDB vm.StateDB, msg *restaking.Unredelegate, signer common.Address) error {
 	if msg.DelegatorAddress != signer {
 		return errInvalidSigner
 	}
@@ -98,7 +97,7 @@ func (s signerVerifierForTokenHolder) VerifyUnredelegateMsg(stateDB vm.StateDB, 
 	return nil
 }
 
-func (s signerVerifierForTokenHolder) VerifyCollectRedelRewardsMsg(stateDB vm.StateDB, msg *staking.CollectRedelegationRewards, signer common.Address) error {
+func (s signerVerifierForTokenHolder) VerifyCollectRedelRewardsMsg(stateDB vm.StateDB, msg *restaking.CollectRedelegationRewards, signer common.Address) error {
 	if msg.DelegatorAddress != signer {
 		return errInvalidSigner
 	}
@@ -139,7 +138,7 @@ func checkValidatorDuplicatedFields(state vm.StateDB, identity string, keys rest
 // in the process.
 //
 // Note that this function never updates the stateDB, it only reads from stateDB.
-func VerifyCreateValidatorMsg(stateDB vm.StateDB, blockNum *big.Int, msg *staking.CreateValidator,
+func VerifyCreateValidatorMsg(stateDB vm.StateDB, blockNum *big.Int, msg *restaking.CreateValidator,
 	signer common.Address) (*restaking.Validator_, error) {
 	if stateDB == nil {
 		return nil, errStateDBIsMissing
@@ -180,7 +179,7 @@ func VerifyCreateValidatorMsg(stateDB vm.StateDB, blockNum *big.Int, msg *stakin
 //
 // Note that this function never updates the stateDB, it only reads from stateDB.
 func VerifyEditValidatorMsg(stateDB vm.StateDB, chainContext ChainContext, epoch, blockNum *big.Int,
-	msg *staking.EditValidator, signer common.Address) error {
+	msg *restaking.EditValidator, signer common.Address) error {
 	if stateDB == nil {
 		return errStateDBIsMissing
 	}
@@ -246,7 +245,7 @@ func VerifyEditValidatorMsg(stateDB vm.StateDB, chainContext ChainContext, epoch
 // validatorWrapper with the delegation applied to it.
 //
 // Note that this function never updates the stateDB, it only reads from stateDB.
-func VerifyRedelegateMsg(stateDB vm.StateDB, msg *staking.Redelegate, signer common.Address) error {
+func VerifyRedelegateMsg(stateDB vm.StateDB, msg *restaking.Redelegate, signer common.Address) error {
 	if stateDB == nil {
 		return errStateDBIsMissing
 	}
@@ -269,7 +268,7 @@ func VerifyRedelegateMsg(stateDB vm.StateDB, msg *staking.Redelegate, signer com
 // with the undelegation applied to it.
 //
 // Note that this function never updates the stateDB, it only reads from stateDB.
-func VerifyUnredelegateMsg(stateDB vm.StateDB, epoch *big.Int, msg *staking.Unredelegate, signer common.Address) error {
+func VerifyUnredelegateMsg(stateDB vm.StateDB, epoch *big.Int, msg *restaking.Unredelegate, signer common.Address) error {
 	if stateDB == nil {
 		return errStateDBIsMissing
 	}
@@ -301,7 +300,7 @@ func VerifyUnredelegateMsg(stateDB vm.StateDB, epoch *big.Int, msg *staking.Unre
 // edited validatorWrappers and the sum total of the rewards.
 //
 // Note that this function never updates the stateDB, it only reads from stateDB.
-func VerifyCollectRedelRewardsMsg(stateDB vm.StateDB, msg *staking.CollectRedelegationRewards, signer common.Address) error {
+func VerifyCollectRedelRewardsMsg(stateDB vm.StateDB, msg *restaking.CollectRedelegationRewards, signer common.Address) error {
 	if stateDB == nil {
 		return errStateDBIsMissing
 	}

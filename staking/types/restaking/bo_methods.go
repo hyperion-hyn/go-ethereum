@@ -145,12 +145,45 @@ func (cr *CommissionRates_) Copy() CommissionRates_ {
 }
 
 
-
-
 var (
 	hundredPercent = common.OneDec()
 	zeroPercent    = common.ZeroDec()
 )
+
+// ValidatorStatus represents ability to participate in EPoS auction
+// that occurs just once an epoch
+type ValidatorStatus byte
+
+const (
+	// Nil is a default state that represents a no-op
+	Nil ValidatorStatus = iota
+	// Active means allowed in epos auction
+	Active
+	// Inactive means validator did not sign enough over 66%
+	// of the time in an epoch and so they are removed from
+	// the possibility of being in the epos auction, which happens
+	// only once an epoch and only
+	// by beaconchain, aka shard.BeaconChainShardID
+	Inactive
+	// Banned records whether this validator is banned
+	// from the network because they double-signed
+	// it can never be undone
+	Banned
+)
+
+func (e ValidatorStatus) String() string {
+	switch e {
+	case Active:
+		return "active"
+	case Inactive:
+		return "inactive"
+	case Banned:
+		return "doubleSigningBanned"
+	default:
+		return "unknown"
+	}
+}
+
 
 // SanityCheck checks basic requirements of a validator
 func (v *Validator_) SanityCheck(maxSlotKeyAllowed int) error {

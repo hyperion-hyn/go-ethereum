@@ -6,9 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/ethereum/go-ethereum/staking/effective"
 	"github.com/ethereum/go-ethereum/staking/network"
-	staking "github.com/ethereum/go-ethereum/staking/types"
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	"github.com/pkg/errors"
 	"math/big"
@@ -68,31 +66,31 @@ func (st *StateTransition) StakingTransitionDb() (usedGas uint64, err error) {
 
 	switch msg.Type() {
 	case types.StakeCreateVal:
-		stkMsg := &staking.CreateValidator{}
+		stkMsg := &restaking.CreateValidator{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return 0, err
 		}
 		err = st.verifyAndApplyCreateValidatorTx(stkMsg, msg.From())
 	case types.StakeEditVal:
-		stkMsg := &staking.EditValidator{}
+		stkMsg := &restaking.EditValidator{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return 0, err
 		}
 		err = st.verifyAndApplyEditValidatorTx(stkMsg, msg.From())
 	case types.Redelegate:
-		stkMsg := &staking.Redelegate{}
+		stkMsg := &restaking.Redelegate{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return 0, err
 		}
 		err = st.verifyAndApplyRedelegateTx(stkMsg, msg.From())
 	case types.Unredelegate:
-		stkMsg := &staking.Unredelegate{}
+		stkMsg := &restaking.Unredelegate{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return 0, err
 		}
 		err = st.verifyAndApplyUnredelegateTx(stkMsg, msg.From())
 	case types.CollectRedelRewards:
-		stkMsg := &staking.CollectRedelegationRewards{}
+		stkMsg := &restaking.CollectRedelegationRewards{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return 0, err
 		}
@@ -113,7 +111,7 @@ func (st *StateTransition) StakingTransitionDb() (usedGas uint64, err error) {
 	return st.gasUsed(), err
 }
 
-func (st *StateTransition) verifyAndApplyCreateValidatorTx(msg *staking.CreateValidator, signer common.Address) error {
+func (st *StateTransition) verifyAndApplyCreateValidatorTx(msg *restaking.CreateValidator, signer common.Address) error {
 	v, err := VerifyCreateValidatorMsg(st.state, st.evm.BlockNumber, msg, signer)
 	if err != nil {
 		return err
@@ -144,7 +142,7 @@ func (st *StateTransition) verifyAndApplyCreateValidatorTx(msg *staking.CreateVa
 	return nil
 }
 
-func (st *StateTransition) verifyAndApplyEditValidatorTx(msg *staking.EditValidator, signer common.Address) error {
+func (st *StateTransition) verifyAndApplyEditValidatorTx(msg *restaking.EditValidator, signer common.Address) error {
 	if err := VerifyEditValidatorMsg(st.state, st.bc, st.evm.EpochNumber, st.evm.BlockNumber, msg, signer); err != nil {
 		return err
 	}
@@ -180,13 +178,13 @@ func (st *StateTransition) verifyAndApplyEditValidatorTx(msg *staking.EditValida
 		validatorPool.SlotKeySet().Get(msg.SlotKeyToAdd.Hex()).SetValue(true)
 	}
 
-	if msg.EPOSStatus == effective.Active || msg.EPOSStatus == effective.Inactive {
-		wrapper.Validator().Status().SetValue(big.NewInt(int64(msg.EPOSStatus)))
+	if msg.EPOSStatus == restaking.Active || msg.EPOSStatus == restaking.Inactive {
+		wrapper.Validator().Status().SetValue(uint8(msg.EPOSStatus))
 	}
 	return nil
 }
 
-func (st *StateTransition) verifyAndApplyRedelegateTx(msg *staking.Redelegate, signer common.Address) error {
+func (st *StateTransition) verifyAndApplyRedelegateTx(msg *restaking.Redelegate, signer common.Address) error {
 	if err := VerifyRedelegateMsg(st.state, msg, signer); err != nil {
 		return err
 	}
@@ -207,7 +205,7 @@ func (st *StateTransition) verifyAndApplyRedelegateTx(msg *staking.Redelegate, s
 	return nil
 }
 
-func (st *StateTransition) verifyAndApplyUnredelegateTx(msg *staking.Unredelegate, signer common.Address) error {
+func (st *StateTransition) verifyAndApplyUnredelegateTx(msg *restaking.Unredelegate, signer common.Address) error {
 	if err := VerifyUnredelegateMsg(st.state, st.evm.EpochNumber, msg, signer); err != nil {
 		return err
 	}
@@ -226,7 +224,7 @@ func (st *StateTransition) verifyAndApplyUnredelegateTx(msg *staking.Unredelegat
 	return nil
 }
 
-func (st *StateTransition) verifyAndApplyCollectRedelRewards(msg *staking.CollectRedelegationRewards, signer common.Address) (*big.Int, error) {
+func (st *StateTransition) verifyAndApplyCollectRedelRewards(msg *restaking.CollectRedelegationRewards, signer common.Address) (*big.Int, error) {
 	if err := VerifyCollectRedelRewardsMsg(st.state, msg, signer); err != nil {
 		return network.NoReward, err
 	}

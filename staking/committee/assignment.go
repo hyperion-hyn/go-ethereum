@@ -140,8 +140,8 @@ func IsEligibleForEPoSAuction(snapshot, validator *restaking.Storage_ValidatorWr
 	// For validators who were not in last epoch's committee
 	// or for those who were and signed enough blocks,
 	// the decision is based on the status
-	switch validator.Validator().Status().Value().Uint64() {
-	case uint64(effective.Active):
+	switch validator.Validator().Status().Value() {
+	case uint8(restaking.Active):
 		return true
 	default:
 		return false

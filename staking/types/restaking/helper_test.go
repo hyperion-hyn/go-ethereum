@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/staking/effective"
-	"github.com/ethereum/go-ethereum/staking/types"
 	"github.com/pkg/errors"
 	"math/big"
 	"reflect"
@@ -38,26 +37,26 @@ func TestVerifyBLSKeys(t *testing.T) {
 
 func TestCreateValidatorFromNewMsg(t *testing.T) {
 	tests := []struct {
-		editCreateValidator func(*types.CreateValidator)
+		editCreateValidator func(*CreateValidator)
 		expErr              error
 	}{
 		{
-			editCreateValidator: func(cv *types.CreateValidator) {},
+			editCreateValidator: func(cv *CreateValidator) {},
 			expErr:              nil,
 		},
 		{
-			editCreateValidator: func(cv *types.CreateValidator) { cv.Description = invalidDescription },
+			editCreateValidator: func(cv *CreateValidator) { cv.Description = invalidDescription },
 			expErr:              errors.New("exceed maximum name length"),
 		},
 		{
-			editCreateValidator: func(cv *types.CreateValidator) {
+			editCreateValidator: func(cv *CreateValidator) {
 				cv.SlotPubKeys.Keys = append(cv.SlotPubKeys.Keys, &blsPubSigPairs[1].pub)
 				cv.SlotKeySigs = append(cv.SlotKeySigs, blsPubSigPairs[1].sig)
 			},
 			expErr: errors.Wrapf(ErrExcessiveBLSKeys, "have: %d allowed: %d", 2, 1),
 		},
 		{
-			editCreateValidator: func(cv *types.CreateValidator) { cv.SlotKeySigs[0] = blsPubSigPairs[2].sig },
+			editCreateValidator: func(cv *CreateValidator) { cv.SlotKeySigs[0] = blsPubSigPairs[2].sig },
 			expErr:              errBLSKeysNotMatchSigs,
 		},
 	}
@@ -80,17 +79,17 @@ func TestCreateValidatorFromNewMsg(t *testing.T) {
 
 func TestUpdateValidatorFromEditMsg(t *testing.T) {
 	tests := []struct {
-		editValidator    types.EditValidator
+		editValidator    EditValidator
 		editExpValidator func(*Validator_)
 		expErr           error
 	}{
 		{
-			editValidator:    types.EditValidator{ValidatorAddress: validatorAddr},
+			editValidator:    EditValidator{ValidatorAddress: validatorAddr},
 			editExpValidator: func(*Validator_) {},
 		},
 		{
 			// update Description.Name
-			editValidator: types.EditValidator{
+			editValidator: EditValidator{
 				ValidatorAddress: validatorAddr,
 				Description:      &Description_{Name: "jacky@harmony.one"},
 			},
@@ -98,7 +97,7 @@ func TestUpdateValidatorFromEditMsg(t *testing.T) {
 		},
 		{
 			// Update CommissionRate
-			editValidator: types.EditValidator{
+			editValidator: EditValidator{
 				ValidatorAddress: validatorAddr,
 				CommissionRate:   &halfRate,
 			},
@@ -106,7 +105,7 @@ func TestUpdateValidatorFromEditMsg(t *testing.T) {
 		},
 		{
 			// Update MaxTotalDelegation
-			editValidator: types.EditValidator{
+			editValidator: EditValidator{
 				ValidatorAddress:   validatorAddr,
 				MaxTotalDelegation: elevenK,
 			},
@@ -114,7 +113,7 @@ func TestUpdateValidatorFromEditMsg(t *testing.T) {
 		},
 		{
 			// Update MaxTotalDelegation to zero remain unchanged
-			editValidator: types.EditValidator{
+			editValidator: EditValidator{
 				ValidatorAddress:   validatorAddr,
 				MaxTotalDelegation: common.Big0,
 			},
@@ -122,7 +121,7 @@ func TestUpdateValidatorFromEditMsg(t *testing.T) {
 		},
 		{
 			// Remove a bls pub key
-			editValidator: types.EditValidator{
+			editValidator: EditValidator{
 				ValidatorAddress: validatorAddr,
 				SlotKeyToRemove:  &blsPubSigPairs[0].pub,
 			},
@@ -130,7 +129,7 @@ func TestUpdateValidatorFromEditMsg(t *testing.T) {
 		},
 		{
 			// Add a bls pub key with signature
-			editValidator: types.EditValidator{
+			editValidator: EditValidator{
 				ValidatorAddress: validatorAddr,
 				SlotKeyToAdd:     &blsPubSigPairs[4].pub,
 				SlotKeyToAddSig:  &blsPubSigPairs[4].sig,
@@ -141,7 +140,7 @@ func TestUpdateValidatorFromEditMsg(t *testing.T) {
 		},
 		{
 			// EditValidator having signature without pub will not be a update
-			editValidator: types.EditValidator{
+			editValidator: EditValidator{
 				ValidatorAddress: validatorAddr,
 				SlotKeyToAddSig:  &blsPubSigPairs[4].sig,
 			},
@@ -149,7 +148,7 @@ func TestUpdateValidatorFromEditMsg(t *testing.T) {
 		},
 		{
 			// update status
-			editValidator: types.EditValidator{
+			editValidator: EditValidator{
 				ValidatorAddress: validatorAddr,
 				EPOSStatus:       effective.Inactive,
 			},
@@ -157,7 +156,7 @@ func TestUpdateValidatorFromEditMsg(t *testing.T) {
 		},
 		{
 			// status to banned - not changed
-			editValidator: types.EditValidator{
+			editValidator: EditValidator{
 				ValidatorAddress: validatorAddr,
 				EPOSStatus:       effective.Banned,
 			},
@@ -165,14 +164,14 @@ func TestUpdateValidatorFromEditMsg(t *testing.T) {
 		},
 		{
 			// invalid address
-			editValidator: types.EditValidator{
+			editValidator: EditValidator{
 				ValidatorAddress: common.BigToAddress(common.Big1),
 			},
 			expErr: errAddressNotMatch,
 		},
 		{
 			// invalid description
-			editValidator: types.EditValidator{
+			editValidator: EditValidator{
 				ValidatorAddress: validatorAddr,
 				Description:      &invalidDescription,
 			},
@@ -180,7 +179,7 @@ func TestUpdateValidatorFromEditMsg(t *testing.T) {
 		},
 		{
 			// invalid removing bls key
-			editValidator: types.EditValidator{
+			editValidator: EditValidator{
 				ValidatorAddress: validatorAddr,
 				SlotKeyToRemove:  &blsPubSigPairs[4].pub,
 			},
@@ -188,7 +187,7 @@ func TestUpdateValidatorFromEditMsg(t *testing.T) {
 		},
 		{
 			// add pub not having valid signature
-			editValidator: types.EditValidator{
+			editValidator: EditValidator{
 				ValidatorAddress: validatorAddr,
 				SlotKeyToAdd:     &blsPubSigPairs[4].pub,
 				SlotKeyToAddSig:  &blsPubSigPairs[3].sig,
@@ -197,7 +196,7 @@ func TestUpdateValidatorFromEditMsg(t *testing.T) {
 		},
 		{
 			// add pub key already exist in validator
-			editValidator: types.EditValidator{
+			editValidator: EditValidator{
 				ValidatorAddress: validatorAddr,
 				SlotKeyToAdd:     &blsPubSigPairs[0].pub,
 				SlotKeyToAddSig:  &blsPubSigPairs[0].sig,
@@ -242,13 +241,13 @@ func getSigsFromPairs(pairs []blsPubSigPair, indexes []int) []BLSSignature {
 }
 
 // makeCreateValidator makes a structure of CreateValidator
-func makeCreateValidator() types.CreateValidator {
+func makeCreateValidator() CreateValidator {
 	addr := operatorAddr
 	desc := validDescription
 	cr := validCommissionRates
 	pubs := getPubsFromPairs(blsPubSigPairs, []int{0})
 	sigs := getSigsFromPairs(blsPubSigPairs, []int{0})
-	return types.CreateValidator{
+	return CreateValidator{
 		OperatorAddress:    addr,
 		Description:        desc,
 		CommissionRates:    cr,
@@ -295,7 +294,7 @@ func assertValidatorEqual(v1, v2 Validator_) error {
 	return nil
 }
 
-func assertValidatorAlignCreateValidator(v Validator_, cv types.CreateValidator) error {
+func assertValidatorAlignCreateValidator(v Validator_, cv CreateValidator) error {
 	if v.ValidatorAddress != validatorAddr {
 		return fmt.Errorf("validator address not equal")
 	}

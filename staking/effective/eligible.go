@@ -1,38 +1,6 @@
 package effective
 
-// Eligibility represents ability to participate in EPoS auction
-// that occurs just once an epoch on beaconchain
-type Eligibility byte
-
-const (
-	// Nil is a default state that represents a no-op
-	Nil Eligibility = iota
-	// Active means allowed in epos auction
-	Active
-	// Inactive means validator did not sign enough over 66%
-	// of the time in an epoch and so they are removed from
-	// the possibility of being in the epos auction, which happens
-	// only once an epoch and only
-	// by beaconchain, aka shard.BeaconChainShardID
-	Inactive
-	// Banned records whether this validator is banned
-	// from the network because they double-signed
-	// it can never be undone
-	Banned
-)
-
-func (e Eligibility) String() string {
-	switch e {
-	case Active:
-		return "active"
-	case Inactive:
-		return "inactive"
-	case Banned:
-		return doubleSigningBanned
-	default:
-		return "unknown"
-	}
-}
+import "github.com/ethereum/go-ethereum/staking/types/restaking"
 
 // Candidacy is a more semantically meaningful
 // value that is derived from core protocol logic but
@@ -72,15 +40,15 @@ func (c Candidacy) String() string {
 }
 
 // ValidatorStatus ..
-func ValidatorStatus(currentlyInCommittee bool, status Eligibility) Candidacy {
+func ValidatorStatus(currentlyInCommittee bool, status restaking.ValidatorStatus) Candidacy {
 	switch {
-	case status == Banned:
+	case status == restaking.Banned:
 		return ForeverBanned
 	case currentlyInCommittee:
 		return Elected
-	case !currentlyInCommittee && status == Active:
+	case !currentlyInCommittee && status == restaking.Active:
 		return Candidate
-	case !currentlyInCommittee && status != Active:
+	case !currentlyInCommittee && status != restaking.Active:
 		return NotCandidate
 	default:
 		return Unknown

@@ -3,7 +3,6 @@ package availability
 import (
 	"github.com/ethereum/go-ethereum/crypto/bls"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/staking/effective"
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	"math/big"
 
@@ -172,7 +171,7 @@ func ComputeAndMutateEPOSStatus(
 	if err != nil {
 		return err
 	}
-	if wrapper.Validator().Status().Value().Uint64() == uint64(effective.Banned) {
+	if wrapper.Validator().Status().Value() == uint8(restaking.Banned) {
 		log.Debug("Can't update EPoS status on a banned validator")
 		return nil
 	}
@@ -190,7 +189,7 @@ func ComputeAndMutateEPOSStatus(
 
 	switch computed.IsBelowThreshold {
 	case missedTooManyBlocks:
-		wrapper.Validator().Status().SetValue(big.NewInt(int64(effective.Inactive)))
+		wrapper.Validator().Status().SetValue(uint8(restaking.Inactive))
 		log.Info("validator failed availability threshold, set to inactive", "threshold", measure.String())
 	default:
 		// Default is no-op so validator who wants

@@ -2,7 +2,6 @@ package staketest
 
 import (
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/staking/effective"
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	"math/big"
 )
@@ -43,7 +42,7 @@ var (
 		SlotPubKeys:          restaking.BLSPublicKeys_{Keys: []*restaking.BLSPublicKey_{}},
 		LastEpochInCommittee: common.Big0,
 		MaxTotalDelegation:   DefaultMaxTotalDel,
-		Status:               big.NewInt(int64(effective.Active)),
+		Status:               uint8(restaking.Active),
 		Commission:           commission,
 		Description:          description,
 		CreationHeight:       common.Big0,

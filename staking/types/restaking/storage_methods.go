@@ -26,35 +26,34 @@ func (s *Storage_Description_) UpdateDescription(newDesc *Description_) {
 
 // Storage_BLSPublicKeys_
 func (s *Storage_BLSPublicKeys_) Length() int {
-	return int(s.Keys().Length().Int64())
+	return s.Keys().Length()
 }
 
 func (s *Storage_BLSPublicKeys_) Save(keys *BLSPublicKeys_) {
 	length := len(keys.Keys)
 	s.Keys().Resize(uint64(length))
 	for i := 0; i < length; i++ {
-		s.Keys().Get(uint64(i)).Key().SetValue(keys.Keys[i].Key)
+		s.Keys().Get(i).Key().SetValue(keys.Keys[i].Key)
 	}
 }
 
 func (s *Storage_BLSPublicKeys_) Get(index int) *BLSPublicKey_ {
-	s.Keys().Get(uint64(index)).Key().Value()
-	return s.Keys().Get(uint64(index)).obj
+	s.Keys().Get(index).Key().Value()
+	return s.Keys().Get(index).obj
 }
 
 func (s *Storage_BLSPublicKeys_) Set(index int, key *BLSPublicKey_) {
-	s.Keys().Get(uint64(index)).Key().SetValue(key.Key)
+	s.Keys().Get(index).Key().SetValue(key.Key)
 }
 
 func (s *Storage_BLSPublicKeys_) Remove(index int, keepOrder bool) {
-
 	//remove current
 	length := s.Length()
-	lastOneStorage := s.Keys().Get(uint64(length - 1))
+	lastOneStorage := s.Keys().Get(length - 1)
 	//remove lastOne
-	s.Keys().Get(uint64(length - 1)).Key().SetValue([48]uint8{})
+	s.Keys().Get(length - 1).Key().SetValue([48]uint8{})
 	//replace lastOne to index
-	s.Keys().Get(uint64(index)).Key().SetValue(lastOneStorage.Key().Value())
+	s.Keys().Get(index).Key().SetValue(lastOneStorage.Key().Value())
 	//resize length
 	s.Keys().Resize(uint64(length - 1))
 }
@@ -63,17 +62,16 @@ func (s *Storage_BLSPublicKeys_) Push(key *BLSPublicKey_) {
 	length := s.Length()
 
 	//over length will auto resize , not resize again
-	s.Keys().Get(uint64(length)).Key().SetValue(key.Key)
+	s.Keys().Get(length).Key().SetValue(key.Key)
 }
 
 func (s *Storage_BLSPublicKeys_) Pop() *BLSPublicKey_ {
-
 	length := s.Length()
 
 	blsPublicKeyTemp :=
-		BLSPublicKey_{Key: s.Keys().Get(uint64(length - 1)).Key().Value()}
+		BLSPublicKey_{Key: s.Keys().Get(length - 1).Key().Value()}
 
-	s.Keys().Get(uint64(length - 1)).Key().SetValue([48]uint8{})
+	s.Keys().Get(length - 1).Key().SetValue([48]uint8{})
 	s.Keys().Resize(uint64(length - 1))
 	return &blsPublicKeyTemp
 }
@@ -82,30 +80,28 @@ func (s *Storage_BLSPublicKeys_) Load() *BLSPublicKeys_ {
 	length := s.Length()
 
 	for i := 0; i < length; i++ {
-		s.Keys().Get(uint64(i)).Key().Value()
+		s.Keys().Get(i).Key().Value()
 	}
 	return s.obj
 }
 
 // Storage_AddressSet_
 func (s *Storage_AddressSet_) AllKeys() []common.Address {
-
 	addressSlice := make([]common.Address, 0)
-	addressLength := s.Keys().Length().Int64()
-	for i := int64(0); i < addressLength; i++ {
-		addressSlice = append(addressSlice, s.Keys().Get(uint64(i)).Value())
+	addressLength := s.Keys().Length()
+	for i := 0; i < addressLength; i++ {
+		addressSlice = append(addressSlice, s.Keys().Get(i).Value())
 	}
 	return addressSlice
 }
 
 func (s *Storage_AddressSet_) Save(addressSet AddressSet_) {
-
 	keysLength := len(addressSet.Keys)
 	if keysLength != 0 {
 		s.Keys().Resize(uint64(keysLength))
 		for i := 0; i < keysLength; i++ {
 			keyTemp := addressSet.Keys[i]
-			s.Keys().Get(uint64(i)).SetValue(*keyTemp)
+			s.Keys().Get(i).SetValue(*keyTemp)
 			s.Set().Get(*keyTemp).SetValue(*addressSet.Set[*keyTemp])
 		}
 	}
@@ -113,7 +109,6 @@ func (s *Storage_AddressSet_) Save(addressSet AddressSet_) {
 
 // Storage_Validator_
 func (s *Storage_Validator_) Load() *Validator_ {
-
 	s.ValidatorAddress().Value()
 	s.SlotPubKeys().Load() // need check
 	s.LastEpochInCommittee().Value()
@@ -129,12 +124,10 @@ func (s *Storage_Validator_) Load() *Validator_ {
 	s.Description().SecurityContact().Value()
 	s.Description().Details().Value()
 	s.CreationHeight().Value()
-
 	return s.obj
 }
 
 func (s *Storage_Validator_) Save(validator *Validator_) {
-
 	if validator.ValidatorAddress != common.BigToAddress(common.Big0) {
 		s.ValidatorAddress().SetValue(validator.ValidatorAddress)
 	}
@@ -149,11 +142,11 @@ func (s *Storage_Validator_) Save(validator *Validator_) {
 		s.LastEpochInCommittee().SetValue(validator.LastEpochInCommittee)
 	}
 
-	if validator.MaxTotalDelegation !=nil{
+	if validator.MaxTotalDelegation != nil {
 		s.MaxTotalDelegation().SetValue(validator.MaxTotalDelegation)
 	}
 
-	if validator.Status != nil {
+	if validator.Status != uint8(Nil) {
 		s.Status().SetValue(validator.Status)
 	}
 
@@ -195,7 +188,6 @@ func (s *Storage_Validator_) Save(validator *Validator_) {
 // Storage_ValidatorWrapper_
 
 func (s *Storage_ValidatorWrapper_) Save(validatorWrapper *ValidatorWrapper_) {
-
 	s.Validator().Save(&validatorWrapper.Validator)
 	s.Redelegations().Save(validatorWrapper.Redelegations)
 	if validatorWrapper.Counters.NumBlocksSigned != nil {
@@ -248,20 +240,18 @@ func (s *Storage_ValidatorWrapper_) SubTotalDelegationByOperator(amount *big.Int
 
 // Storage_ValidatorWrapperMap_
 func (s *Storage_ValidatorWrapperMap_) AllKeys() []common.Address {
-
 	addressSlice := make([]common.Address, 0)
-	addressLength := s.Keys().Length().Int64()
-	for i := int64(0); i < addressLength; i++ {
-		addressSlice = append(addressSlice, s.Keys().Get(uint64(i)).Value())
+	addressLength := s.Keys().Length()
+	for i := 0; i < addressLength; i++ {
+		addressSlice = append(addressSlice, s.Keys().Get(i).Value())
 	}
 	return addressSlice
 }
 
 func (s *Storage_ValidatorWrapperMap_) Put(key common.Address, validator *ValidatorWrapper_) {
-
 	keysLength := s.Keys().Length()
 	//set keys
-	s.Keys().Get(keysLength.Uint64()).SetValue(key)
+	s.Keys().Get(keysLength).SetValue(key)
 	s.Get(key)
 	//set map
 	sValidatorWrapper := s.Map().Get(key)
@@ -269,7 +259,7 @@ func (s *Storage_ValidatorWrapperMap_) Put(key common.Address, validator *Valida
 	sValidatorWrapperEntity := sValidatorWrapper.Entry()
 	sValidatorWrapperEntity.Save(validator)
 	//set map index
-	sValidatorWrapper.Index().SetValue(keysLength.Add(keysLength, big.NewInt(1))) //because index start with 1
+	sValidatorWrapper.Index().SetValue(big.NewInt(0).Add(big.NewInt(int64(keysLength)), common.Big1)) //because index start with 1
 
 }
 
@@ -278,7 +268,6 @@ func (s *Storage_ValidatorWrapperMap_) Contain(key common.Address) bool {
 }
 
 func (s *Storage_ValidatorWrapperMap_) Get(key common.Address) (*Storage_ValidatorWrapper_, bool) {
-
 	if s.Contain(key) {
 		return s.Map().Get(Address{}).Entry(), true
 	} else {
@@ -289,7 +278,6 @@ func (s *Storage_ValidatorWrapperMap_) Get(key common.Address) (*Storage_Validat
 
 // Storage_Redelegation_
 func (s *Storage_Redelegation_) AddReward(reward *big.Int) {
-
 	rewardTemp := s.Reward().Value()
 	rewardTemp = rewardTemp.Add(rewardTemp, reward)
 	s.Reward().SetValue(rewardTemp)
@@ -303,7 +291,6 @@ func (s *Storage_Redelegation_) AddAmount(amount *big.Int) {
 }
 
 func (s *Storage_Redelegation_) Save(redelegation Redelegation_) {
-
 	s.DelegatorAddress().SetValue(redelegation.DelegatorAddress)
 	if redelegation.Amount != nil {
 		s.Amount().SetValue(redelegation.Amount)
@@ -320,7 +307,6 @@ func (s *Storage_Redelegation_) Save(redelegation Redelegation_) {
 
 }
 func (s *Storage_Redelegation_) SetNil() {
-
 	s.DelegatorAddress().SetValue(common.BigToAddress(common.Big0))
 	s.Amount().SetValue(common.Big0)
 	s.Reward().SetValue(common.Big0)
@@ -330,20 +316,18 @@ func (s *Storage_Redelegation_) SetNil() {
 
 // Storage_RedelegationMap_
 func (s *Storage_RedelegationMap_) AllKeys() []common.Address {
-
 	addressSlice := make([]common.Address, 0)
-	addressLength := s.Keys().Length().Int64()
-	for i := int64(0); i < addressLength; i++ {
-		addressSlice = append(addressSlice, s.Keys().Get(uint64(i)).Value())
+	addressLength := s.Keys().Length()
+	for i := 0; i < addressLength; i++ {
+		addressSlice = append(addressSlice, s.Keys().Get(i).Value())
 	}
 	return addressSlice
 }
 
 func (s *Storage_RedelegationMap_) Put(key common.Address, redelegation *Redelegation_) {
-
 	keysLength := s.Keys().Length()
 	//set keys
-	s.Keys().Get(keysLength.Uint64()).SetValue(key)
+	s.Keys().Get(keysLength).SetValue(key)
 
 	s.Get(key)
 	//set map
@@ -352,8 +336,7 @@ func (s *Storage_RedelegationMap_) Put(key common.Address, redelegation *Redeleg
 	sRedelegationEntity := sRedelegation.Entry()
 	sRedelegationEntity.Save(*redelegation)
 	//set map index
-	sRedelegation.Index().SetValue(keysLength.Add(keysLength, big.NewInt(1))) //because index start with 1
-
+	sRedelegation.Index().SetValue(big.NewInt(0).Add(big.NewInt(int64(keysLength)), common.Big1)) //because index start with 1
 }
 
 func (s *Storage_RedelegationMap_) Contain(key common.Address) bool {
@@ -369,15 +352,14 @@ func (s *Storage_RedelegationMap_) Get(key common.Address) (*Storage_Redelegatio
 }
 
 func (s *Storage_RedelegationMap_) Remove(key common.Address) {
-
 	//remove keys
 	keysStorage := s.Keys()
 	keysLength := keysStorage.Length()
-	lastKey := keysStorage.Get(keysLength.Uint64() - 1).Value()
+	lastKey := keysStorage.Get(keysLength - 1).Value()
 	keyIndex := s.Map().Get(key).Index().Value()
-	keysStorage.Get(keyIndex.Uint64() - 1).SetValue(keysStorage.Get(keysLength.Uint64() - 1).Value())
-	keysStorage.Get(keysLength.Uint64() - 1).SetValue(common.BigToAddress(common.Big0))
-	s.Keys().Resize(keysLength.Uint64() - 1)
+	keysStorage.Get(int(keyIndex.Uint64() - 1)).SetValue(keysStorage.Get(keysLength - 1).Value())
+	keysStorage.Get(keysLength - 1).SetValue(common.BigToAddress(common.Big0))
+	s.Keys().Resize(uint64(keysLength - 1))
 
 	//remove map entry
 	maps := s.Map()
@@ -396,7 +378,7 @@ func (s *Storage_RedelegationMap_) Save(relegationMap RedelegationMap_) {
 	s.Keys().Resize(uint64(len(relegationKeys)))
 	for i := 0; i < len(relegationKeys); i++ {
 		addressTemp := relegationKeys[i]
-		s.Keys().Get(uint64(i)).SetValue(*addressTemp)
+		s.Keys().Get(i).SetValue(*addressTemp)
 		s.Map().Get(*addressTemp).Entry().Save(relegationMap.Map[*addressTemp].Entry)
 	}
 }
@@ -404,7 +386,7 @@ func (s *Storage_RedelegationMap_) Save(relegationMap RedelegationMap_) {
 // Storage_Slots_
 
 func (s *Storage_Slots_) Length() int {
-	return int(s.Entrys().Length().Int64())
+	return s.Entrys().Length()
 }
 
 func (s *Storage_Slots_) Load() []*Slot_ {
@@ -418,22 +400,20 @@ func (s *Storage_Slots_) Load() []*Slot_ {
 }
 
 func (s *Storage_Slots_) Get(index int) *Storage_Slot_ {
-	return s.Entrys().Get(uint64(index))
+	return s.Entrys().Get(index)
 }
 
 func (s *Storage_Slots_) Set(index int, key *Slot_) {
-	s.Entrys().Get(uint64(index)).Save(key)
+	s.Entrys().Get(index).Save(key)
 }
 
 func (s *Storage_Slots_) Remove(index int, keepOrder bool) {
-
 	// remove from index
-
 	oldEntriesLength := s.Entrys().Length()
 
 	//set lastEntity to index
-	lastEntry := s.Entrys().Get(oldEntriesLength.Uint64() - 1)
-	s.Entrys().Get(uint64(index)).Save(&Slot_{
+	lastEntry := s.Entrys().Get(oldEntriesLength - 1)
+	s.Entrys().Get(index).Save(&Slot_{
 		EcdsaAddress: lastEntry.EcdsaAddress().Value(),
 		BLSPublicKey: BLSPublicKey_{
 			Key: lastEntry.BLSPublicKey().Key().Value(),
@@ -442,23 +422,22 @@ func (s *Storage_Slots_) Remove(index int, keepOrder bool) {
 	})
 
 	//set lastEntity to zero
-
 	lastEntry.SetNil()
 
 	//resize slice
-	s.Entrys().Resize(oldEntriesLength.Uint64() - 1)
+	s.Entrys().Resize(uint64(oldEntriesLength - 1))
 
 }
 
 func (s *Storage_Slots_) Push(slot *Slot_) {
 	entityLength := s.Entrys().Length()
-	s.Entrys().Get(entityLength.Uint64()).Save(slot)
+	s.Entrys().Get(entityLength).Save(slot)
 }
 
 func (s *Storage_Slots_) Pop() *Storage_Slot_ {
 	entityLength := s.Entrys().Length()
-	storageSlot := s.Entrys().Get(entityLength.Uint64() - 1)
-	s.Remove(int(entityLength.Int64()-1), false)
+	storageSlot := s.Entrys().Get(entityLength - 1)
+	s.Remove(entityLength - 1, false)
 	return storageSlot
 }
 
@@ -477,24 +456,20 @@ func (s *Storage_Slots_) UpdateSlots(slots Slots_) {
 }
 
 func (s *Storage_Slot_) SetNil() {
-
 	s.EffectiveStake().SetValue(common.NewDec(int64(0)))
 	s.EcdsaAddress().SetValue(common.BigToAddress(big.NewInt(0)))
 	s.BLSPublicKey().Key().SetValue([48]uint8{})
 }
 
 func (s *Storage_Slot_) Save(key *Slot_) {
-
 	s.BLSPublicKey().Key().SetValue(key.BLSPublicKey.Key)
 	s.EcdsaAddress().SetValue(key.EcdsaAddress)
 	if !key.EffectiveStake.IsNil() {
 		s.EffectiveStake().SetValue(key.EffectiveStake)
 	}
-
 }
 
 func (s *Storage_Slot_) Load() *Slot_ {
-
 	s.BLSPublicKey().Key().Value()
 	s.EcdsaAddress().Value()
 	s.EffectiveStake().Value()
@@ -503,7 +478,6 @@ func (s *Storage_Slot_) Load() *Slot_ {
 
 // Storage_Committee_
 func (s *Storage_Committee_) Load() *Committee_ {
-
 	s.Epoch().Value()
 	s.Slots().Load()
 	return s.obj
@@ -511,7 +485,6 @@ func (s *Storage_Committee_) Load() *Committee_ {
 
 // Storage_ValidatorPool_
 func (s *Storage_ValidatorPool_) UpdateCommittee(committee *Committee_) {
-
 	if committee.Epoch != nil {
 		s.Committee().Epoch().SetValue(committee.Epoch)
 	}

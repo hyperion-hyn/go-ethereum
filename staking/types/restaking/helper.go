@@ -3,8 +3,6 @@ package restaking
 import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/staking/effective"
-	"github.com/ethereum/go-ethereum/staking/types"
 	"github.com/harmony-one/bls/ffi/go/bls"
 	"github.com/pkg/errors"
 	"math/big"
@@ -65,7 +63,7 @@ func VerifyBLSKey(pubKey *BLSPublicKey_, pubKeySig *BLSSignature) error {
 }
 
 // CreateValidatorFromNewMsg creates validator from NewValidator message
-func CreateValidatorFromNewMsg(msg *types.CreateValidator, valAddr common.Address, blockNum *big.Int) (*Validator_, error) {
+func CreateValidatorFromNewMsg(msg *CreateValidator, valAddr common.Address, blockNum *big.Int) (*Validator_, error) {
 	if err := msg.Description.EnsureLength(); err != nil {
 		return nil, err
 	}
@@ -81,7 +79,7 @@ func CreateValidatorFromNewMsg(msg *types.CreateValidator, valAddr common.Addres
 		SlotPubKeys:          msg.SlotPubKeys,
 		LastEpochInCommittee: new(big.Int),
 		MaxTotalDelegation:   msg.MaxTotalDelegation,
-		Status:               big.NewInt(int64(effective.Active)),
+		Status:               uint8(Active),
 		Commission:           commission,
 		Description:          msg.Description,
 		CreationHeight:       blockNum,
@@ -103,7 +101,7 @@ func NewAddressSetWithAddress(address common.Address) AddressSet_ {
 }
 
 // UpdateValidatorFromEditMsg updates validator from EditValidator message
-func UpdateValidatorFromEditMsg(validator *Validator_, edit *types.EditValidator) error {
+func UpdateValidatorFromEditMsg(validator *Validator_, edit *EditValidator) error {
 	if validator.ValidatorAddress != edit.ValidatorAddress {
 		return errAddressNotMatch
 	}
@@ -151,13 +149,13 @@ func UpdateValidatorFromEditMsg(validator *Validator_, edit *types.EditValidator
 		}
 	}
 
-	switch validator.Status.Uint64() {
-	case uint64(effective.Banned):
+	switch validator.Status {
+	case Uint8(Banned):
 		return errCannotChangeBannedTrait
 	default:
 		switch edit.EPOSStatus {
-		case effective.Active, effective.Inactive:
-			validator.Status = big.NewInt(int64(edit.EPOSStatus))
+		case Active, Inactive:
+			validator.Status = Uint8(edit.EPOSStatus)
 		default:
 		}
 	}

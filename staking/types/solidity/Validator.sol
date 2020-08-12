@@ -59,7 +59,7 @@ struct Validator_ {
     uint256 MaxTotalDelegation;
     // Is the validator active in participating
     // committee selection process or not
-    uint256 Status;
+    byte Status;
     // commission parameters
     Commission_ Commission;
     // description for the validator

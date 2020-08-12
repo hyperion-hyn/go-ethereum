@@ -3,7 +3,7 @@ package core
 import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
-	staking "github.com/ethereum/go-ethereum/staking/types"
+	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	"math/big"
 )
 
@@ -25,32 +25,32 @@ func (pool *TxPool) validateStakingTx(tx *types.Transaction) error {
 
 	switch msg.Type() {
 	case types.StakeCreateVal:
-		stkMsg := &staking.CreateValidator{}
+		stkMsg := &restaking.CreateValidator{}
 		if err := rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return err
 		}
 		_, err := VerifyCreateValidatorMsg(pool.currentState, pendingBlockNumber, stkMsg, msg.From())
 		return err
 	case types.StakeEditVal:
-		stkMsg := &staking.EditValidator{}
+		stkMsg := &restaking.EditValidator{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return err
 		}
 		return VerifyEditValidatorMsg(pool.currentState, chainContext, pendingBlockNumber, pendingBlockNumber, stkMsg, msg.From())
 	case types.Redelegate:
-		stkMsg := &staking.Redelegate{}
+		stkMsg := &restaking.Redelegate{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return err
 		}
 		return VerifyRedelegateMsg(pool.currentState, stkMsg, msg.From())
 	case types.Unredelegate:
-		stkMsg := &staking.Unredelegate{}
+		stkMsg := &restaking.Unredelegate{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return err
 		}
 		return VerifyUnredelegateMsg(pool.currentState, pendingEpoch, stkMsg, msg.From())
 	case types.CollectRedelRewards:
-		stkMsg := &staking.CollectRedelegationRewards{}
+		stkMsg := &restaking.CollectRedelegationRewards{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return err
 		}

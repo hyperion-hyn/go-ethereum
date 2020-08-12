@@ -11,7 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/bls"
 	"github.com/ethereum/go-ethereum/staking/effective"
-	staking "github.com/ethereum/go-ethereum/staking/types"
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	staketest "github.com/ethereum/go-ethereum/staking/types/test"
 	"github.com/pkg/errors"
@@ -156,7 +155,7 @@ func TestVerifyCreateValidatorMsg(t *testing.T) {
 	type args struct {
 		stateDB  vm.StateDB
 		blockNum *big.Int
-		msg      staking.CreateValidator
+		msg      restaking.CreateValidator
 		signer   common.Address
 	}
 	tests := []struct {
@@ -203,7 +202,7 @@ func TestVerifyCreateValidatorMsg(t *testing.T) {
 			args: args{
 				stateDB:  makeStateDBForStake(t),
 				blockNum: big.NewInt(defaultBlockNumber),
-				msg: func() staking.CreateValidator {
+				msg: func() restaking.CreateValidator {
 					m := defaultMsgCreateValidator()
 					m.SlotPubKeys = restaking.BLSPublicKeys_{Keys: []*restaking.BLSPublicKey_{&blsKeys[0].pub}}
 					return m
@@ -218,7 +217,7 @@ func TestVerifyCreateValidatorMsg(t *testing.T) {
 			args: args{
 				stateDB:  makeStateDBForStake(t),
 				blockNum: big.NewInt(defaultBlockNumber),
-				msg: func() staking.CreateValidator {
+				msg: func() restaking.CreateValidator {
 					m := defaultMsgCreateValidator()
 					m.SlotKeySigs = []restaking.BLSSignature{blsKeys[12].sig}
 					return m
@@ -245,9 +244,9 @@ func TestVerifyCreateValidatorMsg(t *testing.T) {
 	}
 }
 
-func defaultMsgCreateValidator() staking.CreateValidator {
+func defaultMsgCreateValidator() restaking.CreateValidator {
 	pub, sig := blsKeys[11].pub, blsKeys[11].sig
-	cv := staking.CreateValidator{
+	cv := restaking.CreateValidator{
 		OperatorAddress:    createOperatorAddr,
 		Description:        defaultDesc,
 		CommissionRates:    defaultCommissionRates,
@@ -283,7 +282,7 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 		chainContext ChainContext
 		epoch        *big.Int
 		blockNum     *big.Int
-		msg          staking.EditValidator
+		msg          restaking.EditValidator
 		signer       common.Address
 	}
 	tests := []struct {
@@ -358,7 +357,7 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 				chainContext: makeFakeChainContextForStake(t),
 				epoch:        big.NewInt(defaultEpoch),
 				blockNum:     big.NewInt(defaultBlockNumber),
-				msg: func() staking.EditValidator {
+				msg: func() restaking.EditValidator {
 					msg := defaultMsgEditValidator()
 					msg.SlotKeyToAdd = &blsKeys[3].pub
 					msg.SlotKeyToAddSig = &blsKeys[3].sig
@@ -375,7 +374,7 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 				chainContext: makeFakeChainContextForStake(t),
 				epoch:        big.NewInt(defaultEpoch),
 				blockNum:     big.NewInt(defaultBlockNumber),
-				msg: func() staking.EditValidator {
+				msg: func() restaking.EditValidator {
 					msg := defaultMsgEditValidator()
 					msg.Description.Identity = makeIdentityStr(0)
 					return msg
@@ -391,7 +390,7 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 				chainContext: makeFakeChainContextForStake(t),
 				epoch:        big.NewInt(defaultEpoch),
 				blockNum:     big.NewInt(defaultBlockNumber),
-				msg: func() staking.EditValidator {
+				msg: func() restaking.EditValidator {
 					msg := defaultMsgEditValidator()
 					msg.ValidatorAddress = makeTestAddr("addr not in chain")
 					return msg
@@ -407,7 +406,7 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 				chainContext: makeFakeChainContextForStake(t),
 				epoch:        big.NewInt(defaultEpoch),
 				blockNum:     big.NewInt(defaultBlockNumber),
-				msg: func() staking.EditValidator {
+				msg: func() restaking.EditValidator {
 					msg := defaultMsgEditValidator()
 					msg.OperatorAddress = makeTestAddr("invalid operator")
 					return msg
@@ -423,7 +422,7 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 				chainContext: makeFakeChainContextForStake(t),
 				epoch:        big.NewInt(defaultEpoch),
 				blockNum:     big.NewInt(defaultBlockNumber),
-				msg: func() staking.EditValidator {
+				msg: func() restaking.EditValidator {
 					msg := defaultMsgEditValidator()
 					return msg
 				}(),
@@ -438,7 +437,7 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 				chainContext: makeFakeChainContextForStake(t),
 				epoch:        big.NewInt(defaultEpoch),
 				blockNum:     big.NewInt(defaultBlockNumber),
-				msg: func() staking.EditValidator {
+				msg: func() restaking.EditValidator {
 					msg := defaultMsgEditValidator()
 					msg.SlotKeyToAddSig = &blsKeys[13].sig
 					return msg
@@ -454,7 +453,7 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 				chainContext: makeFakeChainContextForStake(t),
 				epoch:        big.NewInt(defaultEpoch),
 				blockNum:     big.NewInt(defaultBlockNumber),
-				msg: func() staking.EditValidator {
+				msg: func() restaking.EditValidator {
 					msg := defaultMsgEditValidator()
 					msg.CommissionRate = &oneDec
 					return msg
@@ -470,7 +469,7 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 				chainContext: makeFakeChainContextForStake(t),
 				epoch:        big.NewInt(defaultEpoch),
 				blockNum:     big.NewInt(defaultBlockNumber),
-				msg: func() staking.EditValidator {
+				msg: func() restaking.EditValidator {
 					msg := defaultMsgEditValidator()
 					msg.CommissionRate = &pointEightFiveDec
 					return msg
@@ -521,7 +520,7 @@ var (
 	}
 )
 
-func defaultMsgEditValidator() staking.EditValidator {
+func defaultMsgEditValidator() restaking.EditValidator {
 	var (
 		pub0Copy  restaking.BLSPublicKey_
 		pub12Copy restaking.BLSPublicKey_
@@ -531,7 +530,7 @@ func defaultMsgEditValidator() staking.EditValidator {
 	copy(pub12Copy.Key[:], blsKeys[12].pub.Key[:])
 	copy(sig12Copy[:], blsKeys[12].sig[:])
 
-	return staking.EditValidator{
+	return restaking.EditValidator{
 		ValidatorAddress: validatorAddr,
 		OperatorAddress:  operatorAddr,
 		Description:      &editDesc,
@@ -546,7 +545,7 @@ func defaultMsgEditValidator() staking.EditValidator {
 func TestVerifyRedelegateMsg(t *testing.T) {
 	type args struct {
 		stateDB vm.StateDB
-		msg     staking.Redelegate
+		msg     restaking.Redelegate
 		signer  common.Address
 	}
 	tests := []struct {
@@ -576,7 +575,7 @@ func TestVerifyRedelegateMsg(t *testing.T) {
 			name: "validator not exist",
 			args: args{
 				stateDB: makeStateDBForStake(t),
-				msg: func() staking.Redelegate {
+				msg: func() restaking.Redelegate {
 					msg := defaultMsgDelegate()
 					msg.ValidatorAddress = makeTestAddr("addr not in chain")
 					return msg
@@ -606,8 +605,8 @@ func TestVerifyRedelegateMsg(t *testing.T) {
 	}
 }
 
-func defaultMsgDelegate() staking.Redelegate {
-	return staking.Redelegate{
+func defaultMsgDelegate() restaking.Redelegate {
+	return restaking.Redelegate{
 		DelegatorAddress: delegatorAddr,
 		ValidatorAddress: validatorAddr,
 	}
