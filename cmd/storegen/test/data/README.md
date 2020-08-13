@@ -25,6 +25,15 @@ cat build/contracts/Storage.json | jq -c '.abi' | abigen --abi - --pkg storage -
 
 # generate storage-layout
 ````shell script
-solc contracts/Storage.sol --overwrite --storage-layout
+solc contracts/Storage.sol --storage-layout
+````
+
+# combine
+````shell script
+cd cmd/storegen/test/data
+````
+
+````shell script
+truffle compile all && go build ../../ && solc contracts/Map3Pool.sol --storage-layout | grep '^{' | ./storegen --storage-layout - --pkg test --out ../map3pool_storage_test.go && solc contracts/Map3Pool.sol --abi | grep '^\[' | abigen --abi - --pkg test --type Map3PoolWrapper --out ../map3pool_abi_test.go && go test -v -count=1 ../
 ````
 
