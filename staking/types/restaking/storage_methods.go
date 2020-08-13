@@ -31,7 +31,7 @@ func (s *Storage_BLSPublicKeys_) Length() int {
 
 func (s *Storage_BLSPublicKeys_) Save(keys *BLSPublicKeys_) {
 	length := len(keys.Keys)
-	s.Keys().Resize(uint64(length))
+	s.Keys().Resize(length)
 	for i := 0; i < length; i++ {
 		s.Keys().Get(i).Key().SetValue(keys.Keys[i].Key)
 	}
@@ -55,7 +55,7 @@ func (s *Storage_BLSPublicKeys_) Remove(index int, keepOrder bool) {
 	//replace lastOne to index
 	s.Keys().Get(index).Key().SetValue(lastOneStorage.Key().Value())
 	//resize length
-	s.Keys().Resize(uint64(length - 1))
+	s.Keys().Resize(length - 1)
 }
 
 func (s *Storage_BLSPublicKeys_) Push(key *BLSPublicKey_) {
@@ -72,7 +72,7 @@ func (s *Storage_BLSPublicKeys_) Pop() *BLSPublicKey_ {
 		BLSPublicKey_{Key: s.Keys().Get(length - 1).Key().Value()}
 
 	s.Keys().Get(length - 1).Key().SetValue([48]uint8{})
-	s.Keys().Resize(uint64(length - 1))
+	s.Keys().Resize(length - 1)
 	return &blsPublicKeyTemp
 }
 
@@ -98,7 +98,7 @@ func (s *Storage_AddressSet_) AllKeys() []common.Address {
 func (s *Storage_AddressSet_) Save(addressSet AddressSet_) {
 	keysLength := len(addressSet.Keys)
 	if keysLength != 0 {
-		s.Keys().Resize(uint64(keysLength))
+		s.Keys().Resize(keysLength)
 		for i := 0; i < keysLength; i++ {
 			keyTemp := addressSet.Keys[i]
 			s.Keys().Get(i).SetValue(*keyTemp)
@@ -353,7 +353,7 @@ func (s *Storage_RedelegationMap_) Remove(key common.Address) {
 	keyIndex := s.Map().Get(key).Index().Value()
 	keysStorage.Get(int(keyIndex.Uint64() - 1)).SetValue(keysStorage.Get(keysLength - 1).Value())
 	keysStorage.Get(keysLength - 1).SetValue(common.BigToAddress(common.Big0))
-	s.Keys().Resize(uint64(keysLength - 1))
+	s.Keys().Resize(keysLength - 1)
 
 	//remove map entry
 	maps := s.Map()
@@ -367,7 +367,7 @@ func (s *Storage_RedelegationMap_) Remove(key common.Address) {
 
 func (s *Storage_RedelegationMap_) Save(relegationMap RedelegationMap_) {
 	relegationKeys := relegationMap.Keys
-	s.Keys().Resize(uint64(len(relegationKeys)))
+	s.Keys().Resize(len(relegationKeys))
 	for i := 0; i < len(relegationKeys); i++ {
 		addressTemp := relegationKeys[i]
 		s.Keys().Get(i).SetValue(*addressTemp)
@@ -414,7 +414,7 @@ func (s *Storage_Slots_) Remove(index int, keepOrder bool) {
 	lastEntry.SetNil()
 
 	//resize slice
-	s.Entrys().Resize(uint64(oldEntriesLength - 1))
+	s.Entrys().Resize(oldEntriesLength - 1)
 }
 
 func (s *Storage_Slots_) Push(slot *Slot_) {
@@ -437,7 +437,7 @@ func (s *Storage_Slots_) UpdateSlots(slots Slots_) {
 	}
 	//set new
 	newSlotsLength := len(slots.Entrys)
-	s.Entrys().Resize(uint64(newSlotsLength))
+	s.Entrys().Resize(newSlotsLength)
 	for i := 0; i < newSlotsLength; i++ {
 		s.Get(i).Save(slots.Entrys[i])
 	}

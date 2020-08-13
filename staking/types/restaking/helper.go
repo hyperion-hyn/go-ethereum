@@ -115,12 +115,18 @@ func UpdateValidatorFromEditMsg(validator *Validator_, edit *EditValidator) erro
 	if validator.ValidatorAddress != edit.ValidatorAddress {
 		return errAddressNotMatch
 	}
-	if err := validator.Description.UpdateFrom(edit.Description); err != nil {
-		return err
+	if edit.Description != nil {
+		if err := validator.Description.UpdateFrom(edit.Description); err != nil {
+			return err
+		}
 	}
 
 	if edit.CommissionRate != nil {
 		validator.Commission.CommissionRates.Rate = *edit.CommissionRate
+	}
+
+	if edit.MaxTotalDelegation != nil && edit.MaxTotalDelegation.Sign() != 0 {
+		validator.MaxTotalDelegation = edit.MaxTotalDelegation
 	}
 
 	if edit.SlotKeyToRemove != nil {

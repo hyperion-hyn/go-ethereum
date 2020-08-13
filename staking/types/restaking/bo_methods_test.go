@@ -117,9 +117,9 @@ func TestValidator_SanityCheck(t *testing.T) {
 		{
 			func(v *Validator_) {
 				v.SlotPubKeys = NewEmptyBLSKeys()
-				v.SlotPubKeys.Keys = append(v.SlotPubKeys.Keys, &blsPubSigPairs[0].pub, &blsPubSigPairs[0].pub)
+				v.SlotPubKeys.Keys = append(v.SlotPubKeys.Keys, &blsPubSigPairs[0].pub, &blsPubSigPairs[1].pub)
 			},
-			errDuplicateSlotKeys,
+			ErrExcessiveBLSKeys,
 		},
 	}
 	for i, test := range tests {

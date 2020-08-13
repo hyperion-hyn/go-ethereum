@@ -3,6 +3,7 @@ package effective
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	"io/ioutil"
 	"math/big"
 	"math/rand"
@@ -11,8 +12,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/harmony-one/bls/ffi/go/bls"
-	"github.com/harmony-one/harmony/numeric"
-	"github.com/harmony-one/harmony/shard"
 )
 
 const eposTestingFile = "epos.json"
@@ -20,7 +19,7 @@ const eposTestingFile = "epos.json"
 var (
 	testingNumber    = 20
 	testingPurchases []SlotPurchase
-	expectedMedian   numeric.Dec
+	expectedMedian   common.Dec
 	maxAccountGen    = int64(98765654323123134)
 	accountGen       = rand.New(rand.NewSource(1337))
 	maxKeyGen        = int64(98765654323123134)
@@ -59,9 +58,9 @@ func generateRandomSlots(num int) []SlotPurchase {
 		addr.SetBytes(big.NewInt(int64(accountGen.Int63n(maxAccountGen))).Bytes())
 		secretKey := bls.SecretKey{}
 		secretKey.Deserialize(big.NewInt(int64(keyGen.Int63n(maxKeyGen))).Bytes())
-		key := shard.BLSPublicKey{}
+		key := restaking.BLSPublicKey_{}
 		key.FromLibBLSPublicKey(secretKey.GetPublicKey())
-		stake := numeric.NewDecFromBigInt(big.NewInt(int64(stakeGen.Int63n(maxStakeGen))))
+		stake := common.NewDecFromBigInt(big.NewInt(int64(stakeGen.Int63n(maxStakeGen))))
 		randomSlots = append(randomSlots, SlotPurchase{addr, key, stake, stake})
 	}
 	return randomSlots
@@ -89,9 +88,9 @@ func TestMedian(t *testing.T) {
 
 func TestEffectiveStake(t *testing.T) {
 	for _, val := range testingPurchases {
-		expectedStake := numeric.MaxDec(
-			numeric.MinDec(numeric.OneDec().Add(c).Mul(expectedMedian), val.RawStake),
-			numeric.OneDec().Sub(c).Mul(expectedMedian))
+		expectedStake := common.MaxDec(
+			common.MinDec(common.OneDec().Add(c).Mul(expectedMedian), val.RawStake),
+			common.OneDec().Sub(c).Mul(expectedMedian))
 		calculatedStake := effectiveStake(expectedMedian, val.RawStake)
 		if !expectedStake.Equal(calculatedStake) {
 			t.Errorf(

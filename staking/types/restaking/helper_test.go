@@ -251,7 +251,7 @@ func assertValidatorEqual(v1, v2 Validator_) error {
 	if v1.ValidatorAddress != v2.ValidatorAddress {
 		return fmt.Errorf("validator address not equal: %v / %v", v1.ValidatorAddress, v2.ValidatorAddress)
 	}
-	if reflect.DeepEqual(v1.OperatorAddresses.Keys, v2.OperatorAddresses.Keys) {
+	if !reflect.DeepEqual(v1.OperatorAddresses, v2.OperatorAddresses) {
 		return fmt.Errorf("operator addresses not equal")
 	}
 	if len(v1.SlotPubKeys.Keys) != len(v2.SlotPubKeys.Keys) {
@@ -259,7 +259,7 @@ func assertValidatorEqual(v1, v2 Validator_) error {
 	}
 	for i := range v1.SlotPubKeys.Keys {
 		pk1, pk2 := v1.SlotPubKeys.Keys[i], v2.SlotPubKeys.Keys[i]
-		if pk1 != pk2 {
+		if *pk1 != *pk2 {
 			return fmt.Errorf("SlotPubKeys[%v] not equal: %s / %s", i, pk1.Hex(), pk2.Hex())
 		}
 	}
