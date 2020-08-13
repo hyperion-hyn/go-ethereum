@@ -48,6 +48,7 @@ var (
 	twentyFiveKOnes = new(big.Int).Mul(big.NewInt(25000), oneBig)
 	thirtyKOnes     = new(big.Int).Mul(big.NewInt(30000), oneBig)
 	hundredKOnes    = new(big.Int).Mul(big.NewInt(100000), oneBig)
+	millionOnes    = new(big.Int).Mul(big.NewInt(1000000), oneBig)
 
 	negRate           = common.NewDecWithPrec(-1, 10)
 	pointOneDec       = common.NewDecWithPrec(1, 1)
@@ -200,7 +201,7 @@ func TestVerifyCreateValidatorMsg(t *testing.T) {
 				blockNum: big.NewInt(defaultBlockNumber),
 				msg: func() restaking.CreateValidator {
 					m := defaultMsgCreateValidator()
-					m.SlotPubKey = blsKeys[11].pub
+					m.SlotPubKey = blsKeys[0].pub
 					return m
 				}(),
 				signer: createOperatorAddr,
@@ -254,7 +255,7 @@ func defaultMsgCreateValidator() restaking.CreateValidator {
 func defaultExpCreatedValidator() restaking.Validator_ {
 	pub := blsKeys[11].pub
 	v := restaking.Validator_{
-		ValidatorAddress:     validatorAddr,
+		ValidatorAddress:     createValidatorAddr,
 		OperatorAddresses:    restaking.NewAddressSetWithAddress(createOperatorAddr),
 		SlotPubKeys:          restaking.NewBLSKeysWithBLSKey(pub),
 		LastEpochInCommittee: new(big.Int),
@@ -879,8 +880,9 @@ func makeStateDBForStake(t *testing.T) *state.StateDB {
 	if err := updateStateValidators(sdb, ws); err != nil {
 		t.Fatalf("make default state: %v", err)
 	}
-	sdb.AddBalance(createOperatorAddr, hundredKOnes)
-	sdb.AddBalance(delegatorAddr, hundredKOnes)
+	sdb.SetNonce(createOperatorAddr, defaultNonce)
+	sdb.AddBalance(createOperatorAddr, millionOnes)
+	sdb.AddBalance(delegatorAddr, millionOnes)
 	sdb.Commit(false)
 	return sdb
 }

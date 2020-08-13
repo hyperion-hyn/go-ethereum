@@ -11,6 +11,7 @@ var (
 	tenKOnes     = new(big.Int).Mul(big.NewInt(10000), oneBig)
 	twentyKOnes  = new(big.Int).Mul(big.NewInt(20000), oneBig)
 	hundredKOnes = new(big.Int).Mul(big.NewInt(100000), oneBig)
+	millionOnes = new(big.Int).Mul(big.NewInt(1000000), oneBig)
 
 	// DefaultDelAmount is the default delegation amount
 	DefaultDelAmount = new(big.Int).Set(twentyKOnes)
@@ -19,7 +20,7 @@ var (
 	DefaultMinSelfDel = new(big.Int).Set(tenKOnes)
 
 	// DefaultMaxTotalDel is the default value of MaxTotalDelegation
-	DefaultMaxTotalDel = new(big.Int).Set(hundredKOnes)
+	DefaultMaxTotalDel = new(big.Int).Set(millionOnes)
 )
 
 var (

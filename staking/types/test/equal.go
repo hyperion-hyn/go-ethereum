@@ -52,7 +52,7 @@ func checkAddressesEqual(a1, a2 []*common.Address) error {
 		return fmt.Errorf(".len not equal: %v / %v", len(a1), len(a2))
 	}
 	for i := range a1 {
-		if a1[i] != a2[i] {
+		if *a1[i] != *a2[i] {
 			return fmt.Errorf("[%v] not equal: %x / %x", i, a1[i], a2[i])
 		}
 	}
@@ -64,7 +64,7 @@ func checkPubKeysEqual(pubs1, pubs2 restaking.BLSPublicKeys_) error {
 		return fmt.Errorf(".len not equal: %v / %v", len(pubs1.Keys), len(pubs2.Keys))
 	}
 	for i := range pubs1.Keys {
-		if pubs1.Keys[i] != pubs2.Keys[i] {
+		if pubs1.Keys[i].Key != pubs2.Keys[i].Key {
 			return fmt.Errorf("[%v] not equal: %x / %x", i, pubs1.Keys[i], pubs2.Keys[i])
 		}
 	}
