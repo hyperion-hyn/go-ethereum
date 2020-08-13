@@ -3,7 +3,6 @@ package restaking
 import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/staking/effective"
 	"github.com/pkg/errors"
 	"math/big"
 	"reflect"
@@ -49,14 +48,7 @@ func TestCreateValidatorFromNewMsg(t *testing.T) {
 			expErr:              errors.New("exceed maximum name length"),
 		},
 		{
-			editCreateValidator: func(cv *CreateValidator) {
-				cv.SlotPubKeys.Keys = append(cv.SlotPubKeys.Keys, &blsPubSigPairs[1].pub)
-				cv.SlotKeySigs = append(cv.SlotKeySigs, blsPubSigPairs[1].sig)
-			},
-			expErr: errors.Wrapf(ErrExcessiveBLSKeys, "have: %d allowed: %d", 2, 1),
-		},
-		{
-			editCreateValidator: func(cv *CreateValidator) { cv.SlotKeySigs[0] = blsPubSigPairs[2].sig },
+			editCreateValidator: func(cv *CreateValidator) { cv.SlotKeySig = blsPubSigPairs[2].sig },
 			expErr:              errBLSKeysNotMatchSigs,
 		},
 	}
@@ -150,15 +142,15 @@ func TestUpdateValidatorFromEditMsg(t *testing.T) {
 			// update status
 			editValidator: EditValidator{
 				ValidatorAddress: validatorAddr,
-				EPOSStatus:       effective.Inactive,
+				EPOSStatus:       Inactive,
 			},
-			editExpValidator: func(v *Validator_) { v.Status = big.NewInt(int64(effective.Inactive)) },
+			editExpValidator: func(v *Validator_) { v.Status = Uint8(Inactive) },
 		},
 		{
 			// status to banned - not changed
 			editValidator: EditValidator{
 				ValidatorAddress: validatorAddr,
-				EPOSStatus:       effective.Banned,
+				EPOSStatus:       Banned,
 			},
 			editExpValidator: func(v *Validator_) {},
 		},
@@ -225,7 +217,7 @@ func TestUpdateValidatorFromEditMsg(t *testing.T) {
 }
 
 func getPubsFromPairs(pairs []blsPubSigPair, indexes []int) BLSPublicKeys_ {
-	pubs := BLSPublicKeys_{}
+	pubs := NewEmptyBLSKeys()
 	for _, index := range indexes {
 		pubs.Keys = append(pubs.Keys, &pairs[index].pub)
 	}
@@ -245,15 +237,13 @@ func makeCreateValidator() CreateValidator {
 	addr := operatorAddr
 	desc := validDescription
 	cr := validCommissionRates
-	pubs := getPubsFromPairs(blsPubSigPairs, []int{0})
-	sigs := getSigsFromPairs(blsPubSigPairs, []int{0})
 	return CreateValidator{
 		OperatorAddress:    addr,
 		Description:        desc,
 		CommissionRates:    cr,
 		MaxTotalDelegation: twelveK,
-		SlotPubKeys:        pubs,
-		SlotKeySigs:        sigs,
+		SlotPubKey:         blsPubSigPairs[0].pub,
+		SlotKeySig:         blsPubSigPairs[0].sig,
 	}
 }
 
@@ -298,16 +288,14 @@ func assertValidatorAlignCreateValidator(v Validator_, cv CreateValidator) error
 	if v.ValidatorAddress != validatorAddr {
 		return fmt.Errorf("validator address not equal")
 	}
-	if _,ok := v.OperatorAddresses.Set[cv.OperatorAddress]; !ok {
+	if _, ok := v.OperatorAddresses.Set[cv.OperatorAddress]; !ok {
 		return fmt.Errorf("operator address not equal")
 	}
-	if len(v.SlotPubKeys.Keys) != len(cv.SlotPubKeys.Keys) {
-		return fmt.Errorf("len(SlotPubKeys) not equal")
+	if len(v.SlotPubKeys.Keys) != 1 {
+		return fmt.Errorf("len(SlotPubKeys) not equal 1")
 	}
-	for i := range v.SlotPubKeys.Keys {
-		if v.SlotPubKeys.Keys[i] != cv.SlotPubKeys.Keys[i] {
-			return fmt.Errorf("SlotPubKeys[%v] not equal", i)
-		}
+	if *v.SlotPubKeys.Keys[0] != cv.SlotPubKey {
+		return fmt.Errorf("SlotPubKey not equal")
 	}
 	if v.LastEpochInCommittee.Cmp(new(big.Int)) != 0 {
 		return fmt.Errorf("LastEpochInCommittee not zero")
@@ -315,7 +303,7 @@ func assertValidatorAlignCreateValidator(v Validator_, cv CreateValidator) error
 	if v.MaxTotalDelegation.Cmp(cv.MaxTotalDelegation) != 0 {
 		return fmt.Errorf("MaxTotalDelegation not equal")
 	}
-	if v.Status.Uint64() != uint64(effective.Active) {
+	if v.Status != uint8(Active) {
 		return fmt.Errorf("status not active")
 	}
 	if err := assertCommissionRatesEqual(v.Commission.CommissionRates, cv.CommissionRates); err != nil {

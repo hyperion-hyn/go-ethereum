@@ -38,8 +38,8 @@ var (
 
 	validatorPrototype = restaking.Validator_{
 		ValidatorAddress:     common.Address{},
-		OperatorAddresses:    restaking.NewAddressSet(),
-		SlotPubKeys:          restaking.BLSPublicKeys_{Keys: []*restaking.BLSPublicKey_{}},
+		OperatorAddresses:    restaking.NewEmptyAddressSet(),
+		SlotPubKeys:          restaking.NewEmptyBLSKeys(),
 		LastEpochInCommittee: common.Big0,
 		MaxTotalDelegation:   DefaultMaxTotalDel,
 		Status:               uint8(restaking.Active),
@@ -79,12 +79,7 @@ func GetDefaultValidatorWithAddr(validator, operator common.Address, pubs restak
 	v := CopyValidator(validatorPrototype)
 	v.ValidatorAddress = validator
 	v.OperatorAddresses.Put(operator)
-	if pubs.Keys != nil || len(pubs.Keys) > 0 {
-		v.SlotPubKeys = restaking.BLSPublicKeys_{Keys: make([]*restaking.BLSPublicKey_, len(pubs.Keys))}
-		copy(v.SlotPubKeys.Keys, pubs.Keys)
-	} else {
-		v.SlotPubKeys = restaking.BLSPublicKeys_{}
-	}
+	v.SlotPubKeys = CopySlotPubKeys(pubs)
 	return v
 }
 
@@ -99,14 +94,7 @@ func GetDefaultValidatorWrapperWithAddr(validator, operator common.Address, pubs
 	w := CopyValidatorWrapper(vWrapperPrototype)
 	w.Validator.ValidatorAddress = validator
 	w.Validator.OperatorAddresses.Put(operator)
-	if pubs.Keys != nil || len(pubs.Keys) > 0 {
-		w.Validator.SlotPubKeys = restaking.BLSPublicKeys_{Keys: make([]*restaking.BLSPublicKey_, len(pubs.Keys))}
-		copy(w.Validator.SlotPubKeys.Keys, pubs.Keys)
-	} else {
-		w.Validator.SlotPubKeys = restaking.BLSPublicKeys_{}
-	}
+	w.Validator.SlotPubKeys = CopySlotPubKeys(pubs)
 	w.Redelegations.Put(operator, restaking.NewRedelegation(operator, DefaultDelAmount))
-	w.TotalDelegation.Set(DefaultDelAmount)
-	w.TotalDelegationByOperator.Set(DefaultDelAmount)
 	return w
 }

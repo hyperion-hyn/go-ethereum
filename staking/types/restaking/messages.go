@@ -11,8 +11,8 @@ type CreateValidator struct {
 	Description        Description_     `json:"description"`
 	CommissionRates    CommissionRates_ `json:"commission"`
 	MaxTotalDelegation *big.Int         `json:"max-total-delegation"`
-	SlotPubKeys        BLSPublicKeys_   `json:"slot-pub-keys"`
-	SlotKeySigs        []BLSSignature   `json:"slot-key-sigs"`
+	SlotPubKey        BLSPublicKey_   `json:"slot-pub-key"`
+	SlotKeySig        BLSSignature   `json:"slot-key-sig"`
 }
 
 // EditValidator - type for edit existing validator
@@ -40,8 +40,8 @@ type Unredelegate struct {
 	ValidatorAddress common.Address `json:"validator_address"`
 }
 
-// CollectRedelegationRewards - type for collecting token rewards
-type CollectRedelegationRewards struct {
+// CollectReward - type for collecting token rewards
+type CollectReward struct {
 	DelegatorAddress common.Address `json:"delegator_address"`
 	ValidatorAddress common.Address `json:"validator_address"`
 }

@@ -12,7 +12,7 @@ var (
 	errValidatorNotExist    = errors.New("staking validator does not exist")
 	errRedelegationNotExist = errors.New("redelegation does not exist")
 
-	ValidatorStorageAddress = common.Address{}
+	ValidatorStorageAddress = common.BigToAddress(common.Big1)	// TODO(ATLAS): what address?
 )
 
 func (s *StateDB) ValidatorPool() *restaking.Storage_ValidatorPool_ {

@@ -7,10 +7,10 @@ import (
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/crypto/bls"
-	"github.com/ethereum/go-ethereum/staking/effective"
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	"math/big"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -137,22 +137,20 @@ func TestBallotResult(t *testing.T) {
 
 func TestIncrementValidatorSigningCounts(t *testing.T) {
 	tests := []struct {
-		numUserSlots int
-		verified                  []int
+		numSlots int
+		verified []int
 	}{
 		{0, []int{0}},
 		{1, []int{0}},
-		{6, []int{0, 2, 3, 4, 6, 8, 10, 12, 14}},
-		{6, []int{1, 3, 5, 7, 9, 11, 13, 15}},
+		{16, []int{0, 2, 3, 4, 6, 8, 10, 12, 14}},
+		{16, []int{1, 3, 5, 7, 9, 11, 13, 15}},
 	}
 	for _, test := range tests {
-		ctx, err := makeIncStateTestCtx(test.numUserSlots, test.verified)
+		ctx, err := makeIncStateTestCtx(test.numSlots, test.verified)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := IncrementValidatorSigningCounts(nil, ctx.staked, ctx.state, ctx.signers,
-			ctx.missings); err != nil {
-
+		if err := IncrementValidatorSigningCounts(nil, ctx.staked, ctx.state, ctx.signers, ctx.missings); err != nil {
 			t.Fatal(err)
 		}
 		if err := ctx.checkResult(); err != nil {
@@ -206,7 +204,7 @@ func TestComputeAndMutateEPOSStatus(t *testing.T) {
 	tests := []struct {
 		ctx       *computeEPOSTestCtx
 		expErr    error
-		expStatus effective.Eligibility
+		expStatus restaking.ValidatorStatus
 	}{
 		// active node
 		{
@@ -214,12 +212,12 @@ func TestComputeAndMutateEPOSStatus(t *testing.T) {
 				addr:       common.Address{20, 20},
 				snapSigned: 100,
 				snapToSign: 100,
-				snapEli:    effective.Active,
+				snapEli:    restaking.Active,
 				curSigned:  200,
 				curToSign:  200,
-				curEli:     effective.Active,
+				curEli:     restaking.Active,
 			},
-			expStatus: effective.Active,
+			expStatus: restaking.Active,
 		},
 		// active -> inactive
 		{
@@ -227,12 +225,12 @@ func TestComputeAndMutateEPOSStatus(t *testing.T) {
 				addr:       common.Address{20, 20},
 				snapSigned: 100,
 				snapToSign: 100,
-				snapEli:    effective.Active,
+				snapEli:    restaking.Active,
 				curSigned:  200,
 				curToSign:  250,
-				curEli:     effective.Active,
+				curEli:     restaking.Active,
 			},
-			expStatus: effective.Inactive,
+			expStatus: restaking.Inactive,
 		},
 		// active -> inactive
 		{
@@ -240,12 +238,12 @@ func TestComputeAndMutateEPOSStatus(t *testing.T) {
 				addr:       common.Address{20, 20},
 				snapSigned: 100,
 				snapToSign: 100,
-				snapEli:    effective.Active,
+				snapEli:    restaking.Active,
 				curSigned:  100,
 				curToSign:  200,
-				curEli:     effective.Active,
+				curEli:     restaking.Active,
 			},
-			expStatus: effective.Inactive,
+			expStatus: restaking.Inactive,
 		},
 		// status unchanged: inactive -> inactive
 		{
@@ -253,12 +251,12 @@ func TestComputeAndMutateEPOSStatus(t *testing.T) {
 				addr:       common.Address{20, 20},
 				snapSigned: 100,
 				snapToSign: 100,
-				snapEli:    effective.Inactive,
+				snapEli:    restaking.Inactive,
 				curSigned:  200,
 				curToSign:  200,
-				curEli:     effective.Inactive,
+				curEli:     restaking.Inactive,
 			},
-			expStatus: effective.Inactive,
+			expStatus: restaking.Inactive,
 		},
 		// status unchanged: inactive
 		{
@@ -266,12 +264,12 @@ func TestComputeAndMutateEPOSStatus(t *testing.T) {
 				addr:       common.Address{20, 20},
 				snapSigned: 100,
 				snapToSign: 100,
-				snapEli:    effective.Inactive,
+				snapEli:    restaking.Inactive,
 				curSigned:  200,
 				curToSign:  200,
-				curEli:     effective.Active,
+				curEli:     restaking.Active,
 			},
-			expStatus: effective.Active,
+			expStatus: restaking.Active,
 		},
 		// nil validator wrapper in state
 		{
@@ -279,21 +277,21 @@ func TestComputeAndMutateEPOSStatus(t *testing.T) {
 				addr:       common.Address{20, 20},
 				snapSigned: 100,
 				snapToSign: 100,
-				snapEli:    effective.Active,
-				curEli:     effective.Nil,
+				snapEli:    restaking.Active,
+				curEli:     restaking.Nil,
 			},
-			expErr: errors.New("nil validator wrapper in state"),
+			expErr: errors.New("staking validator does not exist"),
 		},
 		// nil validator wrapper in snapshot
 		{
 			ctx: &computeEPOSTestCtx{
 				addr:      common.Address{20, 20},
-				snapEli:   effective.Nil,
+				snapEli:   restaking.Nil,
 				curSigned: 200,
 				curToSign: 200,
-				curEli:    effective.Active,
+				curEli:    restaking.Active,
 			},
-			expErr: errors.New("nil validator wrapper in snapshot"),
+			expErr: errors.New("staking validator does not exist"),
 		},
 		// banned node
 		{
@@ -301,12 +299,12 @@ func TestComputeAndMutateEPOSStatus(t *testing.T) {
 				addr:       common.Address{20, 20},
 				snapSigned: 100,
 				snapToSign: 200,
-				snapEli:    effective.Active,
+				snapEli:    restaking.Active,
 				curSigned:  100,
 				curToSign:  200,
-				curEli:     effective.Banned,
+				curEli:     restaking.Banned,
 			},
-			expStatus: effective.Banned,
+			expStatus: restaking.Banned,
 		},
 	}
 	for i, test := range tests {
@@ -315,8 +313,8 @@ func TestComputeAndMutateEPOSStatus(t *testing.T) {
 
 		err := ComputeAndMutateEPOSStatus(ctx.reader, ctx.stateDB, ctx.addr, ctx.epoch)
 		if err != nil {
-			if test.expErr == nil {
-				t.Errorf("Test %v: unexpected error: %v", i, err)
+			if assErr := assertError(err, test.expErr); assErr != nil {
+				t.Errorf("Test - %v: %v", i, assErr)
 			}
 			continue
 		}
@@ -462,9 +460,9 @@ type computeEPOSTestCtx struct {
 	addr                   common.Address
 	epoch                  *big.Int
 	snapSigned, snapToSign int64
-	snapEli                effective.Eligibility
+	snapEli                restaking.ValidatorStatus
 	curSigned, curToSign   int64
-	curEli                 effective.Eligibility
+	curEli                 restaking.ValidatorStatus
 
 	// computed fields
 	stateDB *state.StateDB
@@ -473,31 +471,35 @@ type computeEPOSTestCtx struct {
 
 // makeStateAndReader compute for state and reader given the input arguments
 func (ctx *computeEPOSTestCtx) makeStateAndReader() {
+	// chain reader
 	ctx.reader = newTestReader()
 	ctx.epoch = big.NewInt(1)
-	fmt.Println(ctx.epoch.Uint64())
-	if ctx.snapEli != effective.Nil {
+	stateDB := newTestStateDB()
+	ctx.reader[ctx.epoch.Uint64()] = stateDB
+	if ctx.snapEli != restaking.Nil {
 		wrapper := makeTestWrapper(ctx.addr, ctx.snapSigned, ctx.snapToSign)
-		wrapper.Validator.Status = big.NewInt(int64(ctx.curEli))
-		stateDB := newTestStateDB()
+		wrapper.Validator.Status = uint8(ctx.curEli)
 		stateDB.ValidatorPool().Validators().Put(ctx.addr, &wrapper)
-		ctx.reader[ctx.epoch.Uint64()] = stateDB
+		stateDB.Commit(false)
 	}
+
+	// state db
 	ctx.stateDB = newTestStateDB()
-	if ctx.curEli != effective.Nil {
+	if ctx.curEli != restaking.Nil {
 		wrapper := makeTestWrapper(ctx.addr, ctx.curSigned, ctx.curToSign)
-		wrapper.Validator.Status = big.NewInt(int64(ctx.curEli))
+		wrapper.Validator.Status = uint8(ctx.curEli)
 		ctx.stateDB.ValidatorPool().Validators().Put(ctx.addr, &wrapper)
+		ctx.stateDB.Commit(false)
 	}
 }
 
-func (ctx *computeEPOSTestCtx) checkWrapperStatus(expStatus effective.Eligibility) error {
+func (ctx *computeEPOSTestCtx) checkWrapperStatus(expStatus restaking.ValidatorStatus) error {
 	wrapper, err := ctx.stateDB.ValidatorByAddress(ctx.addr)
 	if err != nil {
 		return err
 	}
-	status := wrapper.Validator().Status().Value().Uint64()
-	if status != uint64(expStatus) {
+	status := wrapper.Validator().Status().Value()
+	if status != uint8(expStatus) {
 		return fmt.Errorf("wrapper status unexpected: %v / %v", status, expStatus)
 	}
 	return nil
@@ -614,8 +616,21 @@ func newTestStateDBFromCommittee(cmt *restaking.Committee_) *state.StateDB {
 	sdb := newTestStateDB()
 	for _, slot := range cmt.Slots.Entrys {
 		wrapper := makeTestWrapper(slot.EcdsaAddress, 1, 1)
-		wrapper.Validator.SlotPubKeys = restaking.BLSPublicKeys_{Keys: []*restaking.BLSPublicKey_{&slot.BLSPublicKey}}
+		wrapper.Validator.SlotPubKeys = restaking.NewBLSKeysWithBLSKey(slot.BLSPublicKey)
 		sdb.ValidatorPool().Validators().Put(slot.EcdsaAddress, &wrapper)
 	}
 	return sdb
+}
+
+func assertError(got, expect error) error {
+	if (got == nil) != (expect == nil) {
+		return fmt.Errorf("unexpected error [%v] / [%v]", got, expect)
+	}
+	if (got == nil) || (expect == nil) {
+		return nil
+	}
+	if !strings.Contains(got.Error(), expect.Error()) {
+		return fmt.Errorf("unexpected error [%v] / [%v]", got, expect)
+	}
+	return nil
 }

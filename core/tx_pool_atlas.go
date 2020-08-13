@@ -50,7 +50,7 @@ func (pool *TxPool) validateStakingTx(tx *types.Transaction) error {
 		}
 		return VerifyUnredelegateMsg(pool.currentState, pendingEpoch, stkMsg, msg.From())
 	case types.CollectRedelRewards:
-		stkMsg := &restaking.CollectRedelegationRewards{}
+		stkMsg := &restaking.CollectReward{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return err
 		}

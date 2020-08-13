@@ -21,6 +21,16 @@ var (
 	errCannotChangeBannedTrait = errors.New("cannot change validator banned status")
 )
 
+func NewEmptyBLSKeys() BLSPublicKeys_ {
+	return BLSPublicKeys_{Keys: make([]*BLSPublicKey_, 0)}
+}
+
+func NewBLSKeysWithBLSKey(key BLSPublicKey_) BLSPublicKeys_ {
+	keys := NewEmptyBLSKeys()
+	keys.Keys = append(keys.Keys, &key)
+	return keys
+}
+
 // VerifyBLSKeys checks if the public BLS key at index i of pubKeys matches the
 // BLS key signature at index i of pubKeysSigs.
 func VerifyBLSKeys(pubKeys BLSPublicKeys_, pubKeySigs []BLSSignature) error {
@@ -69,14 +79,14 @@ func CreateValidatorFromNewMsg(msg *CreateValidator, valAddr common.Address, blo
 	}
 	commission := Commission_{msg.CommissionRates, blockNum}
 
-	if err := VerifyBLSKeys(msg.SlotPubKeys, msg.SlotKeySigs); err != nil {
+	if err := VerifyBLSKey(&msg.SlotPubKey, &msg.SlotKeySig); err != nil {
 		return nil, err
 	}
 
 	v := Validator_{
 		ValidatorAddress: valAddr,
 		OperatorAddresses: NewAddressSetWithAddress(msg.OperatorAddress),
-		SlotPubKeys:          msg.SlotPubKeys,
+		SlotPubKeys:          NewBLSKeysWithBLSKey(msg.SlotPubKey),
 		LastEpochInCommittee: new(big.Int),
 		MaxTotalDelegation:   msg.MaxTotalDelegation,
 		Status:               uint8(Active),
@@ -87,15 +97,15 @@ func CreateValidatorFromNewMsg(msg *CreateValidator, valAddr common.Address, blo
 	return &v, nil
 }
 
-func NewAddressSet() AddressSet_ {
+func NewEmptyAddressSet() AddressSet_ {
 	return AddressSet_{
 		Keys: []*Address{},
-		Set:  map[Address]*Bool{},
+		Set:  make(map[Address]*Bool),
 	}
 }
 
 func NewAddressSetWithAddress(address common.Address) AddressSet_ {
-	set := NewAddressSet()
+	set := NewEmptyAddressSet()
 	set.Put(address)
 	return set
 }

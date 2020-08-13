@@ -36,7 +36,8 @@ var (
 )
 
 func (a *AddressSet_) Contain(address common.Address) bool {
-	return *a.Set[address]
+	_, ok := a.Set[address]
+	return ok
 }
 
 func (a *AddressSet_) Put(address common.Address) {

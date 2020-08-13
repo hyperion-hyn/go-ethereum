@@ -10,24 +10,25 @@ import (
 )
 
 var (
-	ErrSelfDelegationTooSmall      = errors.New("self delegation amount too small")
-	errStateDBIsMissing            = errors.New("no stateDB was provided")
-	errChainContextMissing         = errors.New("no chain context was provided")
-	errEpochMissing                = errors.New("no epoch was provided")
-	errBlockNumMissing             = errors.New("no block number was provided")
-	errNegativeAmount              = errors.New("amount can not be negative")
-	errInvalidSigner               = errors.New("invalid signer for staking transaction")
-	errDupIdentity                 = errors.New("validator identity exists")
-	errDuplicateSlotKeys           = errors.New("slot keys can not have duplicates")
-	errInsufficientBalanceForStake = errors.New("insufficient balance to stake")
-	errCommissionRateChangeTooHigh = errors.New("commission rate can not be higher than maximum commission rate")
-	errCommissionRateChangeTooFast = errors.New("change on commission rate can not be more than max change rate within the same epoch")
-	errDelegationTooSmall          = errors.New("delegation amount too small")
-	errNoRewardsToCollect          = errors.New("no rewards to collect")
-	errValidatorNotExist           = errors.New("staking validator does not exist")
-	errRedelegationNotExist        = errors.New("redelegation does not exist")
-	errInvalidValidatorOperator    = errors.New("invalid validator operator")
-	errInvalidTotalDelegation      = errors.New("total delegation can not be bigger than max_total_delegation", )
+	ErrSelfDelegationTooSmall          = errors.New("self delegation amount too small")
+	errStateDBIsMissing                = errors.New("no stateDB was provided")
+	errChainContextMissing             = errors.New("no chain context was provided")
+	errEpochMissing                    = errors.New("no epoch was provided")
+	errBlockNumMissing                 = errors.New("no block number was provided")
+	errNegativeAmount                  = errors.New("amount can not be negative")
+	errInvalidSigner                   = errors.New("invalid signer for staking transaction")
+	errDupIdentity                     = errors.New("validator identity exists")
+	errDuplicateSlotKeys               = errors.New("slot keys can not have duplicates")
+	errInsufficientBalanceForStake     = errors.New("insufficient balance to stake")
+	errCommissionRateChangeTooHigh     = errors.New("commission rate can not be higher than maximum commission rate")
+	errCommissionRateChangeTooFast     = errors.New("change on commission rate can not be more than max change rate within the same epoch")
+	errDelegationTooSmall              = errors.New("delegation amount too small")
+	errNoRewardsToCollect              = errors.New("no rewards to collect")
+	errValidatorNotExist               = errors.New("staking validator does not exist")
+	errRedelegationNotExist            = errors.New("redelegation does not exist")
+	errInvalidValidatorOperator        = errors.New("invalid validator operator")
+	errInvalidTotalDelegation          = errors.New("total delegation can not be bigger than max_total_delegation", )
+	errInsufficientBalanceToUndelegate = errors.New("insufficient balance to undelegate")
 )
 
 var (
@@ -39,7 +40,7 @@ type RestakingSignerQualificationVerifier interface {
 	VerifyEditValidatorMsg(stateDB vm.StateDB, msg *restaking.EditValidator, signer common.Address) error
 	VerifyRedelegateMsg(stateDB vm.StateDB, msg *restaking.Redelegate, signer common.Address) error
 	VerifyUnredelegateMsg(stateDB vm.StateDB, msg *restaking.Unredelegate, signer common.Address) error
-	VerifyCollectRedelRewardsMsg(stateDB vm.StateDB, msg *restaking.CollectRedelegationRewards, signer common.Address) error
+	VerifyCollectRedelRewardsMsg(stateDB vm.StateDB, msg *restaking.CollectReward, signer common.Address) error
 }
 
 type signerVerifierForTokenHolder struct {
@@ -97,7 +98,7 @@ func (s signerVerifierForTokenHolder) VerifyUnredelegateMsg(stateDB vm.StateDB, 
 	return nil
 }
 
-func (s signerVerifierForTokenHolder) VerifyCollectRedelRewardsMsg(stateDB vm.StateDB, msg *restaking.CollectRedelegationRewards, signer common.Address) error {
+func (s signerVerifierForTokenHolder) VerifyCollectRedelRewardsMsg(stateDB vm.StateDB, msg *restaking.CollectReward, signer common.Address) error {
 	if msg.DelegatorAddress != signer {
 		return errInvalidSigner
 	}
@@ -151,10 +152,7 @@ func VerifyCreateValidatorMsg(stateDB vm.StateDB, blockNum *big.Int, msg *restak
 		return nil, err
 	}
 
-	if err := checkValidatorDuplicatedFields(
-		stateDB,
-		msg.Description.Identity,
-		msg.SlotPubKeys); err != nil {
+	if err := checkValidatorDuplicatedFields(stateDB, msg.Description.Identity, restaking.NewBLSKeysWithBLSKey(msg.SlotPubKey)); err != nil {
 		return nil, err
 	}
 
@@ -193,10 +191,11 @@ func VerifyEditValidatorMsg(stateDB vm.StateDB, chainContext ChainContext, epoch
 		return errBlockNumMissing
 	}
 
-	if err := checkValidatorDuplicatedFields(
-		stateDB,
-		msg.Description.Identity,
-		restaking.BLSPublicKeys_{Keys: []*restaking.BLSPublicKey_{msg.SlotKeyToAdd}}); err != nil {
+	blsKeys := restaking.NewEmptyBLSKeys()
+	if msg.SlotKeyToAdd != nil {
+		blsKeys.Keys = append(blsKeys.Keys, msg.SlotKeyToAdd)
+	}
+	if err := checkValidatorDuplicatedFields(stateDB, msg.Description.Identity, blsKeys); err != nil {
 		return err
 	}
 
@@ -290,7 +289,7 @@ func VerifyUnredelegateMsg(stateDB vm.StateDB, epoch *big.Int, msg *restaking.Un
 	}
 
 	if redelegation.Amount().Value().Cmp(common.Big0) == 0 {
-		return errRedelegationNotExist
+		return errInsufficientBalanceToUndelegate
 	}
 	return nil
 }
@@ -300,7 +299,7 @@ func VerifyUnredelegateMsg(stateDB vm.StateDB, epoch *big.Int, msg *restaking.Un
 // edited validatorWrappers and the sum total of the rewards.
 //
 // Note that this function never updates the stateDB, it only reads from stateDB.
-func VerifyCollectRedelRewardsMsg(stateDB vm.StateDB, msg *restaking.CollectRedelegationRewards, signer common.Address) error {
+func VerifyCollectRedelRewardsMsg(stateDB vm.StateDB, msg *restaking.CollectReward, signer common.Address) error {
 	if stateDB == nil {
 		return errStateDBIsMissing
 	}

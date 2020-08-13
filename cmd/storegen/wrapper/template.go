@@ -413,7 +413,7 @@ func (s* Storage_{{.Name}}) Resize(length uint64) {
 func (s* Storage_{{.Name}}) Get(index int) ( *Storage_{{$elem.Type}} ) {
 	// Value: {{ printf "%#v" $elem }}
 	length := s.Length()
-	if length < index {
+	if length <= index {
 		s.Resize(uint64(index+1))
 	}
 

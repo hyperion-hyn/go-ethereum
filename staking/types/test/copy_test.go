@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/staking/effective"
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	"math/big"
 	"reflect"
@@ -21,7 +20,6 @@ func TestCopyValidatorWrapper(t *testing.T) {
 	}{
 		{makeNonZeroValidatorWrapper()},
 		{makeZeroValidatorWrapper()},
-		{restaking.ValidatorWrapper_{}},
 	}
 	for i, test := range tests {
 		cp := CopyValidatorWrapper(test.w)
@@ -50,6 +48,7 @@ func makeNonZeroValidatorWrapper() restaking.ValidatorWrapper_ {
 
 func makeZeroValidatorWrapper() restaking.ValidatorWrapper_ {
 	w := restaking.ValidatorWrapper_{
+		Validator:     makeZeroValidator(),
 		Redelegations: restaking.NewRelegationMap(),
 		BlockReward:   common.Big0,
 	}
@@ -64,7 +63,6 @@ func TestCopyValidator(t *testing.T) {
 	}{
 		{makeNonZeroValidator()},
 		{makeZeroValidator()},
-		{restaking.Validator_{}},
 	}
 	for i, test := range tests {
 		cp := CopyValidator(test.v)
@@ -85,10 +83,10 @@ func makeNonZeroValidator() restaking.Validator_ {
 	v := restaking.Validator_{
 		ValidatorAddress:     common.BigToAddress(common.Big0),
 		OperatorAddresses:    restaking.NewAddressSetWithAddress(common.BigToAddress(common.Big1)),
-		SlotPubKeys:          restaking.BLSPublicKeys_{Keys: []*restaking.BLSPublicKey_{&testPub}},
+		SlotPubKeys:          restaking.NewBLSKeysWithBLSKey(testPub),
 		LastEpochInCommittee: big.NewInt(20),
 		MaxTotalDelegation:   common.Big1,
-		Status:               big.NewInt(int64(effective.Active)),
+		Status:               uint8(restaking.Active),
 		Commission:           nonZeroCommission,
 		Description:          d,
 		CreationHeight:       big.NewInt(12306),
@@ -98,7 +96,8 @@ func makeNonZeroValidator() restaking.Validator_ {
 
 func makeZeroValidator() restaking.Validator_ {
 	v := restaking.Validator_{
-		SlotPubKeys:          restaking.BLSPublicKeys_{},
+		OperatorAddresses:    restaking.NewEmptyAddressSet(),
+		SlotPubKeys:          restaking.NewEmptyBLSKeys(),
 		LastEpochInCommittee: common.Big0,
 		MaxTotalDelegation:   common.Big0,
 		Commission:           zeroCommission,
@@ -206,7 +205,7 @@ func assertValidatorDeepCopy(v1, v2 restaking.Validator_) error {
 		return fmt.Errorf("SlotPubKeys same pointer")
 	}
 	for i := range v1.SlotPubKeys.Keys {
-		if v1.SlotPubKeys.Keys[i].Hex() == v2.SlotPubKeys.Keys[i].Hex() {
+		if v1.SlotPubKeys.Keys[i] == v2.SlotPubKeys.Keys[i] {
 			return fmt.Errorf("SlotPubKeys[%v] same address", i)
 		}
 	}

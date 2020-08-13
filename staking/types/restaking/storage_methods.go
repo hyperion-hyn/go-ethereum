@@ -182,11 +182,10 @@ func (s *Storage_Validator_) Save(validator *Validator_) {
 	if validator.CreationHeight != nil {
 		s.CreationHeight().SetValue(validator.CreationHeight)
 	}
-
 }
 
-// Storage_ValidatorWrapper_
 
+// Storage_ValidatorWrapper_
 func (s *Storage_ValidatorWrapper_) Save(validatorWrapper *ValidatorWrapper_) {
 	s.Validator().Save(&validatorWrapper.Validator)
 	s.Redelegations().Save(validatorWrapper.Redelegations)
@@ -205,7 +204,6 @@ func (s *Storage_ValidatorWrapper_) Save(validatorWrapper *ValidatorWrapper_) {
 	if validatorWrapper.TotalDelegationByOperator != nil {
 		s.TotalDelegationByOperator().SetValue(validatorWrapper.TotalDelegationByOperator)
 	}
-
 }
 
 func (s *Storage_ValidatorWrapper_) AddBlockReward(reward *big.Int) {
@@ -260,7 +258,6 @@ func (s *Storage_ValidatorWrapperMap_) Put(key common.Address, validator *Valida
 	sValidatorWrapperEntity.Save(validator)
 	//set map index
 	sValidatorWrapper.Index().SetValue(big.NewInt(0).Add(big.NewInt(int64(keysLength)), common.Big1)) //because index start with 1
-
 }
 
 func (s *Storage_ValidatorWrapperMap_) Contain(key common.Address) bool {
@@ -269,11 +266,9 @@ func (s *Storage_ValidatorWrapperMap_) Contain(key common.Address) bool {
 
 func (s *Storage_ValidatorWrapperMap_) Get(key common.Address) (*Storage_ValidatorWrapper_, bool) {
 	if s.Contain(key) {
-		return s.Map().Get(Address{}).Entry(), true
-	} else {
-		return nil, false
+		return s.Map().Get(key).Entry(), true
 	}
-
+	return nil, false
 }
 
 // Storage_Redelegation_
@@ -304,7 +299,6 @@ func (s *Storage_Redelegation_) Save(redelegation Redelegation_) {
 	if redelegation.Undelegation.Epoch != nil {
 		s.Undelegation().Epoch().SetValue(redelegation.Undelegation.Epoch)
 	}
-
 }
 func (s *Storage_Redelegation_) SetNil() {
 	s.DelegatorAddress().SetValue(common.BigToAddress(common.Big0))
@@ -369,11 +363,9 @@ func (s *Storage_RedelegationMap_) Remove(key common.Address) {
 
 	delegationElem.Entry().SetNil()
 	delegationElem.Index().SetValue(common.Big0)
-
 }
 
 func (s *Storage_RedelegationMap_) Save(relegationMap RedelegationMap_) {
-
 	relegationKeys := relegationMap.Keys
 	s.Keys().Resize(uint64(len(relegationKeys)))
 	for i := 0; i < len(relegationKeys); i++ {
@@ -384,18 +376,15 @@ func (s *Storage_RedelegationMap_) Save(relegationMap RedelegationMap_) {
 }
 
 // Storage_Slots_
-
 func (s *Storage_Slots_) Length() int {
 	return s.Entrys().Length()
 }
 
 func (s *Storage_Slots_) Load() []*Slot_ {
-
 	slotsLength := s.Length()
 	for i := 0; i < slotsLength; i++ {
 		s.Get(i).Load()
 	}
-
 	return s.obj.Entrys
 }
 
@@ -426,7 +415,6 @@ func (s *Storage_Slots_) Remove(index int, keepOrder bool) {
 
 	//resize slice
 	s.Entrys().Resize(uint64(oldEntriesLength - 1))
-
 }
 
 func (s *Storage_Slots_) Push(slot *Slot_) {

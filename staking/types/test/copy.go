@@ -26,15 +26,13 @@ func CopyValidatorWrapper(w restaking.ValidatorWrapper_) restaking.ValidatorWrap
 // CopyValidator deep copies restaking.Validator
 func CopyValidator(v restaking.Validator_) restaking.Validator_ {
 	cp := restaking.Validator_{
-		ValidatorAddress: v.ValidatorAddress,
-		Status:           v.Status,
-		Commission:       CopyCommission(v.Commission),
-		Description:      v.Description,
+		ValidatorAddress:  v.ValidatorAddress,
+		OperatorAddresses: CopyAddressSet(v.OperatorAddresses),
+		Status:            v.Status,
+		Commission:        CopyCommission(v.Commission),
+		Description:       v.Description,
 	}
-	if v.SlotPubKeys.Keys != nil {
-		cp.SlotPubKeys = restaking.BLSPublicKeys_{Keys:make([]*restaking.BLSPublicKey_, len(v.SlotPubKeys.Keys))}
-		copy(cp.SlotPubKeys.Keys, v.SlotPubKeys.Keys)
-	}
+	cp.SlotPubKeys = CopySlotPubKeys(v.SlotPubKeys)
 	if v.LastEpochInCommittee != nil {
 		cp.LastEpochInCommittee = new(big.Int).Set(v.LastEpochInCommittee)
 	}
@@ -47,6 +45,15 @@ func CopyValidator(v restaking.Validator_) restaking.Validator_ {
 	return cp
 }
 
+// CopyAddressSet deep copy the AddressSet
+func CopyAddressSet(s restaking.AddressSet_) restaking.AddressSet_ {
+	cp := restaking.NewEmptyAddressSet()
+	for _, k := range s.Keys {
+		cp.Put(*k)
+	}
+	return cp
+}
+
 // CopyCommission deep copy the Commission
 func CopyCommission(c restaking.Commission_) restaking.Commission_ {
 	cp := restaking.Commission_{
@@ -55,6 +62,20 @@ func CopyCommission(c restaking.Commission_) restaking.Commission_ {
 	if c.UpdateHeight != nil {
 		cp.UpdateHeight = new(big.Int).Set(c.UpdateHeight)
 	}
+	return cp
+}
+
+func CopySlotPubKeys(blsKeys restaking.BLSPublicKeys_) restaking.BLSPublicKeys_ {
+	cp := restaking.NewEmptyBLSKeys()
+	for i := 0; i < len(blsKeys.Keys); i++ {
+		c := CopySlotPubKey(*blsKeys.Keys[i])
+		cp.Keys = append(cp.Keys, &c)
+	}
+	return cp
+}
+
+func CopySlotPubKey(blsKey restaking.BLSPublicKey_) restaking.BLSPublicKey_ {
+	cp := restaking.BLSPublicKey_{Key: blsKey.Key}
 	return cp
 }
 

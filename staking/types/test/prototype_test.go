@@ -29,14 +29,13 @@ func TestGetDefaultValidatorWithAddr(t *testing.T) {
 		{
 			validatorAddr: common.BigToAddress(common.Big1),
 			operatorAddr:  common.BigToAddress(common.Big2),
-			keys:          restaking.BLSPublicKeys_{Keys: []*restaking.BLSPublicKey_{&testPub}},
+			keys:          restaking.NewBLSKeysWithBLSKey(testPub),
 		},
 		{
 			validatorAddr: common.Address{},
 			operatorAddr:  common.Address{},
-			keys:          restaking.BLSPublicKeys_{},
+			keys:          restaking.NewEmptyBLSKeys(),
 		},
-		{},
 	}
 	for i, test := range tests {
 		v := GetDefaultValidatorWithAddr(test.validatorAddr, test.operatorAddr, test.keys)
@@ -61,14 +60,13 @@ func TestGetDefaultValidatorWrapperWithAddr(t *testing.T) {
 		{
 			validatorAddr: common.BigToAddress(common.Big1),
 			operatorAddr:  common.BigToAddress(common.Big2),
-			keys:          restaking.BLSPublicKeys_{Keys: []*restaking.BLSPublicKey_{&testPub}},
+			keys:          restaking.NewBLSKeysWithBLSKey(testPub),
 		},
 		{
 			validatorAddr: common.Address{},
 			operatorAddr:  common.Address{},
-			keys:          restaking.BLSPublicKeys_{},
+			keys:          restaking.NewEmptyBLSKeys(),
 		},
-		{},
 	}
 	for i, test := range tests {
 		v := GetDefaultValidatorWrapperWithAddr(test.validatorAddr, test.operatorAddr, test.keys)

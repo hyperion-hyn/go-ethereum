@@ -5,7 +5,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/bls"
-	"github.com/ethereum/go-ethereum/staking/effective"
 	"github.com/pkg/errors"
 	"math/big"
 	"strings"
@@ -117,9 +116,8 @@ func TestValidator_SanityCheck(t *testing.T) {
 		},
 		{
 			func(v *Validator_) {
-				v.SlotPubKeys = BLSPublicKeys_{Keys: []*BLSPublicKey_{
-					&blsPubSigPairs[0].pub, &blsPubSigPairs[0].pub,
-				}}
+				v.SlotPubKeys = NewEmptyBLSKeys()
+				v.SlotPubKeys.Keys = append(v.SlotPubKeys.Keys, &blsPubSigPairs[0].pub, &blsPubSigPairs[0].pub)
 			},
 			errDuplicateSlotKeys,
 		},
@@ -353,10 +351,10 @@ func makeValidValidator() Validator_ {
 			Keys: []*Address{&operatorAddr},
 			Set:  map[Address]*Bool{operatorAddr: func() *bool { t := true; return &t }()},
 		},
-		SlotPubKeys: BLSPublicKeys_{Keys: []*BLSPublicKey_{&blsPubSigPairs[0].pub}},
+		SlotPubKeys: NewBLSKeysWithBLSKey(blsPubSigPairs[0].pub),
 		LastEpochInCommittee: big.NewInt(20),
 		MaxTotalDelegation:   twelveK,
-		Status:               big.NewInt(int64(effective.Active)),
+		Status:               uint8(Active),
 		Commission:           c,
 		Description:          d,
 		CreationHeight:       big.NewInt(12306),

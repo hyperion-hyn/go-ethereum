@@ -90,7 +90,7 @@ func (st *StateTransition) StakingTransitionDb() (usedGas uint64, err error) {
 		}
 		err = st.verifyAndApplyUnredelegateTx(stkMsg, msg.From())
 	case types.CollectRedelRewards:
-		stkMsg := &restaking.CollectRedelegationRewards{}
+		stkMsg := &restaking.CollectReward{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return 0, err
 		}
@@ -224,7 +224,7 @@ func (st *StateTransition) verifyAndApplyUnredelegateTx(msg *restaking.Unredeleg
 	return nil
 }
 
-func (st *StateTransition) verifyAndApplyCollectRedelRewards(msg *restaking.CollectRedelegationRewards, signer common.Address) (*big.Int, error) {
+func (st *StateTransition) verifyAndApplyCollectRedelRewards(msg *restaking.CollectReward, signer common.Address) (*big.Int, error) {
 	if err := VerifyCollectRedelRewardsMsg(st.state, msg, signer); err != nil {
 		return network.NoReward, err
 	}
