@@ -402,8 +402,8 @@ func (s* Storage_{{.Name}}) Length() (int) {
 	return int(rv.Big().Int64())
 }
 
-func (s* Storage_{{.Name}}) Resize(length uint64) {	
-	s.db.SetState(s.addr, common.BigToHash(s.slot), common.BigToHash(big.NewInt(0).SetUint64(length)))
+func (s* Storage_{{.Name}}) Resize(length int) {	
+	s.db.SetState(s.addr, common.BigToHash(s.slot), common.BigToHash(big.NewInt(0).SetUint64(uint64(length))))
 
 	slice := make([]*{{$elem.Type}}, length, length+50)
 	copy(slice, *s.obj)
@@ -414,11 +414,12 @@ func (s* Storage_{{.Name}}) Get(index int) ( *Storage_{{$elem.Type}} ) {
 	// Value: {{ printf "%#v" $elem }}
 	length := s.Length()
 	if length <= index {
-		s.Resize(uint64(index+1))
+		s.Resize(index+1)
 	}
 
 	hash := crypto.Keccak256Hash(common.BigToHash(s.slot).Bytes())
 	actual := big.NewInt(0).Add(hash.Big(), big.NewInt(0).SetUint64(uint64(index*({{$elem.SolKind.NumberOfBytes}}/32))))
+	offset := 0
 
 {{- if or (isptr $elem) (isslice $elem) (ismap $elem) }}
 	if (*s.obj)[index] == nil {
@@ -432,6 +433,8 @@ func (s* Storage_{{.Name}}) Get(index int) ( *Storage_{{$elem.Type}} ) {
 		db: s.db,
 		addr: s.addr,
 		slot: actual,
+		offset: offset,
+		numberOfBytes: {{$elem.SolKind.NumberOfBytes}},
 		dirty: s.dirty,
 	}
 }
@@ -465,7 +468,8 @@ func (s* Storage_{{.Name}}) Get(key {{$elemKey.Type}}) ( *Storage_{{$elemValue.T
 
 	hash := crypto.Keccak256Hash(append(keyBytes, common.BigToHash(s.slot).Bytes()...))
 	actual := hash.Big()
-	
+	offset := 0
+
 {{- if or (isptr $elemValue) (isslice $elemValue) (ismap $elemValue) }}
 	if s.obj[key] == nil {
 		{{template "new_instance" $elemValue}}
@@ -482,6 +486,8 @@ func (s* Storage_{{.Name}}) Get(key {{$elemKey.Type}}) ( *Storage_{{$elemValue.T
 		db: s.db,
 		addr: s.addr,
 		slot: actual,
+		offset: offset,
+		numberOfBytes: {{$elemValue.SolKind.NumberOfBytes}},	
 		dirty: s.dirty,
 	}
 }

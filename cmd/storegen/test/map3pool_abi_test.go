@@ -20,6 +20,7 @@ var (
 	_ = big.NewInt
 	_ = strings.NewReader
 	_ = ethereum.NotFound
+	_ = abi.U256
 	_ = bind.Bind
 	_ = common.Big1
 	_ = types.BloomLookup
@@ -27,7 +28,7 @@ var (
 )
 
 // Map3PoolWrapperABI is the input ABI used to generate the binding from.
-const Map3PoolWrapperABI = "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"Version\",\"outputs\":[{\"internalType\":\"int256\",\"name\":\"\",\"type\":\"int256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"Length\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
+const Map3PoolWrapperABI = "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"Length\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"Version\",\"outputs\":[{\"internalType\":\"int256\",\"name\":\"\",\"type\":\"int256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
 // Map3PoolWrapper is an auto generated Go binding around an Ethereum contract.
 type Map3PoolWrapper struct {
@@ -173,7 +174,7 @@ func (_Map3PoolWrapper *Map3PoolWrapperTransactorRaw) Transact(opts *bind.Transa
 
 // Length is a free data retrieval call binding the contract method 0x82172882.
 //
-// Solidity: function Length() view returns(uint256)
+// Solidity: function Length() constant returns(uint256)
 func (_Map3PoolWrapper *Map3PoolWrapperCaller) Length(opts *bind.CallOpts) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
@@ -185,21 +186,21 @@ func (_Map3PoolWrapper *Map3PoolWrapperCaller) Length(opts *bind.CallOpts) (*big
 
 // Length is a free data retrieval call binding the contract method 0x82172882.
 //
-// Solidity: function Length() view returns(uint256)
+// Solidity: function Length() constant returns(uint256)
 func (_Map3PoolWrapper *Map3PoolWrapperSession) Length() (*big.Int, error) {
 	return _Map3PoolWrapper.Contract.Length(&_Map3PoolWrapper.CallOpts)
 }
 
 // Length is a free data retrieval call binding the contract method 0x82172882.
 //
-// Solidity: function Length() view returns(uint256)
+// Solidity: function Length() constant returns(uint256)
 func (_Map3PoolWrapper *Map3PoolWrapperCallerSession) Length() (*big.Int, error) {
 	return _Map3PoolWrapper.Contract.Length(&_Map3PoolWrapper.CallOpts)
 }
 
 // Version is a free data retrieval call binding the contract method 0xbb62860d.
 //
-// Solidity: function Version() view returns(int256)
+// Solidity: function Version() constant returns(int256)
 func (_Map3PoolWrapper *Map3PoolWrapperCaller) Version(opts *bind.CallOpts) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
@@ -211,14 +212,14 @@ func (_Map3PoolWrapper *Map3PoolWrapperCaller) Version(opts *bind.CallOpts) (*bi
 
 // Version is a free data retrieval call binding the contract method 0xbb62860d.
 //
-// Solidity: function Version() view returns(int256)
+// Solidity: function Version() constant returns(int256)
 func (_Map3PoolWrapper *Map3PoolWrapperSession) Version() (*big.Int, error) {
 	return _Map3PoolWrapper.Contract.Version(&_Map3PoolWrapper.CallOpts)
 }
 
 // Version is a free data retrieval call binding the contract method 0xbb62860d.
 //
-// Solidity: function Version() view returns(int256)
+// Solidity: function Version() constant returns(int256)
 func (_Map3PoolWrapper *Map3PoolWrapperCallerSession) Version() (*big.Int, error) {
 	return _Map3PoolWrapper.Contract.Version(&_Map3PoolWrapper.CallOpts)
 }
