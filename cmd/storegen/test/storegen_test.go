@@ -90,13 +90,13 @@ func setupBlockchain(t *testing.T, abiJSON string, abiBin string) (common.Addres
 }
 
 func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.SimulatedBackend, addr common.Address) {
-	state, err := sim.Blockchain().State()
+	stateDB, err := sim.Blockchain().State()
 	if err != nil {
 		t.Errorf("could not get a new mutable state based on the current HEAD block")
 	}
 
 	var global Global_t
-	storage := New(&global, state, addr, big.NewInt(0))
+	storage := New(&global, stateDB, addr, big.NewInt(0))
 
 	{
 		// .Version
@@ -600,6 +600,33 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 				if amountStorage.Cmp(global.Pool.Nodes[addr1].Microdelegations[addr2].PendingDelegations[5].Amount) != 0 {
 					t.Errorf(" field expected to be %v instead received %v", global.Pool.Nodes[addr1].Microdelegations[addr2].PendingDelegations[5].Amount, amountStorage)
 				}
+			}
+		}
+	}
+
+	{
+		key := "0xA07306b4d845BD243Da172aeE557893172ccd04a"
+		expected := true
+		storageValue := storage.Pool().NodeKeySet().Get(key).Value()
+		t.Log("expected", expected, "received", storageValue)
+		if expected != storageValue {
+			t.Errorf(" field expected to be %v instead received %v", expected, storageValue)
+		}
+
+		if expected != *(global.Pool.NodeKeySet[key]) {
+			t.Errorf(" field expected to be %v instead %v", expected, *(global.Pool.NodeKeySet[key]))
+		}
+
+		expected = false
+		storage.Pool().NodeKeySet().Get(key).SetValue(expected)
+		{
+			storageValue := storage.Pool().NodeKeySet().Get(key).Value()
+			if expected != storageValue {
+				t.Errorf(" field expected to be %v instead received %v", expected, storageValue)
+			}
+
+			if expected != *(global.Pool.NodeKeySet[key]) {
+				t.Errorf(" field expected to be %v instead %v", expected, *(global.Pool.NodeKeySet[key]))
 			}
 		}
 	}
