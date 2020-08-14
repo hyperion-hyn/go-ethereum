@@ -608,7 +608,6 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 		key := "0xA07306b4d845BD243Da172aeE557893172ccd04a"
 		expected := true
 		storageValue := storage.Pool().NodeKeySet().Get(key).Value()
-		t.Log("expected", expected, "received", storageValue)
 		if expected != storageValue {
 			t.Errorf(" field expected to be %v instead received %v", expected, storageValue)
 		}
@@ -627,6 +626,69 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 
 			if expected != *(global.Pool.NodeKeySet[key]) {
 				t.Errorf(" field expected to be %v instead %v", expected, *(global.Pool.NodeKeySet[key]))
+			}
+		}
+	}
+
+	{
+		// .Node[].Microdelegations[].PendingDelegations[].Amount
+		//
+
+		// Set/Get
+		{
+			expected := 0
+			addr1 := common.HexToAddress("A07306b4d845BD243Da172aeE557893172ccd04a")
+			addr2 := common.HexToAddress("3CB0B0B6D52885760A5404eb0A593B979c88BcEF")
+			index := 0
+
+			amountStorage := storage.Pool().Nodes().Get(addr1).Microdelegations().Get(addr2).PendingDelegations().Get(index).Amount().Value()
+			if amountStorage.Cmp(big.NewInt(0).SetUint64(uint64(expected))) != 0 {
+				t.Errorf("response from calling contract was expected to be %v instead received %v", expected, amountStorage)
+			}
+
+			if amountStorage.Cmp(global.Pool.Nodes[addr1].Microdelegations[addr2].PendingDelegations[index].Amount) != 0 {
+				t.Errorf(" field expected to be %v instead received %v", global.Pool.Nodes[addr1].Microdelegations[addr2].PendingDelegations[index].Amount, amountStorage)
+			}
+
+			expected = 0xdead
+			storage.Pool().Nodes().Get(addr1).Microdelegations().Get(addr2).PendingDelegations().Get(index).Amount().SetValue(big.NewInt(0).SetUint64(uint64(expected)))
+
+			amountStorage = storage.Pool().Nodes().Get(addr1).Microdelegations().Get(addr2).PendingDelegations().Get(index).Amount().Value()
+			if amountStorage.Cmp(big.NewInt(0).SetUint64(uint64(expected))) != 0 {
+				t.Errorf("response from calling contract was expected to be %v instead received %v", expected, amountStorage)
+			}
+
+			if amountStorage.Cmp(global.Pool.Nodes[addr1].Microdelegations[addr2].PendingDelegations[index].Amount) != 0 {
+				t.Errorf(" field expected to be %v instead received %v", global.Pool.Nodes[addr1].Microdelegations[addr2].PendingDelegations[index].Amount, amountStorage)
+			}
+
+		}
+
+		{
+			expected := 0
+			addr1 := common.HexToAddress("A07306b4d845BD243Da172aeE557893172ccd04a")
+			addr2 := common.HexToAddress("3CB0B0B6D52885760A5404eb0A593B979c88BcEF")
+			index := 6
+
+			amountStorage := storage.Pool().Nodes().Get(addr1).Microdelegations().Get(addr2).PendingDelegations().Get(index).Amount().Value()
+			if amountStorage.Cmp(big.NewInt(0).SetUint64(uint64(expected))) != 0 {
+				t.Errorf("response from calling contract was expected to be %v instead received %v", expected, amountStorage)
+			}
+
+			if amountStorage.Cmp(global.Pool.Nodes[addr1].Microdelegations[addr2].PendingDelegations[index].Amount) != 0 {
+				t.Errorf(" field expected to be %v instead received %v", global.Pool.Nodes[addr1].Microdelegations[addr2].PendingDelegations[index].Amount, amountStorage)
+			}
+
+			expected = 0xbeef
+			storage.Pool().Nodes().Get(addr1).Microdelegations().Get(addr2).PendingDelegations().Get(index).Amount().SetValue(big.NewInt(0).SetUint64(uint64(expected)))
+
+			amountStorage = storage.Pool().Nodes().Get(addr1).Microdelegations().Get(addr2).PendingDelegations().Get(index).Amount().Value()
+			if amountStorage.Cmp(big.NewInt(0).SetUint64(uint64(expected))) != 0 {
+				t.Errorf("response from calling contract was expected to be %v instead received %v", expected, amountStorage)
+			}
+
+			if amountStorage.Cmp(global.Pool.Nodes[addr1].Microdelegations[addr2].PendingDelegations[index].Amount) != 0 {
+				t.Errorf(" field expected to be %v instead received %v", global.Pool.Nodes[addr1].Microdelegations[addr2].PendingDelegations[index].Amount, amountStorage)
 			}
 		}
 	}
