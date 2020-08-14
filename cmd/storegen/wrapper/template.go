@@ -74,6 +74,7 @@ var (
 	_ = common.Big1
 	_ = types.BloomLookup
 	_ = event.NewSubscription
+	_ = math.MaxInt32
 )
 
 // use backtick in text/template: https://github.com/golang/go/issues/18221
