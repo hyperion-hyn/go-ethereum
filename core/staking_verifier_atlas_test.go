@@ -847,7 +847,7 @@ func makeStateForReward(t *testing.T) *state.StateDB {
 	if err := addStateRewardForAddr(sdb, validatorAddr, reward00); err != nil {
 		t.Fatal(err)
 	}
-	sdb.IntermediateRoot(true)
+	sdb.IntermediateRoot(false)
 	return sdb
 }
 
