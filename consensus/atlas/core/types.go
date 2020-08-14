@@ -95,6 +95,7 @@ type message struct {
 	Address       common.Address
 	SignerPubKey  []byte
 	Signature     []byte
+	CommittedSeal []byte
 }
 
 // ==============================================
@@ -103,7 +104,7 @@ type message struct {
 
 // EncodeRLP serializes m into the Ethereum RLP format.
 func (m *message) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.Code, m.Msg, m.Address, m.Signature, m.CommittedSeal})
+	return rlp.Encode(w, []interface{}{m.Code, m.Msg, m.Address, m.Signature})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.

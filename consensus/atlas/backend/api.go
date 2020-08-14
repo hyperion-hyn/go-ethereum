@@ -19,6 +19,7 @@ package backend
 import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
+	"github.com/ethereum/go-ethereum/consensus/atlas"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
 )
@@ -34,7 +35,7 @@ type BlockSigners struct {
 	Number     uint64
 	Hash       common.Hash
 	Author     common.Address
-	Committers []common.Address
+	Committers []atlas.Validator
 }
 
 // SignerAddress returns the public address that is used to sign block headers in IBFT
@@ -115,7 +116,7 @@ func (api *API) GetSnapshotAtHash(hash common.Hash) (*Snapshot, error) {
 }
 
 // GetValidators retrieves the list of authorized validators at the specified block.
-func (api *API) GetValidators(number *rpc.BlockNumber) ([]common.Address, error) {
+func (api *API) GetValidators(number *rpc.BlockNumber) ([]atlas.Validator, error) {
 	// Retrieve the requested block number (or current if none requested)
 	var header *types.Header
 	if number == nil || *number == rpc.LatestBlockNumber {
@@ -135,7 +136,7 @@ func (api *API) GetValidators(number *rpc.BlockNumber) ([]common.Address, error)
 }
 
 // GetValidatorsAtHash retrieves the state snapshot at a given block.
-func (api *API) GetValidatorsAtHash(hash common.Hash) ([]common.Address, error) {
+func (api *API) GetValidatorsAtHash(hash common.Hash) ([]atlas.Validator, error) {
 	header := api.chain.GetHeaderByHash(hash)
 	if header == nil {
 		return nil, errUnknownBlock

@@ -177,83 +177,83 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 	// Iterate through the headers and create a new snapshot
 	snap := s.copy()
 
-	for _, header := range headers {
-		// Remove any votes on checkpoint blocks
-		number := header.Number.Uint64()
-		if number%s.Epoch == 0 {
-			snap.Votes = nil
-			snap.Tally = make(map[common.Address]Tally)
-		}
-		// Resolve the authorization key and check against validators
-		// ATLAS(zgx): validator come from signature and public key instead of recovery from signature.
-		validator, err := ecrecover(s, header)
-		if err != nil {
-			return nil, err
-		}
-		if _, v := snap.ValSet.GetByAddress(validator); v == nil {
-			return nil, errUnauthorized
-		}
-
-		// Header authorized, discard any previous votes from the validator
-		for i, vote := range snap.Votes {
-			// maybe a leading node can't sign a block;
-			if vote.Validator == validator && vote.Address == header.Coinbase {
-				// Uncast the vote from the cached tally
-				snap.uncast(vote.Address, vote.Authorize)
-
-				// Uncast the vote from the chronological list
-				snap.Votes = append(snap.Votes[:i], snap.Votes[i+1:]...)
-				break // only one vote allowed
-			}
-		}
-		// Tally up the new vote from the validator
-		var authorize bool
-		switch {
-		case bytes.Compare(header.Nonce[:], nonceAuthVote) == 0:
-			authorize = true
-		case bytes.Compare(header.Nonce[:], nonceDropVote) == 0:
-			authorize = false
-		default:
-			return nil, errInvalidVote
-		}
-		if snap.cast(header.Coinbase, authorize) {
-			snap.Votes = append(snap.Votes, &Vote{
-				Validator: validator,
-				Block:     number,
-				Address:   header.Coinbase,
-				Authorize: authorize,
-			})
-		}
-		// If the vote passed, update the list of validators
-		if tally := snap.Tally[header.Coinbase]; tally.Votes > snap.ValSet.Size()/2 {
-			if tally.Authorize {
-				snap.ValSet.AddValidator(header.Coinbase)
-			} else {
-				snap.ValSet.RemoveValidator(header.Coinbase)
-
-				// Discard any previous votes the deauthorized validator cast
-				for i := 0; i < len(snap.Votes); i++ {
-					if snap.Votes[i].Validator == header.Coinbase {
-						// Uncast the vote from the cached tally
-						snap.uncast(snap.Votes[i].Address, snap.Votes[i].Authorize)
-
-						// Uncast the vote from the chronological list
-						snap.Votes = append(snap.Votes[:i], snap.Votes[i+1:]...)
-
-						i--
-					}
-				}
-			}
-			// Discard any previous votes around the just changed account
-			for i := 0; i < len(snap.Votes); i++ {
-				if snap.Votes[i].Address == header.Coinbase {
-					snap.Votes = append(snap.Votes[:i], snap.Votes[i+1:]...)
-					i--
-				}
-			}
-			delete(snap.Tally, header.Coinbase)
-		}
-	}
+	// for _, header := range headers {
+	// 	// Remove any votes on checkpoint blocks
+	// 	number := header.Number.Uint64()
+	// 	if number%s.Epoch == 0 {
+	// 		snap.Votes = nil
+	// 		snap.Tally = make(map[common.Address]Tally)
+	// 	}
+	// 	// Resolve the authorization key and check against validators
+	// 	// ATLAS(zgx): validator come from signature and public key instead of recovery from signature.
+	// 	validator, err := ecrecover(s, header)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	if _, v := snap.ValSet.GetByAddress(validator); v == nil {
+	// 		return nil, errUnauthorized
+	// 	}
+	//
+	// 	// Header authorized, discard any previous votes from the validator
+	// 	for i, vote := range snap.Votes {
+	// 		// maybe a leading node can't sign a block;
+	// 		if vote.Validator == validator && vote.Address == header.Coinbase {
+	// 			// Uncast the vote from the cached tally
+	// 			snap.uncast(vote.Address, vote.Authorize)
+	//
+	// 			// Uncast the vote from the chronological list
+	// 			snap.Votes = append(snap.Votes[:i], snap.Votes[i+1:]...)
+	// 			break // only one vote allowed
+	// 		}
+	// 	}
+	// 	// Tally up the new vote from the validator
+	// 	var authorize bool
+	// 	switch {
+	// 	case bytes.Compare(header.Nonce[:], nonceAuthVote) == 0:
+	// 		authorize = true
+	// 	case bytes.Compare(header.Nonce[:], nonceDropVote) == 0:
+	// 		authorize = false
+	// 	default:
+	// 		return nil, errInvalidVote
+	// 	}
+	// 	if snap.cast(header.Coinbase, authorize) {
+	// 		snap.Votes = append(snap.Votes, &Vote{
+	// 			Validator: validator,
+	// 			Block:     number,
+	// 			Address:   header.Coinbase,
+	// 			Authorize: authorize,
+	// 		})
+	// 	}
+	// 	// If the vote passed, update the list of validators
+	// 	if tally := snap.Tally[header.Coinbase]; tally.Votes > snap.ValSet.Size()/2 {
+	// 		if tally.Authorize {
+	// 			snap.ValSet.AddValidator(header.Coinbase)
+	// 		} else {
+	// 			snap.ValSet.RemoveValidator(header.Coinbase)
+	//
+	// 			// Discard any previous votes the deauthorized validator cast
+	// 			for i := 0; i < len(snap.Votes); i++ {
+	// 				if snap.Votes[i].Validator == header.Coinbase {
+	// 					// Uncast the vote from the cached tally
+	// 					snap.uncast(snap.Votes[i].Address, snap.Votes[i].Authorize)
+	//
+	// 					// Uncast the vote from the chronological list
+	// 					snap.Votes = append(snap.Votes[:i], snap.Votes[i+1:]...)
+	//
+	// 					i--
+	// 				}
+	// 			}
+	// 		}
+	// 		// Discard any previous votes around the just changed account
+	// 		for i := 0; i < len(snap.Votes); i++ {
+	// 			if snap.Votes[i].Address == header.Coinbase {
+	// 				snap.Votes = append(snap.Votes[:i], snap.Votes[i+1:]...)
+	// 				i--
+	// 			}
+	// 		}
+	// 		delete(snap.Tally, header.Coinbase)
+	// 	}
+	// }
 	snap.Number += uint64(len(headers))
 	snap.Hash = headers[len(headers)-1].Hash()
 
@@ -261,14 +261,16 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 }
 
 // validators retrieves the list of authorized validators in ascending order.
-func (s *Snapshot) validators() []common.Address {
-	validators := make([]common.Address, 0, s.ValSet.Size())
+func (s *Snapshot) validators() []atlas.Validator {
+	validators := make([]atlas.Validator, 0, s.ValSet.Size())
 	for _, validator := range s.ValSet.List() {
-		validators = append(validators, validator.Address())
+		validators = append(validators, validator)
 	}
 	for i := 0; i < len(validators); i++ {
 		for j := i + 1; j < len(validators); j++ {
-			if bytes.Compare(validators[i][:], validators[j][:]) > 0 {
+			addri := validators[i].Address()
+			addrj := validators[j].Address()
+			if bytes.Compare(addri[:], addrj[:]) > 0 {
 				validators[i], validators[j] = validators[j], validators[i]
 			}
 		}
@@ -284,7 +286,7 @@ type snapshotJSON struct {
 	Tally  map[common.Address]Tally `json:"tally"`
 
 	// for validator set
-	Validators []common.Address     `json:"validators"`
+	Validators []atlas.Validator     `json:"validators"`
 	Policy     atlas.ProposerPolicy `json:"policy"`
 }
 

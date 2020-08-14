@@ -547,3 +547,7 @@ func (lc *LightChain) DisableCheckFreq() {
 func (lc *LightChain) EnableCheckFreq() {
 	atomic.StoreInt32(&lc.disableCheckFreq, 0)
 }
+
+// Database retrieves the blockchain's database.
+func (lc *LightChain) Database() ethdb.Database { return lc.chainDb }
+

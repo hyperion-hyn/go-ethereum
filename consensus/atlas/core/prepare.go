@@ -34,7 +34,7 @@ func (c *core) sendPrepare() {
 	logger := c.logger.New("state", c.state)
 
 	hash := c.current.Preprepare.Proposal.Hash()
-	sign, err := c.backend.Sign(hash.Bytes())
+	sign, _, err := c.backend.Sign(hash.Bytes())
 	signer := c.backend.Signer().Bytes()
 	if err != nil {
 		logger.Error("Failed to sign", "view", c.currentView())

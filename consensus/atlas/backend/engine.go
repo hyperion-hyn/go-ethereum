@@ -231,15 +231,7 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 	if parent.Time+sb.config.BlockPeriod > header.Time {
 		return errInvalidTimestamp
 	}
-	// Verify validators in extraData. Validators in snapshot and extraData should be the same.
-	snap, err := sb.snapshot(chain, number-1, header.ParentHash, parents)
-	if err != nil {
-		return err
-	}
-	validators := make([]byte, len(snap.validators())*common.AddressLength)
-	for i, validator := range snap.validators() {
-		copy(validators[i*common.AddressLength:], validator[:])
-	}
+
 	if err := sb.verifySigner(chain, header, parents); err != nil {
 		return err
 	}
@@ -718,7 +710,7 @@ func ecrecover(snap * Snapshot, header *types.Header) (common.Address, error) {
 }
 
 // prepareExtra returns a extra-data of the given header and validators
-func prepareExtra(header *types.Header, vals []common.Address) ([]byte, error) {
+func prepareExtra(header *types.Header, vals []atlas.Validator) ([]byte, error) {
 	var buf bytes.Buffer
 
 	// compensate the lack bytes if header.Extra is not enough AtlasExtraVanity bytes.

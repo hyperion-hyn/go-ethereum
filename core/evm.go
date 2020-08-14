@@ -60,7 +60,6 @@ func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author
 		GasLimit:    header.GasLimit,
 		GasPrice:    new(big.Int).Set(msg.GasPrice()),
 		EpochNumber: header.Epoch(),
-		ChainContext:chain,
 	}
 }
 

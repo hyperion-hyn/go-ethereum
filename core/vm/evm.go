@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
 )
@@ -93,8 +92,6 @@ type Context struct {
 	EpochNumber *big.Int       // Provides information for EPOCH
 	Time        *big.Int       // Provides information for TIME
 	Difficulty  *big.Int       // Provides information for DIFFICULTY
-
-	ChainContext core.ChainContext
 }
 
 // EVM is the Ethereum Virtual Machine base object and provides

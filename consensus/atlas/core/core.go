@@ -40,7 +40,7 @@ func New(backend atlas.Backend, config *atlas.Config) Engine {
 	c := &core{
 		config:             config,
 		address:            backend.Address(),
-		signerPubKey:       backend.Signer(),
+		signerPubKey:       backend.Signer(), // TODO(zgx): signerPubKey
 		state:              StateAcceptRequest,
 		handlerWg:          new(sync.WaitGroup),
 		logger:             log.New("address", backend.Address()),
@@ -120,7 +120,7 @@ func (c *core) finalizeMessage(msg *message) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	msg.Signature, err = c.backend.Sign(data)
+	msg.Signature, _, err = c.backend.Sign(data)
 	if err != nil {
 		return nil, err
 	}
