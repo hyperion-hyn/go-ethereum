@@ -186,6 +186,8 @@ func main() {
 		doWindowsInstaller(os.Args[2:])
 	case "aar":
 		doAndroidArchive(os.Args[2:])
+	case "aar_lib":
+		doAndroidLibArchive(os.Args[2:])
 	case "xcode":
 		doXCodeFramework(os.Args[2:])
 	case "xgo":
@@ -874,6 +876,19 @@ func doAndroidArchive(cmdline []string) {
 			"-Dgpg.keyname="+keyID,
 			"-DpomFile="+meta.Package+".pom", "-Dfile="+meta.Package+".aar")
 	}
+}
+
+func doAndroidLibArchive(cmdline []string) {
+	// Sanity check that the SDK and NDK are installed and set
+	if os.Getenv("ANDROID_HOME") == "" {
+		log.Fatal("Please ensure ANDROID_HOME points to your Android SDK")
+	}
+	// Build the Android archive and Maven resources
+	build.MustRun(goTool("get", "golang.org/x/mobile/cmd/gomobile", "golang.org/x/mobile/cmd/gobind"))
+	build.MustRun(gomobileTool("bind", "--target", "android/arm,android/arm64", "--javapkg", "org.ethereum", "-v", "github.com/ethereum/go-ethereum/mobile_lib"))
+
+	os.Rename("mobile_lib.aar", filepath.Join(GOBIN, "mobile_lib.aar"))
+	os.Rename("mobile_lib-sources.jar", filepath.Join(GOBIN, "mobile_lib-sources.jar"))
 }
 
 func gomobileTool(subcmd string, args ...string) *exec.Cmd {

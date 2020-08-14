@@ -25,6 +25,11 @@ android:
 	@echo "Done building."
 	@echo "Import \"$(GOBIN)/geth.aar\" to use the library."
 
+android_lib:
+	$(GORUN) build/ci.go aar_lib
+	@echo "Done building."
+	@echo "Import \"$(GOBIN)/mobile_lib.aar\" to use the library."
+
 ios:
 	$(GORUN) build/ci.go xcode --local
 	@echo "Done building."
