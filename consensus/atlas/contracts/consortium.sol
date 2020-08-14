@@ -15,4 +15,9 @@ contract consortium {
 
     constructor() public{
     }
+
+    function Version() public view returns (int32) {
+        return 22;
+    }
 }
+

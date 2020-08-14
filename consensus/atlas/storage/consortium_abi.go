@@ -28,7 +28,7 @@ var (
 )
 
 // ConsortiumABI is the input ABI used to generate the binding from.
-const ConsortiumABI = "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"}]"
+const ConsortiumABI = "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"Version\",\"outputs\":[{\"internalType\":\"int32\",\"name\":\"\",\"type\":\"int32\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
 // Consortium is an auto generated Go binding around an Ethereum contract.
 type Consortium struct {
@@ -170,4 +170,30 @@ func (_Consortium *ConsortiumTransactorRaw) Transfer(opts *bind.TransactOpts) (*
 // Transact invokes the (paid) contract method with params as input values.
 func (_Consortium *ConsortiumTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
 	return _Consortium.Contract.contract.Transact(opts, method, params...)
+}
+
+// Version is a free data retrieval call binding the contract method 0xbb62860d.
+//
+// Solidity: function Version() constant returns(int32)
+func (_Consortium *ConsortiumCaller) Version(opts *bind.CallOpts) (int32, error) {
+	var (
+		ret0 = new(int32)
+	)
+	out := ret0
+	err := _Consortium.contract.Call(opts, out, "Version")
+	return *ret0, err
+}
+
+// Version is a free data retrieval call binding the contract method 0xbb62860d.
+//
+// Solidity: function Version() constant returns(int32)
+func (_Consortium *ConsortiumSession) Version() (int32, error) {
+	return _Consortium.Contract.Version(&_Consortium.CallOpts)
+}
+
+// Version is a free data retrieval call binding the contract method 0xbb62860d.
+//
+// Solidity: function Version() constant returns(int32)
+func (_Consortium *ConsortiumCallerSession) Version() (int32, error) {
+	return _Consortium.Contract.Version(&_Consortium.CallOpts)
 }
