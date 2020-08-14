@@ -284,7 +284,7 @@ func CreateConsensusEngine(ctx *node.ServiceContext, chainConfig *params.ChainCo
 		config.Atlas.ProposerPolicy = atlas.ProposerPolicy(chainConfig.Atlas.ProposerPolicy)
 		config.Atlas.Ceil2Nby3Block = chainConfig.Atlas.Ceil2Nby3Block
 
-		return atlasBackend.New(&config.Atlas, ctx.NodeKey(), db)
+		return atlasBackend.New(&config.Atlas, ctx.NodeKey(), db, ctx.SignerKey())
 	}
 
 

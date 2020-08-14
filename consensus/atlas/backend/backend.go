@@ -24,6 +24,7 @@ import (
 	"time"
 
 	lru "github.com/hashicorp/golang-lru"
+	"github.com/hyperion-hyn/bls/ffi/go/bls"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
@@ -49,7 +50,7 @@ var (
 )
 
 // New creates an Ethereum backend for Atlas core engine.
-func New(config *atlas.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database) consensus.Atlas {
+func New(config *atlas.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database, signerKey *bls.SecretKey) consensus.Atlas {
 	// Allocate the snapshot caches and create the engine
 	recents, _ := lru.NewARC(inmemorySnapshots)
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
@@ -60,6 +61,8 @@ func New(config *atlas.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database) 
 		atlasEventMux: new(event.TypeMux),
 		privateKey:    privateKey,
 		address:       crypto.PubkeyToAddress(privateKey.PublicKey),
+		signerKey:     signerKey,
+		signer:        crypto.PubkeyToSigner(signerKey.GetPublicKey()),
 		logger:        log.New(),
 		db:            db,
 		commitCh:      make(chan *types.Block, 1),
@@ -86,6 +89,7 @@ type backend struct {
 	privateKey    *ecdsa.PrivateKey
 	address       common.Address
 
+	signerKey     *bls.SecretKey
 	signer        common.Address
 	signFn        consensus.SignerFn       // Signer function to authorize hashes with
 	lock          sync.RWMutex   // Protects the signer fields
@@ -131,6 +135,11 @@ func (sb *backend) Address() common.Address {
 // Signer implements atlas.Backend.Signer
 func (sb *backend) Signer() common.Address {
 	return sb.signer
+}
+
+// SignerKey implements atlas.Backend.SignerKey
+func (sb *backend) SignerKey() []byte {
+	return sb.signerKey.GetPublicKey().Serialize()
 }
 
 // Validators implements atlas.Backend.Validators
