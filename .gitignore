@@ -38,6 +38,8 @@ profile.cov
 # VS Code
 .vscode
 
+.env
+
 # dashboard
 /dashboard/assets/flow-typed
 /dashboard/assets/node_modules
