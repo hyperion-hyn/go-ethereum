@@ -19,7 +19,7 @@ type CreateValidator struct {
 type EditValidator struct {
 	ValidatorAddress   common.Address  `json:"validator-address"`
 	OperatorAddress    common.Address  `json:"operator-address"`
-	Description        *Description_   `json:"description"`
+	Description        Description_   `json:"description"`
 	CommissionRate     *common.Dec     `json:"commission-rate" rlp:"nil"`
 	MaxTotalDelegation *big.Int        `json:"max-total-delegation"`
 	SlotKeyToRemove    *BLSPublicKey_  `json:"slot-key-to_remove" rlp:"nil"`

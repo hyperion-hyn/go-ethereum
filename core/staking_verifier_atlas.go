@@ -20,7 +20,6 @@ var (
 	errDupIdentity                     = errors.New("validator identity exists")
 	errDuplicateSlotKeys               = errors.New("slot keys can not have duplicates")
 	errInsufficientBalanceForStake     = errors.New("insufficient balance to stake")
-	errCommissionRateChangeTooHigh     = errors.New("commission rate can not be higher than maximum commission rate")
 	errCommissionRateChangeTooFast     = errors.New("change on commission rate can not be more than max change rate within the same epoch")
 	errDelegationTooSmall              = errors.New("delegation amount too small")
 	errNoRewardsToCollect              = errors.New("no rewards to collect")
@@ -216,18 +215,14 @@ func VerifyEditValidatorMsg(stateDB vm.StateDB, chainContext ChainContext, epoch
 		return err
 	}
 
+	// check max change at one epoch
 	newRate := validator.Commission.CommissionRates.Rate
-	if newRate.GT(validator.Commission.CommissionRates.MaxRate) {
-		return errCommissionRateChangeTooHigh
-	}
-
 	validatorSnapshot, err := chainContext.ReadValidatorAtEpoch(epoch, msg.ValidatorAddress)
 	if err != nil {
 		return err
 	}
-
 	rateAtBeginningOfEpoch := validatorSnapshot.Validator().Commission().CommissionRates().Rate().Value()
-	if newRate.Sub(rateAtBeginningOfEpoch).Abs().GT(validator.Commission.CommissionRates.MaxChangeRate, ) {
+	if newRate.Sub(rateAtBeginningOfEpoch).Abs().GT(validator.Commission.CommissionRates.MaxChangeRate) {
 		return errCommissionRateChangeTooFast
 	}
 

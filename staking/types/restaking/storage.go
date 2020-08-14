@@ -6,7 +6,7 @@ import (
 )
 
 // Storage_Description_
-func (s *Storage_Description_) UpdateDescription(newDesc *Description_) {
+func (s *Storage_Description_) UpdateDescription(newDesc Description_) {
 	if newDesc.Name != "" {
 		s.Name().SetValue(newDesc.Name)
 	}

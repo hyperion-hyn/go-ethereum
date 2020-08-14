@@ -439,7 +439,7 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 				}(),
 				signer: operatorAddr,
 			},
-			wantErr: errDupIdentity,
+			wantErr: errors.New("bls keys and corresponding signatures could not be verified"),
 		},
 		{
 			name: "rate exceed maxRate",
@@ -455,7 +455,7 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 				}(),
 				signer: operatorAddr,
 			},
-			wantErr: errCommissionRateChangeTooHigh,
+			wantErr: errors.New("rate:1.000000000000000000 max rate:0.900000000000000000"),
 		},
 		{
 			name: "rate exceed maxChangeRate",
@@ -476,7 +476,6 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 		{
 			name: "banned validator",
 			args: args{
-				//stateDB:      makeStateDBForStake(t),
 				stateDB: func(t *testing.T) *state.StateDB {
 					sdb := makeStateDBForStake(t)
 					vw, err := sdb.ValidatorByAddress(validatorAddr)
@@ -528,7 +527,7 @@ func defaultMsgEditValidator() restaking.EditValidator {
 	return restaking.EditValidator{
 		ValidatorAddress: validatorAddr,
 		OperatorAddress:  operatorAddr,
-		Description:      &editDesc,
+		Description:      editDesc,
 		CommissionRate:   &pointTwoDec,
 		SlotKeyToRemove:  &pub0Copy,
 		SlotKeyToAdd:     &pub12Copy,
@@ -962,11 +961,12 @@ func (chain *fakeChainContext) Engine() consensus.Engine {
 }
 
 func (chain *fakeChainContext) GetHeader(common.Hash, uint64) *types.Header {
-	return nil
+	panic("no implement")
 }
 
-func (chain *fakeChainContext) ReadValidatorAtEpoch(*big.Int, common.Address) (*restaking.Storage_ValidatorWrapper_, error) {
-	panic("implement me")
+func (chain *fakeChainContext) ReadValidatorAtEpoch(epoch *big.Int, validator common.Address) (*restaking.Storage_ValidatorWrapper_, error) {
+	stateDB := chain.stateDBs[epoch.Uint64()]
+	return stateDB.ValidatorByAddress(validatorAddr)
 }
 
 func makeIdentityStr(item interface{}) string {
