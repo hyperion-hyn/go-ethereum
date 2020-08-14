@@ -195,7 +195,7 @@ func (st *StateTransition) verifyAndApplyRedelegateTx(msg *restaking.Redelegate,
 		redelegation.Amount().SetValue(big.NewInt(0).Add(amt, defaultStakingAmount))
 	} else {
 		m := restaking.NewRedelegation(msg.DelegatorAddress, defaultStakingAmount)
-		wrapper.Redelegations().Put(msg.DelegatorAddress, m)
+		wrapper.Redelegations().Put(msg.DelegatorAddress, &m)
 	}
 	wrapper.AddTotalDelegation(defaultStakingAmount)
 	if isOperator(wrapper, msg.DelegatorAddress) {

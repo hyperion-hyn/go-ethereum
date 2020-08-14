@@ -86,9 +86,9 @@ func CopyDelegationMap(ds restaking.RedelegationMap_) restaking.RedelegationMap_
 		return cp
 	}
 	for _, key := range ds.Keys {
-		d := ds.Get(*key)
-		cd := CopyDelegation(*d)
-		cp.Put(*key, &cd)
+		d, _ := ds.Get(*key)
+		cd := CopyDelegation(d)
+		cp.Put(*key, cd)
 	}
 	return cp
 }

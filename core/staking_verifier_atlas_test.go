@@ -693,10 +693,10 @@ func TestVerifyUnredelegateMsg(t *testing.T) {
 				epoch:   big.NewInt(defaultEpoch),
 				msg: func() restaking.Unredelegate {
 					msg := defaultMsgUndelegate()
-					msg.DelegatorAddress = makeTestAddr("addr not in chain")
+					msg.DelegatorAddress = delegatorAddr
 					return msg
 				}(),
-				signer: makeTestAddr("addr not in chain"),
+				signer: delegatorAddr,
 			},
 			wantErr: errInsufficientBalanceToUndelegate,
 		},
@@ -721,7 +721,7 @@ func makeDefaultSnapVWrapperForUndelegate() restaking.ValidatorWrapper_ {
 			Epoch:  defaultStakingAmount,
 		},
 	}
-	w.Redelegations.Put(delegatorAddr, &newRedelegation)
+	w.Redelegations.Put(delegatorAddr, newRedelegation)
 	return w
 }
 
@@ -731,7 +731,7 @@ func makeDefaultStateForUndelegate(t *testing.T) *state.StateDB {
 	if err := updateStateValidators(sdb, []*restaking.ValidatorWrapper_{&w}); err != nil {
 		t.Fatal(err)
 	}
-	sdb.IntermediateRoot(true)
+	sdb.IntermediateRoot(false)
 	return sdb
 }
 

@@ -45,9 +45,8 @@ func (a *AddressSet_) Put(address common.Address) {
 		return
 	}
 	a.Keys = append(a.Keys, &address)
-	a.Set[address] = func() *bool {t := true; return &t}()
+	a.Set[address] = func() *bool { t := true; return &t }()
 }
-
 
 // BLSSignature defines the bls signature
 type BLSSignature [BLSSignatureSizeInBytes]byte
@@ -135,7 +134,6 @@ func (d *Description_) EnsureLength() error {
 	return nil
 }
 
-
 // Copy deep copies the staking.CommissionRates
 func (cr *CommissionRates_) Copy() CommissionRates_ {
 	return CommissionRates_{
@@ -144,7 +142,6 @@ func (cr *CommissionRates_) Copy() CommissionRates_ {
 		MaxChangeRate: cr.MaxChangeRate.Copy(),
 	}
 }
-
 
 var (
 	hundredPercent = common.OneDec()
@@ -184,7 +181,6 @@ func (e ValidatorStatus) String() string {
 		return "unknown"
 	}
 }
-
 
 // SanityCheck checks basic requirements of a validator
 func (v *Validator_) SanityCheck(maxSlotKeyAllowed int) error {
@@ -257,19 +253,42 @@ func (v *Validator_) SanityCheck(maxSlotKeyAllowed int) error {
 }
 
 func (r *RedelegationMap_) Contain(delegator Address) bool {
-	return false
+	_, ok := r.Map[delegator]
+	return ok
 }
 
-func (r *RedelegationMap_) Put(delegator Address, redelegation *Redelegation_) {
+func (r *RedelegationMap_) Put(delegator Address, redelegation Redelegation_) {
+	entry, ok := r.Map[delegator]
+	if ok {
+		entry.Entry = redelegation
+	} else {
+		r.Keys = append(r.Keys, &delegator)
+		r.Map[delegator] = &RedelegationMapEntry_{
+			Entry: redelegation,
+			Index: big.NewInt(int64(len(r.Keys))),
+		}
+	}
 }
 
 func (r *RedelegationMap_) Remove(delegator Address) {
+	if valueEntry, ok := r.Map[delegator]; ok {
+		index := valueEntry.Index.Uint64()
+		if int(index) != len(r.Keys) { // the last one
+			lastDelegator := r.Keys[len(r.Keys) - 1]
+			r.Keys[index - 1] = lastDelegator
+			r.Map[*lastDelegator].Index = big.NewInt(int64(index))
+		}
+		r.Keys = r.Keys[:len(r.Keys)-1]
+		delete(r.Map, delegator)
+	}
 }
 
-func (r *RedelegationMap_) Get(delegator Address) *Redelegation_ {
-	return nil
+func (r *RedelegationMap_) Get(delegator Address) (Redelegation_, bool) {
+	if entry, ok := r.Map[delegator]; ok {
+		return entry.Entry, true
+	}
+	return Redelegation_{}, false
 }
-
 
 // BLSPublicKeys ..
 func (c *Committee_) BLSPublicKeys() ([]*bls.PublicKey, error) {

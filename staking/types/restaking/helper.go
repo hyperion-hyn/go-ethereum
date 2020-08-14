@@ -178,8 +178,8 @@ func UpdateValidatorFromEditMsg(validator *Validator_, edit *EditValidator) erro
 }
 
 // NewDelegation creates a new delegation object
-func NewRedelegation(delegatorAddr common.Address, amount *big.Int) *Redelegation_ {
-	return &Redelegation_{
+func NewRedelegation(delegatorAddr common.Address, amount *big.Int) Redelegation_ {
+	return Redelegation_{
 		DelegatorAddress: delegatorAddr,
 		Amount:           amount,
 		Reward:           big.NewInt(0),

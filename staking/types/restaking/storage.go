@@ -247,6 +247,7 @@ func (s *Storage_ValidatorWrapperMap_) AllKeys() []common.Address {
 }
 
 func (s *Storage_ValidatorWrapperMap_) Put(key common.Address, validator *ValidatorWrapper_) {
+	// TODO(DH): replace old object
 	keysLength := s.Keys().Length()
 	//set keys
 	s.Keys().Get(keysLength).SetValue(key)
@@ -339,7 +340,7 @@ func (s *Storage_RedelegationMap_) Contain(key common.Address) bool {
 
 func (s *Storage_RedelegationMap_) Get(key common.Address) (*Storage_Redelegation_, bool) {
 	if s.Contain(key) {
-		return s.Map().Get(Address{}).Entry(), true
+		return s.Map().Get(key).Entry(), true
 	} else {
 		return nil, false
 	}
@@ -372,6 +373,7 @@ func (s *Storage_RedelegationMap_) Save(relegationMap RedelegationMap_) {
 		addressTemp := relegationKeys[i]
 		s.Keys().Get(i).SetValue(*addressTemp)
 		s.Map().Get(*addressTemp).Entry().Save(relegationMap.Map[*addressTemp].Entry)
+		s.Map().Get(*addressTemp).Index().SetValue(relegationMap.Map[*addressTemp].Index)
 	}
 }
 
