@@ -4,8 +4,11 @@ import (
     "bytes"
     "math/big"
 
-    "github.com/ethereum/go-ethereum/block"
     "github.com/ethereum/go-ethereum/consensus/votepower"
+    "github.com/harmony-one/harmony/block"
+    "github.com/harmony-one/harmony/shard/committee"
+    "github.com/pkg/errors"
+
     "github.com/ethereum/go-ethereum/core/rawdb"
     "github.com/ethereum/go-ethereum/core/state"
     "github.com/ethereum/go-ethereum/core/types"

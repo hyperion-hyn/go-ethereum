@@ -23,15 +23,14 @@ import (
 
 	"github.com/hyperion-hyn/bls/ffi/go/bls"
 	bls_cosi "github.com/ethereum/go-ethereum/crypto/bls"
-	"github.com/ethereum/go-ethereum/staking"
 	"math/big"
-	"sort"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
+	"github.com/ethereum/go-ethereum/consensus/atlas/storage"
 	"github.com/ethereum/go-ethereum/consensus/atlas/validator"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -48,6 +47,10 @@ const (
 	inmemoryPeers      = 40
 	inmemoryMessages   = 1024
 	MaxValidatorCount  = 88
+)
+
+const (
+	CONSORTIUM_BOARD = "0xa40bFc4701562c3fBe246E1da2Ac980c929b7d3e"
 )
 
 var (
@@ -603,12 +606,11 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 			if err := sb.VerifyHeader(chain, genesis, false); err != nil {
 				return nil, err
 			}
-			// ATLAS(yhx): get validators from storage
 			stateDB, err := chain.StateAt(chain.GetBlock(hash, number).Root())
 			if err != nil {
 				return nil, err
 			}
-			validators, err := getLargestAmountStakingValidators(stateDB, MaxValidatorCount)
+			validators, err := getValidators(stateDB, MaxValidatorCount)
 			if err != nil {
 				return nil, err
 			}
@@ -789,38 +791,22 @@ func writeCommittedSeals(h *types.Header, signature []byte, bitmap []byte) error
 	return nil
 }
 
-// ATLAS(yhx): getLargestAmountStakingValidators
-func getLargestAmountStakingValidators(state *state.StateDB, numVal int) ([]staking.Validator, error) {
-	container := state.GetStakingInfo(staking.StakingInfoAddress)
+// ATLAS(yhx): getValidators
+func getValidators(state *state.StateDB, numVal int) ([]atlas.Validator, error) {
+	var global storage.Global_t
 
-	// ATLAS(yhx): sort validators based on staking amount, select top numVal validators
-	if container == nil {
-		return nil, errValidatorNotExist
-	}
-	amount := make(map[common.Address]*big.Int)
-	for _, val := range container.Validators {
-		amount[val.Validator.Address] = val.Amount()
+	wrapper := storage.New(&global, state, common.HexToAddress(CONSORTIUM_BOARD),big.NewInt(0))
+	length := wrapper.Committee().Members().Length()
+	validators := make([]atlas.Validator, length)
+	for i := 0; i < length ; i++ {
+		member := wrapper.Committee().Members().Get(i)
+		validator, err := validator.New(member.Coinbase().Value(), member.PublicKey().Value())
+		if err != nil {
+			// ATLAS(zgx): just ignore invalid validator?
+			continue
+		}
+		validators[i] = validator
 	}
 
-	// sort by amount
-	type pair struct {
-		key   common.Address
-		value *big.Int
-	}
-	var pairs []pair
-	for k, v := range amount {
-		pairs = append(pairs, pair{k, v})
-	}
-	sort.Slice(pairs, func(i, j int) bool {
-		return pairs[i].value.Cmp(pairs[j].value) > 0
-	})
-
-	if numVal > len(pairs) {
-		numVal = len(pairs)
-	}
-	addresses := make([]common.Address, numVal)
-	for i := 0; i < numVal; i++ {
-		addresses[i] = pairs[i].key
-	}
-	return addresses, nil
+	return validators, nil
 }

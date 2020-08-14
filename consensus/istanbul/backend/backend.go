@@ -18,7 +18,6 @@ package backend
 
 import (
 	"crypto/ecdsa"
-	"github.com/ethereum/go-ethereum/accounts"
 	"math/big"
 	"sync"
 	"time"
@@ -66,31 +65,6 @@ func New(config *istanbul.Config, privateKey *ecdsa.PrivateKey, db ethdb.Databas
 	return backend
 }
 
-// ATLAS: // New creates an Ethereum backend with wallet for Istanbul core engine
-func NewWithWallet(config *istanbul.Config, wallet accounts.Wallet, db ethdb.Database) consensus.Istanbul {
-	// Allocate the snapshot caches and create the engine
-	recents, _ := lru.NewARC(inmemorySnapshots)
-	recentMessages, _ := lru.NewARC(inmemoryPeers)
-	knownMessages, _ := lru.NewARC(inmemoryMessages)
-	backend := &backend{
-		config:           config,
-		istanbulEventMux: new(event.TypeMux),
-		address:          wallet.Accounts()[0].Address, // default 0
-		logger:           log.New(),
-		db:               db,
-		commitCh:         make(chan *types.Block, 1),
-		recents:          recents,
-		candidates:       make(map[common.Address]bool),
-		coreStarted:      false,
-		recentMessages:   recentMessages,
-		knownMessages:    knownMessages,
-		wallet:           wallet,
-		account:          wallet.Accounts()[0],
-	}
-	backend.core = istanbulCore.New(backend, backend.config)
-	return backend
-}
-
 // ----------------------------------------------------------------------------
 
 type backend struct {
@@ -124,10 +98,6 @@ type backend struct {
 
 	recentMessages *lru.ARCCache // the cache of peer's messages
 	knownMessages  *lru.ARCCache // the cache of self messages
-
-	// ATLAS: to replace privateKey filed
-	account accounts.Account
-	wallet  accounts.Wallet
 }
 
 // zekun: HACK
@@ -274,10 +244,6 @@ func (sb *backend) Verify(proposal istanbul.Proposal) (time.Duration, error) {
 
 // Sign implements istanbul.Backend.Sign
 func (sb *backend) Sign(data []byte) ([]byte, error) {
-	// ATLAS: if there is a wallet, use it to sign
-	if sb.wallet != nil {
-		return sb.wallet.SignData(sb.account, "", data)
-	}
 	hashData := crypto.Keccak256([]byte(data))
 	return crypto.Sign(hashData, sb.privateKey)
 }

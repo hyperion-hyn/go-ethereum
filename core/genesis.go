@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/staking"
 	"math/big"
 	"strings"
 
@@ -271,16 +270,6 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 			statedb.SetState(addr, key, value)
 		}
 	}
-
-	// ATLAS: staking state
-	validators := g.Config.Istanbul.Validators
-	container := staking.ValidatorContainer{Validators: validators}
-	err := statedb.UpdateStakingInfo(staking.StakingInfoAddress, &container)
-	if err != nil {
-		log.Crit("Failed to save initial staking state", err)
-	}
-	// ATLAS - END
-
 	root := statedb.IntermediateRoot(false)
 	head := &types.Header{
 		Number:     new(big.Int).SetUint64(g.Number),
@@ -415,7 +404,7 @@ func DefaultAtlasGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:     params.AtlasChainConfig,
 		Timestamp:  1496993285,
-		ExtraData:  hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000000f89af85494475cc98b5521ab2a1335683e7567c8048bfe79ed9407d8299de61faed3686ba4c4e6c3b9083d7e2371944fe035ce99af680d89e2c4d73aca01dbfc1bd2fd94dc421209441a754f79c4a4ecd2b49c935aad0312b8410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0"),
+		ExtraData:  hexutil.MustDecode(""),
 		GasLimit:   4700000,
 		Difficulty: big.NewInt(1),
 		Mixhash:    common.HexToHash("0x63746963616c2062797a616e74696e65206661756c7420746f6c6572616e6365"),

@@ -33,7 +33,6 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rpc"
-	staking "github.com/ethereum/go-ethereum/staking/types"
 )
 
 // Backend interface provides the common API services (that are provided by
@@ -74,11 +73,6 @@ type Backend interface {
 	Stats() (pending int, queued int)
 	TxPoolContent() (map[common.Address]types.Transactions, map[common.Address]types.Transactions)
 	SubscribeNewTxsEvent(chan<- core.NewTxsEvent) event.Subscription
-	// ATLAS: Staking transaction pool API
-	// TODO: other APIs for validator and delegations, etc.
-	SendStakingTx(ctx context.Context, newStakingTx *staking.StakingTransaction) error
-	//GetCurrentStakingErrorSink() []staking.RPCTransactionError
-
 
 	// Filter API
 	BloomStatus() (uint64, uint64)

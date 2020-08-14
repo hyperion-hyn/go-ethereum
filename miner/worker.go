@@ -925,7 +925,6 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 	}
 
 	// Fill the block with all available pending transactions.
-	// ATLAS: pending transactions, including non-staking and staking transactions, need to be separated by type.
 	pending, err := w.eth.TxPool().Pending()
 	if err != nil {
 		log.Error("Failed to fetch pending transactions", "err", err)
@@ -936,76 +935,27 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 		w.updateSnapshot()
 		return
 	}
-
-	// ALTAS
-	normalTxs, stakingTxs := w.splitTransactionsIntoNormalAndStaking(pending)
-	// Commit staking transactions
-	if len(stakingTxs) > 0 {
-		// Split the pending transactions into locals and remotes
-		localTxs, remoteTxs := make(map[common.Address]types.Transactions), stakingTxs
-		for _, account := range w.eth.TxPool().Locals() {
-			if txs := remoteTxs[account]; len(txs) > 0 {
-				delete(remoteTxs, account)
-				localTxs[account] = txs
-			}
-		}
-		if len(localTxs) > 0 {
-			txs := types.NewTransactionsByPriceAndNonce(w.current.signer, localTxs)
-			if w.commitTransactions(txs, w.coinbase, interrupt) {
-				return
-			}
-		}
-		if len(remoteTxs) > 0 {
-			txs := types.NewTransactionsByPriceAndNonce(w.current.signer, remoteTxs)
-			if w.commitTransactions(txs, w.coinbase, interrupt) {
-				return
-			}
+	// Split the pending transactions into locals and remotes
+	localTxs, remoteTxs := make(map[common.Address]types.Transactions), pending
+	for _, account := range w.eth.TxPool().Locals() {
+		if txs := remoteTxs[account]; len(txs) > 0 {
+			delete(remoteTxs, account)
+			localTxs[account] = txs
 		}
 	}
-	// Commit normal transactions
-	if len(normalTxs) > 0 {
-		// Split the pending normal transactions into locals and remotes
-		localTxs, remoteTxs := make(map[common.Address]types.Transactions), normalTxs
-		for _, account := range w.eth.TxPool().Locals() {
-			if txs := remoteTxs[account]; len(txs) > 0 {
-				delete(remoteTxs, account)
-				localTxs[account] = txs
-			}
+	if len(localTxs) > 0 {
+		txs := types.NewTransactionsByPriceAndNonce(w.current.signer, localTxs)
+		if w.commitTransactions(txs, w.coinbase, interrupt) {
+			return
 		}
-		if len(localTxs) > 0 {
-			txs := types.NewTransactionsByPriceAndNonce(w.current.signer, localTxs)
-			if w.commitTransactions(txs, w.coinbase, interrupt) {
-				return
-			}
-		}
-		if len(remoteTxs) > 0 {
-			txs := types.NewTransactionsByPriceAndNonce(w.current.signer, remoteTxs)
-			if w.commitTransactions(txs, w.coinbase, interrupt) {
-				return
-			}
+	}
+	if len(remoteTxs) > 0 {
+		txs := types.NewTransactionsByPriceAndNonce(w.current.signer, remoteTxs)
+		if w.commitTransactions(txs, w.coinbase, interrupt) {
+			return
 		}
 	}
 	w.commit(uncles, w.fullTaskHook, true, tstart)
-}
-
-func (w *worker) splitTransactionsIntoNormalAndStaking(transactions map[common.Address]types.Transactions) (normalTxs, stakingTxs map[common.Address]types.Transactions) {
-	normalTxs, stakingTxs = make(map[common.Address]types.Transactions), make(map[common.Address]types.Transactions)
-	for address, txs := range transactions {
-		for _, tx := range txs {
-			if tx.Type() == types.Normal {
-				if _, ok := normalTxs[address]; !ok {
-					normalTxs[address] = types.Transactions{}
-				}
-				normalTxs[address] = append(normalTxs[address], tx)
-			} else {
-				if _, ok := stakingTxs[address]; !ok {
-					stakingTxs[address] = types.Transactions{}
-				}
-				stakingTxs[address] = append(stakingTxs[address], tx)
-			}
-		}
-	}
-	return normalTxs, stakingTxs
 }
 
 // commit runs any post-transaction state modifications, assembles the final block

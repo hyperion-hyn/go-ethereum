@@ -19,25 +19,23 @@ package backend
 import (
 	"bytes"
 	"errors"
-	"github.com/ethereum/go-ethereum/staking"
 	"math/big"
 	"math/rand"
-	"sort"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/istanbul"
-	istanbulCore "github.com/ethereum/go-ethereum/consensus/istanbul/core"
 	"github.com/ethereum/go-ethereum/consensus/istanbul/validator"
+	istanbulCore "github.com/ethereum/go-ethereum/consensus/istanbul/core"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
+	"golang.org/x/crypto/sha3"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
 	lru "github.com/hashicorp/golang-lru"
-	"golang.org/x/crypto/sha3"
 )
 
 const (
@@ -104,8 +102,7 @@ var (
 // block, which may be different from the header's coinbase if a consensus
 // engine is based on signatures.
 func (sb *backend) Author(header *types.Header) (common.Address, error) {
-	//return ecrecover(header)
-	return header.Coinbase, nil		// ATLAS: it should be header's coinbase
+	return ecrecover(header)
 }
 
 // Signers extracts all the addresses who have signed the given header
@@ -341,7 +338,7 @@ func (sb *backend) VerifySeal(chain consensus.ChainReader, header *types.Header)
 // rules of a particular engine. The changes are executed inline.
 func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) error {
 	// unused fields, force to set to empty
-	//header.Coinbase = common.Address{}	// ATLAS: header's coinbase is useful
+	header.Coinbase = common.Address{}
 	header.Nonce = emptyNonce
 	header.MixDigest = types.IstanbulDigest
 
@@ -385,11 +382,6 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	}
 
 	// add validators in snapshot to extraData's validators section
-	log.Info("Preprepare valset")
-	for i, val := range snap.validators() {
-		log.Info("Valset", "index", i, "addr", val.String())
-	}
-
 	extra, err := prepareExtra(header, snap.validators())
 	if err != nil {
 		return err
@@ -570,41 +562,71 @@ func (sb *backend) Stop() error {
 func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*Snapshot, error) {
 	// Search for a snapshot in memory or on disk for checkpoints
 	var (
+		headers []*types.Header
 		snap    *Snapshot
 	)
-
-	// ATLAS
-	// If an in-memory snapshot was found, use that
-	if s, ok := sb.recents.Get(hash); ok {
-		snap = s.(*Snapshot)
-		return snap, nil
-	}
-
-	// If an on-disk checkpoint snapshot can be found, use that
-	if number%checkpointInterval == 0 {
-		if s, err := loadSnapshot(sb.config.Epoch, sb.db, hash); err == nil {
-			log.Trace("Loaded voting snapshot form disk", "number", number, "hash", hash)
-			snap = s
-			return snap, nil
+	for snap == nil {
+		// If an in-memory snapshot was found, use that
+		if s, ok := sb.recents.Get(hash); ok {
+			snap = s.(*Snapshot)
+			break
 		}
+		// If an on-disk checkpoint snapshot can be found, use that
+		if number%checkpointInterval == 0 {
+			if s, err := loadSnapshot(sb.config.Epoch, sb.db, hash); err == nil {
+				log.Trace("Loaded voting snapshot form disk", "number", number, "hash", hash)
+				snap = s
+				break
+			}
+		}
+		// If we're at block zero, make a snapshot
+		if number == 0 {
+			genesis := chain.GetHeaderByNumber(0)
+			if err := sb.VerifyHeader(chain, genesis, false); err != nil {
+				return nil, err
+			}
+			istanbulExtra, err := types.ExtractIstanbulExtra(genesis)
+			if err != nil {
+				return nil, err
+			}
+			snap = newSnapshot(sb.config.Epoch, 0, genesis.Hash(), validator.NewSet(istanbulExtra.Validators, sb.config.ProposerPolicy))
+			if err := snap.store(sb.db); err != nil {
+				return nil, err
+			}
+			log.Trace("Stored genesis voting snapshot to disk")
+			break
+		}
+		// No snapshot for this header, gather the header and move backward
+		var header *types.Header
+		if len(parents) > 0 {
+			// If we have explicit parents, pick from there (enforced)
+			header = parents[len(parents)-1]
+			if header.Hash() != hash || header.Number.Uint64() != number {
+				return nil, consensus.ErrUnknownAncestor
+			}
+			parents = parents[:len(parents)-1]
+		} else {
+			// No explicit parents (or no more left), reach out to the database
+			header = chain.GetHeader(hash, number)
+			if header == nil {
+				return nil, consensus.ErrUnknownAncestor
+			}
+		}
+		headers = append(headers, header)
+		number, hash = number-1, header.ParentHash
 	}
-
-	// If no snapshot for this header, make a new snapshot with validators read from satedb.
-	s, err := chain.StateAt(chain.GetBlock(hash, number).Root())
+	// Previous snapshot found, apply any pending headers on top of it
+	for i := 0; i < len(headers)/2; i++ {
+		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
+	}
+	snap, err := snap.apply(headers)
 	if err != nil {
 		return nil, err
 	}
-	vals, err := getLargestAmountStakingValidators(s, 88)
-	if err != nil {
-		return nil, err
-	}
-	snap = newSnapshot(sb.config.Epoch, number, hash, validator.NewSet(vals, sb.config.ProposerPolicy))
-	// ATLAS - END
-
 	sb.recents.Add(snap.Hash, snap)
 
 	// If we've generated a new checkpoint snapshot, save to disk
-	if snap.Number%checkpointInterval == 0 {
+	if snap.Number%checkpointInterval == 0 && len(headers) > 0 {
 		if err = snap.store(sb.db); err != nil {
 			return nil, err
 		}
@@ -729,38 +751,4 @@ func writeCommittedSeals(h *types.Header, committedSeals [][]byte) error {
 
 	h.Extra = append(h.Extra[:types.IstanbulExtraVanity], payload...)
 	return nil
-}
-
-// ATLAS
-func getLargestAmountStakingValidators(state *state.StateDB, numVal int) ([]common.Address, error) {
-	container := state.GetStakingInfo(staking.StakingInfoAddress)
-	if container == nil {
-		return nil, errValidatorNotExist
-	}
-	amount := make(map[common.Address]*big.Int)
-	for _, val := range container.Validators {
-		amount[val.Validator.Address] = val.Amount()
-	}
-
-	// sort by amount
-	type pair struct {
-		key   common.Address
-		value *big.Int
-	}
-	var pairs []pair
-	for k, v := range amount {
-		pairs = append(pairs, pair{k, v})
-	}
-	sort.Slice(pairs, func(i, j int) bool {
-		return pairs[i].value.Cmp(pairs[j].value) > 0
-	})
-
-	if numVal > len(pairs) {
-		numVal = len(pairs)
-	}
-	addresses := make([]common.Address, numVal)
-	for i := 0; i < numVal; i++ {
-		addresses[i] = pairs[i].key
-	}
-	return addresses, nil
 }

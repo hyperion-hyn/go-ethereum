@@ -900,18 +900,13 @@ func (pm *ProtocolManager) getConsensusAlgorithm() string {
 
 // Quorum
 func (self *ProtocolManager) FindPeers(targets map[common.Address]bool) map[common.Address]consensus.Peer {
-	// ATLAS(zgx): need to return all peers
 	m := make(map[common.Address]consensus.Peer)
 	for _, p := range self.peers.Peers() {
 		pubKey := p.Node().Pubkey()
 		addr := crypto.PubkeyToAddress(*pubKey)
-		//if targets[addr] {
-		//	m[addr] = p
-		//}
-
-		// ATLAS: all peers
-		// TODO: account addr
-		m[addr] = p
+		if targets[addr] {
+			m[addr] = p
+		}
 	}
 	return m
 }

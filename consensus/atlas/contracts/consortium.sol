@@ -3,8 +3,8 @@ pragma solidity ^0.6.10;
 
 contract consortium {
     struct Validator_t {
-        bytes PubKey; // Signer's Public Key
-        address Account; // Signer's Account
+        bytes PublicKey; // Signer's Public Key
+        address Coinbase; // Signer's Account
     }
 
     struct Committee_t {

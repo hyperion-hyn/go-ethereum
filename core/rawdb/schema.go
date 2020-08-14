@@ -19,7 +19,6 @@ package rawdb
 
 import (
 	"encoding/binary"
-	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/metrics"
@@ -81,7 +80,6 @@ const (
 
 	// freezerDifficultyTable indicates the name of the freezer total difficulty table.
 	freezerDifficultyTable = "diffs"
-	
 )
 
 // freezerNoSnappy configures whether compression is disabled for the ancient-tables.
@@ -167,58 +165,4 @@ func preimageKey(hash common.Hash) []byte {
 // configKey = configPrefix + hash
 func configKey(hash common.Hash) []byte {
 	return append(configPrefix, hash.Bytes()...)
-}
-
-func epochBlockNumberKey(epoch *big.Int) []byte {
-	return append(epochBlockNumberPrefix, epoch.Bytes()...)
-}
-
-func delegatorValidatorListKey(delegator common.Address) []byte {
-	return append(delegatorValidatorListPrefix, delegator.Bytes()...)
-}
-
-// cxReceiptKey = cxReceiptsPrefix + shardID + num (uint64 big endian) + hash
-func cxReceiptKey(shardID uint32, number uint64, hash common.Hash) []byte {
-	prefix := cxReceiptPrefix
-	sKey := make([]byte, 4)
-	binary.BigEndian.PutUint32(sKey, shardID)
-	tmp := append(prefix, sKey...)
-	tmp1 := append(tmp, encodeBlockNumber(number)...)
-	return append(tmp1, hash.Bytes()...)
-}
-
-// cxReceiptSpentKey = cxReceiptsSpentPrefix + shardID + num (uint64 big endian)
-func cxReceiptSpentKey(shardID uint32, number uint64) []byte {
-	prefix := cxReceiptSpentPrefix
-	sKey := make([]byte, 4)
-	binary.BigEndian.PutUint32(sKey, shardID)
-	tmp := append(prefix, sKey...)
-	return append(tmp, encodeBlockNumber(number)...)
-}
-
-// cxReceiptUnspentCheckpointKey = cxReceiptsUnspentCheckpointPrefix + shardID
-func cxReceiptUnspentCheckpointKey(shardID uint32) []byte {
-	prefix := cxReceiptUnspentCheckpointPrefix
-	sKey := make([]byte, 4)
-	binary.BigEndian.PutUint32(sKey, shardID)
-	return append(prefix, sKey...)
-}
-
-func validatorKey(addr common.Address) []byte {
-	prefix := validatorPrefix
-	return append(prefix, addr.Bytes()...)
-}
-
-func validatorSnapshotKey(addr common.Address) []byte {
-	prefix := validatorSnapshotPrefix
-	return append(prefix, addr.Bytes()...)
-}
-
-func validatorStatsKey(addr common.Address) []byte {
-	prefix := validatorStatsPrefix
-	return append(prefix, addr.Bytes()...)
-}
-
-func blockRewardAccumKey(number uint64) []byte {
-	return append(currentRewardGivenOutPrefix, encodeBlockNumber(number)...)
 }

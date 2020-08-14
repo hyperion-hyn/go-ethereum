@@ -20,7 +20,6 @@ package state
 import (
 	"errors"
 	"fmt"
-
 	"math/big"
 	"sort"
 	"time"
@@ -31,9 +30,7 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/rlp"
-	stk "github.com/ethereum/go-ethereum/staking/types"
 	"github.com/ethereum/go-ethereum/trie"
-
 )
 
 type revision struct {
@@ -73,7 +70,6 @@ type StateDB struct {
 	stateObjects        map[common.Address]*stateObject
 	stateObjectsPending map[common.Address]struct{} // State objects finalized but not yet written to the trie
 	stateObjectsDirty   map[common.Address]struct{} // State objects modified in the current execution
-	stateValidators     map[common.Address]*stk.ValidatorWrapper
 
 	// DB error.
 	// State objects are used by the consensus core and VM which are

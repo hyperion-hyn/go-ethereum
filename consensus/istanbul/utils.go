@@ -56,5 +56,5 @@ func CheckValidatorSignature(valSet ValidatorSet, data []byte, sig []byte) (comm
 		return val.Address(), nil
 	}
 
-	return common.Address{}, err
+	return common.Address{}, ErrUnauthorizedAddress
 }

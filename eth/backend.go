@@ -177,9 +177,9 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	log.Info("Initialising Ethereum protocol", "versions", ProtocolVersions, "network", config.NetworkId, "dbversion", dbVer)
 
 	// force to set the istanbul etherbase to node key address
-	//if chainConfig.Istanbul != nil {
-	//	eth.etherbase = crypto.PubkeyToAddress(ctx.NodeKey().PublicKey)
-	//}
+	if chainConfig.Istanbul != nil {
+		eth.etherbase = crypto.PubkeyToAddress(ctx.NodeKey().PublicKey)
+	}
 
 	if !config.SkipBcVersionCheck {
 		if bcVersion != nil && *bcVersion > core.BlockChainVersion {
@@ -273,10 +273,6 @@ func CreateConsensusEngine(ctx *node.ServiceContext, chainConfig *params.ChainCo
 		config.Istanbul.ProposerPolicy = istanbul.ProposerPolicy(chainConfig.Istanbul.ProposerPolicy)
 		config.Istanbul.Ceil2Nby3Block = chainConfig.Istanbul.Ceil2Nby3Block
 
-		// ATLAS(yhx): no need to access wallet directly.
-		if len(ctx.AccountManager.Wallets()) < 0 {
-			log.Crit("Need a wallet")
-		}
 		return istanbulBackend.New(&config.Istanbul, ctx.NodeKey(), db)
 	}
 
