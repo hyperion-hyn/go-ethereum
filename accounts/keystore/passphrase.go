@@ -35,6 +35,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/big"
 	"os"
 	"path/filepath"
 
@@ -232,6 +233,66 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 	return &Key{
 		Id:         uuid.UUID(keyId),
 		Address:    crypto.PubkeyToAddress(key.PublicKey),
+		PrivateKey: key,
+	}, nil
+}
+
+// EncryptKey encrypts a key using the specified scrypt parameters into a json
+// blob that can be decrypted later on.
+func EncryptBLSKey(key *BLSKey, auth string, scryptN, scryptP int) ([]byte, error) {
+	val := big.NewInt(0).SetBytes(key.PrivateKey.Serialize())
+	keyBytes := math.PaddedBigBytes(val, 32)
+	cryptoStruct, err := EncryptDataV3(keyBytes, []byte(auth), scryptN, scryptP)
+	if err != nil {
+		return nil, err
+	}
+	address := crypto.PubkeyToSigner(key.PublicKey)
+	encryptedKeyJSONV3 := encryptedKeyJSONV3{
+		hex.EncodeToString(address[:]),
+		cryptoStruct,
+		key.Id.String(),
+		version,
+	}
+	return json.Marshal(encryptedKeyJSONV3)
+}
+
+// DecryptKey decrypts a key from a json blob, returning the private key itself.
+func DecryptBLSKey(keyjson []byte, auth string) (*BLSKey, error) {
+	// Parse the json into a simple map to fetch the key version
+	m := make(map[string]interface{})
+	if err := json.Unmarshal(keyjson, &m); err != nil {
+		return nil, err
+	}
+	// Depending on the version try to parse one way or another
+	var (
+		keyBytes, keyId []byte
+		err             error
+	)
+	if version, ok := m["version"].(string); ok && version == "1" {
+		k := new(encryptedKeyJSONV1)
+		if err := json.Unmarshal(keyjson, k); err != nil {
+			return nil, err
+		}
+		keyBytes, keyId, err = decryptKeyV1(k, auth)
+	} else {
+		k := new(encryptedKeyJSONV3)
+		if err := json.Unmarshal(keyjson, k); err != nil {
+			return nil, err
+		}
+		keyBytes, keyId, err = decryptKeyV3(k, auth)
+	}
+	// Handle any decryption errors and return the key
+	if err != nil {
+		return nil, err
+	}
+	key, err := crypto.ToBLS(keyBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	return &BLSKey{
+		Id:         uuid.UUID(keyId),
+		PublicKey:    key.GetPublicKey(),
 		PrivateKey: key,
 	}, nil
 }

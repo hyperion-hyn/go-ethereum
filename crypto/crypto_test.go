@@ -248,3 +248,21 @@ func TestPythonIntegration(t *testing.T) {
 	t.Logf("msg: %x, privkey: %s sig: %x\n", msg0, kh, sig0)
 	t.Logf("msg: %x, privkey: %s sig: %x\n", msg1, kh, sig1)
 }
+
+func TestSerializeBLS(t *testing.T) {
+	privateKey, err := GenerateBLSKey()
+	if err != nil {
+		t.Fatalf("Failed to generate random private key: %v", err)
+	}
+
+	data := privateKey.Serialize()
+
+	recoveredKey, err := ToBLS(data)
+	if err != nil {
+		t.Fatalf("Failed to recovery private key: %v", err)
+	}
+
+	if bytes.Compare(data, recoveredKey.Serialize()) != 0 {
+		t.Fatalf("recovery private key is different from the orignal one: %x : %x ", data, recoveredKey.Serialize())
+	}
+}

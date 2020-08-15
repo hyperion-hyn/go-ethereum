@@ -246,7 +246,7 @@ func SaveBLS(file string, key *bls.SecretKey) error {
 // it can also accept legacy encodings (0 prefixes).
 func toBLS(d []byte, strict bool) (*bls.SecretKey, error) {
 	priv := &bls.SecretKey{}
-	err := priv.DeserializeHexStr(string(d))
+	err := priv.Deserialize(d)
 
 	return priv, err
 }
