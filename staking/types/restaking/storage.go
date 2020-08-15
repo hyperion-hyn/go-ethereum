@@ -184,7 +184,6 @@ func (s *Storage_Validator_) Save(validator *Validator_) {
 	}
 }
 
-
 // Storage_ValidatorWrapper_
 func (s *Storage_ValidatorWrapper_) Save(validatorWrapper *ValidatorWrapper_) {
 	s.Validator().Save(&validatorWrapper.Validator)
@@ -247,18 +246,20 @@ func (s *Storage_ValidatorWrapperMap_) AllKeys() []common.Address {
 }
 
 func (s *Storage_ValidatorWrapperMap_) Put(key common.Address, validator *ValidatorWrapper_) {
-	// TODO(DH): replace old object
-	keysLength := s.Keys().Length()
-	//set keys
-	s.Keys().Get(keysLength).SetValue(key)
-	s.Get(key)
-	//set map
-	sValidatorWrapper := s.Map().Get(key)
-	//set map entity
-	sValidatorWrapperEntity := sValidatorWrapper.Entry()
-	sValidatorWrapperEntity.Save(validator)
-	//set map index
-	sValidatorWrapper.Index().SetValue(big.NewInt(0).Add(big.NewInt(int64(keysLength)), common.Big1)) //because index start with 1
+	if s.Contain(key) {
+		s.Map().Get(key).Entry().Save(validator)
+	} else {
+		keysLength := s.Keys().Length()
+		//set keys
+		s.Keys().Get(keysLength).SetValue(key)
+		//set map
+		sValidatorWrapper := s.Map().Get(key)
+		//set map entity
+		sValidatorWrapperEntity := sValidatorWrapper.Entry()
+		sValidatorWrapperEntity.Save(validator)
+		//set map index
+		sValidatorWrapper.Index().SetValue(big.NewInt(0).Add(big.NewInt(int64(keysLength)), common.Big1)) //because index start with 1
+	}
 }
 
 func (s *Storage_ValidatorWrapperMap_) Contain(key common.Address) bool {
@@ -427,7 +428,7 @@ func (s *Storage_Slots_) Push(slot *Slot_) {
 func (s *Storage_Slots_) Pop() *Storage_Slot_ {
 	entityLength := s.Entrys().Length()
 	storageSlot := s.Entrys().Get(entityLength - 1)
-	s.Remove(entityLength - 1, false)
+	s.Remove(entityLength-1, false)
 	return storageSlot
 }
 
