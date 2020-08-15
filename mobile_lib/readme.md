@@ -7,7 +7,7 @@ make android_lib
 
 ### ios
 ```bash
-gomobile bind -v -o ~/Downloads/Mobile.framework -target=ios github.com/hyperion-hyn/re-encrypt-server/mobile
+make ios_lib
 ```
 
 See more at https://github.com/golang/go/wiki/Mobile

@@ -35,6 +35,11 @@ ios:
 	@echo "Done building."
 	@echo "Import \"$(GOBIN)/Geth.framework\" to use the library."
 
+ios_lib:
+	$(GORUN) build/ci.go xcode_lib
+	@echo "Done building."
+	@echo "Import \"$(GOBIN)/Mobile_lib.framework\" to use the library."
+
 test: all
 	$(GORUN) build/ci.go test
 

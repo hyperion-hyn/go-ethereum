@@ -190,6 +190,8 @@ func main() {
 		doAndroidLibArchive(os.Args[2:])
 	case "xcode":
 		doXCodeFramework(os.Args[2:])
+	case "xcode_lib":
+		doXCodeLibFramework(os.Args[2:])
 	case "xgo":
 		doXgo(os.Args[2:])
 	case "purge":
@@ -996,6 +998,15 @@ func doXCodeFramework(cmdline []string) {
 		build.Render("build/pod.podspec", "Geth.podspec", 0755, meta)
 		build.MustRunCommand("pod", *deploy, "push", "Geth.podspec", "--allow-warnings", "--verbose")
 	}
+}
+
+func doXCodeLibFramework(cmdline []string) {
+	// Build the iOS XCode framework
+	build.MustRun(goTool("get", "golang.org/x/mobile/cmd/gomobile", "golang.org/x/mobile/cmd/gobind"))
+	build.MustRun(gomobileTool("init"))
+	bind := gomobileTool("bind", "--target", "ios", "-v", "github.com/ethereum/go-ethereum/mobile_lib")
+	bind.Dir, _ = filepath.Abs(GOBIN)
+	build.MustRun(bind)
 }
 
 type podMetadata struct {
