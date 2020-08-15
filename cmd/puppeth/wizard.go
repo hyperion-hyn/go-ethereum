@@ -34,6 +34,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/hyperion-hyn/bls/ffi/go/bls"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -365,4 +366,52 @@ func (w *wizard) readIPAddress() string {
 		}
 		return text
 	}
+}
+
+// readAddress reads a single line from stdin, trimming if from spaces and converts
+// it to an Ethereum address.
+func (w *wizard) readBLSPublicKeyAndCoinbase() (*bls.PublicKey, *common.Address) {
+	var publicKey bls.PublicKey
+	var address common.Address
+	for {
+		// Read the address from the user
+		fmt.Printf("> BLS public key: 0x")
+		text, err := w.in.ReadString('\n')
+		if err != nil {
+			log.Crit("Failed to read user input", "err", err)
+		}
+		if text = strings.TrimSpace(text); text == "" {
+			return nil, common.Address{}
+		}
+		// Make sure it looks ok and return it if so
+		if len(text) != 96 {
+			log.Error("Invalid address length, please retry")
+			continue
+		}
+
+		err = publicKey.DeserializeHexStr(text)
+		if err != nil {
+			log.Error("Invalid bls public key, please retry")
+		}
+	}
+
+	for {
+		// Read the address from the user
+		fmt.Printf("> Account: 0x")
+		text, err := w.in.ReadString('\n')
+		if err != nil {
+			log.Crit("Failed to read user input", "err", err)
+		}
+		if text = strings.TrimSpace(text); text == "" {
+			log.Error("Invalid address, please retry")
+		}
+		// Make sure it looks ok and return it if so
+		if len(text) != 40 {
+			log.Error("Invalid address length, please retry")
+			continue
+		}
+		bigaddr, _ := new(big.Int).SetString(text, 16)
+		address = common.BigToAddress(bigaddr)
+	}
+	return &publicKey, &address
 }

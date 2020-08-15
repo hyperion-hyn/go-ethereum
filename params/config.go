@@ -343,12 +343,12 @@ type ChainConfig struct {
 	EWASMBlock          *big.Int `json:"ewasmBlock,omitempty"`          // EWASM switch block (nil = no fork, 0 = already activated)
 
 	// Various consensus engines
-	Ethash *EthashConfig `json:"ethash,omitempty"`
-	Clique *CliqueConfig `json:"clique,omitempty"`
+	Ethash   *EthashConfig   `json:"ethash,omitempty"`
+	Clique   *CliqueConfig   `json:"clique,omitempty"`
 	Istanbul *IstanbulConfig `json:"istanbul,omitempty"`
-	Atlas *AtlasConfig `json:"atlas,omitempty"`
+	Atlas    *AtlasConfig    `json:"atlas,omitempty"`
 
-	IsQuorum             bool   `json:"isQuorum"`
+	IsQuorum bool `json:"isQuorum"`
 }
 
 // EthashConfig is the consensus engine configs for proof-of-work based sealing.
@@ -384,6 +384,7 @@ func (c *IstanbulConfig) String() string {
 
 // AtlasConfig is the consensus engine configs for Istanbul based sealing.
 type AtlasConfig struct {
+	Period         uint64   `json:"period"`                   // Number of seconds between blocks to enforce
 	Epoch          uint64   `json:"epoch"`                    // Epoch length to reset votes and checkpoint
 	ProposerPolicy uint64   `json:"policy"`                   // The policy for proposer selection
 	Ceil2Nby3Block *big.Int `json:"ceil2Nby3Block,omitempty"` // Number of confirmations required to move from one state to next [2F + 1 to Ceil(2N/3)]

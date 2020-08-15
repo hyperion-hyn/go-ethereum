@@ -29,8 +29,16 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/hyperion-hyn/bls/ffi/go/bls"
+
 	"github.com/ethereum/go-ethereum/common"
+	atlasBackend "github.com/ethereum/go-ethereum/consensus/atlas/backend"
+	"github.com/ethereum/go-ethereum/consensus/atlas/storage"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/types"
+	bls_cosi "github.com/ethereum/go-ethereum/crypto/bls"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 )
@@ -59,8 +67,11 @@ func (w *wizard) makeGenesis() {
 	fmt.Println("Which consensus engine to use? (default = clique)")
 	fmt.Println(" 1. Ethash - proof-of-work")
 	fmt.Println(" 2. Clique - proof-of-authority")
+	fmt.Println(" 3. Atlas - proof-of-staking")
+	// TODO: select consensus engine
 
 	choice := w.read()
+	consensusEngine := choice
 	switch {
 	case choice == "1":
 		// In case of ethash, we're pretty much done
@@ -105,6 +116,8 @@ func (w *wizard) makeGenesis() {
 			copy(genesis.ExtraData[32+i*common.AddressLength:], signer[:])
 		}
 
+	case choice == "3":
+
 	default:
 		log.Crit("Invalid consensus engine choice", "choice", choice)
 	}
@@ -133,6 +146,88 @@ func (w *wizard) makeGenesis() {
 	fmt.Println()
 	fmt.Println("Specify your chain/network ID if you want an explicit one (default = random)")
 	genesis.Config.ChainID = new(big.Int).SetUint64(uint64(w.readDefaultInt(rand.Intn(65536))))
+
+	switch {
+	case consensusEngine == "3":
+		// Prepare storage wrapper to hold state modifications.
+		stateDB, err := state.New(common.Hash{}, state.NewDatabase(rawdb.NewMemoryDatabase()))
+		if err != nil {
+			log.Crit("could not new state based on the current HEAD block")
+		}
+
+		middleware := newMiddleware(stateDB)
+		var global storage.Global_t
+		storage := storage.New(&global, middleware, common.HexToAddress(atlasBackend.CONSORTIUM_BOARD), big.NewInt(0))
+
+		// Initialize a co-sign mask
+		mask, err := bls_cosi.NewMask(make([]*bls.PublicKey, (1<<types.BLSBitmapSizeInBytes*8)), nil)
+		if err != nil {
+			log.Crit("failed to create bls mask")
+		}
+
+		// In the case of atlas, configure the consensus parameters
+		genesis.Difficulty = big.NewInt(1)
+		genesis.Config.Atlas = &params.AtlasConfig{
+			Period:         15,
+			Epoch:          30000,
+			ProposerPolicy: 0,
+			Ceil2Nby3Block: big.NewInt(0),
+		}
+		fmt.Println()
+		fmt.Println("How many seconds should blocks take? (default = 15)")
+		genesis.Config.Atlas.Period = uint64(w.readDefaultInt(15))
+
+		// We also need the initial list of signers
+		fmt.Println()
+		fmt.Println("Which accounts are allowed to seal? (mandatory at least one)")
+
+		type Validator struct {
+			PublicKey *bls.PublicKey
+			Coinbase  *common.Address
+		}
+
+		var signers []*Validator
+		for {
+			if publicKey, coinbase := w.readBLSPublicKeyAndCoinbase(); publicKey != nil {
+				signers = append(signers, &Validator{
+					PublicKey: publicKey,
+					Coinbase:  coinbase,
+				})
+				continue
+			}
+			if len(signers) > 0 {
+				break
+			}
+		}
+		// Sort the signers and embed into the extra-data section
+		for i := 0; i < len(signers); i++ {
+			for j := i + 1; j < len(signers); j++ {
+				if bytes.Compare(signers[i].PublicKey.Serialize()[:], signers[j].PublicKey.Serialize()[:]) > 0 {
+					signers[i], signers[j] = signers[j], signers[i]
+				}
+			}
+		}
+
+		for i := 0; i < len(signers); i++ {
+			memberStorage := storage.Committee().Members().Get(i)
+			memberStorage.PublicKey().SetValue(signers[i].PublicKey.Serialize())
+			memberStorage.Coinbase().SetValue(*signers[i].Coinbase)
+		}
+
+		consortiumBoard := core.GenesisAccount{
+			Balance: new(big.Int).Lsh(big.NewInt(1), 256-7), // 2^256 / 128 (allow many pre-funds without balance overflows)
+		}
+
+		for k, v := range middleware.dirties {
+			consortiumBoard.Storage[k] = v
+		}
+
+		genesis.ExtraData = make([]byte, types.AtlasExtraVanity+types.AtlasExtraMask+types.AtlasExtraSignature)
+
+		// TODO(zgx): get unsigned party and let other's to sign
+		// block := genesis.ToBlock(nil)
+
+	}
 
 	// All done, store the genesis and flush to disk
 	log.Info("Configured new genesis block")
@@ -302,4 +397,24 @@ func saveGenesis(folder, network, client string, spec interface{}) {
 		return
 	}
 	log.Info("Saved genesis chain spec", "client", client, "path", path)
+}
+
+type Middleware struct {
+	db      *state.StateDB
+	dirties map[common.Hash]common.Hash
+}
+
+func newMiddleware(db *state.StateDB) *Middleware {
+	return &Middleware{
+		db:      db,
+		dirties: make(map[common.Hash]common.Hash),
+	}
+}
+func (m *Middleware) GetState(addr common.Address, hash common.Hash) common.Hash {
+	return m.db.GetState(addr, hash)
+}
+
+func (m *Middleware) SetState(addr common.Address, key, value common.Hash) {
+	m.dirties[key] = value
+	m.db.SetState(addr, key, value)
 }
