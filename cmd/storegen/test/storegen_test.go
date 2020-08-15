@@ -16,6 +16,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 )
@@ -695,10 +697,68 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 
 }
 
+type Middleware struct {
+	db      *state.StateDB
+	dirties map[common.Hash]common.Hash
+}
+
+func newMiddleware(db *state.StateDB) *Middleware {
+	return &Middleware{
+		db:      db,
+		dirties: make(map[common.Hash]common.Hash),
+	}
+}
+func (m *Middleware) GetState(addr common.Address, hash common.Hash) common.Hash {
+	return m.db.GetState(addr, hash)
+}
+
+func (m *Middleware) SetState(addr common.Address, key, value common.Hash) {
+	m.dirties[key] = value
+	m.db.SetState(addr, key, value)
+}
+
+func testMiddleware(t *testing.T, addr common.Address) {
+	stateDB, err := state.New(common.Hash{}, state.NewDatabase(rawdb.NewMemoryDatabase()))
+	if err != nil {
+		t.Errorf("could not new state based on the current HEAD block")
+	}
+
+	middleware := newMiddleware(stateDB)
+	var global Global_t
+	storage := New(&global, middleware, addr, big.NewInt(0))
+
+	{
+		// .Name
+		compareExpected := func(expected string) {
+			nameStorage := storage.Name().Value()
+			if nameStorage != expected {
+				t.Errorf("response from calling contract was expected to be '%v' %d instead received '%v' %d", expected, len(expected), nameStorage, len(nameStorage))
+			}
+
+			if nameStorage != global.Name {
+				t.Errorf(" field expected to be %v instead received %v", global.Name, nameStorage)
+			}
+		}
+
+		compareExpected("")
+		expected := "Hyperion, a decentralized map platform, aims to achieve the “One Map” vision - to provide an unified view of global map data and service, and to make it universally accessible just like a public utility for 10B people.\n海伯利安是去中心化的地图生态。"
+		storage.Name().SetValue(expected)
+		compareExpected(expected)
+		// for k, v := range middleware.dirties {
+		// 	t.Logf("%x: %x\n", k, v)
+		// }
+	}
+}
+
 // Tests that storage manipulation
-func TestStorageManipulation(t *testing.T) {
+func TestStorageManipulationViaSimulator(t *testing.T) {
 	addr, sim, _ := setupBlockchain(t, abiJSON, abiBin)
 	defer sim.Close()
 
 	testReadViaStorageAndWriteFromContract(t, sim, addr)
+}
+
+func TestStorageManipulationViaMiddleware(t *testing.T) {
+	addr := crypto.PubkeyToAddress(testKey.PublicKey)
+	testMiddleware(t, addr)
 }
