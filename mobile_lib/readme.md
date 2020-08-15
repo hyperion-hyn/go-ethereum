@@ -1,8 +1,8 @@
-## make cipher lib for mobile
+## make lib for mobile
 
 ### android
 ```bash
-gomobile bind -o ~/Downloads/cipher.aar -target=android/arm,android/arm64 github.com/hyperion-hyn/re-encrypt-server/mobile
+make android_lib
 ```
 
 ### ios

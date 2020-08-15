@@ -885,7 +885,7 @@ func doAndroidLibArchive(cmdline []string) {
 	}
 	// Build the Android archive and Maven resources
 	build.MustRun(goTool("get", "golang.org/x/mobile/cmd/gomobile", "golang.org/x/mobile/cmd/gobind"))
-	build.MustRun(gomobileTool("bind", "--target", "android/arm,android/arm64", "--javapkg", "org.ethereum", "-v", "github.com/ethereum/go-ethereum/mobile_lib"))
+	build.MustRun(gomobileTool("bind", "--target", "android/arm,android/arm64", "--javapkg", "org.atlas", "-v", "github.com/ethereum/go-ethereum/mobile_lib"))
 
 	os.Rename("mobile_lib.aar", filepath.Join(GOBIN, "mobile_lib.aar"))
 	os.Rename("mobile_lib-sources.jar", filepath.Join(GOBIN, "mobile_lib-sources.jar"))

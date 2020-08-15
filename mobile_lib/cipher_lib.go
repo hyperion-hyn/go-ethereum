@@ -11,14 +11,10 @@ import (
 	"github.com/ethereum/go-ethereum/crypto/ecies"
 )
 
-type Cipher struct {
+type CipherLib struct {
 }
 
-func NewCipher() *Cipher {
-	return &Cipher{}
-}
-
-func (m *Cipher) GenKeyPair() string {
+func (m *CipherLib) GenKeyPair() string {
 	privateKey, err := crypto.GenerateKey()
 	if err != nil {
 		print("generate crypt key get error: %v", err)
@@ -32,7 +28,7 @@ func (m *Cipher) GenKeyPair() string {
 	return keyPairString
 }
 
-func (m *Cipher) Encrypt(pubStr, message string) string {
+func (m *CipherLib) Encrypt(pubStr, message string) string {
 	pubKeyByte, err := hex.DecodeString(pubStr)
 	if err != nil {
 		return ""
@@ -50,7 +46,7 @@ func (m *Cipher) Encrypt(pubStr, message string) string {
 	return cipherText
 }
 
-func (m *Cipher) Decrypt(prvStr, cipherText string) string {
+func (m *CipherLib) Decrypt(prvStr, cipherText string) string {
 	originCipherText := base58.Decode(cipherText)
 	prvKey, _ := crypto.HexToECDSA(prvStr)
 	eciesPrvKey := ecies.ImportECDSA(prvKey)
@@ -61,40 +57,10 @@ func (m *Cipher) Decrypt(prvStr, cipherText string) string {
 	return string(message)
 }
 
-func (m *Cipher) DeCompressPubkey(pubStrC string) string {
+func (m *CipherLib) DeCompressPubkey(pubStrC string) string {
 	pubStr, err := crypto.DecompressPubkey(hexutil.MustDecode(pubStrC))
 	if err != nil {
 		return ""
 	}
 	return hex.EncodeToString(crypto.FromECDSAPub(pubStr))
-}
-
-func (m *Cipher) PublicKeyToEthAddress(pubStr string) string {
-	pubKeyByte, err := hex.DecodeString(pubStr)
-	if err != nil {
-		return ""
-	}
-	publicKey, err := crypto.UnmarshalPubkey(pubKeyByte)
-	if err != nil {
-		return ""
-	}
-	address := crypto.PubkeyToAddress(*publicKey)
-	return address.String()
-}
-
-func (m *Cipher) PublicKeyToHynAddress(pubStr string, isMainNet bool) string {
-	pubKeyByte, err := hex.DecodeString(pubStr)
-	if err != nil {
-		return ""
-	}
-	publicKey, err := crypto.UnmarshalPubkey(pubKeyByte)
-	if err != nil {
-		return ""
-	}
-	address := crypto.PubkeyToAddress(*publicKey)
-	if isMainNet {
-		return address.Bech32()
-	} else {
-		return address.Bech32T()
-	}
 }
