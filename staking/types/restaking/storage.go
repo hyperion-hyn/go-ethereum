@@ -321,18 +321,23 @@ func (s *Storage_RedelegationMap_) AllKeys() []common.Address {
 }
 
 func (s *Storage_RedelegationMap_) Put(key common.Address, redelegation *Redelegation_) {
-	keysLength := s.Keys().Length()
-	//set keys
-	s.Keys().Get(keysLength).SetValue(key)
+	if s.Contain(key) {
+		s.Map().Get(key).Entry().Save(*redelegation)
+	} else {
+		keysLength := s.Keys().Length()
+		//set keys
+		s.Keys().Get(keysLength).SetValue(key)
 
-	s.Get(key)
-	//set map
-	sRedelegation := s.Map().Get(key)
-	//set map entity
-	sRedelegationEntity := sRedelegation.Entry()
-	sRedelegationEntity.Save(*redelegation)
-	//set map index
-	sRedelegation.Index().SetValue(big.NewInt(0).Add(big.NewInt(int64(keysLength)), common.Big1)) //because index start with 1
+		s.Get(key)
+		//set map
+		sRedelegation := s.Map().Get(key)
+		//set map entity
+		sRedelegationEntity := sRedelegation.Entry()
+		sRedelegationEntity.Save(*redelegation)
+		//set map index
+		sRedelegation.Index().SetValue(big.NewInt(0).Add(big.NewInt(int64(keysLength)), common.Big1)) //because index start with 1
+	}
+
 }
 
 func (s *Storage_RedelegationMap_) Contain(key common.Address) bool {
