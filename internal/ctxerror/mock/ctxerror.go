@@ -5,8 +5,8 @@
 package mock_ctxerror
 
 import (
+	ctxerror "github.com/ethereum/go-ethereum/internal/ctxerror"
 	gomock "github.com/golang/mock/gomock"
-	ctxerror "github.com/harmony-one/harmony/internal/ctxerror"
 	reflect "reflect"
 )
 

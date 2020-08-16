@@ -88,7 +88,7 @@ func getGenesisAndKeys(n int) (*core.Genesis, []*ecdsa.PrivateKey) {
 	// force enable Istanbul engine
 	genesis.Config.Istanbul = &params.IstanbulConfig{}
 	genesis.Config.Ethash = nil
-	genesis.Difficulty = defaultDifficulty
+	genesis.Difficulty = DefaultDifficulty
 	genesis.Nonce = emptyNonce.Uint64()
 	genesis.Mixhash = types.IstanbulDigest
 
@@ -124,7 +124,7 @@ func makeHeader(parent *types.Block, config *atlas.Config) *types.Header {
 		GasUsed:    0,
 		Extra:      parent.Extra(),
 		Time:       parent.Time() + config.BlockPeriod,
-		Difficulty: defaultDifficulty,
+		Difficulty: DefaultDifficulty,
 	}
 	return header
 }
@@ -559,7 +559,7 @@ func TestWriteCommittedSeals(t *testing.T) {
 	}
 
 	// normal case
-	err := writeCommittedSeals(h, [][]byte{expectedCommittedSeal})
+	err := WriteCommittedSeals(h, [][]byte{expectedCommittedSeal})
 	if err != expectedErr {
 		t.Errorf("error mismatch: have %v, want %v", err, expectedErr)
 	}
@@ -575,7 +575,7 @@ func TestWriteCommittedSeals(t *testing.T) {
 
 	// invalid seal
 	unexpectedCommittedSeal := append(expectedCommittedSeal, make([]byte, 1)...)
-	err = writeCommittedSeals(h, [][]byte{unexpectedCommittedSeal})
+	err = WriteCommittedSeals(h, [][]byte{unexpectedCommittedSeal})
 	if err != errInvalidCommittedSeals {
 		t.Errorf("error mismatch: have %v, want %v", err, errInvalidCommittedSeals)
 	}

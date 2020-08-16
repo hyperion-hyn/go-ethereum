@@ -160,13 +160,13 @@ func (w *wizard) makeGenesis() {
 		storage := storage.New(&global, middleware, common.HexToAddress(atlasBackend.CONSORTIUM_BOARD), big.NewInt(0))
 
 		// Initialize a co-sign mask
-		mask, err := bls_cosi.NewMask(make([]*bls.PublicKey, (1<<types.BLSBitmapSizeInBytes*8)), nil)
+		mask, err := bls_cosi.NewMask(make([]*bls.PublicKey, types.AtlasExtraMask*8), nil)
 		if err != nil {
 			log.Crit("failed to create bls mask")
 		}
 
 		// In the case of atlas, configure the consensus parameters
-		genesis.Difficulty = big.NewInt(1)
+		genesis.Difficulty = atlasBackend.DefaultDifficulty
 		genesis.Config.Atlas = &params.AtlasConfig{
 			Period:         15,
 			Epoch:          30000,
@@ -199,7 +199,7 @@ func (w *wizard) makeGenesis() {
 				break
 			}
 		}
-		// Sort the signers and embed into the extra-data section
+		// Sort the signers
 		for i := 0; i < len(signers); i++ {
 			for j := i + 1; j < len(signers); j++ {
 				if bytes.Compare(signers[i].PublicKey.Serialize()[:], signers[j].PublicKey.Serialize()[:]) > 0 {
@@ -224,9 +224,21 @@ func (w *wizard) makeGenesis() {
 
 		genesis.ExtraData = make([]byte, types.AtlasExtraVanity+types.AtlasExtraMask+types.AtlasExtraSignature)
 
-		// TODO(zgx): get unsigned party and let other's to sign
-		// block := genesis.ToBlock(nil)
+		block := genesis.ToBlock(nil)
+		hash := atlasBackend.SealHash(block.Header())
+		publicKeys := make([]*bls.PublicKey, len(signers))
+		for i := 0; i < len(signers); i++ {
+			publicKeys[i] = signers[i].PublicKey
+		}
+		signatues := w.readSignatureWithPublicKey(publicKeys, hash)
+		var sign bls.Sign
 
+		for i := 0; i < len(signers); i++ {
+			mask.SetKey(publicKeys[i], true)
+			sign.Add(signatues[i])
+		}
+		atlasBackend.WriteCommittedSeals(block.Header(), sign.Serialize(), mask.Mask())
+		copy(genesis.ExtraData[:], block.Header().Extra[:])
 	}
 
 	// All done, store the genesis and flush to disk

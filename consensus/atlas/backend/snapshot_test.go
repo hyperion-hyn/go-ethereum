@@ -58,7 +58,7 @@ func (ap *testerAccountPool) sign(header *types.Header, validator string) {
 		ap.accounts[validator], _ = crypto.GenerateKey()
 	}
 	// Sign the header and embed the signature in extra data
-	hashData := crypto.Keccak256([]byte(sigHash(header).Bytes()))
+	hashData := crypto.Keccak256([]byte(SealHash(header).Bytes()))
 	sig, _ := crypto.Sign(hashData, ap.accounts[validator])
 
 	writeSeal(header, sig)
@@ -332,7 +332,7 @@ func TestVoting(t *testing.T) {
 		}
 		// Create the genesis block with the initial set of validators
 		genesis := &core.Genesis{
-			Difficulty: defaultDifficulty,
+			Difficulty: DefaultDifficulty,
 			Mixhash:    types.IstanbulDigest,
 		}
 		b := genesis.ToBlock(nil)
@@ -356,7 +356,7 @@ func TestVoting(t *testing.T) {
 				Number:     big.NewInt(int64(j) + 1),
 				Time:       uint64(j) * config.BlockPeriod,
 				Coinbase:   accounts.address(vote.voted),
-				Difficulty: defaultDifficulty,
+				Difficulty: DefaultDifficulty,
 				MixDigest:  types.IstanbulDigest,
 			}
 			extra, _ := prepareExtra(headers[j], validators)

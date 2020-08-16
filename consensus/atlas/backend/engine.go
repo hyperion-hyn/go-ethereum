@@ -19,10 +19,11 @@ package backend
 import (
 	"bytes"
 	"errors"
+	"io"
 	"math"
 
-	"github.com/hyperion-hyn/bls/ffi/go/bls"
 	bls_cosi "github.com/ethereum/go-ethereum/crypto/bls"
+	"github.com/hyperion-hyn/bls/ffi/go/bls"
 	"math/big"
 	"time"
 
@@ -96,7 +97,7 @@ var (
 	err = errors.New("mismatch transcations hashes")
 )
 var (
-	defaultDifficulty = big.NewInt(1)
+	DefaultDifficulty = big.NewInt(1)
 	nilUncleHash      = types.CalcUncleHash(nil) // Always Keccak256(RLP([])) as uncles are meaningless outside of PoW.
 	emptyNonce        = types.BlockNonce{}
 	now               = time.Now
@@ -118,7 +119,8 @@ func (sb *backend) Author(header *types.Header) (common.Address, error) {
 		return common.Address{}, err
 	}
 
-	return ecrecover(snap, header)
+	addr, _, err := ecrecover(snap, header)
+	return addr, err
 }
 
 // Signers extracts all the addresses who have signed the given header
@@ -136,29 +138,26 @@ func (sb *backend) Signers(header *types.Header) ([]atlas.Validator, error) {
 		return []atlas.Validator{}, err
 	}
 
-	var sign bls.Sign
-	if err := sign.Deserialize(extra.Signature); err != nil {
-		return []atlas.Validator{}, err
+	signers, err := getSigners(snap.ValSet, extra.AggBitmap[:])
+	if err != nil {
+		return nil, err
 	}
 
-	var pubKey bls.PublicKey
-	if err := pubKey.Deserialize(extra.PublicKey); err != nil {
-		return []atlas.Validator{}, err
-	}
+	return signers, nil
+}
 
-	bitmap, _ := bls_cosi.NewMask(snap.ValSet.GetPublicKeys(), nil)
-	if err := bitmap.SetMask(extra.AggBitmap); err != nil {
-		return []atlas.Validator{}, err
+func getSigners(valSet atlas.ValidatorSet, mask []byte) ([]atlas.Validator, error) {
+	bitmap, _ := bls_cosi.NewMask(valSet.GetPublicKeys(), nil)
+	if err := bitmap.SetMask(mask); err != nil {
+		return nil, err
 	}
 
 	signers := make([]atlas.Validator, bitmap.CountEnabled())
 	publicKeys := bitmap.GetPubKeyFromMask(true)
-	for _, publicKey := range(publicKeys) {
-		_, validator := snap.ValSet.GetByPublicKey(publicKey)
+	for _, publicKey := range publicKeys {
+		_, validator := valSet.GetByPublicKey(publicKey)
 		signers = append(signers, validator)
 	}
-
-	// ATLAS(zgx): should we include block sealer into signers?
 	return signers, nil
 }
 
@@ -201,7 +200,7 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 		return errInvalidUncleHash
 	}
 	// Ensure that the block's difficulty is meaningful (may not be correct at this point)
-	if header.Difficulty == nil || header.Difficulty.Cmp(defaultDifficulty) != 0 {
+	if header.Difficulty == nil || header.Difficulty.Cmp(DefaultDifficulty) != 0 {
 		return errInvalidDifficulty
 	}
 
@@ -284,13 +283,13 @@ func (sb *backend) verifySigner(chain consensus.ChainReader, header *types.Heade
 	}
 
 	// resolve the authorization key and check against signers
-	signer, err := ecrecover(snap, header)
+	_, publicKey, err := ecrecover(snap, header)
 	if err != nil {
 		return err
 	}
 
 	// Signer should be in the validator set of previous block's extraData.
-	if _, v := snap.ValSet.GetByAddress(signer); v == nil {
+	if _, v := snap.ValSet.GetByPublicKey(publicKey); v == nil {
 		return errUnauthorized
 	}
 	return nil
@@ -315,7 +314,7 @@ func (sb *backend) verifyCommittedSeals(chain consensus.ChainReader, header *typ
 		return err
 	}
 	// The length of Confirm seals should be larger than 0
-	if len(extra.AggSignature) == 0 || len(extra.AggBitmap) == 0{
+	if len(extra.AggSignature) == 0 || len(extra.AggBitmap) == 0 {
 		return errEmptyCommittedSeals
 	}
 
@@ -323,19 +322,43 @@ func (sb *backend) verifyCommittedSeals(chain consensus.ChainReader, header *typ
 		return errInvalidAggregatedSignature
 	}
 
-	validators := snap.ValSet.Copy()
-
-	mask, err := bls_cosi.NewMask(snap.ValSet.GetPublicKeys(), nil)
+	err = verifySignature(snap.ValSet, SealHash(header).Bytes()[:], extra.AggSignature[:], extra.AggBitmap[:])
 	if err != nil {
 		return err
 	}
 
-	quorumSize := int(math.Ceil(float64(2*validators.Size()) / 3))
+	return nil
+}
+
+func verifySignature(valSet atlas.ValidatorSet, hash []byte, signature []byte, bitmap []byte) error {
+	mask, err := bls_cosi.NewMask(valSet.GetPublicKeys(), nil)
+	if err != nil {
+		return err
+	}
+	if err := mask.SetMask(bitmap); err != nil {
+		return err
+	}
+
+	quorumSize := int(math.Ceil(float64(2*valSet.Size()) / 3))
 	if mask.CountEnabled() < quorumSize {
 		return errInvalidCommittedSeals
 	}
 
-	// ATLAS(zgx): maybe we should make sure signer satisify a low limit.
+	var aggregatePublicKey bls.PublicKey
+	publicKeys := mask.GetPubKeyFromMask(true)
+	for _, publicKey := range publicKeys {
+		aggregatePublicKey.Add(publicKey)
+	}
+
+	var sign bls.Sign
+	if err := sign.Deserialize(signature); err != nil {
+		return err
+	}
+
+	if err := sign.VerifyHash(&aggregatePublicKey, hash); err == false {
+		return errInvalidAggregatedSignature
+	}
+
 	return nil
 }
 
@@ -348,8 +371,8 @@ func (sb *backend) VerifySeal(chain consensus.ChainReader, header *types.Header)
 		return errUnknownBlock
 	}
 
-	// ensure that the difficulty equals to defaultDifficulty
-	if header.Difficulty.Cmp(defaultDifficulty) != 0 {
+	// ensure that the difficulty equals to DefaultDifficulty
+	if header.Difficulty.Cmp(DefaultDifficulty) != 0 {
 		return errInvalidDifficulty
 	}
 	if err := sb.verifySigner(chain, header, nil); err != nil {
@@ -376,7 +399,7 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 		return consensus.ErrUnknownAncestor
 	}
 	// use the same difficulty for all blocks
-	header.Difficulty = defaultDifficulty
+	header.Difficulty = DefaultDifficulty
 
 	// Assemble the voting snapshot
 	snap, err := sb.snapshot(chain, number-1, header.ParentHash, nil)
@@ -395,16 +418,6 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	if header.Time < uint64(time.Now().Unix()) {
 		header.Time = uint64(time.Now().Unix())
 	}
-
-	signature, mask, err := sb.ReadLastCommits()
-	if err != nil {
-		return err
-	}
-
-	if err = writeCommittedSeals(header, signature, mask); err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -506,16 +519,6 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 // update timestamp and signature of the block based on its number of transactions
 func (sb *backend) updateBlock(parent *types.Header, block *types.Block) (*types.Block, error) {
 	header := block.Header()
-	// sign the hash
-	seal, pubkey, err := sb.Sign(sigHash(header).Bytes())
-	if err != nil {
-		return nil, err
-	}
-
-	err = writeSeal(header, seal, pubkey)
-	if err != nil {
-		return nil, err
-	}
 
 	return block.WithSeal(header), nil
 }
@@ -592,8 +595,9 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 				break
 			}
 		}
+
 		// If we're at block zero, make a snapshot
-		if number == 0 {
+		if number%checkpointInterval == 0 {
 			genesis := chain.GetHeaderByNumber(0)
 			if err := sb.VerifyHeader(chain, genesis, false); err != nil {
 				return nil, err
@@ -652,61 +656,32 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 	return snap, err
 }
 
-// FIXME: Need to update this for Atlas
-// sigHash returns the hash which is used as input for the Atlas
-// signing. It is the hash of the entire header apart from the 65 byte signature
-// contained at the end of the extra data.
-//
-// Note, the method requires the extra data to be at least 65 bytes, otherwise it
-// panics. This is done to avoid accidentally using both forms (signature present
-// or not), which could be abused to produce different hashes for the same header.
-func sigHash(header *types.Header) (hash common.Hash) {
-	hasher := sha3.NewLegacyKeccak256()
-
-	// Clean seal is required for calculating proposer seal.
-	rlp.Encode(hasher, types.AtlasFilteredHeader(header, false))
-	hasher.Sum(hash[:0])
-	return hash
-}
-
 // SealHash returns the hash of a block prior to it being sealed.
 func (sb *backend) SealHash(header *types.Header) common.Hash {
-	return sigHash(header)
+	return SealHash(header)
 }
 
 // ecrecover extracts the Ethereum account address from a signed header.
-func ecrecover(snap * Snapshot, header *types.Header) (common.Address, error) {
+func ecrecover(snap *Snapshot, header *types.Header) (common.Address, *bls.PublicKey, error) {
 	hash := header.Hash()
 	if addr, ok := recentAddresses.Get(hash); ok {
-		return addr.(common.Address), nil
+		return addr.(common.Address), nil, nil
 	}
 
 	// Retrieve the signature from the header extra-data
 	atlasExtra, err := types.ExtractAtlasExtra(header)
 	if err != nil {
-		return common.Address{}, err
+		return common.Address{}, nil, err
 	}
 
-	var sign bls.Sign
-	if err := sign.Deserialize(atlasExtra.Signature); err != nil {
-		return common.Address{}, err
-	}
-
-	var pubKey bls.PublicKey
-	if err := pubKey.Deserialize(atlasExtra.PublicKey); err != nil {
-		return common.Address{}, err
-	}
-
-	// ATLAS(zgx): should verify signature here?
-
-	_, validator := snap.ValSet.GetByPublicKey(&pubKey)
+	validator := snap.ValSet.GetByIndex(uint64(atlasExtra.Proposer))
 	if validator == nil {
-		return common.Address{}, errValidatorNotExist
+		return common.Address{}, nil, errValidatorNotExist
 	}
 
 	addr := validator.Coinbase()
 	recentAddresses.Add(hash, addr)
-	return addr, nil
+	return addr, validator.PublicKey(), nil
 }
 
 // prepareExtra returns a extra-data of the given header and validators
@@ -720,10 +695,7 @@ func prepareExtra(header *types.Header, vals []atlas.Validator) ([]byte, error) 
 	buf.Write(header.Extra[:types.AtlasExtraVanity])
 
 	ist := &types.AtlasExtra{
-		AggSignature: []byte{},
-		AggBitmap:    []byte{},
-		Signature:    []byte{},
-		PublicKey:    []byte{},
+		Proposer: 0,
 	}
 
 	payload, err := rlp.EncodeToBytes(&ist)
@@ -746,9 +718,6 @@ func writeSeal(h *types.Header, seal []byte, pubkey []byte) error {
 		return err
 	}
 
-	atlasExtra.Signature = seal
-	atlasExtra.PublicKey = pubkey
-
 	payload, err := rlp.EncodeToBytes(&atlasExtra)
 	if err != nil {
 		return err
@@ -758,8 +727,8 @@ func writeSeal(h *types.Header, seal []byte, pubkey []byte) error {
 	return nil
 }
 
-// writeCommittedSeals writes the extra-data field of a block header with given committed seals.
-func writeCommittedSeals(h *types.Header, signature []byte, bitmap []byte) error {
+// WriteCommittedSeals writes the extra-data field of a block header with given committed seals.
+func WriteCommittedSeals(h *types.Header, signature []byte, bitmap []byte) error {
 	if len(signature) != types.AtlasExtraSignature || len(bitmap) != types.AtlasExtraMask {
 		return errInvalidCommittedSeals
 	}
@@ -769,10 +738,8 @@ func writeCommittedSeals(h *types.Header, signature []byte, bitmap []byte) error
 		return err
 	}
 
-	atlasExtra.AggSignature = make([]byte, len(signature))
-	copy(atlasExtra.AggSignature, signature)
-	atlasExtra.AggBitmap = make([]byte, len(bitmap))
-	copy(atlasExtra.AggBitmap, bitmap)
+	copy(atlasExtra.AggSignature[:], signature)
+	copy(atlasExtra.AggBitmap[:], bitmap)
 
 	payload, err := rlp.EncodeToBytes(&atlasExtra)
 	if err != nil {
@@ -787,18 +754,63 @@ func writeCommittedSeals(h *types.Header, signature []byte, bitmap []byte) error
 func getValidators(state *state.StateDB, numVal int) ([]atlas.Validator, error) {
 	var global storage.Global_t
 
-	wrapper := storage.New(&global, state, common.HexToAddress(CONSORTIUM_BOARD),big.NewInt(0))
+	wrapper := storage.New(&global, state, common.HexToAddress(CONSORTIUM_BOARD), big.NewInt(0))
 	length := wrapper.Committee().Members().Length()
 	validators := make([]atlas.Validator, length)
-	for i := 0; i < length ; i++ {
+	for i := 0; i < length; i++ {
 		member := wrapper.Committee().Members().Get(i)
 		validator, err := validator.New(member.Coinbase().Value(), member.PublicKey().Value())
 		if err != nil {
-			// ATLAS(zgx): just ignore invalid validator?
-			continue
+			return nil, err
 		}
 		validators[i] = validator
 	}
 
 	return validators, nil
+}
+
+// SealHash returns the hash of a block prior to it being sealed.
+func SealHash(header *types.Header) (hash common.Hash) {
+	hasher := sha3.NewLegacyKeccak256()
+	encodeSigHeader(hasher, header)
+	hasher.Sum(hash[:0])
+	return hash
+}
+
+// AtlasRLP returns the rlp bytes which needs to be signed for
+// sealing. The RLP to sign consists of the entire header apart from the signature
+// contained at the end of the extra data.
+//
+// Note, the method requires the extra data to be at least 65 bytes, otherwise it
+// panics. This is done to avoid accidentally using both forms (signature present
+// or not), which could be abused to produce different hashes for the same header.
+func AtlasRLP(header *types.Header) []byte {
+	b := new(bytes.Buffer)
+	encodeSigHeader(b, header)
+	return b.Bytes()
+}
+
+func encodeSigHeader(w io.Writer, header *types.Header) {
+	extra := make([]byte, len(header.Extra))
+	copy(extra[:types.AtlasExtraVanity], header.Extra[:types.AtlasExtraVanity])
+	err := rlp.Encode(w, []interface{}{
+		header.ParentHash,
+		header.UncleHash,
+		header.Coinbase,
+		header.Root,
+		header.TxHash,
+		header.ReceiptHash,
+		header.Bloom,
+		header.Difficulty,
+		header.Number,
+		header.GasLimit,
+		header.GasUsed,
+		header.Time,
+		extra,
+		header.MixDigest,
+		header.Nonce,
+	})
+	if err != nil {
+		panic("can't encode: " + err.Error())
+	}
 }
