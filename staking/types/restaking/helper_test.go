@@ -83,7 +83,7 @@ func TestUpdateValidatorFromEditMsg(t *testing.T) {
 			// update Description.Name
 			editValidator: EditValidator{
 				ValidatorAddress: validatorAddr,
-				Description:      &Description_{Name: "jacky@harmony.one"},
+				Description:      Description_{Name: "jacky@harmony.one"},
 			},
 			editExpValidator: func(v *Validator_) { v.Description.Name = "jacky@harmony.one" },
 		},
@@ -165,7 +165,7 @@ func TestUpdateValidatorFromEditMsg(t *testing.T) {
 			// invalid description
 			editValidator: EditValidator{
 				ValidatorAddress: validatorAddr,
-				Description:      &invalidDescription,
+				Description:      invalidDescription,
 			},
 			expErr: errors.New("exceed maximum name length"),
 		},

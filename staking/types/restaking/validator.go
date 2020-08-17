@@ -2,87 +2,41 @@ package restaking
 
 import (
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/pkg/errors"
 	"math/big"
 )
 
-// Storage_Description_
-func (s *Storage_Description_) UpdateDescription(newDesc Description_) {
-	if newDesc.Name != "" {
-		s.Name().SetValue(newDesc.Name)
+const (
+	DoNotEnforceMaxBLS       = -1
+	BLSSignatureSizeInBytes  = 96
+	MaxNameLength            = 140
+	MaxIdentityLength        = 140
+	MaxWebsiteLength         = 140
+	MaxSecurityContactLength = 140
+	MaxDetailsLength         = 280
+)
+
+var (
+	errCommissionRateTooLarge = errors.New("commission rate and change rate can not be larger than max commission rate")
+	errInvalidCommissionRate  = errors.New("commission rate, change rate and max rate should be a value ranging from 0.0 to 1.0")
+	errNeedAtLeastOneSlotKey  = errors.New("need at least one slot key")
+	ErrExcessiveBLSKeys       = errors.New("more slot keys provided than allowed")
+	errDuplicateSlotKeys      = errors.New("slot keys can not have duplicates")
+	ErrCommitteeNil           = errors.New("subcommittee is nil pointer")
+	errNilMaxTotalDelegation  = errors.New("MaxTotalDelegation can not be nil")
+)
+
+func (a *AddressSet_) Contain(address common.Address) bool {
+	_, ok := a.Set[address]
+	return ok
+}
+
+func (a *AddressSet_) Put(address common.Address) {
+	if a.Contain(address) {
+		return
 	}
-	if newDesc.Identity != "" {
-		s.Identity().SetValue(newDesc.Identity)
-	}
-	if newDesc.Website != "" {
-		s.Website().SetValue(newDesc.Website)
-	}
-	if newDesc.SecurityContact != "" {
-		s.SecurityContact().SetValue(newDesc.SecurityContact)
-	}
-	if newDesc.Details != "" {
-		s.Details().SetValue(newDesc.Details)
-	}
-}
-
-// Storage_BLSPublicKeys_
-func (s *Storage_BLSPublicKeys_) Length() int {
-	return s.Keys().Length()
-}
-
-func (s *Storage_BLSPublicKeys_) Save(keys *BLSPublicKeys_) {
-	length := len(keys.Keys)
-	s.Keys().Resize(length)
-	for i := 0; i < length; i++ {
-		s.Keys().Get(i).Key().SetValue(keys.Keys[i].Key)
-	}
-}
-
-func (s *Storage_BLSPublicKeys_) Get(index int) *BLSPublicKey_ {
-	s.Keys().Get(index).Key().Value()
-	return s.Keys().Get(index).obj
-}
-
-func (s *Storage_BLSPublicKeys_) Set(index int, key *BLSPublicKey_) {
-	s.Keys().Get(index).Key().SetValue(key.Key)
-}
-
-func (s *Storage_BLSPublicKeys_) Remove(index int, keepOrder bool) {
-	//remove current
-	length := s.Length()
-	lastOneStorage := s.Keys().Get(length - 1)
-	//remove lastOne
-	s.Keys().Get(length - 1).Key().SetValue([48]uint8{})
-	//replace lastOne to index
-	s.Keys().Get(index).Key().SetValue(lastOneStorage.Key().Value())
-	//resize length
-	s.Keys().Resize(length - 1)
-}
-
-func (s *Storage_BLSPublicKeys_) Push(key *BLSPublicKey_) {
-	length := s.Length()
-
-	//over length will auto resize , not resize again
-	s.Keys().Get(length).Key().SetValue(key.Key)
-}
-
-func (s *Storage_BLSPublicKeys_) Pop() *BLSPublicKey_ {
-	length := s.Length()
-
-	blsPublicKeyTemp :=
-		BLSPublicKey_{Key: s.Keys().Get(length - 1).Key().Value()}
-
-	s.Keys().Get(length - 1).Key().SetValue([48]uint8{})
-	s.Keys().Resize(length - 1)
-	return &blsPublicKeyTemp
-}
-
-func (s *Storage_BLSPublicKeys_) Load() *BLSPublicKeys_ {
-	length := s.Length()
-
-	for i := 0; i < length; i++ {
-		s.Keys().Get(i).Key().Value()
-	}
-	return s.obj
+	a.Keys = append(a.Keys, &address)
+	a.Set[address] = func() *bool { t := true; return &t }()
 }
 
 // Storage_AddressSet_
@@ -106,6 +60,127 @@ func (s *Storage_AddressSet_) Save(addressSet AddressSet_) {
 		}
 	}
 }
+
+
+
+// Copy deep copies the staking.CommissionRates
+func (cr *CommissionRates_) Copy() CommissionRates_ {
+	return CommissionRates_{
+		Rate:          cr.Rate.Copy(),
+		MaxRate:       cr.MaxRate.Copy(),
+		MaxChangeRate: cr.MaxChangeRate.Copy(),
+	}
+}
+
+var (
+	hundredPercent = common.OneDec()
+	zeroPercent    = common.ZeroDec()
+)
+
+// ValidatorStatus represents ability to participate in EPoS auction
+// that occurs just once an epoch
+type ValidatorStatus byte
+
+const (
+	// Nil is a default state that represents a no-op
+	Nil ValidatorStatus = iota
+	// Active means allowed in epos auction
+	Active
+	// Inactive means validator did not sign enough over 66%
+	// of the time in an epoch and so they are removed from
+	// the possibility of being in the epos auction, which happens
+	// only once an epoch and only
+	// by beaconchain, aka shard.BeaconChainShardID
+	Inactive
+	// Banned records whether this validator is banned
+	// from the network because they double-signed
+	// it can never be undone
+	Banned
+)
+
+func (e ValidatorStatus) String() string {
+	switch e {
+	case Active:
+		return "active"
+	case Inactive:
+		return "inactive"
+	case Banned:
+		return "doubleSigningBanned"
+	default:
+		return "unknown"
+	}
+}
+
+// SanityCheck checks basic requirements of a validator
+func (v *Validator_) SanityCheck(maxSlotKeyAllowed int) error {
+	if err := v.Description.EnsureLength(); err != nil {
+		return err
+	}
+
+	if len(v.SlotPubKeys.Keys) == 0 {
+		return errNeedAtLeastOneSlotKey
+	}
+
+	if c := len(v.SlotPubKeys.Keys); maxSlotKeyAllowed != DoNotEnforceMaxBLS &&
+		c > maxSlotKeyAllowed {
+		return errors.Wrapf(
+			ErrExcessiveBLSKeys, "have: %d allowed: %d",
+			c, maxSlotKeyAllowed,
+		)
+	}
+
+	if v.MaxTotalDelegation == nil {
+		return errNilMaxTotalDelegation
+	}
+	// TODO(ATLAS): minimal delegation?
+
+	if v.Commission.CommissionRates.Rate.LT(zeroPercent) || v.Commission.CommissionRates.Rate.GT(hundredPercent) {
+		return errors.Wrapf(
+			errInvalidCommissionRate, "rate:%s", v.Commission.CommissionRates.Rate.String(),
+		)
+	}
+
+	if v.Commission.CommissionRates.MaxRate.LT(zeroPercent) || v.Commission.CommissionRates.MaxRate.GT(hundredPercent) {
+		return errors.Wrapf(
+			errInvalidCommissionRate, "max rate:%s", v.Commission.CommissionRates.MaxRate.String(),
+		)
+	}
+
+	if v.Commission.CommissionRates.MaxChangeRate.LT(zeroPercent) ||
+		v.Commission.CommissionRates.MaxChangeRate.GT(hundredPercent) {
+		return errors.Wrapf(
+			errInvalidCommissionRate, "max change rate:%s", v.Commission.CommissionRates.MaxChangeRate.String(),
+		)
+	}
+
+	if v.Commission.CommissionRates.Rate.GT(v.Commission.CommissionRates.MaxRate) {
+		return errors.Wrapf(
+			errCommissionRateTooLarge,
+			"rate:%s max rate:%s", v.Commission.CommissionRates.Rate.String(),
+			v.Commission.CommissionRates.MaxRate.String(),
+		)
+	}
+
+	if v.Commission.CommissionRates.MaxChangeRate.GT(v.Commission.CommissionRates.MaxRate) {
+		return errors.Wrapf(
+			errCommissionRateTooLarge,
+			"rate:%s max change rate:%s", v.Commission.CommissionRates.Rate.String(),
+			v.Commission.CommissionRates.MaxChangeRate.String(),
+		)
+	}
+
+	allKeys := map[string]struct{}{}
+	for i := range v.SlotPubKeys.Keys {
+		key := v.SlotPubKeys.Keys[i].Hex()
+		if _, ok := allKeys[key]; !ok {
+			allKeys[key] = struct{}{}
+		} else {
+			return errDuplicateSlotKeys
+		}
+	}
+	return nil
+}
+
 
 // Storage_Validator_
 func (s *Storage_Validator_) Load() *Validator_ {
@@ -307,215 +382,6 @@ func (s *Storage_ValidatorWrapperMap_) Get(key common.Address) (*Storage_Validat
 	return nil, false
 }
 
-// Storage_Redelegation_
-func (s *Storage_Redelegation_) AddReward(reward *big.Int) {
-	rewardTemp := s.Reward().Value()
-	rewardTemp = rewardTemp.Add(rewardTemp, reward)
-	s.Reward().SetValue(rewardTemp)
-}
-
-func (s *Storage_Redelegation_) AddAmount(amount *big.Int) {
-	amountTemp := s.Amount().Value()
-	amountTemp = amountTemp.Add(amountTemp, amount)
-	s.Amount().SetValue(amountTemp)
-}
-
-func (s *Storage_Redelegation_) Save(redelegation Redelegation_) {
-	s.DelegatorAddress().SetValue(redelegation.DelegatorAddress)
-	if redelegation.Amount != nil {
-		s.Amount().SetValue(redelegation.Amount)
-	}
-	if redelegation.Reward != nil {
-		s.Reward().SetValue(redelegation.Reward)
-	}
-	if redelegation.Undelegation.Amount != nil {
-		s.Undelegation().Amount().SetValue(redelegation.Undelegation.Amount)
-	}
-	if redelegation.Undelegation.Epoch != nil {
-		s.Undelegation().Epoch().SetValue(redelegation.Undelegation.Epoch)
-	}
-}
-func (s *Storage_Redelegation_) SetNil() {
-	s.DelegatorAddress().SetValue(common.BigToAddress(common.Big0))
-	s.Amount().SetValue(common.Big0)
-	s.Reward().SetValue(common.Big0)
-	s.Undelegation().Amount().SetValue(common.Big0)
-	s.Undelegation().Epoch().SetValue(common.Big0)
-}
-
-func (s *Storage_Redelegation_) CanReleaseAt(epoch *big.Int) bool {
-	return s.Undelegation().Amount().Value().Cmp(common.Big0) > 0 && s.Undelegation().Epoch().Value().Cmp(epoch) >= 0
-}
-
-
-// Storage_RedelegationMap_
-func (s *Storage_RedelegationMap_) AllKeys() []common.Address {
-	addressSlice := make([]common.Address, 0)
-	addressLength := s.Keys().Length()
-	for i := 0; i < addressLength; i++ {
-		addressSlice = append(addressSlice, s.Keys().Get(i).Value())
-	}
-	return addressSlice
-}
-
-func (s *Storage_RedelegationMap_) Put(key common.Address, redelegation *Redelegation_) {
-	if s.Contain(key) {
-		s.Map().Get(key).Entry().Save(*redelegation)
-	} else {
-		keysLength := s.Keys().Length()
-		//set keys
-		s.Keys().Get(keysLength).SetValue(key)
-
-		s.Get(key)
-		//set map
-		sRedelegation := s.Map().Get(key)
-		//set map entity
-		sRedelegationEntity := sRedelegation.Entry()
-		sRedelegationEntity.Save(*redelegation)
-		//set map index
-		sRedelegation.Index().SetValue(big.NewInt(0).Add(big.NewInt(int64(keysLength)), common.Big1)) //because index start with 1
-	}
-
-}
-
-func (s *Storage_RedelegationMap_) Contain(key common.Address) bool {
-	return s.Map().Get(key).Index().Value().Cmp(common.Big0) > 0
-}
-
-func (s *Storage_RedelegationMap_) Get(key common.Address) (*Storage_Redelegation_, bool) {
-	if s.Contain(key) {
-		return s.Map().Get(key).Entry(), true
-	} else {
-		return nil, false
-	}
-}
-
-func (s *Storage_RedelegationMap_) Remove(key common.Address) {
-	//remove keys
-	keysStorage := s.Keys()
-	keysLength := keysStorage.Length()
-	lastKey := keysStorage.Get(keysLength - 1).Value()
-	keyIndex := s.Map().Get(key).Index().Value()
-	keysStorage.Get(int(keyIndex.Uint64() - 1)).SetValue(keysStorage.Get(keysLength - 1).Value())
-	keysStorage.Get(keysLength - 1).SetValue(common.BigToAddress(common.Big0))
-	s.Keys().Resize(keysLength - 1)
-
-	//remove map entry
-	maps := s.Map()
-	delegationElem := maps.Get(key)
-	lastDelegationElem := maps.Get(lastKey)
-	lastDelegationElem.Index().SetValue(keyIndex)
-
-	delegationElem.Entry().SetNil()
-	delegationElem.Index().SetValue(common.Big0)
-}
-
-func (s *Storage_RedelegationMap_) Save(relegationMap RedelegationMap_) {
-	relegationKeys := relegationMap.Keys
-	s.Keys().Resize(len(relegationKeys))
-	for i := 0; i < len(relegationKeys); i++ {
-		addressTemp := relegationKeys[i]
-		s.Keys().Get(i).SetValue(*addressTemp)
-		s.Map().Get(*addressTemp).Entry().Save(relegationMap.Map[*addressTemp].Entry)
-		s.Map().Get(*addressTemp).Index().SetValue(relegationMap.Map[*addressTemp].Index)
-	}
-}
-
-// Storage_Slots_
-func (s *Storage_Slots_) Length() int {
-	return s.Entrys().Length()
-}
-
-func (s *Storage_Slots_) Load() []*Slot_ {
-	slotsLength := s.Length()
-	for i := 0; i < slotsLength; i++ {
-		s.Get(i).Load()
-	}
-	return s.obj.Entrys
-}
-
-func (s *Storage_Slots_) Get(index int) *Storage_Slot_ {
-	return s.Entrys().Get(index)
-}
-
-func (s *Storage_Slots_) Set(index int, key *Slot_) {
-	s.Entrys().Get(index).Save(key)
-}
-
-func (s *Storage_Slots_) Remove(index int, keepOrder bool) {
-	// remove from index
-	oldEntriesLength := s.Entrys().Length()
-
-	//set lastEntity to index
-	lastEntry := s.Entrys().Get(oldEntriesLength - 1)
-	s.Entrys().Get(index).Save(&Slot_{
-		EcdsaAddress: lastEntry.EcdsaAddress().Value(),
-		BLSPublicKey: BLSPublicKey_{
-			Key: lastEntry.BLSPublicKey().Key().Value(),
-		},
-		EffectiveStake: lastEntry.EffectiveStake().Value(),
-	})
-
-	//set lastEntity to zero
-	lastEntry.SetNil()
-
-	//resize slice
-	s.Entrys().Resize(oldEntriesLength - 1)
-}
-
-func (s *Storage_Slots_) Push(slot *Slot_) {
-	entityLength := s.Entrys().Length()
-	s.Entrys().Get(entityLength).Save(slot)
-}
-
-func (s *Storage_Slots_) Pop() *Storage_Slot_ {
-	entityLength := s.Entrys().Length()
-	storageSlot := s.Entrys().Get(entityLength - 1)
-	s.Remove(entityLength-1, false)
-	return storageSlot
-}
-
-func (s *Storage_Slots_) UpdateSlots(slots Slots_) {
-	// remove old
-	length := s.Length()
-	for i := 0; i < length; i++ {
-		s.Get(i).SetNil()
-	}
-	//set new
-	newSlotsLength := len(slots.Entrys)
-	s.Entrys().Resize(newSlotsLength)
-	for i := 0; i < newSlotsLength; i++ {
-		s.Get(i).Save(slots.Entrys[i])
-	}
-}
-
-func (s *Storage_Slot_) SetNil() {
-	s.EffectiveStake().SetValue(common.NewDec(int64(0)))
-	s.EcdsaAddress().SetValue(common.BigToAddress(big.NewInt(0)))
-	s.BLSPublicKey().Key().SetValue([48]uint8{})
-}
-
-func (s *Storage_Slot_) Save(key *Slot_) {
-	s.BLSPublicKey().Key().SetValue(key.BLSPublicKey.Key)
-	s.EcdsaAddress().SetValue(key.EcdsaAddress)
-	if !key.EffectiveStake.IsNil() {
-		s.EffectiveStake().SetValue(key.EffectiveStake)
-	}
-}
-
-func (s *Storage_Slot_) Load() *Slot_ {
-	s.BLSPublicKey().Key().Value()
-	s.EcdsaAddress().Value()
-	s.EffectiveStake().Value()
-	return s.obj
-}
-
-// Storage_Committee_
-func (s *Storage_Committee_) Load() *Committee_ {
-	s.Epoch().Value()
-	s.Slots().Load()
-	return s.obj
-}
 
 // Storage_ValidatorPool_
 func (s *Storage_ValidatorPool_) UpdateCommittee(committee *Committee_) {
