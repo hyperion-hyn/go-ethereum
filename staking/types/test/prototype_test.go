@@ -76,7 +76,7 @@ func TestGetDefaultValidatorWrapperWithAddr(t *testing.T) {
 		exp.Validator.OperatorAddresses = restaking.NewAddressSetWithAddress(test.operatorAddr)
 		exp.Validator.SlotPubKeys = test.keys
 		exp.Redelegations = func() restaking.RedelegationMap_ {
-			m := restaking.NewRelegationMap()
+			m := restaking.NewRedelegationMap()
 			m.Put(test.operatorAddr, &restaking.Redelegation_{
 				DelegatorAddress: test.operatorAddr,
 			})

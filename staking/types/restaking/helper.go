@@ -186,7 +186,7 @@ func NewRedelegation(delegatorAddr common.Address, amount *big.Int) Redelegation
 	}
 }
 
-func NewRelegationMap() RedelegationMap_ {
+func NewRedelegationMap() RedelegationMap_ {
 	return RedelegationMap_{
 		Keys: []*Address{},
 		Map:  map[Address]*RedelegationMapEntry_{},

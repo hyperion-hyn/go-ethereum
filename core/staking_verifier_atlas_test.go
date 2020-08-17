@@ -48,7 +48,7 @@ var (
 	twentyFiveKOnes = new(big.Int).Mul(big.NewInt(25000), oneBig)
 	thirtyKOnes     = new(big.Int).Mul(big.NewInt(30000), oneBig)
 	hundredKOnes    = new(big.Int).Mul(big.NewInt(100000), oneBig)
-	millionOnes    = new(big.Int).Mul(big.NewInt(1000000), oneBig)
+	millionOnes     = new(big.Int).Mul(big.NewInt(1000000), oneBig)
 
 	negRate           = common.NewDecWithPrec(-1, 10)
 	pointOneDec       = common.NewDecWithPrec(1, 1)
@@ -161,7 +161,7 @@ func TestVerifyCreateValidatorMsg(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    restaking.Validator_
+		want    restaking.ValidatorWrapper_
 		wantErr error
 	}{
 		{
@@ -232,7 +232,7 @@ func TestVerifyCreateValidatorMsg(t *testing.T) {
 			if err != nil || tt.wantErr != nil {
 				return
 			}
-			if err := staketest.CheckValidatorEqual(got, &tt.want); err != nil {
+			if err := staketest.CheckValidatorEqual(got.NewValidator.Validator, tt.want.Validator); err != nil {
 				t.Errorf("Test - %v: %v", tt.name, err)
 			}
 		})
@@ -252,7 +252,7 @@ func defaultMsgCreateValidator() restaking.CreateValidator {
 	return cv
 }
 
-func defaultExpCreatedValidator() restaking.Validator_ {
+func defaultExpCreatedValidator() restaking.ValidatorWrapper_ {
 	pub := blsKeys[11].pub
 	v := restaking.Validator_{
 		ValidatorAddress:     createValidatorAddr,
@@ -268,7 +268,28 @@ func defaultExpCreatedValidator() restaking.Validator_ {
 		Description:    defaultDesc,
 		CreationHeight: big.NewInt(defaultBlockNumber),
 	}
-	return v
+
+	redelegations := restaking.NewRedelegationMap()
+	newRedelegation := restaking.Redelegation_{
+		DelegatorAddress: delegatorAddr,
+		Amount:           common.Big0,
+		Undelegation: restaking.Undelegation_{
+			Amount: new(big.Int).Set(twentyKOnes),
+			Epoch:  defaultStakingAmount,
+		},
+	}
+	redelegations.Put(delegatorAddr, newRedelegation)
+
+	w := restaking.ValidatorWrapper_{
+		Validator:                 v,
+		Redelegations:             redelegations,
+		BlockReward:               big.NewInt(0),
+		TotalDelegation:           defaultStakingAmount,
+		TotalDelegationByOperator: defaultStakingAmount,
+	}
+	w.Counters.NumBlocksSigned = common.Big0
+	w.Counters.NumBlocksToSign = common.Big0
+	return w
 }
 
 func TestVerifyEditValidatorMsg(t *testing.T) {
@@ -496,7 +517,7 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := VerifyEditValidatorMsg(tt.args.stateDB, tt.args.chainContext, tt.args.epoch, tt.args.blockNum, &tt.args.msg, tt.args.signer)
+			_, err := VerifyEditValidatorMsg(tt.args.stateDB, tt.args.chainContext, tt.args.epoch, tt.args.blockNum, &tt.args.msg, tt.args.signer)
 			if assErr := assertError(err, tt.wantErr); assErr != nil {
 				t.Errorf("Test - %v: %v", tt.name, err)
 			}
@@ -591,7 +612,7 @@ func TestVerifyRedelegateMsg(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := VerifyRedelegateMsg(tt.args.stateDB, &tt.args.msg, tt.args.signer)
+			_, err := VerifyRedelegateMsg(tt.args.stateDB, &tt.args.msg, tt.args.signer)
 			if assErr := assertError(err, tt.wantErr); assErr != nil {
 				t.Errorf("Test - %v: %v", tt.name, err)
 			}
@@ -703,7 +724,7 @@ func TestVerifyUnredelegateMsg(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := VerifyUnredelegateMsg(tt.args.stateDB, tt.args.epoch, &tt.args.msg, tt.args.signer)
+			_, err := VerifyUnredelegateMsg(tt.args.stateDB, tt.args.epoch, &tt.args.msg, tt.args.signer)
 			if assErr := assertError(err, tt.wantErr); assErr != nil {
 				t.Errorf("Test - %v: %v", tt.name, err)
 			}
@@ -826,7 +847,7 @@ func TestVerifyCollectRedelRewardsMsg(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := VerifyCollectRedelRewardsMsg(tt.args.stateDB, &tt.args.msg, tt.args.signer)
+			_, err := VerifyCollectRedelRewardsMsg(tt.args.stateDB, &tt.args.msg, tt.args.signer)
 			if assErr := assertError(err, tt.wantErr); assErr != nil {
 				t.Errorf("Test - %v: %v", tt.name, err)
 			}

@@ -29,7 +29,6 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
@@ -578,7 +577,7 @@ func (c *AtlasClique) APIs(chain consensus.ChainReader) []rpc.API {
 }
 
 // ATLAS
-func handleMap3AndAtlasStaking(chain consensus.ChainReader, header *types.Header, state *state.StateDB) (reward.Reader, error) {
+func handleMap3AndAtlasStaking(chain consensus.ChainReader, header *types.Header, stateDB *state.StateDB) (reward.Reader, error) {
 	// ATLAS
 	isNewEpoch := chain.Config().Atlas.IsFirstBlock(header.Number.Uint64())
 	isEnd := chain.Config().Atlas.IsLastBlock(header.Number.Uint64())
@@ -587,38 +586,40 @@ func handleMap3AndAtlasStaking(chain consensus.ChainReader, header *types.Header
 		// ComputeAndMutateEPOSStatus depends on the signing counts that's
 		// consistent with the counts when the new shardState was proposed.
 		// Refer to committee.IsEligibleForEPoSAuction()
-		curComm := state.ValidatorPool().Committee()
+		curComm := stateDB.ValidatorPool().Committee()
 		for _, addr := range getValidatorAddressFromCommittee(curComm) { // current committee
 			if err := availability.ComputeAndMutateEPOSStatus(
-				chain, state, addr, header.Epoch,
+				chain, stateDB, addr, header.Epoch,
 			); err != nil {
 				return nil, err
 			}
 		}
 
 		// committee
-		newComm, err := updateCommitteeForNextEpoch(chain, header, state)
+		newComm, err := updateCommitteeForNextEpoch(chain, header, stateDB)
 		if err != nil {
 			return nil, err
 		}
 
 		// Needs to be after payoutUndelegations because payoutUndelegations
 		// depends on the old LastEpochInCommittee
-		if err := setLastEpochInCommittee(newComm, state); err != nil {
+		if err := setLastEpochInCommittee(newComm, stateDB); err != nil {
 			return nil, err
 		}
 	}
 
 	if isNewEpoch {
 		// unredelegation
-		handler := undelegationToBalance{stateDB: state}
-		if err := payoutUnredelegations(header, state, &handler); err != nil {
+		undelegationReleaser := undelegationToBalance{
+			rewardHandler: &core.RewardToBalance{StateDB: stateDB},
+		}
+		if err := payoutUnredelegations(header, stateDB, &undelegationReleaser); err != nil {
 			return nil, err
 		}
 	}
 
 	// reward
-	payout, err := accumulateRewardsAndCountSigs(chain, state, header)
+	payout, err := accumulateRewardsAndCountSigs(chain, stateDB, header)
 	if err != nil {
 		return nil, errors.New("cannot pay block reward")
 	}
@@ -639,30 +640,29 @@ func setLastEpochInCommittee(newComm *restaking.Storage_Committee_, stateDB *sta
 	return nil
 }
 
-type UndelegationHandler interface {
-	ReleaseUndelegation(delegator common.Address, amount, epoch *big.Int) error
+type UndelegationReleaser interface {
+	Release(redelegation *restaking.Storage_Redelegation_, fromValidator common.Address, epoch *big.Int, stateDB *state.StateDB) error
 }
 
 type undelegationToBalance struct {
-	RewardHandler core.RewardHandler
-	stateDB       vm.StateDB
+	rewardHandler core.RestakingRewardHandler
 }
 
-func (u *undelegationToBalance) HandleReward(delegator common.Address, amount, epoch *big.Int) error {
-	if err := u.RewardHandler.HandleReward(delegator, amount, epoch); err != nil {
-		return err
+func (u *undelegationToBalance) Release(redelegation *restaking.Storage_Redelegation_, fromValidator common.Address,
+	epoch *big.Int, stateDB *state.StateDB) error {
+	delegator := redelegation.DelegatorAddress().Value()
+	amt, r := redelegation.Amount().Value(), redelegation.Reward().Value()
+	stateDB.AddBalance(delegator, amt)
+	if r.Cmp(common.Big0) > 0 {
+		if err := u.rewardHandler.HandleReward(fromValidator, delegator, r, epoch); err != nil {
+			return err
+		}
 	}
-	u.stateDB.AddBalance(delegator, amount)
-	return nil
-}
-
-func (u *undelegationToBalance) ReleaseUndelegation(delegator common.Address, amount, epoch *big.Int) error {
-	u.stateDB.AddBalance(delegator, amount)
 	return nil
 }
 
 // Withdraw unlocked tokens to the delegators' accounts
-func payoutUnredelegations(header *types.Header, stateDB *state.StateDB, handler UndelegationHandler) error {
+func payoutUnredelegations(header *types.Header, stateDB *state.StateDB, releaser UndelegationReleaser) error {
 	nowEpoch, blockNow := header.Epoch, header.Number
 
 	validators := stateDB.ValidatorPool().Validators()
@@ -680,10 +680,11 @@ func payoutUnredelegations(header *types.Header, stateDB *state.StateDB, handler
 				return errRedelegationNotExist
 			}
 
-			undelegation := redelegation.Undelegation()
-			if undelegation.Amount().Value().Cmp(common.Big0) > 0 && undelegation.Epoch().Value().Cmp(nowEpoch) >= 0 {
+			if redelegation.CanReleaseAt(nowEpoch) {
 				toBeRemoved = append(toBeRemoved, delegator)
-
+				if err := releaser.Release(redelegation, validatorAddr, nowEpoch, stateDB); err != nil {
+					return err
+				}
 			}
 		}
 

@@ -9,14 +9,14 @@ import (
 
 // CheckValidatorEqual checks the equality of validator. If not equal, an
 // error is returned. Note nil pointer is treated as zero in this compare function.
-func CheckValidatorEqual(v1, v2 *restaking.Validator_) error {
+func CheckValidatorEqual(v1, v2 restaking.Validator_) error {
 	if err := checkValidatorEqual(v1, v2); err != nil {
 		return fmt.Errorf("validator%v", err)
 	}
 	return nil
 }
 
-func checkValidatorEqual(v1, v2 *restaking.Validator_) error {
+func checkValidatorEqual(v1, v2 restaking.Validator_) error {
 	if v1.ValidatorAddress != v2.ValidatorAddress {
 		return fmt.Errorf(".Validator address not equal: %x / %x", v1.ValidatorAddress, v2.ValidatorAddress)
 	}
@@ -138,3 +138,4 @@ func checkBigIntEqual(i1, i2 *big.Int) error {
 	}
 	return nil
 }
+

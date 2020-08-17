@@ -36,25 +36,29 @@ func (pool *TxPool) validateStakingTx(tx *types.Transaction) error {
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return err
 		}
-		return VerifyEditValidatorMsg(pool.currentState, chainContext, pendingBlockNumber, pendingBlockNumber, stkMsg, msg.From())
+		_, err := VerifyEditValidatorMsg(pool.currentState, chainContext, pendingBlockNumber, pendingBlockNumber, stkMsg, msg.From())
+		return err
 	case types.Redelegate:
 		stkMsg := &restaking.Redelegate{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return err
 		}
-		return VerifyRedelegateMsg(pool.currentState, stkMsg, msg.From())
+		_, err := VerifyRedelegateMsg(pool.currentState, stkMsg, msg.From())
+		return err
 	case types.Unredelegate:
 		stkMsg := &restaking.Unredelegate{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return err
 		}
-		return VerifyUnredelegateMsg(pool.currentState, pendingEpoch, stkMsg, msg.From())
+		_, err := VerifyUnredelegateMsg(pool.currentState, pendingEpoch, stkMsg, msg.From())
+		return err
 	case types.CollectRedelRewards:
 		stkMsg := &restaking.CollectReward{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return err
 		}
-		return VerifyCollectRedelRewardsMsg(pool.currentState, stkMsg, msg.From())
+		_, err := VerifyCollectRedelRewardsMsg(pool.currentState, stkMsg, msg.From())
+		return err
 	}
 	return nil
 }

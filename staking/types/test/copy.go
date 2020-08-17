@@ -81,7 +81,7 @@ func CopySlotPubKey(blsKey restaking.BLSPublicKey_) restaking.BLSPublicKey_ {
 
 // CopyDelegations deeps copy restaking.Delegations
 func CopyDelegationMap(ds restaking.RedelegationMap_) restaking.RedelegationMap_ {
-	cp := restaking.NewRelegationMap()
+	cp := restaking.NewRedelegationMap()
 	if ds.Keys == nil || len(ds.Keys) == 0 {
 		return cp
 	}

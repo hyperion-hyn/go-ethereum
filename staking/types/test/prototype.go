@@ -27,7 +27,7 @@ var (
 	vWrapperPrototype = func() restaking.ValidatorWrapper_ {
 		w := restaking.ValidatorWrapper_{
 			Validator: validatorPrototype,
-			Redelegations: restaking.NewRelegationMap(),
+			Redelegations: restaking.NewRedelegationMap(),
 			TotalDelegation:           DefaultDelAmount,
 			TotalDelegationByOperator: DefaultDelAmount,
 			BlockReward:               common.Big0,

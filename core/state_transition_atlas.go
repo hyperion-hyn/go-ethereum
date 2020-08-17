@@ -112,148 +112,149 @@ func (st *StateTransition) StakingTransitionDb() (usedGas uint64, err error) {
 }
 
 func (st *StateTransition) verifyAndApplyCreateValidatorTx(msg *restaking.CreateValidator, signer common.Address) error {
-	v, err := VerifyCreateValidatorMsg(st.state, st.evm.BlockNumber, msg, signer)
+	verified, err := VerifyCreateValidatorMsg(st.state, st.evm.BlockNumber, msg, signer)
 	if err != nil {
 		return err
 	}
-	wrapper := &restaking.ValidatorWrapper_{}
-	wrapper.Validator = *v
-	wrapper.TotalDelegation = big.NewInt(0).Set(defaultStakingAmount)
-	wrapper.TotalDelegationByOperator = big.NewInt(0).Set(defaultStakingAmount)
+	saveNewValidatorToPool(verified.NewValidator, st.state.ValidatorPool())
+	return verified.Participant.PostCreateValidator(msg.OperatorAddress, verified.NewRedelegation)
+}
 
+func (st *StateTransition) verifyAndApplyEditValidatorTx(msg *restaking.EditValidator, signer common.Address) error {
+	if _, err := VerifyEditValidatorMsg(st.state, st.bc, st.evm.EpochNumber, st.evm.BlockNumber, msg, signer); err != nil {
+		return err
+	}
 	validatorPool := st.state.ValidatorPool()
-	validatorPool.Validators().Put(v.ValidatorAddress, wrapper)
-	wrapperSt, _ := validatorPool.Validators().Get(v.ValidatorAddress)
-	wrapperSt.Redelegations().Put(msg.OperatorAddress, &restaking.Redelegation_{
-		DelegatorAddress: msg.OperatorAddress,
-		Amount:           defaultStakingAmount,
-	})
+	validator, _ := st.state.ValidatorByAddress(msg.ValidatorAddress)
+	updateValidatorFromPoolByMsg(validator, validatorPool, msg, st.evm.BlockNumber)
+	return nil
+}
 
+func (st *StateTransition) verifyAndApplyRedelegateTx(msg *restaking.Redelegate, signer common.Address) error {
+	verified, err := VerifyRedelegateMsg(st.state, msg, signer)
+	if err != nil {
+		return err
+	}
+	wrapper, _ := st.state.ValidatorByAddress(msg.ValidatorAddress)
+	wrapper.AddRedelegation(msg.DelegatorAddress, verified.NewRedelegation)
+	return verified.Participant.PostRedelegate(msg.ValidatorAddress, verified.NewRedelegation)
+}
+
+func (st *StateTransition) verifyAndApplyUnredelegateTx(msg *restaking.Unredelegate, signer common.Address) error {
+	if _, err := VerifyUnredelegateMsg(st.state, st.evm.EpochNumber, msg, signer); err != nil {
+		return err
+	}
+
+	validator, _ := st.state.ValidatorByAddress(msg.ValidatorAddress)
+	validator.Undelegate(msg.DelegatorAddress, st.evm.EpochNumber)
+
+	// TODO: need 20%? change state to inactive?
+	return nil
+}
+
+func (st *StateTransition) verifyAndApplyCollectRedelRewards(msg *restaking.CollectReward, signer common.Address) (*big.Int, error) {
+	if _, err := VerifyCollectRedelRewardsMsg(st.state, msg, signer); err != nil {
+		return network.NoReward, err
+	}
+	validator, _ := st.state.ValidatorByAddress(msg.ValidatorAddress)
+	handler := RewardToBalance{StateDB: st.state} // TODO(ATLAS): map3 reward distributor ?
+	return payoutRedelegationReward(validator, msg.DelegatorAddress, &handler, st.evm.EpochNumber)
+}
+
+func saveNewValidatorToPool(wrapper *restaking.ValidatorWrapper_, validatorPool *restaking.Storage_ValidatorPool_) {
+	validatorPool.Validators().Put(wrapper.Validator.ValidatorAddress, wrapper)
 	keySet := validatorPool.SlotKeySet()
 	for _, key := range wrapper.Validator.SlotPubKeys.Keys {
 		keySet.Get(key.Hex()).SetValue(true)
 	}
-	if msg.Description.Identity != "" {
-		validatorPool.DescriptionIdentitySet().Get(msg.Description.Identity).SetValue(true)
+
+	if identity := wrapper.Validator.Description.Identity; identity != "" {
+		validatorPool.DescriptionIdentitySet().Get(identity).SetValue(true)
 	}
-
-	st.state.SubBalance(msg.OperatorAddress, defaultStakingAmount)
-
-	return nil
 }
 
-func (st *StateTransition) verifyAndApplyEditValidatorTx(msg *restaking.EditValidator, signer common.Address) error {
-	if err := VerifyEditValidatorMsg(st.state, st.bc, st.evm.EpochNumber, st.evm.BlockNumber, msg, signer); err != nil {
-		return err
-	}
-
-	validatorPool := st.state.ValidatorPool()
-	wrapper, _ := st.state.ValidatorByAddress(msg.ValidatorAddress)
-
+func updateValidatorFromPoolByMsg(validator *restaking.Storage_ValidatorWrapper_, pool *restaking.Storage_ValidatorPool_,
+	msg *restaking.EditValidator, blockNum *big.Int) {
 	// update description
 	if msg.Description.Identity != "" {
-		i := wrapper.Validator().Description().Identity().Value()
-		validatorPool.DescriptionIdentitySet().Get(i).SetValue(false)
-		validatorPool.DescriptionIdentitySet().Get(msg.Description.Identity).SetValue(true)
+		i := validator.Validator().Description().Identity().Value()
+		pool.DescriptionIdentitySet().Get(i).SetValue(false)
+		pool.DescriptionIdentitySet().Get(msg.Description.Identity).SetValue(true)
 	}
-	wrapper.Validator().Description().UpdateDescription(msg.Description)
+	validator.Validator().Description().UpdateDescription(msg.Description)
 
-	if !msg.CommissionRate.IsNil() {
-		wrapper.Validator().Commission().CommissionRates().Rate().SetValue(*msg.CommissionRate)
-		wrapper.Validator().Commission().UpdateHeight().SetValue(st.evm.BlockNumber)
+	if msg.CommissionRate != nil {
+		validator.Validator().Commission().CommissionRates().Rate().SetValue(*msg.CommissionRate)
+		validator.Validator().Commission().UpdateHeight().SetValue(blockNum)
 	}
 
 	if msg.SlotKeyToRemove != nil {
-		for i := 0; i < wrapper.Validator().SlotPubKeys().Length(); i++ {
-			if *msg.SlotKeyToRemove == *wrapper.Validator().SlotPubKeys().Get(i) {
-				wrapper.Validator().SlotPubKeys().Remove(i, false)
-				validatorPool.SlotKeySet().Get(msg.SlotKeyToRemove.Hex()).SetValue(false)
+		for i := 0; i < validator.Validator().SlotPubKeys().Length(); i++ {
+			if *msg.SlotKeyToRemove == *validator.Validator().SlotPubKeys().Get(i) {
+				validator.Validator().SlotPubKeys().Remove(i, false)
+				pool.SlotKeySet().Get(msg.SlotKeyToRemove.Hex()).SetValue(false)
 				break
 			}
 		}
 	}
 
 	if msg.SlotKeyToAdd != nil {
-		wrapper.Validator().SlotPubKeys().Push(msg.SlotKeyToAdd)
-		validatorPool.SlotKeySet().Get(msg.SlotKeyToAdd.Hex()).SetValue(true)
+		validator.Validator().SlotPubKeys().Push(msg.SlotKeyToAdd)
+		pool.SlotKeySet().Get(msg.SlotKeyToAdd.Hex()).SetValue(true)
 	}
 
 	if msg.EPOSStatus == restaking.Active || msg.EPOSStatus == restaking.Inactive {
-		wrapper.Validator().Status().SetValue(uint8(msg.EPOSStatus))
+		validator.Validator().Status().SetValue(uint8(msg.EPOSStatus))
 	}
-	return nil
 }
 
-func (st *StateTransition) verifyAndApplyRedelegateTx(msg *restaking.Redelegate, signer common.Address) error {
-	if err := VerifyRedelegateMsg(st.state, msg, signer); err != nil {
-		return err
+func payoutRedelegationReward(s *restaking.Storage_ValidatorWrapper_, delegator common.Address, handler RestakingRewardHandler,
+	epoch *big.Int) (*big.Int, error) {
+	redelegation, ok := s.Redelegations().Get(delegator)
+	if !ok {
+		return nil, errRedelegationNotExist
 	}
 
-	wrapper, _ := st.state.ValidatorByAddress(msg.ValidatorAddress)
-	if redelegation, ok := wrapper.Redelegations().Get(msg.DelegatorAddress); ok {
-		amt := redelegation.Amount().Value()
-		redelegation.Amount().SetValue(big.NewInt(0).Add(amt, defaultStakingAmount))
-	} else {
-		m := restaking.NewRedelegation(msg.DelegatorAddress, defaultStakingAmount)
-		wrapper.Redelegations().Put(msg.DelegatorAddress, &m)
+	r := redelegation.Reward().Value()
+	if r.Cmp(common.Big0) == 0 {
+		return nil, errNoRewardsToCollect
 	}
-	wrapper.AddTotalDelegation(defaultStakingAmount)
-	if isOperator(wrapper, msg.DelegatorAddress) {
-		wrapper.AddTotalDelegationByOperator(defaultStakingAmount)
+	redelegation.Reward().SetValue(common.Big0)
+	if err := handler.HandleReward(s.Validator().ValidatorAddress().Value(), delegator, r, epoch); err != nil {
+		return common.Big0, err
 	}
-	st.state.SubBalance(signer, defaultStakingAmount)
-	return nil
+	return r, nil
 }
 
-func (st *StateTransition) verifyAndApplyUnredelegateTx(msg *restaking.Unredelegate, signer common.Address) error {
-	if err := VerifyUnredelegateMsg(st.state, st.evm.EpochNumber, msg, signer); err != nil {
-		return err
-	}
-
-	validator, _ := st.state.ValidatorByAddress(msg.ValidatorAddress)
-	redelegation, _ := validator.Redelegations().Get(msg.DelegatorAddress)
-	amount := redelegation.Amount().Value()
-	redelegation.Undelegation().Amount().SetValue(amount)
-	redelegation.Undelegation().Epoch().SetValue(st.evm.EpochNumber)
-	redelegation.Amount().SetValue(common.Big0)
-	validator.SubTotalDelegation(amount)
-	if isOperator(validator, msg.DelegatorAddress) {
-		validator.SubTotalDelegationByOperator(amount)
-		// TODO: need 20% ?
-	}
-	return nil
-}
-
-func (st *StateTransition) verifyAndApplyCollectRedelRewards(msg *restaking.CollectReward, signer common.Address) (*big.Int, error) {
-	if err := VerifyCollectRedelRewardsMsg(st.state, msg, signer); err != nil {
-		return network.NoReward, err
-	}
-	validator, _ := st.state.ValidatorByAddress(msg.ValidatorAddress)
-	redelegation, _ := validator.Redelegations().Get(msg.DelegatorAddress)
-	reward := redelegation.Reward().Value()
-	handler := RewardToBalance{stateDB: st.state}
-	if err := handler.HandleReward(msg.DelegatorAddress, reward, st.evm.EpochNumber); err != nil {
-		return nil, err
-	}
-	return reward, nil
-}
-
-type RewardHandler interface {
-	HandleReward(delegator common.Address, amount, epoch *big.Int) error
+type RestakingRewardHandler interface {
+	HandleReward(validator, delegator common.Address, reward, epoch *big.Int) error
 }
 
 type RewardToBalance struct {
-	stateDB vm.StateDB
+	StateDB vm.StateDB
 }
 
-func (r *RewardToBalance) HandleReward(delegator common.Address, amount, epoch *big.Int) error {
-	r.stateDB.AddBalance(delegator, amount)
+func (r *RewardToBalance) HandleReward(validator, delegator common.Address, reward, epoch *big.Int) error {
+	r.StateDB.AddBalance(delegator, reward)
 	return nil
 }
 
-func isOperator(validator *restaking.Storage_ValidatorWrapper_, delegator common.Address) bool {
-	if validator.Validator().OperatorAddresses().Set().Get(delegator).Value() {
-		return true
-	}
-	return false
+type participant interface {
+	PostCreateValidator(validator common.Address, amount *big.Int) error
+	PostRedelegate(validator common.Address, amount *big.Int) error
+}
+
+type tokenHolder struct {
+	stateDB       vm.StateDB
+	holderAddress common.Address
+}
+
+func (t tokenHolder) PostCreateValidator(validator common.Address, amount *big.Int) error {
+	t.stateDB.SubBalance(t.holderAddress, amount)
+	return nil
+}
+
+func (t tokenHolder) PostRedelegate(validator common.Address, amount *big.Int) error {
+	t.stateDB.SubBalance(t.holderAddress, amount)
+	return nil
 }

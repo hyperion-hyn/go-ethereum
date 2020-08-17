@@ -34,7 +34,7 @@ func makeNonZeroValidatorWrapper() restaking.ValidatorWrapper_ {
 	w := restaking.ValidatorWrapper_{
 		Validator: makeNonZeroValidator(),
 		Redelegations: func() restaking.RedelegationMap_ {
-			m := restaking.NewRelegationMap()
+			m := restaking.NewRedelegationMap()
 			m.Put(nonZeroDelegation.DelegatorAddress, &nonZeroDelegation)
 			m.Put(zeroDelegation.DelegatorAddress, &zeroDelegation)
 			return m
@@ -49,7 +49,7 @@ func makeNonZeroValidatorWrapper() restaking.ValidatorWrapper_ {
 func makeZeroValidatorWrapper() restaking.ValidatorWrapper_ {
 	w := restaking.ValidatorWrapper_{
 		Validator:     makeZeroValidator(),
-		Redelegations: restaking.NewRelegationMap(),
+		Redelegations: restaking.NewRedelegationMap(),
 		BlockReward:   common.Big0,
 	}
 	w.Counters.NumBlocksSigned = common.Big0

@@ -236,6 +236,40 @@ func (s *Storage_ValidatorWrapper_) SubTotalDelegationByOperator(amount *big.Int
 	s.TotalDelegationByOperator().SetValue(totalDelegationByOperator)
 }
 
+func (s *Storage_ValidatorWrapper_) IsOperator(delegator common.Address) bool {
+	if s.Validator().OperatorAddresses().Set().Get(delegator).Value() {
+		return true
+	}
+	return false
+}
+
+func (s *Storage_ValidatorWrapper_) AddRedelegation(delegator common.Address, amount *big.Int) {
+	if redelegation, ok := s.Redelegations().Get(delegator); ok {
+		redelegation.AddAmount(amount)
+	} else {
+		m := NewRedelegation(delegator, amount)
+		s.Redelegations().Put(delegator, &m)
+	}
+	s.AddTotalDelegation(amount)
+	if s.IsOperator(delegator) {
+		s.AddTotalDelegationByOperator(amount)
+	}
+}
+
+func (s *Storage_ValidatorWrapper_) Undelegate(delegator common.Address, epoch *big.Int) {
+	if redelegation, ok := s.Redelegations().Get(delegator); ok {
+		amount := redelegation.Amount().Value()
+		redelegation.Undelegation().Amount().SetValue(amount)
+		redelegation.Undelegation().Epoch().SetValue(epoch)
+		redelegation.Amount().SetValue(common.Big0)
+		s.SubTotalDelegation(amount)
+		if s.IsOperator(delegator) {
+			s.SubTotalDelegationByOperator(amount)
+		}
+	}
+}
+
+
 // Storage_ValidatorWrapperMap_
 func (s *Storage_ValidatorWrapperMap_) AllKeys() []common.Address {
 	addressSlice := make([]common.Address, 0)
@@ -277,7 +311,6 @@ func (s *Storage_Redelegation_) AddReward(reward *big.Int) {
 	rewardTemp := s.Reward().Value()
 	rewardTemp = rewardTemp.Add(rewardTemp, reward)
 	s.Reward().SetValue(rewardTemp)
-
 }
 
 func (s *Storage_Redelegation_) AddAmount(amount *big.Int) {
@@ -308,6 +341,11 @@ func (s *Storage_Redelegation_) SetNil() {
 	s.Undelegation().Amount().SetValue(common.Big0)
 	s.Undelegation().Epoch().SetValue(common.Big0)
 }
+
+func (s *Storage_Redelegation_) CanReleaseAt(epoch *big.Int) bool {
+	return s.Undelegation().Amount().Value().Cmp(common.Big0) > 0 && s.Undelegation().Epoch().Value().Cmp(epoch) >= 0
+}
+
 
 // Storage_RedelegationMap_
 func (s *Storage_RedelegationMap_) AllKeys() []common.Address {
