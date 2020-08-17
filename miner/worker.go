@@ -848,6 +848,16 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 		Extra:      w.extra,
 		Time:       uint64(timestamp),
 	}
+
+	// ATLAS
+	if w.chainConfig.Atlas != nil {
+		epoch := parent.Epoch()
+		if w.chainConfig.Atlas.IsFirstBlock(num.Uint64()) {
+			epoch.Add(epoch, common.Big1)
+		}
+		header.Epoch = epoch
+	}
+
 	// Only set the coinbase if our consensus engine is running (avoid spurious block rewards)
 	if w.isRunning() {
 		if w.coinbase == (common.Address{}) {
