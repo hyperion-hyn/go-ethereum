@@ -20,6 +20,7 @@ package eth
 import (
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/consensus/atlasclique"
 	"math/big"
 	"runtime"
 	"sync"
@@ -252,6 +253,11 @@ func CreateConsensusEngine(ctx *node.ServiceContext, chainConfig *params.ChainCo
 	// If proof-of-authority is requested, set it up
 	if chainConfig.Clique != nil {
 		return clique.New(chainConfig.Clique, db)
+	}
+
+	//ATLAS : add init atlas clique Engine
+	if chainConfig.Atlas != nil {
+		return atlasclique.NewAtlasClique(chainConfig.Atlas, db)
 	}
 	// Otherwise assume proof-of-work
 	switch config.PowMode {

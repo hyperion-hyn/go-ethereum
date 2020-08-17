@@ -10,9 +10,9 @@ import (
 )
 
 var (
-	slotList      restaking.Slots_
-	totalStake    common.Dec
-	stakedNodes   = 10
+	slotList    restaking.Slots_
+	totalStake  common.Dec
+	stakedNodes = 10
 
 	maxAccountGen = int64(98765654323123134)
 	accountGen    = rand.New(rand.NewSource(1337))
@@ -48,7 +48,7 @@ func TestCompute(t *testing.T) {
 	expectedRoster.TotalEffectiveStake = totalStake
 	staked := slotList.Entrys
 	for i := range staked {
-		member := PureStakedVote {
+		member := PureStakedVote{
 			EarningAccount: staked[i].EcdsaAddress,
 			Identity:       staked[i].BLSPublicKey,
 			OverallPercent: staked[i].EffectiveStake.Quo(expectedRoster.TotalEffectiveStake),

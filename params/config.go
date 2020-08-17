@@ -216,16 +216,16 @@ var (
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
 	AllEthashProtocolChanges = &ChainConfig{
-		ChainID: big.NewInt(1337),
-		HomesteadBlock: big.NewInt(0),
-		EIP150Block: big.NewInt(0),
-		EIP155Block: big.NewInt(0),
-		EIP158Block: big.NewInt(0),
-		ByzantiumBlock: big.NewInt(0),
+		ChainID:             big.NewInt(1337),
+		HomesteadBlock:      big.NewInt(0),
+		EIP150Block:         big.NewInt(0),
+		EIP155Block:         big.NewInt(0),
+		EIP158Block:         big.NewInt(0),
+		ByzantiumBlock:      big.NewInt(0),
 		ConstantinopleBlock: big.NewInt(0),
-		PetersburgBlock: big.NewInt(0),
-		IstanbulBlock: big.NewInt(0),
-		Ethash: new(EthashConfig),
+		PetersburgBlock:     big.NewInt(0),
+		IstanbulBlock:       big.NewInt(0),
+		Ethash:              new(EthashConfig),
 	}
 
 	// AllCliqueProtocolChanges contains every protocol change (EIPs) introduced
@@ -234,31 +234,31 @@ var (
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
 	AllCliqueProtocolChanges = &ChainConfig{
-		ChainID: big.NewInt(1337),
-		HomesteadBlock: big.NewInt(0),
-		EIP150Block: big.NewInt(0),
-		EIP155Block: big.NewInt(0),
-		EIP158Block: big.NewInt(0),
-		ByzantiumBlock: big.NewInt(0),
+		ChainID:             big.NewInt(1337),
+		HomesteadBlock:      big.NewInt(0),
+		EIP150Block:         big.NewInt(0),
+		EIP155Block:         big.NewInt(0),
+		EIP158Block:         big.NewInt(0),
+		ByzantiumBlock:      big.NewInt(0),
 		ConstantinopleBlock: big.NewInt(0),
-		PetersburgBlock: big.NewInt(0),
-		IstanbulBlock: big.NewInt(0),
-		Clique: &CliqueConfig{Period: 0, Epoch: 30000},
+		PetersburgBlock:     big.NewInt(0),
+		IstanbulBlock:       big.NewInt(0),
+		Clique:              &CliqueConfig{Period: 0, Epoch: 30000},
 	}
 
 	TestChainConfig = &ChainConfig{
-		ChainID: big.NewInt(1),
-		HomesteadBlock: big.NewInt(0),
-		EIP150Block: big.NewInt(0),
-		EIP155Block: big.NewInt(0),
-		EIP158Block: big.NewInt(0),
-		ByzantiumBlock: big.NewInt(0),
+		ChainID:             big.NewInt(1),
+		HomesteadBlock:      big.NewInt(0),
+		EIP150Block:         big.NewInt(0),
+		EIP155Block:         big.NewInt(0),
+		EIP158Block:         big.NewInt(0),
+		ByzantiumBlock:      big.NewInt(0),
 		ConstantinopleBlock: big.NewInt(0),
-		PetersburgBlock: big.NewInt(0),
-		IstanbulBlock: big.NewInt(0),
-		Ethash: new(EthashConfig),
+		PetersburgBlock:     big.NewInt(0),
+		IstanbulBlock:       big.NewInt(0),
+		Ethash:              new(EthashConfig),
 	}
-	TestRules       = TestChainConfig.Rules(new(big.Int))
+	TestRules = TestChainConfig.Rules(new(big.Int))
 )
 
 // TrustedCheckpoint represents a set of post-processed trie roots (CHT and
@@ -365,6 +365,9 @@ func (c *ChainConfig) String() string {
 		engine = c.Ethash
 	case c.Clique != nil:
 		engine = c.Clique
+	// ATLAS: add ATLAS
+	case c.Atlas != nil:
+		engine = c.Atlas
 	default:
 		engine = "unknown"
 	}

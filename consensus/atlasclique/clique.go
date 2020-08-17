@@ -15,23 +15,26 @@
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 // Package clique implements the proof-of-authority consensus engine.
-package clique
+package atlasclique
 
 import (
 	"bytes"
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/consensus/clique/reward"
-	"github.com/ethereum/go-ethereum/consensus/clique/votepower"
+	"github.com/ethereum/go-ethereum/consensus/atlasclique/reward"
+	"github.com/ethereum/go-ethereum/consensus/atlasclique/votepower"
 	"github.com/ethereum/go-ethereum/consensus/misc"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/staking/availability"
 	"github.com/ethereum/go-ethereum/staking/committee"
@@ -39,11 +42,37 @@ import (
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
+	"golang.org/x/crypto/sha3"
 	"golang.org/x/sync/singleflight"
+	"io"
 	"math/big"
 	"math/rand"
 	"sync"
 	"time"
+)
+
+const (
+	checkpointInterval = 1024 // Number of blocks after which to save the vote snapshot to the database
+	inmemorySnapshots  = 128  // Number of recent vote snapshots to keep in memory
+	inmemorySignatures = 4096 // Number of recent block signatures to keep in memory
+
+	wiggleTime = 500 * time.Millisecond // Random delay (per signer) to allow concurrent signers
+)
+
+// Clique proof-of-authority protocol constants.
+var (
+	epochLength = uint64(30000) // Default number of blocks after which to checkpoint and reset the pending votes
+
+	extraVanity = 32                     // Fixed number of extra-data prefix bytes reserved for signer vanity
+	extraSeal   = crypto.SignatureLength // Fixed number of extra-data suffix bytes reserved for signer seal
+
+	nonceAuthVote = hexutil.MustDecode("0xffffffffffffffff") // Magic nonce number to vote on adding a new signer
+	nonceDropVote = hexutil.MustDecode("0x0000000000000000") // Magic nonce number to vote on removing a signer.
+
+	uncleHash = types.CalcUncleHash(nil) // Always Keccak256(RLP([])) as uncles are meaningless outside of PoW.
+
+	diffInTurn = big.NewInt(2) // Block difficulty for in-turn signatures
+	diffNoTurn = big.NewInt(1) // Block difficulty for out-of-turn signatures
 )
 
 var (
@@ -51,11 +80,110 @@ var (
 	errRedelegationNotExist = errors.New("no redelegation exists")
 )
 
+// Various error messages to mark blocks invalid. These should be private to
+// prevent engine specific errors from being referenced in the remainder of the
+// codebase, inherently breaking if the engine is swapped out. Please put common
+// error types into the consensus package.
+var (
+	// errUnknownBlock is returned when the list of signers is requested for a block
+	// that is not part of the local blockchain.
+	errUnknownBlock = errors.New("unknown block")
+
+	// errInvalidCheckpointBeneficiary is returned if a checkpoint/epoch transition
+	// block has a beneficiary set to non-zeroes.
+	errInvalidCheckpointBeneficiary = errors.New("beneficiary in checkpoint block non-zero")
+
+	// errInvalidVote is returned if a nonce value is something else that the two
+	// allowed constants of 0x00..0 or 0xff..f.
+	errInvalidVote = errors.New("vote nonce not 0x00..0 or 0xff..f")
+
+	// errInvalidCheckpointVote is returned if a checkpoint/epoch transition block
+	// has a vote nonce set to non-zeroes.
+	errInvalidCheckpointVote = errors.New("vote nonce in checkpoint block non-zero")
+
+	// errMissingVanity is returned if a block's extra-data section is shorter than
+	// 32 bytes, which is required to store the signer vanity.
+	errMissingVanity = errors.New("extra-data 32 byte vanity prefix missing")
+
+	// errMissingSignature is returned if a block's extra-data section doesn't seem
+	// to contain a 65 byte secp256k1 signature.
+	errMissingSignature = errors.New("extra-data 65 byte signature suffix missing")
+
+	// errExtraSigners is returned if non-checkpoint block contain signer data in
+	// their extra-data fields.
+	errExtraSigners = errors.New("non-checkpoint block contains extra signer list")
+
+	// errInvalidCheckpointSigners is returned if a checkpoint block contains an
+	// invalid list of signers (i.e. non divisible by 20 bytes).
+	errInvalidCheckpointSigners = errors.New("invalid signer list on checkpoint block")
+
+	// errMismatchingCheckpointSigners is returned if a checkpoint block contains a
+	// list of signers different than the one the local node calculated.
+	errMismatchingCheckpointSigners = errors.New("mismatching signer list on checkpoint block")
+
+	// errInvalidMixDigest is returned if a block's mix digest is non-zero.
+	errInvalidMixDigest = errors.New("non-zero mix digest")
+
+	// errInvalidUncleHash is returned if a block contains an non-empty uncle list.
+	errInvalidUncleHash = errors.New("non empty uncle hash")
+
+	// errInvalidDifficulty is returned if the difficulty of a block neither 1 or 2.
+	errInvalidDifficulty = errors.New("invalid difficulty")
+
+	// errWrongDifficulty is returned if the difficulty of a block doesn't match the
+	// turn of the signer.
+	errWrongDifficulty = errors.New("wrong difficulty")
+
+	// ErrInvalidTimestamp is returned if the timestamp of a block is lower than
+	// the previous block's timestamp + the minimum block period.
+	ErrInvalidTimestamp = errors.New("invalid timestamp")
+
+	// errInvalidVotingChain is returned if an authorization list is attempted to
+	// be modified via out-of-range or non-contiguous headers.
+	errInvalidVotingChain = errors.New("invalid voting chain")
+
+	// errUnauthorizedSigner is returned if a header is signed by a non-authorized entity.
+	errUnauthorizedSigner = errors.New("unauthorized signer")
+
+	// errRecentlySigned is returned if a header is signed by an authorized entity
+	// that already signed a header recently, thus is temporarily not allowed to.
+	errRecentlySigned = errors.New("recently signed")
+)
+
+// SignerFn is a signer callback function to request a header to be signed by a
+// backing account.
+type SignerFn func(accounts.Account, string, []byte) ([]byte, error)
+
+// ecrecover extracts the Ethereum account address from a signed header.
+func ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, error) {
+	// If the signature's already cached, return that
+	hash := header.Hash()
+	if address, known := sigcache.Get(hash); known {
+		return address.(common.Address), nil
+	}
+	// Retrieve the signature from the header extra-data
+	if len(header.Extra) < extraSeal {
+		return common.Address{}, errMissingSignature
+	}
+	signature := header.Extra[len(header.Extra)-extraSeal:]
+
+	// Recover the public key and the Ethereum address
+	pubkey, err := crypto.Ecrecover(SealHash(header).Bytes(), signature)
+	if err != nil {
+		return common.Address{}, err
+	}
+	var signer common.Address
+	copy(signer[:], crypto.Keccak256(pubkey[1:])[12:])
+
+	sigcache.Add(hash, signer)
+	return signer, nil
+}
+
 // Clique is the proof-of-authority consensus engine proposed to support the
 // Ethereum testnet following the Ropsten attacks.
 type AtlasClique struct {
-	config *params.CliqueConfig // Consensus engine configuration parameters
-	db     ethdb.Database       // Database to store and retrieve snapshot checkpoints
+	config *params.AtlasConfig // Consensus engine configuration parameters
+	db     ethdb.Database      // Database to store and retrieve snapshot checkpoints
 
 	recents    *lru.ARCCache // Snapshots for recent block to speed up reorgs
 	signatures *lru.ARCCache // Signatures of recent blocks to speed up mining
@@ -73,11 +201,11 @@ type AtlasClique struct {
 // New creates a Clique proof-of-authority consensus engine with the initial
 // signers set to the ones provided by the user.
 // Just for staking testing.
-func NewAtlasClique(config *params.CliqueConfig, db ethdb.Database) *AtlasClique {
+func NewAtlasClique(config *params.AtlasConfig, db ethdb.Database) *AtlasClique {
 	// Set any missing consensus parameters to their defaults
 	conf := *config
-	if conf.Epoch == 0 {
-		conf.Epoch = epochLength
+	if conf.BlocksPerEpoch == 0 {
+		conf.BlocksPerEpoch = epochLength
 	}
 	// Allocate the snapshot caches and create the engine
 	recents, _ := lru.NewARC(inmemorySnapshots)
@@ -139,7 +267,7 @@ func (c *AtlasClique) verifyHeader(chain consensus.ChainReader, header *types.He
 		return consensus.ErrFutureBlock
 	}
 	// Checkpoint blocks need to enforce zero beneficiary
-	checkpoint := (number % c.config.Epoch) == 0
+	checkpoint := (number % c.config.BlocksPerEpoch) == 0
 	if checkpoint && header.Coinbase != (common.Address{}) {
 		return errInvalidCheckpointBeneficiary
 	}
@@ -216,7 +344,7 @@ func (c *AtlasClique) verifyCascadingFields(chain consensus.ChainReader, header 
 		return err
 	}
 	// If the block is a checkpoint block, verify the signer list
-	if number%c.config.Epoch == 0 {
+	if number%c.config.BlocksPerEpoch == 0 {
 		signers := make([]byte, len(snap.Signers)*common.AddressLength)
 		for i, signer := range snap.signers() {
 			copy(signers[i*common.AddressLength:], signer[:])
@@ -255,7 +383,7 @@ func (c *AtlasClique) snapshot(chain consensus.ChainReader, number uint64, hash 
 		// at a checkpoint block without a parent (light client CHT), or we have piled
 		// up more headers than allowed to be reorged (chain reinit from a freezer),
 		// consider the checkpoint trusted and snapshot it.
-		if number == 0 || (number%c.config.Epoch == 0 && (len(headers) > params.ImmutabilityThreshold || chain.GetHeaderByNumber(number-1) == nil)) {
+		if number == 0 || (number%c.config.BlocksPerEpoch == 0 && (len(headers) > params.ImmutabilityThreshold || chain.GetHeaderByNumber(number-1) == nil)) {
 			checkpoint := chain.GetHeaderByNumber(number)
 			if checkpoint != nil {
 				hash := checkpoint.Hash()
@@ -384,7 +512,7 @@ func (c *AtlasClique) Prepare(chain consensus.ChainReader, header *types.Header)
 	if err != nil {
 		return err
 	}
-	if number%c.config.Epoch != 0 {
+	if number%c.config.BlocksPerEpoch != 0 {
 		c.lock.RLock()
 
 		// Gather all the proposals that make sense voting on
@@ -414,7 +542,7 @@ func (c *AtlasClique) Prepare(chain consensus.ChainReader, header *types.Header)
 	}
 	header.Extra = header.Extra[:extraVanity]
 
-	if number%c.config.Epoch == 0 {
+	if number%c.config.BlocksPerEpoch == 0 {
 		for _, signer := range snap.signers() {
 			header.Extra = append(header.Extra, signer[:]...)
 		}
@@ -555,6 +683,16 @@ func (c *AtlasClique) CalcDifficulty(chain consensus.ChainReader, time uint64, p
 	return CalcDifficulty(snap, c.signer)
 }
 
+// CalcDifficulty is the difficulty adjustment algorithm. It returns the difficulty
+// that a new block should have based on the previous blocks in the chain and the
+// current signer.
+func CalcDifficulty(snap *Snapshot, signer common.Address) *big.Int {
+	if snap.inturn(snap.Number+1, signer) {
+		return new(big.Int).Set(diffInTurn)
+	}
+	return new(big.Int).Set(diffNoTurn)
+}
+
 // SealHash returns the hash of a block prior to it being sealed.
 func (c *AtlasClique) SealHash(header *types.Header) common.Hash {
 	return SealHash(header)
@@ -571,9 +709,53 @@ func (c *AtlasClique) APIs(chain consensus.ChainReader) []rpc.API {
 	return []rpc.API{{
 		Namespace: "clique",
 		Version:   "1.0",
-		Service:   &API{chain: chain},
+		Service:   &API{chain: chain, clique: c},
 		Public:    false,
 	}}
+}
+
+// SealHash returns the hash of a block prior to it being sealed.
+func SealHash(header *types.Header) (hash common.Hash) {
+	hasher := sha3.NewLegacyKeccak256()
+	encodeSigHeader(hasher, header)
+	hasher.Sum(hash[:0])
+	return hash
+}
+
+// CliqueRLP returns the rlp bytes which needs to be signed for the proof-of-authority
+// sealing. The RLP to sign consists of the entire header apart from the 65 byte signature
+// contained at the end of the extra data.
+//
+// Note, the method requires the extra data to be at least 65 bytes, otherwise it
+// panics. This is done to avoid accidentally using both forms (signature present
+// or not), which could be abused to produce different hashes for the same header.
+func CliqueRLP(header *types.Header) []byte {
+	b := new(bytes.Buffer)
+	encodeSigHeader(b, header)
+	return b.Bytes()
+}
+
+func encodeSigHeader(w io.Writer, header *types.Header) {
+	err := rlp.Encode(w, []interface{}{
+		header.ParentHash,
+		header.UncleHash,
+		header.Coinbase,
+		header.Root,
+		header.TxHash,
+		header.ReceiptHash,
+		header.Bloom,
+		header.Difficulty,
+		header.Number,
+		header.GasLimit,
+		header.GasUsed,
+		header.Time,
+		header.Extra[:len(header.Extra)-crypto.SignatureLength], // Yes, this will panic if extra is too short
+		header.MixDigest,
+		header.Nonce,
+	})
+	if err != nil {
+		panic("can't encode: " + err.Error())
+	}
 }
 
 // ATLAS
@@ -663,7 +845,7 @@ func (u *undelegationToBalance) Release(redelegation *restaking.Storage_Redelega
 
 // Withdraw unlocked tokens to the delegators' accounts
 func payoutUnredelegations(header *types.Header, stateDB *state.StateDB, releaser UndelegationReleaser) error {
-	nowEpoch, blockNow := header.Epoch, header.Number
+	nowEpoch := header.Epoch
 
 	validators := stateDB.ValidatorPool().Validators()
 	// Payout undelegated/unlocked tokens
@@ -692,7 +874,7 @@ func payoutUnredelegations(header *types.Header, stateDB *state.StateDB, release
 			validator.Redelegations().Remove(delegator)
 		}
 	}
-	log.Info("paid out delegations", "epoch", nowEpoch.Uint64(), "block-number", blockNow.Uint64())
+	//log.Info("paid out delegations", "epoch", nowEpoch.Uint64(), "block-number", blockNow.Uint64())
 	return nil
 }
 

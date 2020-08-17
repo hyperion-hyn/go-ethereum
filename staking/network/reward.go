@@ -3,7 +3,7 @@ package network
 import (
 	"errors"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/clique/reward"
+	"github.com/ethereum/go-ethereum/consensus/atlasclique/reward"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	"math"
