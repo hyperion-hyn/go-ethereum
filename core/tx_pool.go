@@ -568,8 +568,10 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	}
 
 	// ATLAS: Do more checks if it is a staking transaction
-	if tx.Type() != types.Normal {
-		return pool.validateStakingTx(tx)
+	if pool.chainconfig.Atlas != nil {
+		if tx.Type() != types.Normal {
+			return pool.validateStakingTx(tx)
+		}
 	}
 
 	return nil
