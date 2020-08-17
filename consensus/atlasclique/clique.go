@@ -801,6 +801,10 @@ func handleMap3AndAtlasStaking(chain consensus.ChainReader, header *types.Header
 	}
 
 	// reward
+	if header.Number.Cmp(common.Big1) <= 0 {
+		// genesis block has no parent to reward.
+		return network.EmptyPayout, nil
+	}
 	payout, err := accumulateRewardsAndCountSigs(chain, stateDB, header)
 	if err != nil {
 		return nil, errors.New("cannot pay block reward")
