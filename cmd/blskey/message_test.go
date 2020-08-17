@@ -67,3 +67,48 @@ PublicKey: ([0-9a-f]+)
 		t.Error("recovered publicKey doesn't match generated key")
 	}
 }
+
+func TestHashSignVerify(t *testing.T) {
+	tmpdir, err := ioutil.TempDir("", "blskey-test")
+	if err != nil {
+		t.Fatal("Can't create temporary directory:", err)
+	}
+	defer os.RemoveAll(tmpdir)
+
+	keyfile := filepath.Join(tmpdir, "the-keyfile")
+	message := "0xa09e62bfeebbb156de599ad2a0a96c9578eb64bf31b3ded35ce63188208f89ac"
+
+	// Create the key.
+	generate := runBLSkey(t, "generate", keyfile)
+	generate.Expect(`
+!! Unsupported terminal, password will be echoed.
+Password: {{.InputLine "foobar"}}
+Repeat password: {{.InputLine "foobar"}}
+`)
+	_, matches := generate.ExpectRegexp(`PublicKey: ([0-9a-fA-F]{96})\n`)
+	publicKey := matches[1]
+	generate.ExpectExit()
+
+	// Sign a message.
+	sign := runBLSkey(t, "signmessage", keyfile, "--hash", message)
+	sign.Expect(`
+!! Unsupported terminal, password will be echoed.
+Password: {{.InputLine "foobar"}}
+`)
+	_, matches = sign.ExpectRegexp(`Signature: ([0-9a-f]+)\n`)
+	signature := matches[1]
+	sign.ExpectExit()
+
+	// Verify the message.
+	verify := runBLSkey(t, "verifymessage", publicKey, signature, "--hash", message)
+	_, matches = verify.ExpectRegexp(`
+Signature verification successful!
+PublicKey: ([0-9a-f]+)
+`)
+	recovered := matches[1]
+	verify.ExpectExit()
+
+	if recovered != publicKey {
+		t.Error("recovered publicKey doesn't match generated key")
+	}
+}

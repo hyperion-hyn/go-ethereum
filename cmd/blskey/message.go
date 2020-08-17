@@ -26,6 +26,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/cmd/utils"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type outputSign struct {
@@ -37,6 +38,11 @@ var msgfileFlag = cli.StringFlag{
 	Usage: "file containing the message to sign/verify",
 }
 
+var hashFlag = cli.StringFlag{
+	Name:  "hash",
+	Usage: "hash of message to sign/verify",
+}
+
 var commandSignMessage = cli.Command{
 	Name:      "signmessage",
 	Usage:     "sign a message",
@@ -45,14 +51,16 @@ var commandSignMessage = cli.Command{
 Sign the message with a keyfile.
 
 To sign a message contained in a file, use the --msgfile flag.
+To sign a hash of message, use the --hash flag.
 `,
 	Flags: []cli.Flag{
 		passphraseFlag,
 		jsonFlag,
 		msgfileFlag,
+		hashFlag,
 	},
 	Action: func(ctx *cli.Context) error {
-		message := getMessage(ctx, 1)
+		message, isMessage := getMessage(ctx, 1)
 
 		// Load the keyfile.
 		keyfilepath := ctx.Args().First()
@@ -68,7 +76,12 @@ To sign a message contained in a file, use the --msgfile flag.
 			utils.Fatalf("Error decrypting key: %v", err)
 		}
 
-		signature := key.PrivateKey.SignHash(signHash(message))
+		var signature *bls.Sign
+		if isMessage {
+			signature = key.PrivateKey.SignHash(signHash(message))
+		} else {
+			signature = key.PrivateKey.SignHash(common.HexToHash(string(message)).Bytes())
+		}
 		if signature == nil {
 			utils.Fatalf("Failed to sign message: %v", err)
 		}
@@ -83,7 +96,7 @@ To sign a message contained in a file, use the --msgfile flag.
 }
 
 type outputVerify struct {
-	Success            bool
+	Success   bool
 	PublicKey string
 }
 
@@ -97,11 +110,12 @@ It is possible to refer to a file containing the message.`,
 	Flags: []cli.Flag{
 		jsonFlag,
 		msgfileFlag,
+		hashFlag,
 	},
 	Action: func(ctx *cli.Context) error {
 		pubKeyHex := ctx.Args().First()
 		signatureHex := ctx.Args().Get(1)
-		message := getMessage(ctx, 2)
+		message, isMessage := getMessage(ctx, 2)
 
 		var publicKey bls.PublicKey
 		data, err := hex.DecodeString(pubKeyHex)
@@ -123,13 +137,18 @@ It is possible to refer to a file containing the message.`,
 			utils.Fatalf("Signature is not deserialized: %v", err)
 		}
 
-		success := signature.VerifyHash(&publicKey, signHash(message))
+		var success bool
+		if isMessage {
+			success = signature.VerifyHash(&publicKey, signHash(message))
+		} else {
+			success = signature.VerifyHash(&publicKey, common.HexToHash(string(message)).Bytes())
+		}
 		if !success {
 			utils.Fatalf("Signature verification failed")
 		}
 
 		out := outputVerify{
-			Success:            success,
+			Success:   success,
 			PublicKey: hex.EncodeToString(publicKey.Serialize()),
 		}
 		if ctx.Bool(jsonFlag.Name) {
@@ -146,8 +165,13 @@ It is possible to refer to a file containing the message.`,
 	},
 }
 
-func getMessage(ctx *cli.Context, msgarg int) []byte {
-	if file := ctx.String("msgfile"); file != "" {
+func getMessage(ctx *cli.Context, msgarg int) (data []byte, isMessage bool) {
+	if hash := ctx.String("hash"); hash != "" {
+		if len(ctx.Args()) > msgarg {
+			utils.Fatalf("Can't use --hash and message argument at the same time.")
+		}
+		return []byte(hash), false
+	} else if file := ctx.String("msgfile"); file != "" {
 		if len(ctx.Args()) > msgarg {
 			utils.Fatalf("Can't use --msgfile and message argument at the same time.")
 		}
@@ -155,10 +179,10 @@ func getMessage(ctx *cli.Context, msgarg int) []byte {
 		if err != nil {
 			utils.Fatalf("Can't read message file: %v", err)
 		}
-		return msg
+		return msg, true
 	} else if len(ctx.Args()) == msgarg+1 {
-		return []byte(ctx.Args().Get(msgarg))
+		return []byte(ctx.Args().Get(msgarg)), true
 	}
 	utils.Fatalf("Invalid number of arguments: want %d, got %d", msgarg+1, len(ctx.Args()))
-	return nil
+	return nil, false
 }
