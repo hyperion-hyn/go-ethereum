@@ -39,6 +39,7 @@ func (a *AddressSet_) Put(address common.Address) {
 	a.Set[address] = func() *bool { t := true; return &t }()
 }
 
+
 // Storage_AddressSet_
 func (s *Storage_AddressSet_) AllKeys() []common.Address {
 	addressSlice := make([]common.Address, 0)
@@ -61,16 +62,15 @@ func (s *Storage_AddressSet_) Save(addressSet AddressSet_) {
 	}
 }
 
-
-
-// Copy deep copies the staking.CommissionRates
-func (cr *CommissionRates_) Copy() CommissionRates_ {
-	return CommissionRates_{
-		Rate:          cr.Rate.Copy(),
-		MaxRate:       cr.MaxRate.Copy(),
-		MaxChangeRate: cr.MaxChangeRate.Copy(),
+func (s *Storage_AddressSet_) Load() *AddressSet_ {
+	length := s.Keys().Length()
+	for i := 0; i < length; i++ {
+		k := s.Keys().Get(i).Value()
+		s.Set().Get(k).Value()
 	}
+	return s.obj
 }
+
 
 var (
 	hundredPercent = common.OneDec()
@@ -134,39 +134,8 @@ func (v *Validator_) SanityCheck(maxSlotKeyAllowed int) error {
 	}
 	// TODO(ATLAS): minimal delegation?
 
-	if v.Commission.CommissionRates.Rate.LT(zeroPercent) || v.Commission.CommissionRates.Rate.GT(hundredPercent) {
-		return errors.Wrapf(
-			errInvalidCommissionRate, "rate:%s", v.Commission.CommissionRates.Rate.String(),
-		)
-	}
-
-	if v.Commission.CommissionRates.MaxRate.LT(zeroPercent) || v.Commission.CommissionRates.MaxRate.GT(hundredPercent) {
-		return errors.Wrapf(
-			errInvalidCommissionRate, "max rate:%s", v.Commission.CommissionRates.MaxRate.String(),
-		)
-	}
-
-	if v.Commission.CommissionRates.MaxChangeRate.LT(zeroPercent) ||
-		v.Commission.CommissionRates.MaxChangeRate.GT(hundredPercent) {
-		return errors.Wrapf(
-			errInvalidCommissionRate, "max change rate:%s", v.Commission.CommissionRates.MaxChangeRate.String(),
-		)
-	}
-
-	if v.Commission.CommissionRates.Rate.GT(v.Commission.CommissionRates.MaxRate) {
-		return errors.Wrapf(
-			errCommissionRateTooLarge,
-			"rate:%s max rate:%s", v.Commission.CommissionRates.Rate.String(),
-			v.Commission.CommissionRates.MaxRate.String(),
-		)
-	}
-
-	if v.Commission.CommissionRates.MaxChangeRate.GT(v.Commission.CommissionRates.MaxRate) {
-		return errors.Wrapf(
-			errCommissionRateTooLarge,
-			"rate:%s max change rate:%s", v.Commission.CommissionRates.Rate.String(),
-			v.Commission.CommissionRates.MaxChangeRate.String(),
-		)
+	if err := v.Commission.SanityCheck(); err != nil {
+		return err
 	}
 
 	allKeys := map[string]struct{}{}
@@ -185,19 +154,13 @@ func (v *Validator_) SanityCheck(maxSlotKeyAllowed int) error {
 // Storage_Validator_
 func (s *Storage_Validator_) Load() *Validator_ {
 	s.ValidatorAddress().Value()
+	s.OperatorAddresses().Load()
 	s.SlotPubKeys().Load() // need check
 	s.LastEpochInCommittee().Value()
 	s.MaxTotalDelegation().Value()
 	s.Status().Value()
-	s.Commission().CommissionRates().Rate().Value()
-	s.Commission().CommissionRates().MaxChangeRate().Value()
-	s.Commission().CommissionRates().MaxRate().Value()
-	s.Commission().UpdateHeight().Value()
-	s.Description().Name().Value()
-	s.Description().Identity().Value()
-	s.Description().Website().Value()
-	s.Description().SecurityContact().Value()
-	s.Description().Details().Value()
+	s.Commission().Load()
+	s.Description().Load()
 	s.CreationHeight().Value()
 	return s.obj
 }
@@ -341,6 +304,17 @@ func (s *Storage_ValidatorWrapper_) Undelegate(delegator common.Address, epoch *
 			s.SubTotalDelegationByOperator(amount)
 		}
 	}
+}
+
+func (s *Storage_ValidatorWrapper_) Load() *ValidatorWrapper_ {
+	s.Validator().Load()
+	s.Redelegations().Load()
+	s.Counters().NumBlocksSigned().Value()
+	s.Counters().NumBlocksToSign().Value()
+	s.BlockReward().Value()
+	s.TotalDelegation().Value()
+	s.TotalDelegationByOperator().Value()
+	return s.obj
 }
 
 

@@ -80,6 +80,16 @@ func (s *Storage_Redelegation_) SetNil() {
 	s.Undelegation().Epoch().SetValue(common.Big0)
 }
 
+func (s *Storage_Redelegation_) Load() *Redelegation_ {
+	s.DelegatorAddress().Value()
+	s.Amount().Value()
+	s.Reward().Value()
+	s.Undelegation().Amount().Value()
+	s.Undelegation().Epoch().Value()
+	return s.obj
+}
+
+
 func (s *Storage_Redelegation_) CanReleaseAt(epoch *big.Int) bool {
 	return s.Undelegation().Amount().Value().Cmp(common.Big0) > 0 && s.Undelegation().Epoch().Value().Cmp(epoch) >= 0
 }
@@ -156,4 +166,14 @@ func (s *Storage_RedelegationMap_) Save(relegationMap RedelegationMap_) {
 		s.Map().Get(*addressTemp).Entry().Save(relegationMap.Map[*addressTemp].Entry)
 		s.Map().Get(*addressTemp).Index().SetValue(relegationMap.Map[*addressTemp].Index)
 	}
+}
+
+func (s *Storage_RedelegationMap_) Load() *RedelegationMap_ {
+	length := s.Keys().Length()
+	for i := 0; i < length; i++ {
+		k := s.Keys().Get(i).Value()
+		s.Map().Get(k).Index().Value()
+		s.Map().Get(k).Entry().Load()
+	}
+	return s.obj
 }

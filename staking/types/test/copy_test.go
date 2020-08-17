@@ -35,8 +35,8 @@ func makeNonZeroValidatorWrapper() restaking.ValidatorWrapper_ {
 		Validator: makeNonZeroValidator(),
 		Redelegations: func() restaking.RedelegationMap_ {
 			m := restaking.NewRedelegationMap()
-			m.Put(nonZeroDelegation.DelegatorAddress, &nonZeroDelegation)
-			m.Put(zeroDelegation.DelegatorAddress, &zeroDelegation)
+			m.Put(nonZeroDelegation.DelegatorAddress, nonZeroDelegation)
+			m.Put(zeroDelegation.DelegatorAddress, zeroDelegation)
 			return m
 		}(),
 		BlockReward: common.Big1,
@@ -255,7 +255,9 @@ func assertRedelegationMapDeepCopy(ds1, ds2 restaking.RedelegationMap_) error {
 		return fmt.Errorf("not deep equal")
 	}
 	for _, key := range ds1.Keys {
-		if err := assertRedelegationDeepCopy(*ds1.Get(*key), *ds2.Get(*key)); err != nil {
+		r1, _ := ds1.Get(*key)
+		r2, _ := ds2.Get(*key)
+		if err := assertRedelegationDeepCopy(r1, r2); err != nil {
 			return fmt.Errorf("[%v]: %v", key, err)
 		}
 	}
