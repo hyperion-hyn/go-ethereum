@@ -3,6 +3,7 @@ package staketest
 import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
+	"math/big"
 	"testing"
 )
 
@@ -77,9 +78,7 @@ func TestGetDefaultValidatorWrapperWithAddr(t *testing.T) {
 		exp.Validator.SlotPubKeys = test.keys
 		exp.Redelegations = func() restaking.RedelegationMap_ {
 			m := restaking.NewRedelegationMap()
-			m.Put(test.operatorAddr, &restaking.Redelegation_{
-				DelegatorAddress: test.operatorAddr,
-			})
+			m.Put(test.operatorAddr, restaking.NewRedelegation(test.operatorAddr, big.NewInt(0).Set(DefaultDelAmount)))
 			return m
 		}()
 

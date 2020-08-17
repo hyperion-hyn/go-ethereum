@@ -14,7 +14,7 @@ func TestCheckValidatorEqual(t *testing.T) {
 		{restaking.Validator_{}, restaking.Validator_{}},
 	}
 	for i, test := range tests {
-		if err := CheckValidatorEqual(&test.v1, &test.v2); err != nil {
+		if err := CheckValidatorEqual(test.v1, test.v2); err != nil {
 			t.Errorf("Test %v: %v", i, err)
 		}
 	}

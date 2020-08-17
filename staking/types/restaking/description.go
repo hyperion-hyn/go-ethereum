@@ -71,3 +71,12 @@ func (s *Storage_Description_) UpdateDescription(newDesc Description_) {
 		s.Details().SetValue(newDesc.Details)
 	}
 }
+
+func (s *Storage_Description_) Load() *Description_ {
+	s.Name().Value()
+	s.Identity().Value()
+	s.Website().Value()
+	s.SecurityContact().Value()
+	s.Details().Value()
+	return s.obj
+}

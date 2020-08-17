@@ -28,12 +28,12 @@ var (
 		w := restaking.ValidatorWrapper_{
 			Validator: validatorPrototype,
 			Redelegations: restaking.NewRedelegationMap(),
-			TotalDelegation:           DefaultDelAmount,
-			TotalDelegationByOperator: DefaultDelAmount,
-			BlockReward:               common.Big0,
+			TotalDelegation:           big.NewInt(0).Set(DefaultDelAmount),
+			TotalDelegationByOperator: big.NewInt(0).Set(DefaultDelAmount),
+			BlockReward:               big.NewInt(0),
 		}
-		w.Counters.NumBlocksToSign = common.Big0
-		w.Counters.NumBlocksSigned = common.Big0
+		w.Counters.NumBlocksToSign = big.NewInt(0)
+		w.Counters.NumBlocksSigned = big.NewInt(0)
 		return w
 	}()
 
@@ -41,12 +41,12 @@ var (
 		ValidatorAddress:     common.Address{},
 		OperatorAddresses:    restaking.NewEmptyAddressSet(),
 		SlotPubKeys:          restaking.NewEmptyBLSKeys(),
-		LastEpochInCommittee: common.Big0,
+		LastEpochInCommittee: big.NewInt(0),
 		MaxTotalDelegation:   DefaultMaxTotalDel,
 		Status:               uint8(restaking.Active),
 		Commission:           commission,
 		Description:          description,
-		CreationHeight:       common.Big0,
+		CreationHeight:       big.NewInt(0),
 	}
 
 	commissionRates = restaking.CommissionRates_{
@@ -57,7 +57,7 @@ var (
 
 	commission = restaking.Commission_{
 		CommissionRates: commissionRates,
-		UpdateHeight:    common.Big0,
+		UpdateHeight:    big.NewInt(0),
 	}
 
 	description = restaking.Description_{
@@ -96,6 +96,6 @@ func GetDefaultValidatorWrapperWithAddr(validator, operator common.Address, pubs
 	w.Validator.ValidatorAddress = validator
 	w.Validator.OperatorAddresses.Put(operator)
 	w.Validator.SlotPubKeys = CopySlotPubKeys(pubs)
-	w.Redelegations.Put(operator, restaking.NewRedelegation(operator, DefaultDelAmount))
+	w.Redelegations.Put(operator, restaking.NewRedelegation(operator, big.NewInt(0).Set(DefaultDelAmount)))
 	return w
 }
