@@ -1,6 +1,7 @@
 package staketest
 
 import (
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	"math/big"
 )
@@ -19,6 +20,12 @@ func CopyValidatorWrapper(w restaking.ValidatorWrapper_) restaking.ValidatorWrap
 	}
 	if w.BlockReward != nil {
 		cp.BlockReward = new(big.Int).Set(w.BlockReward)
+	}
+	if w.TotalDelegation != nil {
+		cp.TotalDelegation = new(big.Int).Set(w.TotalDelegation)
+	}
+	if w.TotalDelegationByOperator != nil {
+		cp.TotalDelegationByOperator = new(big.Int).Set(w.TotalDelegationByOperator)
 	}
 	return cp
 }
@@ -47,9 +54,21 @@ func CopyValidator(v restaking.Validator_) restaking.Validator_ {
 
 // CopyAddressSet deep copy the AddressSet
 func CopyAddressSet(s restaking.AddressSet_) restaking.AddressSet_ {
-	cp := restaking.NewEmptyAddressSet()
-	for _, k := range s.Keys {
-		cp.Put(*k)
+	cp := restaking.AddressSet_{}
+	if s.Keys != nil {
+		cp.Keys = []*common.Address{}
+		for _, key := range s.Keys {
+			k := *key
+			cp.Keys = append(cp.Keys, &k)
+		}
+	}
+
+	if s.Set != nil {
+		cp.Set = make(map[common.Address]*bool)
+		for addr, bo := range s.Set {
+			b := *bo
+			cp.Set[addr] = &b
+		}
 	}
 	return cp
 }
@@ -66,10 +85,13 @@ func CopyCommission(c restaking.Commission_) restaking.Commission_ {
 }
 
 func CopySlotPubKeys(blsKeys restaking.BLSPublicKeys_) restaking.BLSPublicKeys_ {
-	cp := restaking.NewEmptyBLSKeys()
-	for i := 0; i < len(blsKeys.Keys); i++ {
-		c := CopySlotPubKey(*blsKeys.Keys[i])
-		cp.Keys = append(cp.Keys, &c)
+	cp := restaking.BLSPublicKeys_{}
+	if blsKeys.Keys != nil {
+		cp.Keys = make([]*restaking.BLSPublicKey_, 0)
+		for i := 0; i < len(blsKeys.Keys); i++ {
+			c := CopySlotPubKey(*blsKeys.Keys[i])
+			cp.Keys = append(cp.Keys, &c)
+		}
 	}
 	return cp
 }
@@ -81,20 +103,23 @@ func CopySlotPubKey(blsKey restaking.BLSPublicKey_) restaking.BLSPublicKey_ {
 
 // CopyDelegations deeps copy restaking.Delegations
 func CopyDelegationMap(ds restaking.RedelegationMap_) restaking.RedelegationMap_ {
+	if ds.Keys == nil {
+		return restaking.RedelegationMap_{}
+	}
 	cp := restaking.NewRedelegationMap()
-	if ds.Keys == nil || len(ds.Keys) == 0 {
+	if len(ds.Keys) == 0 {
 		return cp
 	}
 	for _, key := range ds.Keys {
 		d, _ := ds.Get(*key)
-		cd := CopyDelegation(d)
+		cd := CopyRedelegation(d)
 		cp.Put(*key, cd)
 	}
 	return cp
 }
 
-// CopyDelegation copies restaking.Redelegation_
-func CopyDelegation(d restaking.Redelegation_) restaking.Redelegation_ {
+// CopyRedelegation copies restaking.Redelegation_
+func CopyRedelegation(d restaking.Redelegation_) restaking.Redelegation_ {
 	cp := restaking.Redelegation_{
 		DelegatorAddress: d.DelegatorAddress,
 		Undelegation:     CopyUndelegation(d.Undelegation),

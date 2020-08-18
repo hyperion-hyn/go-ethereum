@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	BLSVerificationStr       = "hyperion-hyn"
-	MaxPubKeyAllowed         = 1
+	BLSVerificationStr = "hyperion-hyn"
+	MaxPubKeyAllowed   = 1
 )
 
 var (
@@ -84,8 +84,8 @@ func CreateValidatorFromNewMsg(msg *CreateValidator, valAddr common.Address, blo
 	}
 
 	v := Validator_{
-		ValidatorAddress: valAddr,
-		OperatorAddresses: NewAddressSetWithAddress(msg.OperatorAddress),
+		ValidatorAddress:     valAddr,
+		OperatorAddresses:    NewAddressSetWithAddress(msg.OperatorAddress),
 		SlotPubKeys:          NewBLSKeysWithBLSKey(msg.SlotPubKey),
 		LastEpochInCommittee: new(big.Int),
 		MaxTotalDelegation:   msg.MaxTotalDelegation,

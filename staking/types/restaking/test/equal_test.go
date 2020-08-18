@@ -19,3 +19,18 @@ func TestCheckValidatorEqual(t *testing.T) {
 		}
 	}
 }
+
+func TestCheckValidatorWrapperEqual(t *testing.T) {
+	tests := []struct {
+		w1, w2 restaking.ValidatorWrapper_
+	}{
+		{vWrapperPrototype, vWrapperPrototype},
+		{makeZeroValidatorWrapper(), makeZeroValidatorWrapper()},
+		{restaking.ValidatorWrapper_{}, restaking.ValidatorWrapper_{}},
+	}
+	for i, test := range tests {
+		if err := CheckValidatorWrapperEqual(test.w1, test.w2); err != nil {
+			t.Errorf("Test %v: %v", i, err)
+		}
+	}
+}

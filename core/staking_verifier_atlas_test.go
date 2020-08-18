@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/bls"
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
-	staketest "github.com/ethereum/go-ethereum/staking/types/test"
+	staketest "github.com/ethereum/go-ethereum/staking/types/restaking/test"
 	"github.com/pkg/errors"
 	"math/big"
 	"strings"

@@ -7,6 +7,15 @@ import (
 	"math/big"
 )
 
+// CheckValidatorWrapperEqual checks the equality of staking.ValidatorWrapper. If not equal, an
+// error is returned. Note nil pointer is treated as zero in this compare function.
+func CheckValidatorWrapperEqual(w1, w2 restaking.ValidatorWrapper_) error {
+	if err := checkValidatorWrapperEqual(w1, w2); err != nil {
+		return fmt.Errorf("wrapper%v", err)
+	}
+	return nil
+}
+
 // CheckValidatorEqual checks the equality of validator. If not equal, an
 // error is returned. Note nil pointer is treated as zero in this compare function.
 func CheckValidatorEqual(v1, v2 restaking.Validator_) error {
@@ -16,11 +25,36 @@ func CheckValidatorEqual(v1, v2 restaking.Validator_) error {
 	return nil
 }
 
+func checkValidatorWrapperEqual(w1, w2 restaking.ValidatorWrapper_) error {
+	if err := checkValidatorEqual(w1.Validator, w2.Validator); err != nil {
+		return fmt.Errorf(".Validator%v", err)
+	}
+	if err := checkDelegationMapEqual(w1.Redelegations, w2.Redelegations); err != nil {
+		return fmt.Errorf(".Redelegations%v", err)
+	}
+	if err := checkBigIntEqual(w1.Counters.NumBlocksToSign, w2.Counters.NumBlocksToSign); err != nil {
+		return fmt.Errorf("..Counters.NumBlocksToSign %v", err)
+	}
+	if err := checkBigIntEqual(w1.Counters.NumBlocksSigned, w2.Counters.NumBlocksSigned); err != nil {
+		return fmt.Errorf("..Counters.NumBlocksSigned %v", err)
+	}
+	if err := checkBigIntEqual(w1.BlockReward, w2.BlockReward); err != nil {
+		return fmt.Errorf(".BlockReward %v", err)
+	}
+	if err := checkBigIntEqual(w1.TotalDelegation, w2.TotalDelegation); err != nil {
+		return fmt.Errorf(".TotalDelegation %v", err)
+	}
+	if err := checkBigIntEqual(w1.TotalDelegationByOperator, w2.TotalDelegationByOperator); err != nil {
+		return fmt.Errorf(".TotalDelegationByOperator %v", err)
+	}
+	return nil
+}
+
 func checkValidatorEqual(v1, v2 restaking.Validator_) error {
 	if v1.ValidatorAddress != v2.ValidatorAddress {
 		return fmt.Errorf(".Validator address not equal: %x / %x", v1.ValidatorAddress, v2.ValidatorAddress)
 	}
-	if err := checkAddressesEqual(v1.OperatorAddresses.Keys, v2.OperatorAddresses.Keys); err != nil {
+	if err := checkAddressSetEqual(v1.OperatorAddresses, v2.OperatorAddresses); err != nil {
 		return fmt.Errorf(".Operator addresses not equal %v", err)
 	}
 	if err := checkPubKeysEqual(v1.SlotPubKeys, v2.SlotPubKeys); err != nil {
@@ -47,13 +81,20 @@ func checkValidatorEqual(v1, v2 restaking.Validator_) error {
 	return nil
 }
 
-func checkAddressesEqual(a1, a2 []*common.Address) error {
-	if len(a1) != len(a2) {
-		return fmt.Errorf(".len not equal: %v / %v", len(a1), len(a2))
+func checkAddressSetEqual(a1, a2 restaking.AddressSet_) error {
+	if len(a1.Keys) != len(a2.Keys) {
+		return fmt.Errorf(".len of keys not equal: %v / %v", len(a1.Keys), len(a2.Keys))
 	}
-	for i := range a1 {
-		if *a1[i] != *a2[i] {
-			return fmt.Errorf("[%v] not equal: %x / %x", i, a1[i], a2[i])
+	if len(a1.Set) != len(a2.Set) {
+		return fmt.Errorf(".len of set not equal: %v / %v", len(a1.Set), len(a2.Set))
+	}
+	for i := range a1.Keys {
+		if *(a1.Keys[i]) != *(a2.Keys[i]) {
+			return fmt.Errorf("[%v] not equal in array: %x / %x", i, a1.Keys[i], a2.Keys[i])
+		}
+		k := *(a1.Keys[i])
+		if *(a1.Set[k]) != *(a2.Set[k]) {
+			return fmt.Errorf("[%v] not equal in set: %x / %x", k, a1.Keys[i], a2.Keys[i])
 		}
 	}
 	return nil
@@ -113,6 +154,47 @@ func checkCommissionRateEqual(cr1, cr2 restaking.CommissionRates_) error {
 	return nil
 }
 
+func checkDelegationMapEqual(ds1, ds2 restaking.RedelegationMap_) error {
+	if len(ds1.Keys) != len(ds2.Keys) {
+		return fmt.Errorf(".len not equal: %v / %v", len(ds1.Keys), len(ds2.Keys))
+	}
+	for _, key := range ds1.Keys {
+		r1, _ := ds1.Get(*key)
+		r2, _ := ds2.Get(*key)
+		if err := checkRedelegationEqual(r1, r2); err != nil {
+			return fmt.Errorf("[%v]%v", key, err)
+		}
+	}
+	return nil
+}
+
+func checkRedelegationEqual(d1, d2 restaking.Redelegation_) error {
+	if d1.DelegatorAddress != d2.DelegatorAddress {
+		return fmt.Errorf(".DelegatorAddress not equal: %x / %x",
+			d1.DelegatorAddress, d2.DelegatorAddress)
+	}
+	if err := checkBigIntEqual(d1.Amount, d2.Amount); err != nil {
+		return fmt.Errorf(".Amount %v", err)
+	}
+	if err := checkBigIntEqual(d1.Reward, d2.Reward); err != nil {
+		return fmt.Errorf(".Reward %v", err)
+	}
+	if err := checkUndelegationEqual(d1.Undelegation, d2.Undelegation); err != nil {
+		return fmt.Errorf(".Undelegations%v", err)
+	}
+	return nil
+}
+
+func checkUndelegationEqual(ud1, ud2 restaking.Undelegation_) error {
+	if err := checkBigIntEqual(ud1.Amount, ud2.Amount); err != nil {
+		return fmt.Errorf(".Amount %v", err)
+	}
+	if err := checkBigIntEqual(ud1.Epoch, ud2.Epoch); err != nil {
+		return fmt.Errorf(".Epoch %v", err)
+	}
+	return nil
+}
+
 func checkDecEqual(d1, d2 common.Dec) error {
 	if d1.IsNil() {
 		d1 = common.ZeroDec()
@@ -138,4 +220,3 @@ func checkBigIntEqual(i1, i2 *big.Int) error {
 	}
 	return nil
 }
-

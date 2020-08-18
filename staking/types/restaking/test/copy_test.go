@@ -20,6 +20,7 @@ func TestCopyValidatorWrapper(t *testing.T) {
 	}{
 		{makeNonZeroValidatorWrapper()},
 		{makeZeroValidatorWrapper()},
+		{restaking.ValidatorWrapper_{}},
 	}
 	for i, test := range tests {
 		cp := CopyValidatorWrapper(test.w)
@@ -48,9 +49,11 @@ func makeNonZeroValidatorWrapper() restaking.ValidatorWrapper_ {
 
 func makeZeroValidatorWrapper() restaking.ValidatorWrapper_ {
 	w := restaking.ValidatorWrapper_{
-		Validator:     makeZeroValidator(),
-		Redelegations: restaking.NewRedelegationMap(),
-		BlockReward:   common.Big0,
+		Validator:                 makeZeroValidator(),
+		Redelegations:             restaking.NewRedelegationMap(),
+		BlockReward:               common.Big0,
+		TotalDelegation:           common.Big0,
+		TotalDelegationByOperator: common.Big0,
 	}
 	w.Counters.NumBlocksSigned = common.Big0
 	w.Counters.NumBlocksToSign = common.Big0
@@ -63,6 +66,7 @@ func TestCopyValidator(t *testing.T) {
 	}{
 		{makeNonZeroValidator()},
 		{makeZeroValidator()},
+		{restaking.Validator_{}},
 	}
 	for i, test := range tests {
 		cp := CopyValidator(test.v)
@@ -75,13 +79,14 @@ func TestCopyValidator(t *testing.T) {
 // makeNonZeroValidator makes a valid Validator data structure
 func makeNonZeroValidator() restaking.Validator_ {
 	d := restaking.Description_{
-		Name:     "Wayne",
-		Identity: "wen",
-		Website:  "harmony.one.wen",
-		Details:  "best",
+		Name:            "Wayne",
+		Identity:        "wen",
+		Website:         "harmony.one.wen",
+		Details:         "best",
+		SecurityContact: "sc",
 	}
 	v := restaking.Validator_{
-		ValidatorAddress:     common.BigToAddress(common.Big0),
+		ValidatorAddress:     common.BigToAddress(common.Big1),
 		OperatorAddresses:    restaking.NewAddressSetWithAddress(common.BigToAddress(common.Big1)),
 		SlotPubKeys:          restaking.NewBLSKeysWithBLSKey(testPub),
 		LastEpochInCommittee: big.NewInt(20),
@@ -132,7 +137,7 @@ func TestCopyRedelegation(t *testing.T) {
 		{restaking.Redelegation_{}},
 	}
 	for i, test := range tests {
-		cp := CopyDelegation(test.d)
+		cp := CopyRedelegation(test.d)
 		if err := assertRedelegationDeepCopy(cp, test.d); err != nil {
 			t.Errorf("Test %v: %v", i, err)
 		}
@@ -175,6 +180,10 @@ var (
 	zeroDelegation = restaking.Redelegation_{
 		Amount: common.Big0,
 		Reward: common.Big0,
+		Undelegation: restaking.Undelegation_{
+			Amount: common.Big0,
+			Epoch:  common.Big0,
+		},
 	}
 )
 
@@ -191,8 +200,8 @@ func assertValidatorWrapperDeepCopy(w1, w2 restaking.ValidatorWrapper_) error {
 	if err := assertBigIntCopy(w1.Counters.NumBlocksSigned, w2.Counters.NumBlocksSigned); err != nil {
 		return fmt.Errorf("counters %v", err)
 	}
-	if w1.BlockReward != nil && w1.BlockReward == w2.BlockReward {
-		return fmt.Errorf("BlockReward same address")
+	if err := assertBigIntCopy(w1.BlockReward, w2.BlockReward); err != nil {
+		return fmt.Errorf("BlockReward %v", err)
 	}
 	return nil
 }
@@ -201,6 +210,14 @@ func assertValidatorDeepCopy(v1, v2 restaking.Validator_) error {
 	if !reflect.DeepEqual(v1, v2) {
 		return fmt.Errorf("not deep equal")
 	}
+
+	if &v1.OperatorAddresses == &v2.OperatorAddresses {
+		return fmt.Errorf("OperatorAddresses same pointer")
+	}
+	if err := assertAddressSetDeepCopy(v1.OperatorAddresses, v2.OperatorAddresses); err != nil {
+		return fmt.Errorf("OperatorAddresses not deep copy")
+	}
+
 	if &v1.SlotPubKeys == &v2.SlotPubKeys {
 		return fmt.Errorf("SlotPubKeys same pointer")
 	}
@@ -209,11 +226,11 @@ func assertValidatorDeepCopy(v1, v2 restaking.Validator_) error {
 			return fmt.Errorf("SlotPubKeys[%v] same address", i)
 		}
 	}
-	if v1.LastEpochInCommittee != nil && v1.LastEpochInCommittee == v2.LastEpochInCommittee {
-		return fmt.Errorf("LastEpochInCommittee same address")
+	if err := assertBigIntCopy(v1.LastEpochInCommittee, v2.LastEpochInCommittee); err != nil {
+		return fmt.Errorf("LastEpochInCommittee %v", err)
 	}
-	if v1.CreationHeight != nil && v1.CreationHeight == v2.CreationHeight {
-		return fmt.Errorf("CreationHeight same address")
+	if err := assertBigIntCopy(v1.CreationHeight, v2.CreationHeight); err != nil {
+		return fmt.Errorf("CreationHeight %v", err)
 	}
 	if &v1.Description == &v2.Description {
 		return fmt.Errorf("same description")
@@ -224,9 +241,30 @@ func assertValidatorDeepCopy(v1, v2 restaking.Validator_) error {
 	return nil
 }
 
+func assertAddressSetDeepCopy(as1, as2 restaking.AddressSet_) error {
+	if !reflect.DeepEqual(as1, as2) {
+		return fmt.Errorf("not deep equal")
+	}
+	if len(as1.Keys) != 0 {
+		for i := range as1.Keys {
+			if as1.Keys[i] == as2.Keys[i] {
+				return fmt.Errorf("AddressSet key same address")
+			}
+			key := as1.Keys[i]
+			if as1.Contain(*key) != as2.Contain(*key) {
+				return fmt.Errorf("AddressSet [%v]: not equal", key)
+			}
+		}
+	}
+	return nil
+}
+
 func assertCommissionDeepCopy(c1, c2 restaking.Commission_) error {
 	if !reflect.DeepEqual(c1, c2) {
 		return fmt.Errorf("not deep equal")
+	}
+	if &c1.CommissionRates == &c2.CommissionRates {
+		return fmt.Errorf("CommissionRates same address")
 	}
 	if err := assertCommissionRatesCopy(c1.CommissionRates, c2.CommissionRates); err != nil {
 		return fmt.Errorf("CommissionRates: %v", err)
@@ -254,11 +292,17 @@ func assertRedelegationMapDeepCopy(ds1, ds2 restaking.RedelegationMap_) error {
 	if !reflect.DeepEqual(ds1, ds2) {
 		return fmt.Errorf("not deep equal")
 	}
-	for _, key := range ds1.Keys {
-		r1, _ := ds1.Get(*key)
-		r2, _ := ds2.Get(*key)
-		if err := assertRedelegationDeepCopy(r1, r2); err != nil {
-			return fmt.Errorf("[%v]: %v", key, err)
+	if len(ds1.Keys) != 0 {
+		for i := range ds1.Keys {
+			if ds1.Keys[i] == ds2.Keys[i] {
+				return fmt.Errorf("RedelegationMap key same address")
+			}
+			key := ds1.Keys[i]
+			r1, _ := ds1.Get(*key)
+			r2, _ := ds2.Get(*key)
+			if err := assertRedelegationDeepCopy(r1, r2); err != nil {
+				return fmt.Errorf("[%v]: %v", key, err)
+			}
 		}
 	}
 	return nil
@@ -268,11 +312,14 @@ func assertRedelegationDeepCopy(d1, d2 restaking.Redelegation_) error {
 	if !reflect.DeepEqual(d1, d2) {
 		return fmt.Errorf("not deep equal")
 	}
-	if d1.Amount != nil && d1.Amount == d2.Amount {
-		return fmt.Errorf("amount same address")
+	if err := assertBigIntCopy(d1.Amount, d2.Amount); err != nil {
+		return fmt.Errorf("amount %v", err)
 	}
-	if d1.Reward != nil && d1.Reward == d2.Reward {
-		return fmt.Errorf("reward same address")
+	if err := assertBigIntCopy(d1.Reward, d2.Reward); err != nil {
+		return fmt.Errorf("reward %v", err)
+	}
+	if &d1.Undelegation == &d2.Undelegation {
+		return fmt.Errorf("undelegations same address")
 	}
 	if err := assertUndelegationDeepCopy(d1.Undelegation, d2.Undelegation); err != nil {
 		return fmt.Errorf("undelegations %v", err)
@@ -294,15 +341,12 @@ func assertUndelegationDeepCopy(ud1, ud2 restaking.Undelegation_) error {
 }
 
 func assertDecCopy(d1, d2 common.Dec) error {
-	if d1.IsNil() != d2.IsNil() {
-		return errors.New("IsNil not equal")
+	if !reflect.DeepEqual(d1, d2) {
+		return fmt.Errorf("not deep equal")
 	}
-	if d1.IsNil() {
-		return nil
-	}
-	if d1 == d2 {
-		return errors.New("same address")
-	}
+	//if err := assertBigIntCopy(d1.I, d2.I); err != nil {
+	//	return fmt.Errorf("int: %v", err)
+	//}
 	return nil
 }
 
@@ -311,7 +355,10 @@ func assertBigIntCopy(i1, i2 *big.Int) error {
 		return errors.New("is nil not equal")
 	}
 	if i1 != nil && i1 == i2 {
-		return errors.New("not copy")
+		return errors.New("not copy, same address")
+	}
+	if i1 != nil && i1.Cmp(i2) != 0 {
+		return errors.New("big int not equal")
 	}
 	return nil
 }
