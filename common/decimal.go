@@ -28,7 +28,7 @@ import (
 // NOTE: never use new(Dec) or else we will panic unmarshalling into the
 // nil embedded big.Int
 type Dec struct {
-	I *big.Int
+	I *big.Int //ATLAS modify i to I
 }
 
 // number of decimal places
