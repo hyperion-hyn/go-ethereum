@@ -805,12 +805,13 @@ func handleMap3AndAtlasStaking(chain consensus.ChainReader, header *types.Header
 		// genesis block has no parent to reward.
 		return network.EmptyPayout, nil
 	}
-	payout, err := accumulateRewardsAndCountSigs(chain, stateDB, header)
-	if err != nil {
-		return nil, errors.New("cannot pay block reward")
-	}
+	//payout, err := accumulateRewardsAndCountSigs(chain, stateDB, header)
+	//if err != nil {
+	//	return nil, errors.New("cannot pay block reward")
+	//}
 
 	// TODO(ATLAS): slash
+	payout := network.EmptyPayout
 
 	return payout, nil
 }

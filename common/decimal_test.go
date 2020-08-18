@@ -287,7 +287,7 @@ func TestTruncate(t *testing.T) {
 func TestDecMarshalJSON(t *testing.T) {
 	decimal := func(i int64) Dec {
 		d := NewDec(0)
-		d.i = new(big.Int).SetInt64(i)
+		d.I = new(big.Int).SetInt64(i) // ATLAS
 		return d
 	}
 	tests := []struct {
@@ -393,11 +393,11 @@ func TestPower(t *testing.T) {
 		power    uint64
 		expected Dec
 	}{
-		{OneDec(), 10, OneDec()},                                               // 1.0 ^ (10) => 1.0
-		{NewDecWithPrec(5, 1), 2, NewDecWithPrec(25, 2)},                       // 0.5 ^ 2 => 0.25
-		{NewDecWithPrec(2, 1), 2, NewDecWithPrec(4, 2)},                        // 0.2 ^ 2 => 0.04
-		{NewDecFromInt(big.NewInt(3)), 3, NewDecFromInt(big.NewInt(27))},               // 3 ^ 3 => 27
-		{NewDecFromInt(big.NewInt(-3)), 4, NewDecFromInt(big.NewInt(81))},              // -3 ^ 4 = 81
+		{OneDec(), 10, OneDec()},                                                   // 1.0 ^ (10) => 1.0
+		{NewDecWithPrec(5, 1), 2, NewDecWithPrec(25, 2)},                           // 0.5 ^ 2 => 0.25
+		{NewDecWithPrec(2, 1), 2, NewDecWithPrec(4, 2)},                            // 0.2 ^ 2 => 0.04
+		{NewDecFromInt(big.NewInt(3)), 3, NewDecFromInt(big.NewInt(27))},           // 3 ^ 3 => 27
+		{NewDecFromInt(big.NewInt(-3)), 4, NewDecFromInt(big.NewInt(81))},          // -3 ^ 4 = 81
 		{NewDecWithPrec(1414213562373095049, 18), 2, NewDecFromInt(big.NewInt(2))}, // 1.414213562373095049 ^ 2 = 2
 	}
 
@@ -413,11 +413,11 @@ func TestApproxRoot(t *testing.T) {
 		root     uint64
 		expected Dec
 	}{
-		{OneDec(), 10, OneDec()},                                               // 1.0 ^ (0.1) => 1.0
-		{NewDecWithPrec(25, 2), 2, NewDecWithPrec(5, 1)},                       // 0.25 ^ (0.5) => 0.5
-		{NewDecWithPrec(4, 2), 2, NewDecWithPrec(2, 1)},                        // 0.04 => 0.2
-		{NewDecFromInt(big.NewInt(27)), 3, NewDecFromInt(big.NewInt(3))},               // 27 ^ (1/3) => 3
-		{NewDecFromInt(big.NewInt(-81)), 4, NewDecFromInt(big.NewInt(-3))},             // -81 ^ (0.25) => -3
+		{OneDec(), 10, OneDec()},                                                   // 1.0 ^ (0.1) => 1.0
+		{NewDecWithPrec(25, 2), 2, NewDecWithPrec(5, 1)},                           // 0.25 ^ (0.5) => 0.5
+		{NewDecWithPrec(4, 2), 2, NewDecWithPrec(2, 1)},                            // 0.04 => 0.2
+		{NewDecFromInt(big.NewInt(27)), 3, NewDecFromInt(big.NewInt(3))},           // 27 ^ (1/3) => 3
+		{NewDecFromInt(big.NewInt(-81)), 4, NewDecFromInt(big.NewInt(-3))},         // -81 ^ (0.25) => -3
 		{NewDecFromInt(big.NewInt(2)), 2, NewDecWithPrec(1414213562373095049, 18)}, // 2 ^ (0.5) => 1.414213562373095049
 		{NewDecWithPrec(1005, 3), 31536000, MustNewDecFromStr("1.000000000158153904")},
 	}
@@ -434,11 +434,11 @@ func TestApproxSqrt(t *testing.T) {
 		input    Dec
 		expected Dec
 	}{
-		{OneDec(), OneDec()},                                                // 1.0 => 1.0
-		{NewDecWithPrec(25, 2), NewDecWithPrec(5, 1)},                       // 0.25 => 0.5
-		{NewDecWithPrec(4, 2), NewDecWithPrec(2, 1)},                        // 0.09 => 0.3
-		{NewDecFromInt(big.NewInt(9)), NewDecFromInt(big.NewInt(3))},                // 9 => 3
-		{NewDecFromInt(big.NewInt(-9)), NewDecFromInt(big.NewInt(-3))},              // -9 => -3
+		{OneDec(), OneDec()},                                                    // 1.0 => 1.0
+		{NewDecWithPrec(25, 2), NewDecWithPrec(5, 1)},                           // 0.25 => 0.5
+		{NewDecWithPrec(4, 2), NewDecWithPrec(2, 1)},                            // 0.09 => 0.3
+		{NewDecFromInt(big.NewInt(9)), NewDecFromInt(big.NewInt(3))},            // 9 => 3
+		{NewDecFromInt(big.NewInt(-9)), NewDecFromInt(big.NewInt(-3))},          // -9 => -3
 		{NewDecFromInt(big.NewInt(2)), NewDecWithPrec(1414213562373095049, 18)}, // 2 => 1.414213562373095049
 	}
 
