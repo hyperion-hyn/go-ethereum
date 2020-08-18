@@ -161,8 +161,12 @@ func VerifyCreateValidatorMsg(stateDB vm.StateDB, blockNum *big.Int, msg *restak
 		Redelegations:             restaking.NewRedelegationMap(),
 		TotalDelegation:           big.NewInt(0).Set(amt),
 		TotalDelegationByOperator: big.NewInt(0).Set(amt),
+		BlockReward:               big.NewInt(0),
 	}
+	wrapper.Counters.NumBlocksSigned = big.NewInt(0)
+	wrapper.Counters.NumBlocksToSign = big.NewInt(0)
 	wrapper.Redelegations.Put(msg.OperatorAddress, restaking.NewRedelegation(msg.OperatorAddress, amt))
+
 	return &verification{
 		NewValidator: &wrapper,
 		Participant:  p,

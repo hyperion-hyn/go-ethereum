@@ -83,52 +83,59 @@ type ValidatorWrapperBuilder struct {
 	wrapper restaking.ValidatorWrapper_
 }
 
-func (b ValidatorWrapperBuilder) SetValidatorAddress(validator common.Address) ValidatorWrapperBuilder {
+func (b *ValidatorWrapperBuilder) SetValidatorAddress(validator common.Address) *ValidatorWrapperBuilder {
 	b.wrapper.Validator.ValidatorAddress = validator
 	return b
 }
 
-func (b ValidatorWrapperBuilder) AddOperatorAddress(operator common.Address) ValidatorWrapperBuilder {
+func (b *ValidatorWrapperBuilder) AddOperatorAddress(operator common.Address) *ValidatorWrapperBuilder {
 	b.wrapper.Validator.OperatorAddresses.Put(operator)
 	return b
 }
 
-func (b ValidatorWrapperBuilder) AddSlotPubKey(key restaking.BLSPublicKey_) ValidatorWrapperBuilder {
+func (b *ValidatorWrapperBuilder) AddSlotPubKey(key restaking.BLSPublicKey_) *ValidatorWrapperBuilder {
 	b.wrapper.Validator.SlotPubKeys.Keys = append(b.wrapper.Validator.SlotPubKeys.Keys, &key)
 	return b
 }
 
-func (b ValidatorWrapperBuilder) SetLastEpochInCommittee(lastEpochInCommittee *big.Int) ValidatorWrapperBuilder {
+func (b *ValidatorWrapperBuilder) AddSlotPubKeys(keys restaking.BLSPublicKeys_) *ValidatorWrapperBuilder {
+	for _, k := range keys.Keys {
+		b.AddSlotPubKey(*k)
+	}
+	return b
+}
+
+func (b *ValidatorWrapperBuilder) SetLastEpochInCommittee(lastEpochInCommittee *big.Int) *ValidatorWrapperBuilder {
 	b.wrapper.Validator.LastEpochInCommittee = big.NewInt(0).Set(lastEpochInCommittee)
 	return b
 }
 
-func (b ValidatorWrapperBuilder) SetMaxTotalDelegation(maxTotalDelegation *big.Int) ValidatorWrapperBuilder {
+func (b *ValidatorWrapperBuilder) SetMaxTotalDelegation(maxTotalDelegation *big.Int) *ValidatorWrapperBuilder {
 	b.wrapper.Validator.MaxTotalDelegation = big.NewInt(0).Set(maxTotalDelegation)
 	return b
 }
 
-func (b ValidatorWrapperBuilder) SetStatus(status uint8) ValidatorWrapperBuilder {
+func (b *ValidatorWrapperBuilder) SetStatus(status uint8) *ValidatorWrapperBuilder {
 	b.wrapper.Validator.Status = status
 	return b
 }
 
-func (b ValidatorWrapperBuilder) SetCommission(commission restaking.Commission_) ValidatorWrapperBuilder {
+func (b *ValidatorWrapperBuilder) SetCommission(commission restaking.Commission_) *ValidatorWrapperBuilder {
 	b.wrapper.Validator.Commission = CopyCommission(commission)
 	return b
 }
 
-func (b ValidatorWrapperBuilder) SetDescription(description restaking.Description_) ValidatorWrapperBuilder {
+func (b *ValidatorWrapperBuilder) SetDescription(description restaking.Description_) *ValidatorWrapperBuilder {
 	b.wrapper.Validator.Description = description
 	return b
 }
 
-func (b ValidatorWrapperBuilder) SetCreationHeight(creationHeight *big.Int) ValidatorWrapperBuilder {
+func (b *ValidatorWrapperBuilder) SetCreationHeight(creationHeight *big.Int) *ValidatorWrapperBuilder {
 	b.wrapper.Validator.CreationHeight = big.NewInt(0).Set(creationHeight)
 	return b
 }
 
-func (b ValidatorWrapperBuilder) AddRedelegation(redelegation restaking.Redelegation_) ValidatorWrapperBuilder {
+func (b *ValidatorWrapperBuilder) AddRedelegation(redelegation restaking.Redelegation_) *ValidatorWrapperBuilder {
 	b.wrapper.Redelegations.Put(redelegation.DelegatorAddress, CopyRedelegation(redelegation))
 	b.wrapper.TotalDelegation.Add(b.wrapper.TotalDelegation, redelegation.Amount)
 	if b.wrapper.Validator.OperatorAddresses.Contain(redelegation.DelegatorAddress) {
@@ -137,25 +144,25 @@ func (b ValidatorWrapperBuilder) AddRedelegation(redelegation restaking.Redelega
 	return b
 }
 
-func (b ValidatorWrapperBuilder) SetNumBlocksToSign(numBlocksToSign *big.Int) ValidatorWrapperBuilder {
+func (b *ValidatorWrapperBuilder) SetNumBlocksToSign(numBlocksToSign *big.Int) *ValidatorWrapperBuilder {
 	b.wrapper.Counters.NumBlocksToSign = big.NewInt(0).Set(numBlocksToSign)
 	return b
 }
 
-func (b ValidatorWrapperBuilder) SetNumBlocksSigned(numBlocksSigned *big.Int) ValidatorWrapperBuilder {
+func (b *ValidatorWrapperBuilder) SetNumBlocksSigned(numBlocksSigned *big.Int) *ValidatorWrapperBuilder {
 	b.wrapper.Counters.NumBlocksSigned = big.NewInt(0).Set(numBlocksSigned)
 	return b
 }
 
-func (b ValidatorWrapperBuilder) SetBlockReward(blockReward *big.Int) ValidatorWrapperBuilder {
+func (b *ValidatorWrapperBuilder) SetBlockReward(blockReward *big.Int) *ValidatorWrapperBuilder {
 	b.wrapper.BlockReward = big.NewInt(0).Set(blockReward)
 	return b
 }
 
-func (b ValidatorWrapperBuilder) Build() restaking.ValidatorWrapper_ {
+func (b *ValidatorWrapperBuilder) Build() restaking.ValidatorWrapper_ {
 	return b.wrapper
 }
 
-func NewValidatorWrapperBuilder() ValidatorWrapperBuilder {
-	return ValidatorWrapperBuilder{wrapper: CopyValidatorWrapper(vWrapperPrototype)}
+func NewValidatorWrapperBuilder() *ValidatorWrapperBuilder {
+	return &ValidatorWrapperBuilder{wrapper: CopyValidatorWrapper(vWrapperPrototype)}
 }

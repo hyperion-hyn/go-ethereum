@@ -58,6 +58,8 @@ var (
 	pointEightFiveDec = common.NewDecWithPrec(85, 2)
 	pointNineDec      = common.NewDecWithPrec(9, 1)
 	oneDec            = common.OneDec()
+
+	defaultDelAmount = millionOnes
 )
 
 const (
@@ -232,7 +234,7 @@ func TestVerifyCreateValidatorMsg(t *testing.T) {
 			if err != nil || tt.wantErr != nil {
 				return
 			}
-			if err := staketest.CheckValidatorEqual(got.NewValidator.Validator, tt.want.Validator); err != nil {
+			if err := staketest.CheckValidatorWrapperEqual(*got.NewValidator, tt.want); err != nil {
 				t.Errorf("Test - %v: %v", tt.name, err)
 			}
 		})
@@ -271,21 +273,17 @@ func defaultExpCreatedValidator() restaking.ValidatorWrapper_ {
 
 	redelegations := restaking.NewRedelegationMap()
 	newRedelegation := restaking.Redelegation_{
-		DelegatorAddress: delegatorAddr,
-		Amount:           common.Big0,
-		Undelegation: restaking.Undelegation_{
-			Amount: new(big.Int).Set(twentyKOnes),
-			Epoch:  defaultStakingAmount,
-		},
+		DelegatorAddress: createOperatorAddr,
+		Amount:           defaultDelAmount,
 	}
-	redelegations.Put(delegatorAddr, newRedelegation)
+	redelegations.Put(createOperatorAddr, newRedelegation)
 
 	w := restaking.ValidatorWrapper_{
 		Validator:                 v,
 		Redelegations:             redelegations,
 		BlockReward:               big.NewInt(0),
-		TotalDelegation:           defaultStakingAmount,
-		TotalDelegationByOperator: defaultStakingAmount,
+		TotalDelegation:           defaultDelAmount,
+		TotalDelegationByOperator: defaultDelAmount,
 	}
 	w.Counters.NumBlocksSigned = common.Big0
 	w.Counters.NumBlocksToSign = common.Big0
@@ -948,7 +946,12 @@ func makeStateVWrapperFromGetter(index int, numPubs int, pubGetter *BLSPubGetter
 		pub := pubGetter.getPub()
 		pubs.Keys = append(pubs.Keys, &pub)
 	}
-	w := staketest.GetDefaultValidatorWrapperWithAddr(validatorAddr, operator, pubs)
+	w := staketest.NewValidatorWrapperBuilder().
+		SetValidatorAddress(validatorAddr).
+		AddOperatorAddress(operator).
+		AddSlotPubKeys(pubs).
+		AddRedelegation(restaking.NewRedelegation(operator, defaultDelAmount)).
+		Build()
 	w.Validator.Description.Identity = makeIdentityStr(index)
 	w.Validator.Commission.UpdateHeight = big.NewInt(defaultSnapBlockNumber)
 	return w
