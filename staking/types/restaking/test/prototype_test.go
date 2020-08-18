@@ -1,6 +1,9 @@
 package staketest
 
 import (
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/staking/types/restaking"
+	"math/big"
 	"testing"
 )
 
@@ -19,75 +22,77 @@ func TestGetDefaultValidatorWrapper(t *testing.T) {
 }
 
 func TestValidatorWrapperBuilder(t *testing.T) {
+	tests := []struct {
+		validatorAddr        common.Address
+		operatorAddr         common.Address
+		key                  restaking.BLSPublicKey_
+		lastEpochInCommittee *big.Int
+		maxTotalDelegation   *big.Int
+		commission           restaking.Commission_
+		description          restaking.Description_
+		creationHeight       *big.Int
+		redelegation         restaking.Redelegation_
+		blockReward          *big.Int
+		numBlocksToSign      *big.Int
+		numBlocksSigned      *big.Int
+	}{
+		{
+			validatorAddr:        common.BigToAddress(common.Big1),
+			operatorAddr:         common.BigToAddress(common.Big1),
+			key:                  testPub,
+			lastEpochInCommittee: big.NewInt(1),
+			maxTotalDelegation:   big.NewInt(1),
+			commission:           nonZeroCommission,
+			description: restaking.Description_{
+				Name:            "A",
+				Identity:        "B",
+				Website:         "C",
+				SecurityContact: "D",
+				Details:         "E",
+			},
+			creationHeight:  big.NewInt(1),
+			redelegation:    nonZeroDelegation,
+			blockReward:     big.NewInt(1),
+			numBlocksToSign: big.NewInt(1),
+			numBlocksSigned: big.NewInt(1),
+		},
+	}
 
+	for i, test := range tests {
+		v := NewValidatorWrapperBuilder().
+			SetValidatorAddress(test.validatorAddr).
+			AddOperatorAddress(test.operatorAddr).
+			AddSlotPubKey(test.key).
+			SetLastEpochInCommittee(test.lastEpochInCommittee).
+			SetMaxTotalDelegation(test.maxTotalDelegation).
+			SetCommission(test.commission).
+			SetDescription(test.description).
+			SetCreationHeight(test.creationHeight).
+			AddRedelegation(test.redelegation).
+			SetBlockReward(test.blockReward).
+			SetNumBlocksToSign(test.numBlocksToSign).
+			SetNumBlocksSigned(test.numBlocksSigned).
+			Build()
 
+		exp := CopyValidatorWrapper(vWrapperPrototype)
+		exp.Validator.ValidatorAddress = test.validatorAddr
+		exp.Validator.OperatorAddresses = restaking.NewAddressSetWithAddress(test.operatorAddr)
+		exp.Validator.SlotPubKeys.Keys = append(exp.Validator.SlotPubKeys.Keys, &test.key)
+		exp.Validator.LastEpochInCommittee = test.lastEpochInCommittee
+		exp.Validator.MaxTotalDelegation = test.maxTotalDelegation
+		exp.Validator.Commission = test.commission
+		exp.Validator.Description = test.description
+		exp.Validator.CreationHeight = test.creationHeight
+		exp.Redelegations.Put(test.redelegation.DelegatorAddress, test.redelegation)
+		exp.BlockReward = test.blockReward
+		exp.Counters.NumBlocksToSign = test.numBlocksToSign
+		exp.Counters.NumBlocksSigned = test.numBlocksSigned
+		exp.TotalDelegation = common.Big1
+		exp.TotalDelegationByOperator = common.Big1
+		exp = CopyValidatorWrapper(exp)
 
-
+		if err := assertValidatorWrapperDeepCopy(v, exp); err != nil {
+			t.Errorf("Test %v: %v", i, err)
+		}
+	}
 }
-//
-//func TestGetDefaultValidatorWithAddr(t *testing.T) {
-//	tests := []struct {
-//		validatorAddr common.Address
-//		operatorAddr  common.Address
-//		keys          restaking.BLSPublicKeys_
-//	}{
-//		{
-//			validatorAddr: common.BigToAddress(common.Big1),
-//			operatorAddr:  common.BigToAddress(common.Big2),
-//			keys:          restaking.NewBLSKeysWithBLSKey(testPub),
-//		},
-//		{
-//			validatorAddr: common.Address{},
-//			operatorAddr:  common.Address{},
-//			keys:          restaking.NewEmptyBLSKeys(),
-//		},
-//	}
-//	for i, test := range tests {
-//		v := GetDefaultValidatorWithAddr(test.validatorAddr, test.operatorAddr, test.keys)
-//
-//		exp := CopyValidator(validatorPrototype)
-//		exp.ValidatorAddress = test.validatorAddr
-//		exp.OperatorAddresses = restaking.NewAddressSetWithAddress(test.operatorAddr)
-//		exp.SlotPubKeys = test.keys
-//
-//		if err := assertValidatorDeepCopy(v, exp); err != nil {
-//			t.Errorf("Test %v: %v", i, err)
-//		}
-//	}
-//}
-//
-//func TestGetDefaultValidatorWrapperWithAddr(t *testing.T) {
-//	tests := []struct {
-//		validatorAddr common.Address
-//		operatorAddr  common.Address
-//		keys          restaking.BLSPublicKeys_
-//	}{
-//		{
-//			validatorAddr: common.BigToAddress(common.Big1),
-//			operatorAddr:  common.BigToAddress(common.Big2),
-//			keys:          restaking.NewBLSKeysWithBLSKey(testPub),
-//		},
-//		{
-//			validatorAddr: common.Address{},
-//			operatorAddr:  common.Address{},
-//			keys:          restaking.NewEmptyBLSKeys(),
-//		},
-//	}
-//	for i, test := range tests {
-//		v := GetDefaultValidatorWrapperWithAddr(test.validatorAddr, test.operatorAddr, test.keys)
-//
-//		exp := CopyValidatorWrapper(vWrapperPrototype)
-//		exp.Validator.ValidatorAddress = test.validatorAddr
-//		exp.Validator.OperatorAddresses = restaking.NewAddressSetWithAddress(test.operatorAddr)
-//		exp.Validator.SlotPubKeys = test.keys
-//		exp.Redelegations = func() restaking.RedelegationMap_ {
-//			m := restaking.NewRedelegationMap()
-//			m.Put(test.operatorAddr, restaking.NewRedelegation(test.operatorAddr, big.NewInt(0).Set(DefaultDelAmount)))
-//			return m
-//		}()
-//
-//		if err := assertValidatorWrapperDeepCopy(v, exp); err != nil {
-//			t.Errorf("Test %v: %v", i, err)
-//		}
-//	}
-//}

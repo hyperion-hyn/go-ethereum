@@ -344,9 +344,9 @@ func assertDecCopy(d1, d2 common.Dec) error {
 	if !reflect.DeepEqual(d1, d2) {
 		return fmt.Errorf("not deep equal")
 	}
-	//if err := assertBigIntCopy(d1.I, d2.I); err != nil {
-	//	return fmt.Errorf("int: %v", err)
-	//}
+	if err := assertBigIntCopy(d1.I, d2.I); err != nil {
+		return fmt.Errorf("int: %v", err)
+	}
 	return nil
 }
 
