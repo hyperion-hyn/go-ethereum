@@ -120,16 +120,46 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 	}
 
 	{
-		// .Name
-		nameStorage := storage.Name().Value()
+		// .Name		
+		verify := func(expected string) {
+			nameStorage := storage.Name().Value()
+			if nameStorage != expected {
+				t.Errorf("response from calling contract was expected to be '%v' %d instead received '%v' %d", expected, len(expected), nameStorage, len(nameStorage))
+			}
+	
+			if nameStorage != global.Name {
+				t.Errorf(" field expected to be %v instead received %v", global.Name, nameStorage)
+			}
+		}
 		expected := "Hyperion"
-		if nameStorage != expected {
-			t.Errorf("response from calling contract was expected to be '%v' %d instead received '%v' %d", expected, len(expected), nameStorage, len(nameStorage))
-		}
+		verify(expected)
+		expected = "Hyperion (c)2018"
+		storage.Name().SetValue(expected)
+		verify(expected)
+	}
 
-		if nameStorage != global.Name {
-			t.Errorf(" field expected to be %v instead received %v", global.Name, nameStorage)
+	// flush state in a new block
+	if err = sim.FlushStateInNewBlock(stateDB); err != nil {
+		t.Errorf("failed to FlushStateInNewBlock, err: %v", err)
+	}
+
+	stateDB, err = sim.Blockchain().State()
+	storage = New(&global, stateDB, addr, big.NewInt(0))
+
+	{
+		// .Name		
+		verify := func(expected string) {
+			nameStorage := storage.Name().Value()
+			if nameStorage != expected {
+				t.Errorf("response from calling contract was expected to be '%v' %d instead received '%v' %d", expected, len(expected), nameStorage, len(nameStorage))
+			}
+	
+			if nameStorage != global.Name {
+				t.Errorf(" field expected to be %v instead received %v", global.Name, nameStorage)
+			}
 		}
+		expected := "Hyperion (c)2018"
+		verify(expected)
 	}
 
 	{
@@ -748,7 +778,20 @@ func testMiddleware(t *testing.T, addr common.Address) {
 		// 	t.Logf("%x: %x\n", k, v)
 		// }
 	}
+
+	var data [10]byte
+	for i :=0 ; i < len(data); i++ {
+		data[i] = byte(i)
+	}
+	t.Logf("%v", data)
+	reset(data[:])
+	t.Logf("%v", data)
 }
+
+func reset(data []byte) {
+	copy(data, make([]byte, len(data)))
+}
+
 
 // Tests that storage manipulation
 func TestStorageManipulationViaSimulator(t *testing.T) {
