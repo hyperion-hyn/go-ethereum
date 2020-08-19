@@ -7,7 +7,6 @@ import (
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	staketest "github.com/ethereum/go-ethereum/staking/types/restaking/test"
 	"math/big"
-	"reflect"
 	"testing"
 )
 
@@ -82,7 +81,7 @@ func TestSaveNewValidatorToPool(t *testing.T) {
 					CommissionRates: defaultCommissionRates,
 					UpdateHeight:    big.NewInt(defaultBlockNumber),
 				},
-				description: defaultDesc,
+				description:    defaultDesc,
 				creationHeight: big.NewInt(defaultBlockNumber),
 				redelegation: restaking.Redelegation_{
 					DelegatorAddress: createOperatorAddr,
@@ -247,29 +246,40 @@ func assertIdentityAndSlotKeySet(validatorPool *restaking.Storage_ValidatorPool_
 }
 
 func TestPayoutRedelegationReward(t *testing.T) {
-	type args struct {
-		s         *restaking.Storage_ValidatorWrapper_
-		delegator common.Address
-		handler   RestakingRewardHandler
-		epoch     *big.Int
-	}
 	tests := []struct {
-		name    string
-		args    args
-		want    *big.Int
-		wantErr bool
+		name      string
+		validator common.Address
+		delegator common.Address
+		want      *big.Int
+		wantErr   error
 	}{
-		// TODO: Add test cases.
+		{
+			name:      "collect reward",
+			validator: validatorAddr,
+			delegator: operatorAddr,
+			want:      reward00,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := payoutRedelegationReward(tt.args.s, tt.args.delegator, tt.args.handler, tt.args.epoch)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("payoutRedelegationReward() error = %v, wantErr %v", err, tt.wantErr)
+			stateDB := makeStateForReward(t)
+			handler := &RewardToBalance{StateDB: stateDB}
+			validator, _ := stateDB.ValidatorByAddress(tt.validator)
+
+			got, gotErr := payoutRedelegationReward(validator, tt.delegator, handler, nil)
+			if err := assertError(gotErr, tt.wantErr); err != nil {
+				t.Errorf("Test - %v: gotErr = %v, want %v", tt.name, gotErr, tt.wantErr)
+			}
+			if tt.wantErr != nil {
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("payoutRedelegationReward() got = %v, want %v", got, tt.want)
+			if tt.want.Cmp(got) != 0 {
+				t.Errorf("Test - %v: got = %v, want %v", tt.name, got, tt.want)
+			}
+
+			redelgation, _ := validator.Redelegations().Get(tt.delegator)
+			if redelgation.Reward().Value().Cmp(common.Big0) != 0 {
+				t.Errorf("Test - %v: fail to collect reward", tt.name)
 			}
 		})
 	}
