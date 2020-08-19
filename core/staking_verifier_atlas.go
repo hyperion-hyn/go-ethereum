@@ -26,7 +26,7 @@ var (
 	errValidatorNotExist               = errors.New("staking validator does not exist")
 	errRedelegationNotExist            = errors.New("redelegation does not exist")
 	errInvalidValidatorOperator        = errors.New("invalid validator operator")
-	errInvalidTotalDelegation          = errors.New("total delegation can not be bigger than max_total_delegation", )
+	errInvalidTotalDelegation          = errors.New("total delegation can not be bigger than max_total_delegation")
 	errInsufficientBalanceToUndelegate = errors.New("insufficient balance to undelegate")
 )
 
@@ -168,8 +168,9 @@ func VerifyCreateValidatorMsg(stateDB vm.StateDB, blockNum *big.Int, msg *restak
 	wrapper.Redelegations.Put(msg.OperatorAddress, restaking.NewRedelegation(msg.OperatorAddress, amt))
 
 	return &verification{
-		NewValidator: &wrapper,
-		Participant:  p,
+		NewValidator:    &wrapper,
+		NewRedelegation: amt,
+		Participant:     p,
 	}, nil
 }
 
