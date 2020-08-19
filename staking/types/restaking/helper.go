@@ -77,6 +77,7 @@ func CreateValidatorFromNewMsg(msg *CreateValidator, valAddr common.Address, blo
 	if err := msg.Description.EnsureLength(); err != nil {
 		return nil, err
 	}
+	// TODO(ATLAS): default max?
 	commission := Commission_{msg.CommissionRates, blockNum}
 
 	if err := VerifyBLSKey(&msg.SlotPubKey, &msg.SlotKeySig); err != nil {
@@ -88,7 +89,7 @@ func CreateValidatorFromNewMsg(msg *CreateValidator, valAddr common.Address, blo
 		OperatorAddresses:    NewAddressSetWithAddress(msg.OperatorAddress),
 		SlotPubKeys:          NewBLSKeysWithBLSKey(msg.SlotPubKey),
 		LastEpochInCommittee: new(big.Int),
-		MaxTotalDelegation:   msg.MaxTotalDelegation,
+		MaxTotalDelegation:   msg.MaxTotalDelegation,	// TODO(ATLAS): default max?
 		Status:               uint8(Active),
 		Commission:           commission,
 		Description:          msg.Description,

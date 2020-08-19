@@ -215,6 +215,7 @@ func VerifyEditValidatorMsg(stateDB vm.StateDB, chainContext ChainContext, epoch
 	}
 	validator := wrapperSt.Validator().Load()
 
+	// TODO: block num?
 	if err := restaking.UpdateValidatorFromEditMsg(validator, msg); err != nil {
 		return nil, err
 	}
