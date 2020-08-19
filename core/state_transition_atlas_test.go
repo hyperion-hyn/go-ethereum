@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
@@ -12,15 +13,17 @@ import (
 
 func TestSaveNewValidatorToPool(t *testing.T) {
 	tests := []struct {
-		name string
-		ctx  saveNewValidatorCtx
+		name        string
+		ctx         saveNewValidatorCtx
+		slotKeySet  map[string]bool
+		identitySet map[string]bool
 	}{
 		{
 			name: "save new validator",
 			ctx: saveNewValidatorCtx{
 				validatorAddr:      createValidatorAddr,
 				operatorAddr:       createOperatorAddr,
-				key:                blsKeys[11].pub,
+				key:                &blsKeys[11].pub,
 				maxTotalDelegation: staketest.DefaultMaxTotalDel,
 				commission: restaking.Commission_{
 					CommissionRates: defaultCommissionRates,
@@ -33,8 +36,66 @@ func TestSaveNewValidatorToPool(t *testing.T) {
 					Amount:           defaultDelAmount,
 				},
 			},
+			identitySet: map[string]bool{
+				defaultDesc.Identity: true,
+			},
+			slotKeySet: map[string]bool{
+				blsKeys[11].pub.Hex(): true,
+			},
 		},
-
+		{
+			name: "no new identity",
+			ctx: saveNewValidatorCtx{
+				validatorAddr:      createValidatorAddr,
+				operatorAddr:       createOperatorAddr,
+				key:                &blsKeys[11].pub,
+				maxTotalDelegation: staketest.DefaultMaxTotalDel,
+				commission: restaking.Commission_{
+					CommissionRates: defaultCommissionRates,
+					UpdateHeight:    big.NewInt(defaultBlockNumber),
+				},
+				description: func(d restaking.Description_) restaking.Description_ {
+					d.Identity = ""
+					return d
+				}(defaultDesc),
+				creationHeight: big.NewInt(defaultBlockNumber),
+				redelegation: restaking.Redelegation_{
+					DelegatorAddress: createOperatorAddr,
+					Amount:           defaultDelAmount,
+				},
+			},
+			identitySet: map[string]bool{
+				defaultDesc.Identity: false,
+			},
+			slotKeySet: map[string]bool{
+				blsKeys[11].pub.Hex(): true,
+			},
+		},
+		{
+			name: "no new slot key",
+			ctx: saveNewValidatorCtx{
+				validatorAddr:      createValidatorAddr,
+				operatorAddr:       createOperatorAddr,
+				key:                nil,
+				maxTotalDelegation: staketest.DefaultMaxTotalDel,
+				commission: restaking.Commission_{
+					CommissionRates: defaultCommissionRates,
+					UpdateHeight:    big.NewInt(defaultBlockNumber),
+				},
+				description: defaultDesc,
+				creationHeight: big.NewInt(defaultBlockNumber),
+				redelegation: restaking.Redelegation_{
+					DelegatorAddress: createOperatorAddr,
+					Amount:           defaultDelAmount,
+				},
+			},
+			identitySet: map[string]bool{
+				defaultDesc.Identity: true,
+			},
+			slotKeySet: map[string]bool{
+				blsKeys[11].pub.Hex(): false,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -45,15 +106,9 @@ func TestSaveNewValidatorToPool(t *testing.T) {
 			if err := staketest.CheckValidatorWrapperEqual(*got.Load(), exp); err != nil {
 				t.Errorf("Test - %v: %v", tt.name, err)
 			}
-			identitySet := tt.ctx.validatorPool.DescriptionIdentitySet()
-			if !identitySet.Get(tt.ctx.description.Identity).Value() {
-				t.Errorf("Test - %v: identity not contain", tt.name)
+			if err := assertIdentityAndSlotKeySet(tt.ctx.validatorPool, tt.identitySet, tt.slotKeySet); err != nil {
+				t.Errorf("Test - %v: %v", tt.name, err)
 			}
-			keySet := tt.ctx.validatorPool.SlotKeySet()
-			if !keySet.Get(tt.ctx.key.Hex()).Value() {
-				t.Errorf("Test - %v: identity not contain", tt.name)
-			}
-
 		})
 	}
 }
@@ -62,7 +117,7 @@ type saveNewValidatorCtx struct {
 	// input args
 	validatorAddr      common.Address
 	operatorAddr       common.Address
-	key                restaking.BLSPublicKey_
+	key                *restaking.BLSPublicKey_
 	maxTotalDelegation *big.Int
 	commission         restaking.Commission_
 	description        restaking.Description_
@@ -75,41 +130,120 @@ type saveNewValidatorCtx struct {
 	stateDB       *state.StateDB
 }
 
-func (s *saveNewValidatorCtx) makeStateAndValidator(t *testing.T) {
-	w := staketest.NewValidatorWrapperBuilder().
-		SetValidatorAddress(s.validatorAddr).
-		AddOperatorAddress(s.operatorAddr).
-		AddSlotPubKey(s.key).
-		SetMaxTotalDelegation(s.maxTotalDelegation).
-		SetCommission(s.commission).
-		SetDescription(s.description).
-		SetCreationHeight(s.creationHeight).
-		AddRedelegation(s.redelegation).
-		Build()
-	s.newValidator = &w
-	s.stateDB = makeStateDBForStake(t)
-	s.validatorPool = s.stateDB.ValidatorPool()
+func (c *saveNewValidatorCtx) makeStateAndValidator(t *testing.T) {
+	builder := staketest.NewValidatorWrapperBuilder().
+		SetValidatorAddress(c.validatorAddr).
+		AddOperatorAddress(c.operatorAddr).
+		SetMaxTotalDelegation(c.maxTotalDelegation).
+		SetCommission(c.commission).
+		SetDescription(c.description).
+		SetCreationHeight(c.creationHeight).
+		AddRedelegation(c.redelegation)
+	if c.key != nil {
+		builder.AddSlotPubKey(*c.key)
+	}
+	w := builder.Build()
+	c.newValidator = &w
+	c.stateDB = makeStateDBForStake(t)
+	c.validatorPool = c.stateDB.ValidatorPool()
 }
 
-
-
 func TestUpdateValidatorFromPoolByMsg(t *testing.T) {
-	type args struct {
-		validator *restaking.Storage_ValidatorWrapper_
-		pool      *restaking.Storage_ValidatorPool_
-		msg       *restaking.EditValidator
-		blockNum  *big.Int
-	}
 	tests := []struct {
-		name string
-		args args
+		name        string
+		msg         restaking.EditValidator
+		blockNum    *big.Int
+		slotKeySet  map[string]bool
+		identitySet map[string]bool
 	}{
-		// TODO: Add test cases.
+		{
+			name:     "edit completely",
+			msg:      defaultMsgEditValidator(),
+			blockNum: big.NewInt(111),
+			identitySet: map[string]bool{
+				editDesc.Identity:  true,
+				makeIdentityStr(0): false,
+			},
+			slotKeySet: map[string]bool{
+				blsKeys[12].pub.Hex(): true,
+				blsKeys[0].pub.Hex():  false,
+			},
+		},
+		{
+			name: "UpdateHeight not update",
+			msg: func() restaking.EditValidator {
+				ev := defaultMsgEditValidator()
+				ev.CommissionRate = nil
+				return ev
+			}(),
+			identitySet: map[string]bool{
+				editDesc.Identity:  true,
+				makeIdentityStr(0): false,
+			},
+			slotKeySet: map[string]bool{
+				blsKeys[12].pub.Hex(): true,
+				blsKeys[0].pub.Hex():  false,
+			},
+		},
+		{
+			name: "add new key, not remove old key",
+			msg: func() restaking.EditValidator {
+				ev := defaultMsgEditValidator()
+				ev.SlotKeyToRemove = nil
+				return ev
+			}(),
+			blockNum: big.NewInt(111),
+			identitySet: map[string]bool{
+				editDesc.Identity:  true,
+				makeIdentityStr(0): false,
+			},
+			slotKeySet: map[string]bool{
+				blsKeys[12].pub.Hex(): true,
+				blsKeys[0].pub.Hex():  true,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			stateDB := makeStateDBForStake(t)
+			validatorPool := stateDB.ValidatorPool()
+			validatorSt, _ := stateDB.ValidatorByAddress(tt.msg.ValidatorAddress)
+
+			exp := staketest.CopyValidator(*validatorSt.Validator().Load())
+			_ = restaking.UpdateValidatorFromEditMsg(&exp, &tt.msg)
+			if tt.blockNum != nil {
+				exp.Commission.UpdateHeight = tt.blockNum
+			}
+
+			updateValidatorFromPoolByMsg(validatorSt, validatorPool, &tt.msg, tt.blockNum)
+			got, _ := stateDB.ValidatorByAddress(tt.msg.ValidatorAddress)
+
+			if err := staketest.CheckValidatorEqual(*got.Validator().Load(), exp); err != nil {
+				t.Errorf("Test - %v: %v", tt.name, err)
+			}
+			if err := assertIdentityAndSlotKeySet(validatorPool, tt.identitySet, tt.slotKeySet); err != nil {
+				t.Errorf("Test - %v: %v", tt.name, err)
+			}
 		})
 	}
+}
+
+func assertIdentityAndSlotKeySet(validatorPool *restaking.Storage_ValidatorPool_, expIdentitySet, expSlotKeySet map[string]bool) error {
+	identitySet := validatorPool.DescriptionIdentitySet()
+	for i, b := range expIdentitySet {
+		got := identitySet.Get(i).Value()
+		if got != b {
+			return fmt.Errorf("identity %v: %v, exp: %v", i, got, b)
+		}
+	}
+	keySet := validatorPool.SlotKeySet()
+	for i, b := range expSlotKeySet {
+		got := keySet.Get(i).Value()
+		if got != b {
+			return fmt.Errorf("slot key %v: %v, exp: %v", i, got, b)
+		}
+	}
+	return nil
 }
 
 func TestPayoutRedelegationReward(t *testing.T) {

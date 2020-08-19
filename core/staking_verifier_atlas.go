@@ -168,8 +168,9 @@ func VerifyCreateValidatorMsg(stateDB vm.StateDB, blockNum *big.Int, msg *restak
 	wrapper.Redelegations.Put(msg.OperatorAddress, restaking.NewRedelegation(msg.OperatorAddress, amt))
 
 	return &verification{
-		NewValidator: &wrapper,
-		Participant:  p,
+		NewValidator:    &wrapper,
+		NewRedelegation: amt,
+		Participant:     p,
 	}, nil
 }
 
@@ -214,6 +215,7 @@ func VerifyEditValidatorMsg(stateDB vm.StateDB, chainContext ChainContext, epoch
 	}
 	validator := wrapperSt.Validator().Load()
 
+	// TODO: block num?
 	if err := restaking.UpdateValidatorFromEditMsg(validator, msg); err != nil {
 		return nil, err
 	}
