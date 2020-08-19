@@ -33,7 +33,7 @@ func (s *StateDB) ValidatorByAddress(validatorAddress common.Address) (*restakin
 }
 
 func (s *StateDB) ValidatorList() []common.Address {
-	return s.validatorPool.Validators().AllKeys()
+	return s.ValidatorPool().Validators().AllKeys()
 }
 
 // AddRedelegationReward distributes the reward to all the delegators based on stake percentage.
