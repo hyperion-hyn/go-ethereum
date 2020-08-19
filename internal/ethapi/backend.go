@@ -128,6 +128,11 @@ func GetAPIs(apiBackend Backend) []rpc.API {
 			Version:   "1.0",
 			Service:   NewPrivateAccountAPI(apiBackend, nonceLock),
 			Public:    false,
+		}, { // ATLAS :add staking api
+			Namespace: "eth",
+			Version:   "1.0",
+			Service:   NewPublicRestakingAPI(apiBackend),
+			Public:    true,
 		},
 	}
 }
