@@ -212,7 +212,8 @@ func (s *Storage_{{.Name}}) Value() {{.Type}} {
 {{else if eq .Name "BigInt"}}
 	{{template "getBytes" .}}
 	*s.obj = *(big.NewInt(0).SetBytes(data))
-	return s.obj
+	retval := big.NewInt(0).SetBytes(data)
+	return retval
 {{else if eq .Name "Uint8" "Uint16" "Uint32" "Uint64"}}
 	{{template "getBytes" .}}
 	*s.obj = {{.Type}}(big.NewInt(0).SetBytes(data).Uint64())
