@@ -120,6 +120,7 @@ func (c *core) verifyConfirm(prepare *atlas.Confirm, src atlas.Validator) error 
 }
 
 func (c *core) acceptConfirm(msg *message, src atlas.Validator) error {
+	// TODO(zgx): should reset if error occure
 	logger := c.logger.New("from", src, "state", c.state)
 
 	// Add the PREPARE message to current round state
@@ -171,6 +172,8 @@ func (c *core) acceptConfirm(msg *message, src atlas.Validator) error {
 	if err := c.current.confirmBitmap.SetKey(pubKey, true); err != nil {
 		c.current.aggregatedConfirmSig.Add(&sign)
 	}
+
+	c.current.aggregatedConfirmPublicKey.Add(pubKey)
 
 	c.current.confirmBitmap.Mask()
 

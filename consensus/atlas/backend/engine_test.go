@@ -19,33 +19,38 @@ package backend
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"fmt"
 	"math/big"
 	"reflect"
 	"testing"
 	"time"
 
+	"github.com/hyperion-hyn/bls/ffi/go/bls"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
+	"github.com/ethereum/go-ethereum/consensus/atlas/storage"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
+	bls_cosi "github.com/ethereum/go-ethereum/crypto/bls"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/rlp"
 )
 
-// in this test, we can set n to 1, and it means we can process Istanbul and commit a
+// in this test, we can set n to 1, and it means we can process Atlas and commit a
 // block by one node. Otherwise, if n is larger than 1, we have to generate
-// other fake events to process Istanbul.
-func newBlockChain(n int) (*core.BlockChain, *backend) {
-	genesis, nodeKeys := getGenesisAndKeys(n)
+// other fake events to process Atlas.
+func newBlockChain(n int) (*core.BlockChain, *backend, []*bls.SecretKey) {
+	genesis, nodeKeys, signerKeys := getGenesisAndKeys(n)
 	memDB := rawdb.NewMemoryDatabase()
 	config := atlas.DefaultConfig
 	// Use the first key as private key
-	b, _ := New(config, nodeKeys[0], memDB).(*backend)
+	b, _ := New(config, nodeKeys[0], memDB, signerKeys[0]).(*backend)
 	genesis.MustCommit(memDB)
 	blockchain, err := core.NewBlockChain(memDB, nil, genesis.Config, b, vm.Config{}, nil)
 	if err != nil {
@@ -62,58 +67,86 @@ func newBlockChain(n int) (*core.BlockChain, *backend) {
 	proposerAddr := snap.ValSet.GetProposer().Address()
 
 	// find proposer key
-	for _, key := range nodeKeys {
-		addr := crypto.PubkeyToAddress(key.PublicKey)
+	for _, key := range signerKeys {
+		addr := crypto.PubkeyToSigner(key.GetPublicKey())
 		if addr.String() == proposerAddr.String() {
-			b.privateKey = key
-			b.address = addr
+			b.signerKey = key
+			b.signer = addr
 		}
 	}
 
-	return blockchain, b
+	return blockchain, b, signerKeys
 }
 
-func getGenesisAndKeys(n int) (*core.Genesis, []*ecdsa.PrivateKey) {
+func getGenesisAndKeys(n int) (*core.Genesis, []*ecdsa.PrivateKey, []*bls.SecretKey) {
 	// Setup validators
 	var nodeKeys = make([]*ecdsa.PrivateKey, n)
+	var signerKeys = make([]*bls.SecretKey, n)
+
 	var addrs = make([]common.Address, n)
 	for i := 0; i < n; i++ {
 		nodeKeys[i], _ = crypto.GenerateKey()
+		signerKeys[i], _ = crypto.GenerateBLSKey()
 		addrs[i] = crypto.PubkeyToAddress(nodeKeys[i].PublicKey)
 	}
 
 	// generate genesis block
 	genesis := core.DefaultGenesisBlock()
 	genesis.Config = params.TestChainConfig
-	// force enable Istanbul engine
-	genesis.Config.Istanbul = &params.IstanbulConfig{}
+	// force enable Atlas engine
+	genesis.Config.Atlas = &params.AtlasConfig{}
 	genesis.Config.Ethash = nil
 	genesis.Difficulty = DefaultDifficulty
 	genesis.Nonce = emptyNonce.Uint64()
-	genesis.Mixhash = types.IstanbulDigest
+	genesis.Mixhash = types.AtlasDigest
 
-	appendValidators(genesis, addrs)
-	return genesis, nodeKeys
+	appendValidators(genesis, signerKeys, addrs)
+	return genesis, nodeKeys, signerKeys
 }
 
-func appendValidators(genesis *core.Genesis, addrs []common.Address) {
-
-	if len(genesis.ExtraData) < types.IstanbulExtraVanity {
-		genesis.ExtraData = append(genesis.ExtraData, bytes.Repeat([]byte{0x00}, types.IstanbulExtraVanity)...)
+func appendValidators(genesis *core.Genesis, signers []*bls.SecretKey, addrs []common.Address) error {
+	if len(genesis.ExtraData) < types.AtlasExtraVanity {
+		genesis.ExtraData = append(genesis.ExtraData, bytes.Repeat([]byte{0x00}, types.AtlasExtraVanity-len(genesis.ExtraData))...)
 	}
-	genesis.ExtraData = genesis.ExtraData[:types.IstanbulExtraVanity]
+	genesis.ExtraData = genesis.ExtraData[:types.AtlasExtraVanity]
 
-	ist := &types.IstanbulExtra{
-		Validators:    addrs,
-		Seal:          []byte{},
-		CommittedSeal: [][]byte{},
+	account := &core.GenesisAccount{
+		Code:       nil,
+		Storage:    make(map[common.Hash]common.Hash),
+		Balance:    big.NewInt(1),
+		Nonce:      0,
+		PrivateKey: nil,
 	}
 
-	istPayload, err := rlp.EncodeToBytes(&ist)
+	validators := make([]*storage.Signer, len(signers))
+	for i := 0; i < len(signers); i++ {
+		validators[i] = &storage.Signer{
+			PublicKey: signers[i].GetPublicKey(),
+			Coinbase:  addrs[i],
+		}
+	}
+
+	err := storage.SetupValidatorsInGenesisAt(account, validators)
 	if err != nil {
-		panic("failed to encode atlas extra")
+		return err
 	}
-	genesis.ExtraData = append(genesis.ExtraData, istPayload...)
+
+	block := genesis.ToBlock(nil)
+	hashdata := SealHash(block.Header())
+
+	signatures := make([]*bls.Sign, len(signers))
+	publicKeys := make([]*bls.PublicKey, len(signers))
+	for i := 0; i < len(signers); i++ {
+		signatures[i] = signers[i].SignHash(hashdata.Bytes())
+		publicKeys[i] = signers[i].GetPublicKey()
+	}
+
+	err = WriteCommittedSealInGenesis(genesis, block.Header().Extra, signatures, publicKeys)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func makeHeader(parent *types.Block, config *atlas.Config) *types.Header {
@@ -147,7 +180,7 @@ func makeBlockWithoutSeal(chain *core.BlockChain, engine *backend, parent *types
 }
 
 func TestPrepare(t *testing.T) {
-	chain, engine := newBlockChain(1)
+	chain, engine, _ := newBlockChain(1)
 	header := makeHeader(chain.Genesis(), engine.config)
 	err := engine.Prepare(chain, header)
 	if err != nil {
@@ -161,7 +194,7 @@ func TestPrepare(t *testing.T) {
 }
 
 func TestSealStopChannel(t *testing.T) {
-	chain, engine := newBlockChain(4)
+	chain, engine, _ := newBlockChain(4)
 	block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
 	stop := make(chan struct{}, 1)
 	eventSub := engine.EventMux().Subscribe(atlas.RequestEvent{})
@@ -191,11 +224,35 @@ func TestSealStopChannel(t *testing.T) {
 	}
 }
 
+func getPublicKeys(signers []*bls.SecretKey) []*bls.PublicKey {
+	publicKeys := make([]*bls.PublicKey, len(signers))
+	for i := 0; i < len(signers); i++ {
+		publicKeys[i] = signers[i].GetPublicKey()
+	}
+	return publicKeys
+}
+
+func signWithSecretKeys(signers []*bls.SecretKey, hash common.Hash) (*bls.Sign, *bls.PublicKey, *bls_cosi.Mask, error) {
+	var sign bls.Sign
+	var publicKey bls.PublicKey
+	mask, err := bls_cosi.NewMask(getPublicKeys(signers), nil)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	for _, signer := range signers {
+		rv := signer.SignHash(hash.Bytes())
+		sign.Add(rv)
+		publicKey.Add(signer.GetPublicKey())
+		mask.SetKey(signer.GetPublicKey(), true)
+	}
+	return &sign, &publicKey, mask, nil
+}
+
 func TestSealCommittedOtherHash(t *testing.T) {
-	chain, engine := newBlockChain(4)
+	chain, engine, signerKeys := newBlockChain(4)
 	block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
 	otherBlock := makeBlockWithoutSeal(chain, engine, block)
-	expectedCommittedSeal := append([]byte{1, 2, 3}, bytes.Repeat([]byte{0x00}, types.IstanbulExtraSeal-3)...)
 
 	eventSub := engine.EventMux().Subscribe(atlas.RequestEvent{})
 	blockOutputChannel := make(chan *types.Block)
@@ -204,10 +261,17 @@ func TestSealCommittedOtherHash(t *testing.T) {
 	go func() {
 		select {
 		case ev := <-eventSub.Chan():
-			if _, ok := ev.Data.(atlas.RequestEvent); !ok {
+			event, ok := ev.Data.(atlas.RequestEvent)
+			if !ok {
 				t.Errorf("unexpected event comes: %v", reflect.TypeOf(ev.Data))
 			}
-			if err := engine.Commit(otherBlock, [][]byte{expectedCommittedSeal}); err != nil {
+
+			sign, publicKey, bitmap, err := signWithSecretKeys(signerKeys, SealHash(event.Proposal.(*types.Block).Header()))
+			if err != nil {
+				t.Errorf("failed to sign with secret keys: %v", err)
+			}
+
+			if err := engine.Commit(otherBlock, sign.Serialize(), publicKey.Serialize(), bitmap.Mask()); err != nil {
 				t.Error(err.Error())
 			}
 		}
@@ -237,7 +301,7 @@ func TestSealCommittedOtherHash(t *testing.T) {
 }
 
 func TestSealCommitted(t *testing.T) {
-	chain, engine := newBlockChain(1)
+	chain, engine, _ := newBlockChain(1)
 	block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
 	expectedBlock, _ := engine.updateBlock(engine.chain.GetHeader(block.ParentHash(), block.NumberU64()-1), block)
 	resultCh := make(chan *types.Block, 10)
@@ -256,7 +320,7 @@ func TestSealCommitted(t *testing.T) {
 }
 
 func TestVerifyHeader(t *testing.T) {
-	chain, engine := newBlockChain(1)
+	chain, engine, _ := newBlockChain(1)
 
 	// errEmptyCommittedSeals case
 	block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
@@ -337,7 +401,7 @@ func TestVerifyHeader(t *testing.T) {
 }
 
 func TestVerifySeal(t *testing.T) {
-	chain, engine := newBlockChain(1)
+	chain, engine, _ := newBlockChain(1)
 	genesis := chain.Genesis()
 	// cannot verify genesis
 	err := engine.VerifySeal(chain, genesis.Header())
@@ -364,7 +428,7 @@ func TestVerifySeal(t *testing.T) {
 }
 
 func TestVerifyHeaders(t *testing.T) {
-	chain, engine := newBlockChain(1)
+	chain, engine, _ := newBlockChain(1)
 	genesis := chain.Genesis()
 
 	// success case
@@ -465,14 +529,10 @@ OUT3:
 }
 
 func TestPrepareExtra(t *testing.T) {
-	validators := make([]common.Address, 4)
-	validators[0] = common.BytesToAddress(hexutil.MustDecode("0x44add0ec310f115a0e603b2d7db9f067778eaf8a"))
-	validators[1] = common.BytesToAddress(hexutil.MustDecode("0x294fc7e8f22b3bcdcf955dd7ff3ba2ed833f8212"))
-	validators[2] = common.BytesToAddress(hexutil.MustDecode("0x6beaaed781d2d2ab6350f5c4566a2c6eaac407a6"))
-	validators[3] = common.BytesToAddress(hexutil.MustDecode("0x8be76812f765c24641ec63dc2852b378aba2b440"))
+	validators := make([]atlas.Validator, 0)
 
-	vanity := make([]byte, types.IstanbulExtraVanity)
-	expectedResult := append(vanity, hexutil.MustDecode("0xf858f8549444add0ec310f115a0e603b2d7db9f067778eaf8a94294fc7e8f22b3bcdcf955dd7ff3ba2ed833f8212946beaaed781d2d2ab6350f5c4566a2c6eaac407a6948be76812f765c24641ec63dc2852b378aba2b44080c0")...)
+	vanity := make([]byte, types.AtlasExtraVanity)
+	expectedResult := append(vanity, hexutil.MustDecode("")...)
 
 	h := &types.Header{
 		Extra: vanity,
@@ -496,19 +556,17 @@ func TestPrepareExtra(t *testing.T) {
 }
 
 func TestWriteSeal(t *testing.T) {
-	vanity := bytes.Repeat([]byte{0x00}, types.IstanbulExtraVanity)
-	istRawData := hexutil.MustDecode("0xf858f8549444add0ec310f115a0e603b2d7db9f067778eaf8a94294fc7e8f22b3bcdcf955dd7ff3ba2ed833f8212946beaaed781d2d2ab6350f5c4566a2c6eaac407a6948be76812f765c24641ec63dc2852b378aba2b44080c0")
-	expectedSeal := append([]byte{1, 2, 3}, bytes.Repeat([]byte{0x00}, types.IstanbulExtraSeal-3)...)
-	expectedIstExtra := &types.IstanbulExtra{
-		Validators: []common.Address{
-			common.BytesToAddress(hexutil.MustDecode("0x44add0ec310f115a0e603b2d7db9f067778eaf8a")),
-			common.BytesToAddress(hexutil.MustDecode("0x294fc7e8f22b3bcdcf955dd7ff3ba2ed833f8212")),
-			common.BytesToAddress(hexutil.MustDecode("0x6beaaed781d2d2ab6350f5c4566a2c6eaac407a6")),
-			common.BytesToAddress(hexutil.MustDecode("0x8be76812f765c24641ec63dc2852b378aba2b440")),
-		},
-		Seal:          expectedSeal,
-		CommittedSeal: [][]byte{},
+	vanity := bytes.Repeat([]byte{0x00}, types.AtlasExtraVanity)
+	istRawData := bytes.Repeat([]byte{0x00}, types.AtlasExtraSeal)
+	expectedSeal := bytes.Repeat([]byte{0x00}, 0)
+	expectedPublicKey := make([]byte, 0)
+	expectedIstExtra := &types.AtlasExtra{
+		AggSignature: [96]byte{},
+		AggPublicKey: [48]byte{},
+		AggBitmap:    [32]byte{},
+		Proposer:     0,
 	}
+
 	var expectedErr error
 
 	h := &types.Header{
@@ -516,13 +574,13 @@ func TestWriteSeal(t *testing.T) {
 	}
 
 	// normal case
-	err := writeSeal(h, expectedSeal)
+	err := writeSeal(h, expectedSeal, expectedPublicKey)
 	if err != expectedErr {
 		t.Errorf("error mismatch: have %v, want %v", err, expectedErr)
 	}
 
 	// verify atlas extra-data
-	istExtra, err := types.ExtractIstanbulExtra(h)
+	istExtra, err := types.ExtractAtlasExtra(h)
 	if err != nil {
 		t.Errorf("error mismatch: have %v, want nil", err)
 	}
@@ -532,26 +590,30 @@ func TestWriteSeal(t *testing.T) {
 
 	// invalid seal
 	unexpectedSeal := append(expectedSeal, make([]byte, 1)...)
-	err = writeSeal(h, unexpectedSeal)
+	err = writeSeal(h, unexpectedSeal, expectedPublicKey)
 	if err != errInvalidSignature {
 		t.Errorf("error mismatch: have %v, want %v", err, errInvalidSignature)
 	}
 }
 
 func TestWriteCommittedSeals(t *testing.T) {
-	vanity := bytes.Repeat([]byte{0x00}, types.IstanbulExtraVanity)
-	istRawData := hexutil.MustDecode("0xf858f8549444add0ec310f115a0e603b2d7db9f067778eaf8a94294fc7e8f22b3bcdcf955dd7ff3ba2ed833f8212946beaaed781d2d2ab6350f5c4566a2c6eaac407a6948be76812f765c24641ec63dc2852b378aba2b44080c0")
-	expectedCommittedSeal := append([]byte{1, 2, 3}, bytes.Repeat([]byte{0x00}, types.IstanbulExtraSeal-3)...)
-	expectedIstExtra := &types.IstanbulExtra{
-		Validators: []common.Address{
-			common.BytesToAddress(hexutil.MustDecode("0x44add0ec310f115a0e603b2d7db9f067778eaf8a")),
-			common.BytesToAddress(hexutil.MustDecode("0x294fc7e8f22b3bcdcf955dd7ff3ba2ed833f8212")),
-			common.BytesToAddress(hexutil.MustDecode("0x6beaaed781d2d2ab6350f5c4566a2c6eaac407a6")),
-			common.BytesToAddress(hexutil.MustDecode("0x8be76812f765c24641ec63dc2852b378aba2b440")),
-		},
-		Seal:          []byte{},
-		CommittedSeal: [][]byte{expectedCommittedSeal},
-	}
+	vanity := bytes.Repeat([]byte{0x00}, types.AtlasExtraVanity)
+	signerKey, _ := crypto.GenerateBLSKey()
+	sign := signerKey.SignHash(crypto.Keccak256Hash(signerKey.Serialize()).Bytes())
+
+	expectedCommittedSeal := sign.Serialize()
+	expectedPublicKey := signerKey.GetPublicKey().Serialize()
+	expectedBitmap := make([]byte, types.AtlasExtraMask)
+
+	data := fmt.Sprintf("0x%x%x%x%x", sign.Serialize(), expectedPublicKey, expectedBitmap, math.PaddedBigBytes(big.NewInt(0), 2))
+	istRawData := hexutil.MustDecode(data)
+
+	expectedIstExtra := &types.AtlasExtra{}
+	copy(expectedIstExtra.AggSignature[:], expectedCommittedSeal)
+	copy(expectedIstExtra.AggPublicKey[:], expectedPublicKey)
+	copy(expectedIstExtra.AggBitmap[:], expectedBitmap)
+	expectedIstExtra.Proposer = 0
+
 	var expectedErr error
 
 	h := &types.Header{
@@ -559,13 +621,13 @@ func TestWriteCommittedSeals(t *testing.T) {
 	}
 
 	// normal case
-	err := WriteCommittedSeals(h, [][]byte{expectedCommittedSeal})
+	err := WriteCommittedSeals(h, expectedCommittedSeal, expectedPublicKey, expectedBitmap)
 	if err != expectedErr {
 		t.Errorf("error mismatch: have %v, want %v", err, expectedErr)
 	}
 
 	// verify atlas extra-data
-	istExtra, err := types.ExtractIstanbulExtra(h)
+	istExtra, err := types.ExtractAtlasExtra(h)
 	if err != nil {
 		t.Errorf("error mismatch: have %v, want nil", err)
 	}
@@ -575,7 +637,7 @@ func TestWriteCommittedSeals(t *testing.T) {
 
 	// invalid seal
 	unexpectedCommittedSeal := append(expectedCommittedSeal, make([]byte, 1)...)
-	err = WriteCommittedSeals(h, [][]byte{unexpectedCommittedSeal})
+	err = WriteCommittedSeals(h, unexpectedCommittedSeal, expectedPublicKey, expectedBitmap)
 	if err != errInvalidCommittedSeals {
 		t.Errorf("error mismatch: have %v, want %v", err, errInvalidCommittedSeals)
 	}

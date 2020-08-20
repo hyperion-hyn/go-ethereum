@@ -46,7 +46,7 @@ const (
 )
 
 var (
-	lastCommitsKey   = []byte("LastCommits")
+	lastCommitsKey = []byte("LastCommits")
 )
 
 // New creates an Ethereum backend for Atlas core engine.
@@ -57,20 +57,20 @@ func New(config *atlas.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database, 
 	knownMessages, _ := lru.NewARC(inmemoryMessages)
 
 	backend := &backend{
-		config:        config,
-		atlasEventMux: new(event.TypeMux),
-		privateKey:    privateKey,
-		address:       crypto.PubkeyToAddress(privateKey.PublicKey),
-		signerKey:     signerKey,
-		signer:        crypto.PubkeyToSigner(signerKey.GetPublicKey()),
-		logger:        log.New(),
-		db:            db,
-		commitCh:      make(chan *types.Block, 1),
-		recents:       recents,
-		candidates:    make(map[common.Address]ValidatorProposal),
-		coreStarted:   false,
-		recentMessages:   recentMessages,
-		knownMessages:    knownMessages,
+		config:         config,
+		atlasEventMux:  new(event.TypeMux),
+		privateKey:     privateKey,
+		address:        crypto.PubkeyToAddress(privateKey.PublicKey),
+		signerKey:      signerKey,
+		signer:         crypto.PubkeyToSigner(signerKey.GetPublicKey()),
+		logger:         log.New(),
+		db:             db,
+		commitCh:       make(chan *types.Block, 1),
+		recents:        recents,
+		candidates:     make(map[common.Address]ValidatorProposal),
+		coreStarted:    false,
+		recentMessages: recentMessages,
+		knownMessages:  knownMessages,
 	}
 	backend.core = kernel.New(backend, backend.config)
 	return backend
@@ -89,17 +89,17 @@ type backend struct {
 	privateKey    *ecdsa.PrivateKey
 	address       common.Address
 
-	signerKey     *bls.SecretKey
-	signer        common.Address
-	signFn        consensus.SignerFn       // Signer function to authorize hashes with
-	lock          sync.RWMutex   // Protects the signer fields
+	signerKey *bls.SecretKey
+	signer    common.Address
+	signFn    consensus.SignerFn // Signer function to authorize hashes with
+	lock      sync.RWMutex       // Protects the signer fields
 
-	core          kernel.Engine
-	logger        log.Logger
-	db            ethdb.Database
-	chain         consensus.ChainReader
-	currentBlock  func() *types.Block
-	hasBadBlock   func(hash common.Hash) bool
+	core         kernel.Engine
+	logger       log.Logger
+	db           ethdb.Database
+	chain        consensus.ChainReader
+	currentBlock func() *types.Block
+	hasBadBlock  func(hash common.Hash) bool
 
 	// the channels for atlas engine notifications
 	commitCh          chan *types.Block
@@ -196,7 +196,7 @@ func (sb *backend) Gossip(valSet atlas.ValidatorSet, payload []byte) error {
 }
 
 // Commit implements atlas.Backend.Commit
-func (sb *backend) Commit(proposal atlas.Proposal, signature []byte, bitmap []byte) error {
+func (sb *backend) Commit(proposal atlas.Proposal, signature []byte, publicKey []byte, bitmap []byte) error {
 	// ATLAS(zgx): should save signature and bitmap into db, proposal is a sealed block.
 	// Check if the proposal is a valid block
 	block := &types.Block{}
@@ -205,6 +205,15 @@ func (sb *backend) Commit(proposal atlas.Proposal, signature []byte, bitmap []by
 		sb.logger.Error("Invalid proposal, %v", proposal)
 		return errInvalidProposal
 	}
+
+	h := block.Header()
+	// Append seals into extra-data
+	err := WriteCommittedSeals(h, signature, publicKey, bitmap)
+	if err != nil {
+		return err
+	}
+	// update block's header
+	block = block.WithSeal(h)
 
 	sb.logger.Info("Confirm", "address", sb.Address(), "hash", proposal.Hash(), "number", proposal.Number().Uint64())
 	if err := sb.WriteLastCommits(signature, bitmap); err != nil {
@@ -366,13 +375,13 @@ func (sb *backend) WriteLastCommits(signature []byte, mask []byte) error {
 	if len(signature) != types.AtlasExtraSignature || len(mask) != types.AtlasExtraMask {
 		return types.ErrInvalidAtlasHeaderExtra
 	}
-	data := make([]byte, len(signature) + len(mask))
+	data := make([]byte, len(signature)+len(mask))
 	copy(data, signature)
 	copy(data[len(signature):], mask)
 	if err := sb.db.Put(lastCommitsKey, data); err != nil {
 		return err
 	}
-	return  nil
+	return nil
 }
 
 func (sb *backend) ReadLastCommits() (signature []byte, mask []byte, err error) {
@@ -382,7 +391,7 @@ func (sb *backend) ReadLastCommits() (signature []byte, mask []byte, err error) 
 		return nil, nil, err
 	}
 
-	if len(data) != types.AtlasExtraSignature + types.AtlasExtraMask {
+	if len(data) != types.AtlasExtraSignature+types.AtlasExtraMask {
 		return nil, nil, types.ErrInvalidAtlasHeaderExtra
 	}
 

@@ -31,8 +31,8 @@ import (
 	"github.com/hashicorp/golang-lru"
 )
 
-func TestIstanbulMessage(t *testing.T) {
-	_, backend := newBlockChain(1)
+func TestAtlasMessage(t *testing.T) {
+	_, backend, _ := newBlockChain(1)
 
 	// generate one msg
 	data := []byte("data1")
@@ -77,7 +77,7 @@ func makeMsg(msgcode uint64, data interface{}) p2p.Msg {
 }
 
 func TestHandleNewBlockMessage_whenTypical(t *testing.T) {
-	_, backend := newBlockChain(1)
+	_, backend, _ := newBlockChain(1)
 	arbitraryAddress := common.StringToAddress("arbitrary")
 	arbitraryBlock, arbitraryP2PMessage := buildArbitraryP2PNewBlockMessage(t, false)
 	postAndWait(backend, arbitraryBlock, t)
@@ -96,14 +96,14 @@ func TestHandleNewBlockMessage_whenTypical(t *testing.T) {
 }
 
 func TestHandleNewBlockMessage_whenNotAProposedBlock(t *testing.T) {
-	_, backend := newBlockChain(1)
+	_, backend, _ := newBlockChain(1)
 	arbitraryAddress := common.StringToAddress("arbitrary")
 	_, arbitraryP2PMessage := buildArbitraryP2PNewBlockMessage(t, false)
 	postAndWait(backend, types.NewBlock(&types.Header{
 		Number:    big.NewInt(1),
 		Root:      common.StringToHash("someroot"),
 		GasLimit:  1,
-		MixDigest: types.IstanbulDigest,
+		MixDigest: types.AtlasDigest,
 	}, nil, nil, nil), t)
 
 	handled, err := backend.HandleMsg(arbitraryAddress, arbitraryP2PMessage)
@@ -120,13 +120,13 @@ func TestHandleNewBlockMessage_whenNotAProposedBlock(t *testing.T) {
 }
 
 func TestHandleNewBlockMessage_whenFailToDecode(t *testing.T) {
-	_, backend := newBlockChain(1)
+	_, backend, _ := newBlockChain(1)
 	arbitraryAddress := common.StringToAddress("arbitrary")
 	_, arbitraryP2PMessage := buildArbitraryP2PNewBlockMessage(t, true)
 	postAndWait(backend, types.NewBlock(&types.Header{
 		Number:    big.NewInt(1),
 		GasLimit:  1,
-		MixDigest: types.IstanbulDigest,
+		MixDigest: types.AtlasDigest,
 	}, nil, nil, nil), t)
 
 	handled, err := backend.HandleMsg(arbitraryAddress, arbitraryP2PMessage)
@@ -165,7 +165,7 @@ func buildArbitraryP2PNewBlockMessage(t *testing.T, invalidMsg bool) (*types.Blo
 	arbitraryBlock := types.NewBlock(&types.Header{
 		Number:    big.NewInt(1),
 		GasLimit:  0,
-		MixDigest: types.IstanbulDigest,
+		MixDigest: types.AtlasDigest,
 	}, nil, nil, nil)
 	request := []interface{}{&arbitraryBlock, big.NewInt(1)}
 	if invalidMsg {

@@ -244,3 +244,10 @@ func TestSetMask(test *testing.T) {
 		test.Error("Expected mismatching Bitmap lengths")
 	}
 }
+
+func TestSignVerify(t *testing.T) {
+	var publicKey bls.PublicKey
+	var sign bls.PublicKey
+	publicKey.Deserialize("")
+
+}

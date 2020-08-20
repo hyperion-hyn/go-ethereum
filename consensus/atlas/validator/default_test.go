@@ -17,9 +17,12 @@
 package validator
 
 import (
+	"bytes"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/hyperion-hyn/bls/ffi/go/bls"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
@@ -29,8 +32,6 @@ import (
 var (
 	testAddress  = "70524d664ffe731100208a0154e556f9bb679ae6"
 	testAddress2 = "b37866a925bccd69cfa98d43b510f1d23d78a851"
-	testSigner   = ""
-	testSigner2 =  ""
 )
 
 func TestValidatorSet(t *testing.T) {
@@ -70,7 +71,7 @@ func testNewValidatorSet(t *testing.T) {
 	for i := 0; i < ValCnt-1; i++ {
 		val := valSet.GetByIndex(uint64(i))
 		nextVal := valSet.GetByIndex(uint64(i + 1))
-		if strings.Compare(val.String(), nextVal.String()) >= 0 {
+		if strings.Compare(val.Address().String(), nextVal.Address().String()) >= 0 {
 			t.Errorf("validator set is not sorted in ascending order")
 		}
 	}
@@ -81,12 +82,21 @@ func testNormalValSet(t *testing.T) {
 	b2 := common.Hex2Bytes(testAddress2)
 	addr1 := common.BytesToAddress(b1)
 	addr2 := common.BytesToAddress(b2)
-	s1 := common.Hex2Bytes(testSigner)
-	s2 := common.Hex2Bytes(testSigner2)
-	val1, _ := New(addr1, s1)
-	val2, _:= New(addr2, s2)
 
-	valSet := newDefaultSet([]atlas.Validator {val1, val2}, atlas.RoundRobin)
+	secretKey1, _ := crypto.GenerateBLSKey()
+	secretKey2, _ := crypto.GenerateBLSKey()
+	if strings.Compare(crypto.PubkeyToSigner(secretKey1.GetPublicKey()).String(), crypto.PubkeyToSigner(secretKey2.GetPublicKey()).String()) == 1 {
+		secretKey1, secretKey2 = secretKey2, secretKey1
+	}
+
+	publicKey1 := secretKey1.GetPublicKey()
+	publicKey2 := secretKey2.GetPublicKey()
+	// s1 := crypto.PubkeyToSigner(publicKey1)
+	s2 := crypto.PubkeyToSigner(publicKey2)
+	val1, _ := New(addr1, publicKey1.Serialize())
+	val2, _ := New(addr2, publicKey2.Serialize())
+
+	valSet := newDefaultSet([]atlas.Validator{val1, val2}, atlas.RoundRobin)
 	if valSet == nil {
 		t.Errorf("the format of validator set is invalid")
 		t.FailNow()
@@ -105,7 +115,7 @@ func testNormalValSet(t *testing.T) {
 		t.Errorf("validator mismatch: have %v, want nil", val)
 	}
 	// test get by address
-	if _, val := valSet.GetByAddress(addr2); !reflect.DeepEqual(val, val2) {
+	if _, val := valSet.GetByAddress(s2); !reflect.DeepEqual(val, val2) {
 		t.Errorf("validator mismatch: have %v, want %v", val, val2)
 	}
 	// test get by invalid address
@@ -142,11 +152,33 @@ func testEmptyValSet(t *testing.T) {
 	}
 }
 
+func generateSecretKeys(n int) []*bls.SecretKey {
+	secretKeys := make([]*bls.SecretKey, n)
+	for i := 0; i < n; i++ {
+		key, _ := crypto.GenerateBLSKey()
+		secretKeys[i] = key
+	}
+	return secretKeys
+}
+
+func sortSecretKeys(secretKeys []*bls.SecretKey) {
+	for i := 0; i < len(secretKeys); i++ {
+		for j := i; j < len(secretKeys); j++ {
+			if bytes.Compare(crypto.PubkeyToSigner(secretKeys[i].GetPublicKey()).Bytes()[:], crypto.PubkeyToSigner(secretKeys[j].GetPublicKey()).Bytes()[:]) > 0 {
+				secretKeys[i], secretKeys[j] = secretKeys[j], secretKeys[i]
+			}
+		}
+	}
+}
+
 func testAddAndRemoveValidator(t *testing.T) {
 	valSet := NewSet([]atlas.Validator{}, atlas.RoundRobin)
+
+	secretKeys := generateSecretKeys(3)
+	sortSecretKeys(secretKeys)
+
 	{
-		blsKey, _ := crypto.GenerateBLSKey()
-		validator, _ := New(common.StringToAddress(string(2)), blsKey.GetPublicKey().Serialize())
+		validator, _ := New(common.StringToAddress(string(2)), secretKeys[2].GetPublicKey().Serialize())
 		if !valSet.AddValidator(validator) {
 			t.Error("the validator should be added")
 		}
@@ -155,13 +187,11 @@ func testAddAndRemoveValidator(t *testing.T) {
 		}
 	}
 	{
-		blsKey, _ := crypto.GenerateBLSKey()
-		validator, _ := New(common.StringToAddress(string(1)), blsKey.GetPublicKey().Serialize())
+		validator, _ := New(common.StringToAddress(string(1)), secretKeys[1].GetPublicKey().Serialize())
 		valSet.AddValidator(validator)
 	}
 	{
-		blsKey, _ := crypto.GenerateBLSKey()
-		validator, _ := New(common.StringToAddress(string(0)), blsKey.GetPublicKey().Serialize())
+		validator, _ := New(common.StringToAddress(string(0)), secretKeys[0].GetPublicKey().Serialize())
 		valSet.AddValidator(validator)
 	}
 	if len(valSet.List()) != 3 {
@@ -169,26 +199,26 @@ func testAddAndRemoveValidator(t *testing.T) {
 	}
 
 	for i, v := range valSet.List() {
-		expected := common.StringToAddress(string(i))
+		expected := crypto.PubkeyToSigner(secretKeys[i].GetPublicKey())
 		if v.Address() != expected {
 			t.Errorf("the order of validators is wrong: have %v, want %v", v.Address().Hex(), expected.Hex())
 		}
 	}
 
-	if !valSet.RemoveValidator(common.StringToAddress(string(2))) {
+	if !valSet.RemoveValidatorBySigner(crypto.PubkeyToSigner(secretKeys[2].GetPublicKey())) {
 		t.Error("the validator should be removed")
 	}
-	if valSet.RemoveValidator(common.StringToAddress(string(2))) {
+	if valSet.RemoveValidatorBySigner(crypto.PubkeyToSigner(secretKeys[2].GetPublicKey())) {
 		t.Error("the non-existing validator should not be removed")
 	}
 	if len(valSet.List()) != 2 {
 		t.Error("the size of validator set should be 2")
 	}
-	valSet.RemoveValidator(common.StringToAddress(string(1)))
+	valSet.RemoveValidatorBySigner(crypto.PubkeyToSigner(secretKeys[1].GetPublicKey()))
 	if len(valSet.List()) != 1 {
 		t.Error("the size of validator set should be 1")
 	}
-	valSet.RemoveValidator(common.StringToAddress(string(0)))
+	valSet.RemoveValidatorBySigner(crypto.PubkeyToSigner(secretKeys[0].GetPublicKey()))
 	if len(valSet.List()) != 0 {
 		t.Error("the size of validator set should be 0")
 	}
@@ -199,9 +229,14 @@ func testStickyProposer(t *testing.T) {
 	b2 := common.Hex2Bytes(testAddress2)
 	addr1 := common.BytesToAddress(b1)
 	addr2 := common.BytesToAddress(b2)
+
 	blsKey1, _ := crypto.GenerateBLSKey()
-	s1 := blsKey1.GetPublicKey().Serialize()
 	blsKey2, _ := crypto.GenerateBLSKey()
+	if strings.Compare(crypto.PubkeyToSigner(blsKey1.GetPublicKey()).String(), crypto.PubkeyToSigner(blsKey2.GetPublicKey()).String()) == 1 {
+		blsKey1, blsKey2 = blsKey2, blsKey1
+	}
+
+	s1 := blsKey1.GetPublicKey().Serialize()
 	s2 := blsKey2.GetPublicKey().Serialize()
 	val1, _ := New(addr1, s1)
 	val2, _ := New(addr2, s2)

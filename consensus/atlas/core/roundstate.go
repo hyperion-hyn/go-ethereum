@@ -23,9 +23,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
-	"github.com/hyperion-hyn/bls/ffi/go/bls"
 	bls_cosi "github.com/ethereum/go-ethereum/crypto/bls"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/hyperion-hyn/bls/ffi/go/bls"
 )
 
 // newRoundState creates a new roundState instance with the given view and validatorSet
@@ -33,21 +33,21 @@ import (
 // we need to keep a reference of preprepare in order to propose locked proposal when there is a lock and itself is the proposer
 func newRoundState(view *atlas.View, validatorSet atlas.ValidatorSet, lockedHash common.Hash, preprepare *atlas.Preprepare, pendingRequest *atlas.Request, hasBadProposal func(hash common.Hash) bool) *roundState {
 	pubKeys := validatorSet.GetPublicKeys()
-	prepareBitmap, _:= bls_cosi.NewMask(pubKeys, nil)
-	confirmBitmap, _:= bls_cosi.NewMask(pubKeys, nil)
+	prepareBitmap, _ := bls_cosi.NewMask(pubKeys, nil)
+	confirmBitmap, _ := bls_cosi.NewMask(pubKeys, nil)
 
 	return &roundState{
-		round:                view.Round,
-		sequence:             view.Sequence,
-		Preprepare:           preprepare,
-		Prepares:             newMessageSet(validatorSet),
-		Commits:              newMessageSet(validatorSet),
-		lockedHash:           lockedHash,
-		mu:                   new(sync.RWMutex),
-		pendingRequest:       pendingRequest,
-		hasBadProposal:       hasBadProposal,
-		prepareBitmap:        prepareBitmap,
-		confirmBitmap:        confirmBitmap,
+		round:          view.Round,
+		sequence:       view.Sequence,
+		Preprepare:     preprepare,
+		Prepares:       newMessageSet(validatorSet),
+		Commits:        newMessageSet(validatorSet),
+		lockedHash:     lockedHash,
+		mu:             new(sync.RWMutex),
+		pendingRequest: pendingRequest,
+		hasBadProposal: hasBadProposal,
+		prepareBitmap:  prepareBitmap,
+		confirmBitmap:  confirmBitmap,
 	}
 }
 
@@ -66,10 +66,12 @@ type roundState struct {
 	mu             *sync.RWMutex
 	hasBadProposal func(hash common.Hash) bool
 
-	aggregatedPrepareSig *bls.Sign
-	prepareBitmap        *bls_cosi.Mask
-	aggregatedConfirmSig *bls.Sign
-	confirmBitmap        *bls_cosi.Mask
+	aggregatedPrepareSig       *bls.Sign
+	aggregatedPreparePublicKey *bls.PublicKey
+	prepareBitmap              *bls_cosi.Mask
+	aggregatedConfirmSig       *bls.Sign
+	aggregatedConfirmPublicKey *bls.PublicKey
+	confirmBitmap              *bls_cosi.Mask
 }
 
 func (s *roundState) GetPrepareSize() int {

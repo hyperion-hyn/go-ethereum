@@ -19,9 +19,11 @@ package backend
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"math"
 
+	"github.com/ethereum/go-ethereum/core"
 	bls_cosi "github.com/ethereum/go-ethereum/crypto/bls"
 	"github.com/hyperion-hyn/bls/ffi/go/bls"
 	"math/big"
@@ -60,6 +62,8 @@ var (
 	// errInvalidSignature is returned when given signature is not signed by given
 	// address.
 	errInvalidSignature = errors.New("invalid signature")
+	// errInvalidPublicKey is returned when given public key is valid
+	errInvalidPublicKey = errors.New("invalid public key")
 	// errUnknownBlock is returned when the list of validators is requested for a block
 	// that is not part of the local blockchain.
 	errUnknownBlock = errors.New("unknown block")
@@ -95,6 +99,8 @@ var (
 	errMismatchTxhashes = errors.New("mismatch transcations hashes")
 	// errMismatchTxhashes is returned if the TxHash in header is mismatch.
 	err = errors.New("mismatch transcations hashes")
+	// errCountBetweenPublicKeyAndSignatureNotMatch is returned if count of public keys and count of signature is mismatch
+	errCountBetweenPublicKeyAndSignatureNotMatch = errors.New("Count between public key and signature not match.")
 )
 var (
 	DefaultDifficulty = big.NewInt(1)
@@ -709,8 +715,12 @@ func prepareExtra(header *types.Header, vals []atlas.Validator) ([]byte, error) 
 // writeSeal writes the extra-data field of the given header with the given seals.
 // suggest to rename to writeSeal.
 func writeSeal(h *types.Header, seal []byte, pubkey []byte) error {
-	if len(seal) != types.AtlasExtraSignature || len(pubkey) != types.AtlasExtraPublicKey {
+	if len(seal) != types.AtlasExtraSignature {
 		return errInvalidSignature
+	}
+
+	if len(pubkey) != types.AtlasExtraPublicKey {
+		return errInvalidPublicKey
 	}
 
 	atlasExtra, err := types.ExtractAtlasExtra(h)
@@ -728,9 +738,22 @@ func writeSeal(h *types.Header, seal []byte, pubkey []byte) error {
 }
 
 // WriteCommittedSeals writes the extra-data field of a block header with given committed seals.
-func WriteCommittedSeals(h *types.Header, signature []byte, bitmap []byte) error {
-	if len(signature) != types.AtlasExtraSignature || len(bitmap) != types.AtlasExtraMask {
+func WriteCommittedSeals(h *types.Header, signature []byte, publicKey []byte, bitmap []byte) error {
+	fmt.Printf("length, signature: %d, public: %d, bitmap: %d\n", len(signature), len(publicKey), len(bitmap))
+	if len(signature) != types.AtlasExtraSignature || len(publicKey) != types.AtlasExtraPublicKey || len(bitmap) > types.AtlasExtraMask {
 		return errInvalidCommittedSeals
+	}
+
+	if len(bitmap) < types.AtlasExtraMask {
+		bitmap = append(bitmap, make([]byte, types.AtlasExtraMask-len(bitmap))...)
+	}
+
+	fmt.Printf("signature: %v\n", signature)
+	fmt.Printf("publicKey: %v\n", publicKey)
+	fmt.Printf("bitmap: %v\n", bitmap)
+
+	if len(h.Extra) < types.AtlasExtraSeal {
+		h.Extra = append(h.Extra[:], bytes.Repeat([]byte{0x00}, types.AtlasExtraSeal-len(h.Extra))...)
 	}
 
 	atlasExtra, err := types.ExtractAtlasExtra(h)
@@ -739,6 +762,7 @@ func WriteCommittedSeals(h *types.Header, signature []byte, bitmap []byte) error
 	}
 
 	copy(atlasExtra.AggSignature[:], signature)
+	copy(atlasExtra.AggPublicKey[:], publicKey)
 	copy(atlasExtra.AggBitmap[:], bitmap)
 
 	payload, err := rlp.EncodeToBytes(&atlasExtra)
@@ -747,6 +771,62 @@ func WriteCommittedSeals(h *types.Header, signature []byte, bitmap []byte) error
 	}
 
 	h.Extra = append(h.Extra[:types.AtlasExtraVanity], payload...)
+	return nil
+}
+
+func WriteCommittedSealsAsExtra(extra []byte, signature []byte, publicKey []byte, bitmap []byte) ([]byte, error) {
+	if len(signature) != types.AtlasExtraSignature || len(publicKey) != types.AtlasExtraPublicKey || len(bitmap) > types.AtlasExtraMask {
+		return nil, errInvalidCommittedSeals
+	}
+
+	if len(bitmap) < types.AtlasExtraMask {
+		bitmap = append(bitmap, bytes.Repeat([]byte{0x00}, types.AtlasExtraMask-len(bitmap))...)
+	}
+
+	extraData := make([]byte, len(extra))
+	atlasExtra, err := types.ExtractAtlasExtraField(extraData)
+	if err != nil {
+		return nil, err
+	}
+
+	copy(atlasExtra.AggSignature[:], signature)
+	copy(atlasExtra.AggPublicKey[:], publicKey)
+	copy(atlasExtra.AggBitmap[:], bitmap)
+
+	payload, err := rlp.EncodeToBytes(&atlasExtra)
+	if err != nil {
+		return nil, err
+	}
+
+	extraData = append(extraData[:types.AtlasExtraVanity], payload...)
+	return extraData, nil
+}
+
+func WriteCommittedSealInGenesis(genesis *core.Genesis, extra []byte, signatures []*bls.Sign, publicKeys []*bls.PublicKey) error {
+	mask, err := bls_cosi.NewMask(publicKeys, nil)
+	if err != nil {
+		return err
+	}
+
+	if len(publicKeys) != len(signatures) {
+		return errCountBetweenPublicKeyAndSignatureNotMatch
+	}
+
+	var sign bls.Sign
+	var publicKey bls.PublicKey
+
+	for i := 0; i < len(publicKeys); i++ {
+		mask.SetKey(publicKeys[i], true)
+		publicKey.Add(publicKeys[i])
+		sign.Add(signatures[i])
+	}
+
+	data, err := WriteCommittedSealsAsExtra(extra, sign.Serialize(), publicKey.Serialize(), mask.Mask())
+	if err != nil {
+		return err
+	}
+
+	copy(genesis.ExtraData[:], data[:])
 	return nil
 }
 

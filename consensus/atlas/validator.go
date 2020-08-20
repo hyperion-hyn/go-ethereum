@@ -46,7 +46,7 @@ func (slice Validators) Len() int {
 }
 
 func (slice Validators) Less(i, j int) bool {
-	return strings.Compare(slice[i].String(), slice[j].String()) < 0
+	return strings.Compare(slice[i].Address().String(), slice[j].Address().String()) < 0
 }
 
 func (slice Validators) Swap(i, j int) {
@@ -75,7 +75,7 @@ type ValidatorSet interface {
 	// Add validator
 	AddValidator(validator Validator) bool
 	// Remove validator
-	RemoveValidator(address common.Address) bool
+	RemoveValidatorBySigner(address common.Address) bool
 	// Copy validator set
 	Copy() ValidatorSet
 	// Get the maximum number of faulty nodes

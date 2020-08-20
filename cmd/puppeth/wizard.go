@@ -369,11 +369,8 @@ func (w *wizard) readIPAddress() string {
 	}
 }
 
-// readAddress reads a single line from stdin, trimming if from spaces and converts
-// it to an Ethereum address.
-func (w *wizard) readBLSPublicKeyAndCoinbase() (*bls.PublicKey, *common.Address) {
+func (w *wizard) readBLSPublicKey() *bls.PublicKey {
 	var publicKey bls.PublicKey
-	var address common.Address
 	for {
 		// Read the address from the user
 		fmt.Printf("> BLS public key: 0x")
@@ -382,7 +379,7 @@ func (w *wizard) readBLSPublicKeyAndCoinbase() (*bls.PublicKey, *common.Address)
 			log.Crit("Failed to read user input", "err", err)
 		}
 		if text = strings.TrimSpace(text); text == "" {
-			return nil, &common.Address{}
+			return nil
 		}
 		// Make sure it looks ok and return it if so
 		if len(text) != types.AtlasExtraPublicKey*2 {
@@ -394,17 +391,22 @@ func (w *wizard) readBLSPublicKeyAndCoinbase() (*bls.PublicKey, *common.Address)
 		if err != nil {
 			log.Error("Invalid bls public key, please retry")
 		}
+		return &publicKey
 	}
+}
 
+// readAddress reads a single line from stdin, trimming if from spaces and converts
+// it to an Ethereum address.
+func (w *wizard) readCoinbase() *common.Address {
 	for {
 		// Read the address from the user
-		fmt.Printf("> Account: 0x")
+		fmt.Printf("> Coinbase: 0x")
 		text, err := w.in.ReadString('\n')
 		if err != nil {
 			log.Crit("Failed to read user input", "err", err)
 		}
 		if text = strings.TrimSpace(text); text == "" {
-			log.Error("Invalid address, please retry")
+			return nil
 		}
 		// Make sure it looks ok and return it if so
 		if len(text) != 40 {
@@ -412,39 +414,48 @@ func (w *wizard) readBLSPublicKeyAndCoinbase() (*bls.PublicKey, *common.Address)
 			continue
 		}
 		bigaddr, _ := new(big.Int).SetString(text, 16)
-		address = common.BigToAddress(bigaddr)
+		address := common.BigToAddress(bigaddr)
+		return &address
 	}
-	return &publicKey, &address
 }
 
-func (w *wizard) readSignatureWithPublicKey(publicKeys []*bls.PublicKey, hash common.Hash) []*bls.Sign {
-	var signatures []*bls.Sign = make([]*bls.Sign, len(publicKeys))
-	for idx, publicKey := range publicKeys {
-		for {
-			// Read the address from the user
-			fmt.Printf("> BLS public key: 0x%s\n", publicKey.Serialize())
-			fmt.Printf(">   Sigh hash:0x%s\n", hash.String())
-			fmt.Printf(">   Signature:0x")
-			text, err := w.in.ReadString('\n')
-			if err != nil {
-				log.Crit("Failed to read user input", "err", err)
-			}
-			if text = strings.TrimSpace(text); text == "" {
-				break
-			}
-			// Make sure it looks ok and return it if so
-			if len(text) != types.AtlasExtraPublicKey*2 {
-				log.Error("Invalid address length, please retry")
-				continue
-			}
+// readAddress reads a single line from stdin, trimming if from spaces and converts
+// it to an Ethereum address.
+func (w *wizard) readBLSPublicKeyAndCoinbase() (*bls.PublicKey, *common.Address) {
 
-			var sign bls.Sign
-			err = sign.DeserializeHexStr(text)
-			if err != nil {
-				log.Error("Invalid bls public key, please retry")
-			}
-			signatures[idx] = &sign
-		}
+	publicKey := w.readBLSPublicKey()
+	if publicKey == nil {
+		return nil, nil
 	}
-	return signatures
+	address := w.readCoinbase()
+	return publicKey, address
+}
+
+func (w *wizard) readSignatureWithPublicKey(publicKey *bls.PublicKey, hash common.Hash) *bls.Sign {
+	for {
+		// Read the address from the user
+		fmt.Printf("> BLS public key: 0x%s\n", publicKey.SerializeToHexStr())
+		fmt.Printf(">   Sigh hash: %s\n", hash.String())
+		fmt.Printf(">   Signature: 0x")
+		text, err := w.in.ReadString('\n')
+		if err != nil {
+			log.Crit("Failed to read user input", "err", err)
+		}
+		if text = strings.TrimSpace(text); text == "" {
+			return nil
+		}
+		// Make sure it looks ok and return it if so
+		if len(text) != types.AtlasExtraSignature*2 {
+			log.Error("Invalid address length, please retry")
+			continue
+		}
+
+		var sign bls.Sign
+		err = sign.DeserializeHexStr(text)
+		if err != nil {
+			log.Error("Invalid bls public key, please retry")
+			continue
+		}
+		return &sign
+	}
 }

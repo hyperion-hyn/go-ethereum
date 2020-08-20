@@ -51,10 +51,10 @@ type Tally struct {
 type Snapshot struct {
 	Epoch uint64 // The number of blocks after which to checkpoint and reset the pending votes
 
-	Number uint64                   `json:"number"`  // Block number where the snapshot was created
-	Hash   common.Hash              `json:"hash"`    // Block hash where the snapshot was created
-	Votes  []*Vote                  `json:"votes"`   // List of votes cast in chronological order
-	Tally  map[common.Address]Tally `json:"tally"`   // Current vote tally to avoid recalculating
+	Number uint64                   `json:"number"`     // Block number where the snapshot was created
+	Hash   common.Hash              `json:"hash"`       // Block hash where the snapshot was created
+	Votes  []*Vote                  `json:"votes"`      // List of votes cast in chronological order
+	Tally  map[common.Address]Tally `json:"tally"`      // Current vote tally to avoid recalculating
 	ValSet atlas.ValidatorSet       `json:"validators"` // Set of authorized validators at this moment
 }
 
@@ -229,7 +229,7 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 	// 		if tally.Authorize {
 	// 			snap.ValSet.AddValidator(header.Coinbase)
 	// 		} else {
-	// 			snap.ValSet.RemoveValidator(header.Coinbase)
+	// 			snap.ValSet.RemoveValidatorBySigner(header.Coinbase)
 	//
 	// 			// Discard any previous votes the deauthorized validator cast
 	// 			for i := 0; i < len(snap.Votes); i++ {
@@ -286,7 +286,7 @@ type snapshotJSON struct {
 	Tally  map[common.Address]Tally `json:"tally"`
 
 	// for validator set
-	Validators []atlas.Validator     `json:"validators"`
+	Validators []atlas.Validator    `json:"validators"`
 	Policy     atlas.ProposerPolicy `json:"policy"`
 }
 

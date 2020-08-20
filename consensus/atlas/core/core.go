@@ -66,11 +66,11 @@ func New(backend atlas.Backend, config *atlas.Config) Engine {
 // ----------------------------------------------------------------------------
 
 type core struct {
-	config  *atlas.Config
-	address common.Address
+	config       *atlas.Config
+	address      common.Address
 	signerPubKey []byte
-	state   State
-	logger  log.Logger
+	state        State
+	logger       log.Logger
 
 	backend               atlas.Backend
 	events                *event.TypeMuxSubscription
@@ -175,9 +175,10 @@ func (c *core) commit() {
 	proposal := c.current.Proposal()
 	if proposal != nil {
 		committedSignature := c.current.aggregatedConfirmSig.Serialize()
+		committedPublicKey := c.current.aggregatedConfirmPublicKey.Serialize()
 		committedBitmap := c.current.confirmBitmap.Bitmap
 
-		if err := c.backend.Commit(proposal, committedSignature, committedBitmap); err != nil {
+		if err := c.backend.Commit(proposal, committedSignature, committedPublicKey, committedBitmap); err != nil {
 			c.current.UnlockHash() //Unlock block when insertion fails
 			c.sendNextRoundChange()
 			return

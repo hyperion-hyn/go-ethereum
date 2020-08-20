@@ -333,7 +333,7 @@ func TestVoting(t *testing.T) {
 		// Create the genesis block with the initial set of validators
 		genesis := &core.Genesis{
 			Difficulty: DefaultDifficulty,
-			Mixhash:    types.IstanbulDigest,
+			Mixhash:    types.AtlasDigest,
 		}
 		b := genesis.ToBlock(nil)
 		extra, _ := prepareExtra(b.Header(), validators)
@@ -357,7 +357,7 @@ func TestVoting(t *testing.T) {
 				Time:       uint64(j) * config.BlockPeriod,
 				Coinbase:   accounts.address(vote.voted),
 				Difficulty: DefaultDifficulty,
-				MixDigest:  types.IstanbulDigest,
+				MixDigest:  types.AtlasDigest,
 			}
 			extra, _ := prepareExtra(headers[j], validators)
 			headers[j].Extra = extra

@@ -34,7 +34,7 @@ const (
 	AtlasExtraSignature = 96                           // Fixed number of extra-data bytes reverved for BLS signature
 	AtlasExtraMask      = (AtlasMaxValidator + 7) >> 3 // Fixed number of extra-data bytes reserved for BLS signature bitmap
 	AtlasExtraProposer  = ((AtlasMaxValidator + ((1 << 16) - 1)) >> 16) << 1
-	AtlasExtraSeal      = AtlasExtraSignature + AtlasExtraMask + AtlasExtraProposer
+	AtlasExtraSeal      = AtlasExtraSignature + AtlasExtraPublicKey + AtlasExtraMask + AtlasExtraProposer
 )
 
 var (
@@ -50,6 +50,7 @@ var (
 // or it will fail to initialize instance of this struct.
 type AtlasExtra struct {
 	AggSignature [AtlasExtraSignature]byte // aggregated signature
+	AggPublicKey [AtlasExtraPublicKey]byte // aggregated public key
 	AggBitmap    [AtlasExtraMask]byte      // aggregated bitmap
 	Proposer     int                       // proposer's index
 }
@@ -61,6 +62,7 @@ func (ist *AtlasExtra) EncodeRLP(w io.Writer) error {
 
 	return rlp.Encode(w, []interface{}{
 		ist.AggSignature,
+		ist.AggPublicKey,
 		ist.AggBitmap,
 		data,
 	})
@@ -70,13 +72,14 @@ func (ist *AtlasExtra) EncodeRLP(w io.Writer) error {
 func (ist *AtlasExtra) DecodeRLP(s *rlp.Stream) error {
 	var atlasExtra struct {
 		AggSignature [AtlasExtraSignature]byte // aggregated signature
+		AggPublicKey [AtlasExtraPublicKey]byte // aggregated public key
 		AggBitmap    [AtlasExtraMask]byte      // aggregated bitmap
 		Proposer     [AtlasExtraProposer]byte  // proposer's index
 	}
 	if err := s.Decode(&atlasExtra); err != nil {
 		return err
 	}
-	ist.AggBitmap, ist.AggSignature = atlasExtra.AggBitmap, atlasExtra.AggSignature
+	ist.AggSignature, ist.AggPublicKey, ist.AggBitmap = atlasExtra.AggSignature, atlasExtra.AggPublicKey, atlasExtra.AggBitmap
 	ist.Proposer = int(big.NewInt(0).SetBytes(atlasExtra.Proposer[:]).Uint64())
 	return nil
 }
@@ -85,16 +88,25 @@ func (ist *AtlasExtra) DecodeRLP(s *rlp.Stream) error {
 // error if the length of the given extra-data is less than 32 bytes or the extra-data can not
 // be decoded.
 func ExtractAtlasExtra(h *Header) (*AtlasExtra, error) {
-	if len(h.Extra) < AtlasExtraVanity {
+	return ExtractAtlasExtraField(h.Extra)
+}
+
+func ExtractAtlasExtraField(extra []byte) (*AtlasExtra, error) {
+	if len(extra) < AtlasExtraVanity {
 		return nil, ErrInvalidAtlasHeaderExtra
 	}
 
+	if len(extra) < AtlasExtraSeal {
+		return nil, ErrInvalidIstanbulHeaderExtra
+	}
+
 	var atlasExtra *AtlasExtra
-	err := rlp.DecodeBytes(h.Extra[AtlasExtraVanity:], &atlasExtra)
+	err := rlp.DecodeBytes(extra[AtlasExtraVanity:], &atlasExtra)
 	if err != nil {
 		return nil, err
 	}
 	return atlasExtra, nil
+
 }
 
 func reset(data []byte) {

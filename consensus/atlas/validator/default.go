@@ -47,7 +47,7 @@ func (val *defaultValidator) PublicKey() *bls.PublicKey {
 }
 
 func (val *defaultValidator) String() string {
-	return val.Address().String()
+	return "address: " + val.Address().String() + ", coinbase: " + val.Coinbase().String()
 }
 
 // ----------------------------------------------------------------------------
@@ -108,6 +108,15 @@ func (valSet *defaultSet) GetByIndex(i uint64) atlas.Validator {
 func (valSet *defaultSet) GetByAddress(addr common.Address) (int, atlas.Validator) {
 	for i, val := range valSet.List() {
 		if addr == val.Address() {
+			return i, val
+		}
+	}
+	return -1, nil
+}
+
+func (valSet *defaultSet) GetByCoinbase(addr common.Address) (int, atlas.Validator) {
+	for i, val := range valSet.List() {
+		if addr == val.Coinbase() {
 			return i, val
 		}
 	}
@@ -195,13 +204,27 @@ func (valSet *defaultSet) AddValidator(validator atlas.Validator) bool {
 	return true
 }
 
-func (valSet *defaultSet) RemoveValidator(address common.Address) bool {
+func (valSet *defaultSet) RemoveValidatorBySigner(address common.Address) bool {
 	valSet.validatorMu.Lock()
 	defer valSet.validatorMu.Unlock()
 
 	for i, v := range valSet.validators {
 		if v.Address() == address {
 			valSet.validators = append(valSet.validators[:i], valSet.validators[i+1:]...)
+			return true
+		}
+	}
+	return false
+}
+
+func (valSet *defaultSet) RemoveValidatorByCoinbase(address common.Address) bool {
+	valSet.validatorMu.Lock()
+	defer valSet.validatorMu.Unlock()
+
+	for i, v := range valSet.validators {
+		if v.Coinbase() == address {
+			valSet.validators = append(valSet.validators[:i], valSet.validators[i+1:]...)
+			// TODO(zgx): allow one coinbase bind to multiple signer?
 			return true
 		}
 	}

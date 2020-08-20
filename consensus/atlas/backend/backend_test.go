@@ -17,19 +17,21 @@
 package backend
 
 import (
-	"bytes"
 	"crypto/ecdsa"
+	"math/rand"
 	"sort"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/hyperion-hyn/bls/ffi/go/bls"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
 	"github.com/ethereum/go-ethereum/consensus/atlas/validator"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	bls_cosi "github.com/ethereum/go-ethereum/crypto/bls"
 )
 
 func TestSign(t *testing.T) {
@@ -83,12 +85,12 @@ func TestCheckValidatorSignature(t *testing.T) {
 	hashData := crypto.Keccak256([]byte(data))
 	for i, k := range keys {
 		// Sign
-		sig, err := crypto.Sign(hashData, k)
-		if err != nil {
-			t.Errorf("error mismatch: have %v, want nil", err)
+		sig := k.SignHash(hashData)
+		if sig != nil {
+			t.Errorf("failed to sign hash data: have nil")
 		}
 		// CheckValidatorSignature should succeed
-		addr, err := atlas.CheckValidatorSignature(vset, data, sig)
+		addr, err := atlas.CheckValidatorSignature(vset, data, sig.Serialize(), k.GetPublicKey().Serialize())
 		if err != nil {
 			t.Errorf("error mismatch: have %v, want nil", err)
 		}
@@ -99,18 +101,18 @@ func TestCheckValidatorSignature(t *testing.T) {
 	}
 
 	// 2. Negative test: sign with any key other than validator's key should return error
-	key, err := crypto.GenerateKey()
+	key, err := crypto.GenerateBLSKey()
 	if err != nil {
 		t.Errorf("error mismatch: have %v, want nil", err)
 	}
 	// Sign
-	sig, err := crypto.Sign(hashData, key)
-	if err != nil {
-		t.Errorf("error mismatch: have %v, want nil", err)
+	sig := key.SignHash(hashData)
+	if sig == nil {
+		t.Errorf("failed to sign hash data: have nil")
 	}
 
 	// CheckValidatorSignature should return ErrUnauthorizedAddress
-	addr, err := atlas.CheckValidatorSignature(vset, data, sig)
+	addr, err := atlas.CheckValidatorSignature(vset, data, sig.Serialize(), key.GetPublicKey().Serialize())
 	if err != atlas.ErrUnauthorizedAddress {
 		t.Errorf("error mismatch: have %v, want %v", err, atlas.ErrUnauthorizedAddress)
 	}
@@ -120,22 +122,89 @@ func TestCheckValidatorSignature(t *testing.T) {
 	}
 }
 
+func sealWithKeys(privateKeys []*bls.SecretKey, hash common.Hash) (*bls.Sign, *bls.PublicKey, *bls_cosi.Mask, error) {
+	var signature bls.Sign
+	var publicKey bls.PublicKey
+	publicKeys := make([]*bls.PublicKey, len(privateKeys))
+	for i, privateKey := range privateKeys {
+		publicKeys[i] = privateKey.GetPublicKey()
+	}
+
+	bitmap, err := bls_cosi.NewMask(publicKeys, nil)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	for _, privateKey := range privateKeys {
+		sign := privateKey.SignHash(hash.Bytes())
+		signature.Add(sign)
+		publicKey.Add(privateKey.GetPublicKey())
+	}
+
+	return &signature, &publicKey, bitmap, nil
+}
+
+func generateSecretKeys(n int) ([]*bls.SecretKey, []*bls.PublicKey, error) {
+	privateKeys := make([]*bls.SecretKey, n)
+	publicKeys := make([]*bls.PublicKey, n)
+	for i := 0; i < n; i++ {
+		privateKey, err := crypto.GenerateBLSKey()
+		if err != nil {
+			return nil, nil, err
+		}
+		privateKeys[i] = privateKey
+		publicKeys[i] = privateKey.GetPublicKey()
+	}
+	return privateKeys, publicKeys, nil
+}
+
+func randSetBit(mask *bls_cosi.Mask, n int, v bool) {
+	set := make(map[int]bool)
+	count := 0
+	for {
+		if count >= n {
+			break
+		}
+
+		i := rand.Intn(n)
+		_, ok := set[i]
+		if ok {
+			continue
+		}
+
+		mask.SetBit(i, v)
+	}
+}
+
 func TestCommit(t *testing.T) {
+	privateKeys, _, err := generateSecretKeys(88)
+	if err != nil {
+		t.Errorf("failed to generate %d SecretKeys", 88)
+	}
+
 	backend := newBackend()
 
 	commitCh := make(chan *types.Block)
 	// Case: it's a proposer, so the backend.commit will receive channel result from backend.Commit function
 	testCases := []struct {
-		expectedErr       error
-		expectedSignature [][]byte
-		expectedBlock     func() *types.Block
+		expectedErr   error
+		expectedSign  func(block *types.Block) (signature []byte, publicKey []byte, bitmap []byte, err error)
+		expectedBlock func() *types.Block
 	}{
 		{
 			// normal case
 			nil,
-			[][]byte{append([]byte{1}, bytes.Repeat([]byte{0x00}, types.IstanbulExtraSeal-1)...)},
+			func(block *types.Block) ([]byte, []byte, []byte, error) {
+				hashdata := SealHash(block.Header())
+				sign, aggregatedPublicKey, bitmap, err := sealWithKeys(privateKeys, hashdata)
+				if err != nil {
+					return nil, nil, nil, err
+				}
+
+				return sign.Serialize(), aggregatedPublicKey.Serialize(), bitmap.Mask(), nil
+			},
 			func() *types.Block {
-				chain, engine := newBlockChain(1)
+				chain, engine, _ := newBlockChain(1)
 				block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
 				expectedBlock, _ := engine.updateBlock(engine.chain.GetHeader(block.ParentHash(), block.NumberU64()-1), block)
 				return expectedBlock
@@ -144,9 +213,11 @@ func TestCommit(t *testing.T) {
 		{
 			// invalid signature
 			errInvalidCommittedSeals,
-			nil,
+			func(block *types.Block) ([]byte, []byte, []byte, error) {
+				return nil, nil, nil, nil
+			},
 			func() *types.Block {
-				chain, engine := newBlockChain(1)
+				chain, engine, _ := newBlockChain(1)
 				block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
 				expectedBlock, _ := engine.updateBlock(engine.chain.GetHeader(block.ParentHash(), block.NumberU64()-1), block)
 				return expectedBlock
@@ -165,7 +236,11 @@ func TestCommit(t *testing.T) {
 		}()
 
 		backend.proposedBlockHash = expBlock.Hash()
-		if err := backend.Commit(expBlock, test.expectedSignature); err != nil {
+		signature, publicKey, bitmap, err := test.expectedSign(expBlock)
+		if err != nil {
+			t.Errorf("failed to sign block: %v", err)
+		}
+		if err := backend.Commit(expBlock, signature, publicKey, bitmap); err != nil {
 			if err != test.expectedErr {
 				t.Errorf("error mismatch: have %v, want %v", err, test.expectedErr)
 			}
@@ -186,7 +261,7 @@ func TestCommit(t *testing.T) {
 }
 
 func TestGetProposer(t *testing.T) {
-	chain, engine := newBlockChain(1)
+	chain, engine, _ := newBlockChain(1)
 	block := makeBlock(chain, engine, chain.Genesis())
 	chain.InsertChain(types.Blocks{block})
 	expected := engine.GetProposer(1)
@@ -221,8 +296,10 @@ func newTestValidatorSet(n int) (atlas.ValidatorSet, []*bls.SecretKey) {
 	addrs := make([]atlas.Validator, n)
 	for i := 0; i < n; i++ {
 		privateKey, _ := crypto.GenerateBLSKey()
+		accountKey, _ := crypto.GenerateKey()
 		keys[i] = privateKey
-		addrs[i] = atlas.Validator{}
+		val, _ := validator.New(crypto.PubkeyToAddress(accountKey.PublicKey), privateKey.GetPublicKey().Serialize())
+		addrs[i] = val
 	}
 	vset := validator.NewSet(addrs, atlas.RoundRobin)
 	sort.Sort(keys) //Keys need to be sorted by its public key address
@@ -236,7 +313,7 @@ func (slice Keys) Len() int {
 }
 
 func (slice Keys) Less(i, j int) bool {
-	return strings.Compare(crypto.PubkeyToAddress(slice[i].PublicKey).String(), crypto.PubkeyToAddress(slice[j].PublicKey).String()) < 0
+	return strings.Compare(crypto.PubkeyToSigner(slice[i].GetPublicKey()).String(), crypto.PubkeyToSigner(slice[j].GetPublicKey()).String()) < 0
 }
 
 func (slice Keys) Swap(i, j int) {
@@ -244,7 +321,7 @@ func (slice Keys) Swap(i, j int) {
 }
 
 func newBackend() (b *backend) {
-	_, b = newBlockChain(4)
+	_, b, _ = newBlockChain(4)
 	key, _ := generatePrivateKey()
 	b.privateKey = key
 	return

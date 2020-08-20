@@ -70,8 +70,7 @@ func CheckValidatorSignature(valSet ValidatorSet, data []byte, sig []byte, pubKe
 	}
 
 	// 5. Check validator
-	signer := crypto.PubkeyToSigner(&publicKey)
-	if _, val := valSet.GetByAddress(signer); val != nil {
+	if _, val := valSet.GetByPublicKey(&publicKey); val != nil {
 		return val.Address(), nil
 	}
 

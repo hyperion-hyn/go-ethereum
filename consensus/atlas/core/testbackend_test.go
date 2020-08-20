@@ -17,9 +17,12 @@
 package core
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"math/big"
 	"time"
+
+	"github.com/hyperion-hyn/bls/ffi/go/bls"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
@@ -44,13 +47,23 @@ type testSystemBackend struct {
 	committedMsgs []testCommittedMsgs
 	sentMsgs      [][]byte // store the message when Send is called by core
 
-	address common.Address
-	db      ethdb.Database
+	signer    common.Address
+	signerKey *bls.SecretKey
+	address   common.Address // TODO(zgx): should be address or coinbase?
+	db        ethdb.Database
+}
+
+func (self *testSystemBackend) Signer() common.Address {
+	return self.signer
+}
+
+func (self *testSystemBackend) SignerKey() []byte {
+	return self.signerKey.Serialize()
 }
 
 type testCommittedMsgs struct {
 	commitProposal atlas.Proposal
-	committedSeals [][]byte
+	committedSeals []byte
 }
 
 // ==============================================
@@ -93,11 +106,13 @@ func (self *testSystemBackend) Gossip(valSet atlas.ValidatorSet, message []byte)
 	return nil
 }
 
-func (self *testSystemBackend) Commit(proposal atlas.Proposal, seals [][]byte) error {
+func (self *testSystemBackend) Commit(proposal atlas.Proposal, signature []byte, publicKey []byte, bitmap []byte) error {
+	// func (self *testSystemBackend) Commit(proposal atlas.Proposal, seals [][]byte) error {
 	testLogger.Info("commit message", "address", self.Address())
 	self.committedMsgs = append(self.committedMsgs, testCommittedMsgs{
 		commitProposal: proposal,
-		committedSeals: seals,
+		// TODO(zgx): how to commit a message?
+		committedSeals: signature,
 	})
 
 	// fake new head events
@@ -109,17 +124,20 @@ func (self *testSystemBackend) Verify(proposal atlas.Proposal) (time.Duration, e
 	return 0, nil
 }
 
-func (self *testSystemBackend) Sign(data []byte) ([]byte, error) {
+func (self *testSystemBackend) Sign(data []byte) ([]byte, []byte, error) {
 	testLogger.Info("returning current backend address so that CheckValidatorSignature returns the same value")
-	return self.address.Bytes(), nil
+	sighash := self.signerKey.SignHash(data).Serialize()
+	pubkey := self.signerKey.GetPublicKey().Serialize()
+
+	return sighash, pubkey, nil
 }
 
 func (self *testSystemBackend) CheckSignature([]byte, common.Address, []byte) error {
 	return nil
 }
 
-func (self *testSystemBackend) CheckValidatorSignature(data []byte, sig []byte) (common.Address, error) {
-	return common.BytesToAddress(sig), nil
+func (self *testSystemBackend) CheckValidatorSignature(data []byte, sig []byte, pubKey []byte) (common.Address, error) {
+	return atlas.CheckValidatorSignature(self.peers, data, sig, pubKey)
 }
 
 func (self *testSystemBackend) Hash(b interface{}) common.Hash {
@@ -182,32 +200,46 @@ func newTestSystem(n uint64) *testSystem {
 	}
 }
 
-func generateValidators(n int) []common.Address {
-	vals := make([]common.Address, 0)
+func generateValidators(n int) ([]atlas.Validator, []*bls.SecretKey) {
+	vals := make([]atlas.Validator, n)
+	keys := make([]*bls.SecretKey, n)
 	for i := 0; i < n; i++ {
 		privateKey, _ := crypto.GenerateKey()
-		vals = append(vals, crypto.PubkeyToAddress(privateKey.PublicKey))
+		secretKey, _ := crypto.GenerateBLSKey()
+		val, _ := validator.New(crypto.PubkeyToAddress(privateKey.PublicKey), secretKey.GetPublicKey().Serialize())
+		keys[i] = secretKey
+		vals[i] = val
 	}
-	return vals
+	return vals, keys
 }
 
 func newTestValidatorSet(n int) atlas.ValidatorSet {
-	return validator.NewSet(generateValidators(n), atlas.RoundRobin)
+	vals, _ := generateValidators(n)
+	return validator.NewSet(vals, atlas.RoundRobin)
+}
+
+func findSecretKeyBySigner(secretKeys []*bls.SecretKey, address common.Address) *bls.SecretKey {
+	for _, v := range secretKeys {
+		if bytes.Compare(crypto.PubkeyToSigner(v.GetPublicKey()).Bytes(), address.Bytes()) == 0 {
+			return v
+		}
+	}
+	return nil
 }
 
 // FIXME: int64 is needed for N and F
 func NewTestSystemWithBackend(n, f uint64) *testSystem {
 	testLogger.SetHandler(elog.StdoutHandler)
-
-	addrs := generateValidators(int(n))
+	vals, keys := generateValidators(int(n))
 	sys := newTestSystem(n)
 	config := atlas.DefaultConfig
 
 	for i := uint64(0); i < n; i++ {
-		vset := validator.NewSet(addrs, atlas.RoundRobin)
+		vset := validator.NewSet(vals, atlas.RoundRobin)
 		backend := sys.NewBackend(i)
 		backend.peers = vset
-		backend.address = vset.GetByIndex(i).Address()
+		backend.address = vset.GetByIndex(i).Coinbase()
+		backend.signerKey = findSecretKeyBySigner(keys, backend.address)
 
 		core := New(backend, config).(*core)
 		core.state = StateAcceptRequest
