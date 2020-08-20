@@ -16,6 +16,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 )
@@ -118,16 +120,46 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 	}
 
 	{
-		// .Name
-		nameStorage := storage.Name().Value()
+		// .Name		
+		verify := func(expected string) {
+			nameStorage := storage.Name().Value()
+			if nameStorage != expected {
+				t.Errorf("response from calling contract was expected to be '%v' %d instead received '%v' %d", expected, len(expected), nameStorage, len(nameStorage))
+			}
+	
+			if nameStorage != global.Name {
+				t.Errorf(" field expected to be %v instead received %v", global.Name, nameStorage)
+			}
+		}
 		expected := "Hyperion"
-		if nameStorage != expected {
-			t.Errorf("response from calling contract was expected to be '%v' %d instead received '%v' %d", expected, len(expected), nameStorage, len(nameStorage))
-		}
+		verify(expected)
+		expected = "Hyperion (c)2018"
+		storage.Name().SetValue(expected)
+		verify(expected)
+	}
 
-		if nameStorage != global.Name {
-			t.Errorf(" field expected to be %v instead received %v", global.Name, nameStorage)
+	// flush state in a new block
+	if err = sim.FlushStateInNewBlock(stateDB); err != nil {
+		t.Errorf("failed to FlushStateInNewBlock, err: %v", err)
+	}
+
+	stateDB, err = sim.Blockchain().State()
+	storage = New(&global, stateDB, addr, big.NewInt(0))
+
+	{
+		// .Name		
+		verify := func(expected string) {
+			nameStorage := storage.Name().Value()
+			if nameStorage != expected {
+				t.Errorf("response from calling contract was expected to be '%v' %d instead received '%v' %d", expected, len(expected), nameStorage, len(nameStorage))
+			}
+	
+			if nameStorage != global.Name {
+				t.Errorf(" field expected to be %v instead received %v", global.Name, nameStorage)
+			}
 		}
+		expected := "Hyperion (c)2018"
+		verify(expected)
 	}
 
 	{
@@ -608,7 +640,6 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 		key := "0xA07306b4d845BD243Da172aeE557893172ccd04a"
 		expected := true
 		storageValue := storage.Pool().NodeKeySet().Get(key).Value()
-		t.Log("expected", expected, "received", storageValue)
 		if expected != storageValue {
 			t.Errorf(" field expected to be %v instead received %v", expected, storageValue)
 		}
@@ -631,12 +662,146 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 		}
 	}
 
+	{
+		// .Node[].Microdelegations[].PendingDelegations[].Amount
+		//
+
+		// Set/Get
+		{
+			expected := 0
+			addr1 := common.HexToAddress("A07306b4d845BD243Da172aeE557893172ccd04a")
+			addr2 := common.HexToAddress("3CB0B0B6D52885760A5404eb0A593B979c88BcEF")
+			index := 0
+
+			amountStorage := storage.Pool().Nodes().Get(addr1).Microdelegations().Get(addr2).PendingDelegations().Get(index).Amount().Value()
+			if amountStorage.Cmp(big.NewInt(0).SetUint64(uint64(expected))) != 0 {
+				t.Errorf("response from calling contract was expected to be %v instead received %v", expected, amountStorage)
+			}
+
+			if amountStorage.Cmp(global.Pool.Nodes[addr1].Microdelegations[addr2].PendingDelegations[index].Amount) != 0 {
+				t.Errorf(" field expected to be %v instead received %v", global.Pool.Nodes[addr1].Microdelegations[addr2].PendingDelegations[index].Amount, amountStorage)
+			}
+
+			expected = 0xdead
+			storage.Pool().Nodes().Get(addr1).Microdelegations().Get(addr2).PendingDelegations().Get(index).Amount().SetValue(big.NewInt(0).SetUint64(uint64(expected)))
+
+			amountStorage = storage.Pool().Nodes().Get(addr1).Microdelegations().Get(addr2).PendingDelegations().Get(index).Amount().Value()
+			if amountStorage.Cmp(big.NewInt(0).SetUint64(uint64(expected))) != 0 {
+				t.Errorf("response from calling contract was expected to be %v instead received %v", expected, amountStorage)
+			}
+
+			if amountStorage.Cmp(global.Pool.Nodes[addr1].Microdelegations[addr2].PendingDelegations[index].Amount) != 0 {
+				t.Errorf(" field expected to be %v instead received %v", global.Pool.Nodes[addr1].Microdelegations[addr2].PendingDelegations[index].Amount, amountStorage)
+			}
+
+		}
+
+		{
+			expected := 0
+			addr1 := common.HexToAddress("A07306b4d845BD243Da172aeE557893172ccd04a")
+			addr2 := common.HexToAddress("3CB0B0B6D52885760A5404eb0A593B979c88BcEF")
+			index := 6
+
+			amountStorage := storage.Pool().Nodes().Get(addr1).Microdelegations().Get(addr2).PendingDelegations().Get(index).Amount().Value()
+			if amountStorage.Cmp(big.NewInt(0).SetUint64(uint64(expected))) != 0 {
+				t.Errorf("response from calling contract was expected to be %v instead received %v", expected, amountStorage)
+			}
+
+			if amountStorage.Cmp(global.Pool.Nodes[addr1].Microdelegations[addr2].PendingDelegations[index].Amount) != 0 {
+				t.Errorf(" field expected to be %v instead received %v", global.Pool.Nodes[addr1].Microdelegations[addr2].PendingDelegations[index].Amount, amountStorage)
+			}
+
+			expected = 0xbeef
+			storage.Pool().Nodes().Get(addr1).Microdelegations().Get(addr2).PendingDelegations().Get(index).Amount().SetValue(big.NewInt(0).SetUint64(uint64(expected)))
+
+			amountStorage = storage.Pool().Nodes().Get(addr1).Microdelegations().Get(addr2).PendingDelegations().Get(index).Amount().Value()
+			if amountStorage.Cmp(big.NewInt(0).SetUint64(uint64(expected))) != 0 {
+				t.Errorf("response from calling contract was expected to be %v instead received %v", expected, amountStorage)
+			}
+
+			if amountStorage.Cmp(global.Pool.Nodes[addr1].Microdelegations[addr2].PendingDelegations[index].Amount) != 0 {
+				t.Errorf(" field expected to be %v instead received %v", global.Pool.Nodes[addr1].Microdelegations[addr2].PendingDelegations[index].Amount, amountStorage)
+			}
+		}
+	}
+
 }
 
+type Middleware struct {
+	db      *state.StateDB
+	dirties map[common.Hash]common.Hash
+}
+
+func newMiddleware(db *state.StateDB) *Middleware {
+	return &Middleware{
+		db:      db,
+		dirties: make(map[common.Hash]common.Hash),
+	}
+}
+func (m *Middleware) GetState(addr common.Address, hash common.Hash) common.Hash {
+	return m.db.GetState(addr, hash)
+}
+
+func (m *Middleware) SetState(addr common.Address, key, value common.Hash) {
+	m.dirties[key] = value
+	m.db.SetState(addr, key, value)
+}
+
+func testMiddleware(t *testing.T, addr common.Address) {
+	stateDB, err := state.New(common.Hash{}, state.NewDatabase(rawdb.NewMemoryDatabase()))
+	if err != nil {
+		t.Errorf("could not new state based on the current HEAD block")
+	}
+
+	middleware := newMiddleware(stateDB)
+	var global Global_t
+	storage := New(&global, middleware, addr, big.NewInt(0))
+
+	{
+		// .Name
+		compareExpected := func(expected string) {
+			nameStorage := storage.Name().Value()
+			if nameStorage != expected {
+				t.Errorf("response from calling contract was expected to be '%v' %d instead received '%v' %d", expected, len(expected), nameStorage, len(nameStorage))
+			}
+
+			if nameStorage != global.Name {
+				t.Errorf(" field expected to be %v instead received %v", global.Name, nameStorage)
+			}
+		}
+
+		compareExpected("")
+		expected := "Hyperion, a decentralized map platform, aims to achieve the “One Map” vision - to provide an unified view of global map data and service, and to make it universally accessible just like a public utility for 10B people.\n海伯利安是去中心化的地图生态。"
+		storage.Name().SetValue(expected)
+		compareExpected(expected)
+		// for k, v := range middleware.dirties {
+		// 	t.Logf("%x: %x\n", k, v)
+		// }
+	}
+
+	var data [10]byte
+	for i :=0 ; i < len(data); i++ {
+		data[i] = byte(i)
+	}
+	t.Logf("%v", data)
+	reset(data[:])
+	t.Logf("%v", data)
+}
+
+func reset(data []byte) {
+	copy(data, make([]byte, len(data)))
+}
+
+
 // Tests that storage manipulation
-func TestStorageManipulation(t *testing.T) {
+func TestStorageManipulationViaSimulator(t *testing.T) {
 	addr, sim, _ := setupBlockchain(t, abiJSON, abiBin)
 	defer sim.Close()
 
 	testReadViaStorageAndWriteFromContract(t, sim, addr)
+}
+
+func TestStorageManipulationViaMiddleware(t *testing.T) {
+	addr := crypto.PubkeyToAddress(testKey.PublicKey)
+	testMiddleware(t, addr)
 }
