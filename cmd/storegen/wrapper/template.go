@@ -361,13 +361,14 @@ func (s* Storage_{{.Name}}) Length() (int) {
 
 func (s* Storage_{{.Name}}) Get(index int) ( *Storage_{{$elem.Type}} ) {
 	// Value: {{ printf "%#v" $elem }}
+	base := s.slot
 {{ if le $elem.SolKind.NumberOfBytes 32 }}
 	itemsPerSlot := 32/{{$elem.SolKind.NumberOfBytes}}
-	actual := big.NewInt(0).Add(s.slot, big.NewInt(0).SetUint64(uint64(index/itemsPerSlot)))
+	actual := big.NewInt(0).Add(base, big.NewInt(0).SetUint64(uint64(index/itemsPerSlot)))
 	offset := ((index % itemsPerSlot) * {{$elem.SolKind.NumberOfBytes}})
 {{else}}
 	slotsPerItem := ({{$elem.SolKind.NumberOfBytes}} + 31)/32
-	actual := big.NewInt(0).Add(s.slot, big.NewInt(0).SetUint64(uint64(index * slotsPerItem)))
+	actual := big.NewInt(0).Add(base, big.NewInt(0).SetUint64(uint64(index * slotsPerItem)))
 	offset := 0
 {{end}}
 {{- if or (isptr $elem) (isslice $elem) (ismap $elem) }}
@@ -419,9 +420,16 @@ func (s* Storage_{{.Name}}) Get(index int) ( *Storage_{{$elem.Type}} ) {
 		s.Resize(index+1)
 	}
 
-	hash := crypto.Keccak256Hash(common.BigToHash(s.slot).Bytes())
-	actual := big.NewInt(0).Add(hash.Big(), big.NewInt(0).SetUint64(uint64(index*({{$elem.SolKind.NumberOfBytes}}/32))))
+	base := crypto.Keccak256Hash(common.BigToHash(s.slot).Bytes()).Big()
+{{ if le $elem.SolKind.NumberOfBytes 32 }}
+	itemsPerSlot := 32/{{$elem.SolKind.NumberOfBytes}}
+	actual := big.NewInt(0).Add(base, big.NewInt(0).SetUint64(uint64(index/itemsPerSlot)))
+	offset := ((index % itemsPerSlot) * {{$elem.SolKind.NumberOfBytes}})
+{{else}}
+	slotsPerItem := ({{$elem.SolKind.NumberOfBytes}} + 31)/32
+	actual := big.NewInt(0).Add(base, big.NewInt(0).SetUint64(uint64(index * slotsPerItem)))
 	offset := 0
+{{end}}
 
 {{- if or (isptr $elem) (isslice $elem) (ismap $elem) }}
 	if (*s.obj)[index] == nil {
