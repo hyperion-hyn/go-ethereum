@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
@@ -721,6 +722,42 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 
 			if amountStorage.Cmp(global.Pool.Nodes[addr1].Microdelegations[addr2].PendingDelegations[index].Amount) != 0 {
 				t.Errorf(" field expected to be %v instead received %v", global.Pool.Nodes[addr1].Microdelegations[addr2].PendingDelegations[index].Amount, amountStorage)
+			}
+		}
+
+		{
+			// .Addrs[]
+			val := big.NewInt(0).SetBytes(hexutil.MustDecode("0xa40bFc4701562c3fBe246E1da2Ac980c929b7d3e"))
+			for i := 0; i < 10; i++ {
+				v := big.NewInt(0).Add(val, big.NewInt(0).SetInt64(int64(i)))
+				storage.Addrs().Get(i).SetValue(common.BigToAddress(v))
+			}
+			
+			for i := 0; i < 10; i++ {
+				v := big.NewInt(0).Add(val, big.NewInt(0).SetInt64(int64(i)))
+				addrExpected := common.BigToAddress(v)
+				addrGot := storage.Addrs().Get(i).Value()
+				if bytes.Compare(addrExpected.Bytes(), addrGot.Bytes()) != 0 {
+					t.Errorf("slice[%d], expected %x, got %x", i, addrExpected, addrGot)
+				}
+			}
+		}
+
+		{
+			// .Signatures[]
+			val := big.NewInt(0).SetBytes(hexutil.MustDecode("0x980c929b7d3e"))
+			for i := 0; i < 10; i++ {
+				v := big.NewInt(0).Add(val, big.NewInt(0).SetInt64(int64(i)))
+				storage.Signatures().Get(i).SetValue(v)
+			}
+			
+			for i := 0; i < 10; i++ {
+				v := big.NewInt(0).Add(val, big.NewInt(0).SetInt64(int64(i)))
+				signExpected := v
+				signGot := storage.Signatures().Get(i).Value()
+				if signExpected.Cmp(signGot) != 0 {
+					t.Errorf("slice[%d], expected %x, got %x", i, signExpected, signGot)
+				}
 			}
 		}
 	}
