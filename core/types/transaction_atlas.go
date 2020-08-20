@@ -1,5 +1,10 @@
 package types
 
+import (
+	"github.com/ethereum/go-ethereum/common"
+	"math/big"
+)
+
 // TransactionType different types of transactions
 type TransactionType byte
 
@@ -14,6 +19,12 @@ const (
 	Unredelegate
 	CollectRedelRewards
 )
+
+func NewStakingTransaction(nonce uint64, gasLimit uint64, gasPrice *big.Int, data []byte, txType TransactionType) *Transaction {
+	t := newTransaction(nonce, nil, common.Big0, gasLimit, gasPrice, data)
+	t.SetType(txType)
+	return t
+}
 
 func (txType TransactionType) String() string {
 	// TODO(ATLAS)
