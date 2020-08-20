@@ -62,7 +62,7 @@ func (st *StateTransition) StakingTransitionDb() (usedGas uint64, err error) {
 	}
 
 	// Increment the nonce for the next transaction
-	st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
+	defer st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
 
 	switch msg.Type() {
 	case types.StakeCreateVal:
