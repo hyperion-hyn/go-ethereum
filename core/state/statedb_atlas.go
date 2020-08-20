@@ -12,13 +12,14 @@ var (
 	errValidatorNotExist    = errors.New("staking validator does not exist")
 	errRedelegationNotExist = errors.New("redelegation does not exist")
 
-	ValidatorStorageAddress = common.BigToAddress(common.Big1)	// TODO(ATLAS): what address?
+	validatorStorageAddress = common.BigToAddress(common.Big1) // TODO(ATLAS): what address?
 )
 
 func (s *StateDB) ValidatorPool() *restaking.Storage_ValidatorPool_ {
+	// TODO(ATLAS): thread safety? need to lock?
 	if s.validatorPool == nil {
 		var g restaking.Global_t
-		globalSt := restaking.New(&g, s, ValidatorStorageAddress, common.Big0)
+		globalSt := restaking.New(&g, s, validatorStorageAddress, common.Big0)
 		s.validatorPool = globalSt.ValidatorPool()
 	}
 	return s.validatorPool
@@ -109,4 +110,8 @@ func (s *StateDB) AddRedelegationReward(snapshot *restaking.Storage_ValidatorWra
 		redelegation.AddReward(rewardForOperators)
 	}
 	return nil
+}
+
+func (s *StateDB) IncrementValidatorNonce() {
+	s.SetNonce(validatorStorageAddress, s.GetNonce(validatorStorageAddress)+1)
 }

@@ -70,7 +70,10 @@ func (st *StateTransition) StakingTransitionDb() (usedGas uint64, err error) {
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return 0, err
 		}
-		err = st.verifyAndApplyCreateValidatorTx(stkMsg, msg.From())
+		if err = st.verifyAndApplyCreateValidatorTx(stkMsg, msg.From()); err != nil {
+			return 0, err
+		}
+		st.state.IncrementValidatorNonce()
 	case types.StakeEditVal:
 		stkMsg := &restaking.EditValidator{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {

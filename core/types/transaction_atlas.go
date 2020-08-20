@@ -28,7 +28,7 @@ func (txType TransactionType) String() string {
 	} else if txType == Unredelegate {
 		return "UndelegateValidator"
 	} else if txType == CollectRedelRewards {
-		return "CollectMicroredelegationRewards"
+		return "CollectRedelegationRewards"
 	}
 	return "Normal"
 }

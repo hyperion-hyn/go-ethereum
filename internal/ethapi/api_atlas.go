@@ -21,7 +21,6 @@ func (s *PublicRestakingAPI) GetAllValidatorAddresses(
 	if state == nil || err != nil {
 		return nil, err
 	}
-	state.ValidatorPool() // need init validatorPool
 	validatorAddresses := state.ValidatorList()
 
 	// Fetch all validator addresses

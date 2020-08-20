@@ -70,6 +70,7 @@ type StateDB interface {
 	ValidatorPool() *restaking.Storage_ValidatorPool_
 	ValidatorByAddress(validatorAddress common.Address) (*restaking.Storage_ValidatorWrapper_, error)
 	AddRedelegationReward(snapshot *restaking.Storage_ValidatorWrapper_, reward *big.Int, shareLookup map[common.Address]common.Dec) error
+	IncrementValidatorNonce()
 }
 
 // CallContext provides a basic interface for the EVM calling conventions. The EVM
