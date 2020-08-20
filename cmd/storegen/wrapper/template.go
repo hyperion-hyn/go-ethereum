@@ -179,6 +179,14 @@ func SetStateAsBytes(db StateDB, addr common.Address, slot *big.Int, value []byt
 {{end -}}
 {{end}}{{/* new_instance */}}
 
+{{define "new_slice"}}
+{{- if eq .Type "BigInt" }}
+		slice := make([]{{.Type}}, _length, _capacity)
+{{else}}
+		slice := make([]*{{.Type}}, _length, _capacity)
+{{end -}}
+{{end}}{{/* new_slice */}}
+
 {{define "getBytes"}}
 	hash := s.db.GetState(s.addr, common.BigToHash(s.slot))
 	data := hash.Bytes()[32 - (s.offset + s.numberOfBytes) : 32 - s.offset]
@@ -405,10 +413,13 @@ func (s* Storage_{{.Name}}) Length() (int) {
 	return int(rv.Big().Int64())
 }
 
-func (s* Storage_{{.Name}}) Resize(length int) {	
+func (s* Storage_{{.Name}}) Resize(length int) {
+	// Value: {{ printf "%#v" $elem }}
 	s.db.SetState(s.addr, common.BigToHash(s.slot), common.BigToHash(big.NewInt(0).SetUint64(uint64(length))))
 
-	slice := make([]*{{$elem.Type}}, length, length+50)
+	_length := length
+	_capacity := length + 50
+	{{template "new_slice" $elem}}
 	copy(slice, *s.obj)
 	*s.obj = slice
 }
