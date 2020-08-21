@@ -16,7 +16,7 @@ var (
 )
 
 func (s *StateDB) ValidatorPool() *restaking.Storage_ValidatorPool_ {
-	// TODO(ATLAS): thread safety? need to lock?
+	// TODO(ATLAS): singleton
 	if s.validatorPool == nil {
 		var g restaking.Global_t
 		globalSt := restaking.New(&g, s, validatorStorageAddress, common.Big0)
