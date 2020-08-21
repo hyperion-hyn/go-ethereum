@@ -2,7 +2,6 @@ package ethapi
 
 import (
 	"context"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rpc"
 )
 
@@ -26,9 +25,8 @@ func (s *PublicRestakingAPI) GetAllValidatorAddresses(
 	// Fetch all validator addresses
 	addresses := make([]string, len(validatorAddresses))
 	for i, addr := range validatorAddresses {
-		oneAddr, _ := common.AddressToBech32(addr)
-		// Response output is the same for all versions
-		addresses[i] = oneAddr
+		hexAddr := addr.Hex()
+		addresses[i] = hexAddr
 	}
 	return addresses, nil
 }
