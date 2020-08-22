@@ -46,7 +46,8 @@ type CandidateOrder struct {
 // NewEPoSRound runs a fresh computation of EPoS using
 // latest data always
 func NewEPoSRound(epoch *big.Int, stakedReader DataProvider) (*CompletedEPoSRound, error) {
-	eligibleCandidate, err := prepareOrders(epoch, stakedReader)
+	lastEpoch := big.NewInt(0).Sub(epoch, common.Big1)
+	eligibleCandidate, err := prepareOrders(stakedReader, lastEpoch)
 	if err != nil {
 		return nil, err
 	}
@@ -83,8 +84,8 @@ func NewEPoSRound(epoch *big.Int, stakedReader DataProvider) (*CompletedEPoSRoun
 	}, nil
 }
 
-func prepareOrders(epoch *big.Int, stakedReader DataProvider) (map[common.Address]*effective.SlotOrder, error) {
-	candidates := stakedReader.ValidatorList()
+func prepareOrders(stakedReader DataProvider, lastEpoch *big.Int) (map[common.Address]*effective.SlotOrder, error) {
+	candidates := stakedReader.ValidatorList() // latest validators
 	essentials := map[common.Address]*effective.SlotOrder{}
 	totalStaked, tempZero := big.NewInt(0), common.ZeroDec()
 
@@ -93,11 +94,12 @@ func prepareOrders(epoch *big.Int, stakedReader DataProvider) (map[common.Addres
 		if err != nil {
 			return nil, err
 		}
-		snapshot, err := stakedReader.ReadValidatorAtEpoch(epoch, candidates[i])
+		// snapshot of validator at the beginning of the given epoch
+		snapshot, err := stakedReader.ReadValidatorAtEpoch(lastEpoch, candidates[i])
 		if err != nil {
 			return nil, err
 		}
-		if !IsEligibleForEPoSAuction(snapshot, validator, epoch) {
+		if !IsEligibleForEPoSAuction(snapshot, validator, lastEpoch) {
 			continue
 		}
 
@@ -121,14 +123,14 @@ func prepareOrders(epoch *big.Int, stakedReader DataProvider) (map[common.Addres
 }
 
 // IsEligibleForEPoSAuction ..
-func IsEligibleForEPoSAuction(snapshot, validator *restaking.Storage_ValidatorWrapper_, epoch *big.Int) bool {
+func IsEligibleForEPoSAuction(snapshot, validator *restaking.Storage_ValidatorWrapper_, lastEpoch *big.Int) bool {
 	// This original condition to check whether a validator is in last committee is not stable
 	// because cross-links may arrive after the epoch ends and it still got counted into the
 	// NumBlocksToSign, making this condition to be true when the validator is actually not in committee
 	//if snapshot.Counters.NumBlocksToSign.Cmp(validator.Counters.NumBlocksToSign) != 0 {
 
 	// Check whether the validator is in current committee
-	if validator.Validator().LastEpochInCommittee().Value().Cmp(epoch) == 0 {
+	if validator.Validator().LastEpochInCommittee().Value().Cmp(lastEpoch) == 0 {
 		// validator was in last epoch's committee
 		// validator with below-threshold signing activity won't be considered for next epoch
 		// and their status will be turned to inactive in FinalizeNewBlock
@@ -205,8 +207,8 @@ func eposStakedCommittee(epoch *big.Int, stakerReader DataProvider) (*restaking.
 		)
 	}
 
-	// Set the epoch of shard state
-	committee.Epoch = big.NewInt(0).Set(epoch) // TODO: epoch + 1?
+	// Set the epoch
+	committee.Epoch = big.NewInt(0).Set(epoch)
 	return committee, nil
 }
 
@@ -219,13 +221,12 @@ func (def stakingEnabled) ReadFromDB(epoch *big.Int, reader DataProvider) (*rest
 	return committee.Load(), err
 }
 
-// Compute is single entry point for
-// computing a new super committee, aka new shard state
+// Compute is single entry point for computing a new committee for next epoch
 func (def stakingEnabled) Compute(epoch *big.Int, stakerReader DataProvider) (newComm *restaking.Committee_, err error) {
 	committee, err := eposStakedCommittee(epoch, stakerReader)
 	if err != nil {
 		return nil, err
 	}
-	log.Info("computed new super committee", "computed-for-epoch", epoch.Uint64())
+	log.Info("computed new committee", "computed-for-epoch", epoch.Uint64())
 	return committee, nil
 }

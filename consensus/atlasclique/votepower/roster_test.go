@@ -59,7 +59,7 @@ func TestCompute(t *testing.T) {
 
 	computedRoster, err := Compute(&restaking.Committee_{
 		Epoch: big.NewInt(3), Slots: slotList,
-	}, big.NewInt(3))
+	})
 	if err != nil {
 		t.Error("Computed Roster failed on vote summation to one")
 	}

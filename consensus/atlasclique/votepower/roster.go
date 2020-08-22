@@ -8,7 +8,6 @@ import (
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	"github.com/harmony-one/bls/ffi/go/bls"
 	"github.com/pkg/errors"
-	"math/big"
 )
 
 var (
@@ -82,10 +81,7 @@ func (r Roster) String() string {
 }
 
 // Compute creates a new roster based off the shard.SlotList
-func Compute(comm *restaking.Committee_, epoch *big.Int) (*Roster, error) {
-	if epoch == nil {
-		return nil, errors.New("nil epoch for roster compute")
-	}
+func Compute(comm *restaking.Committee_) (*Roster, error) {
 	roster, staked := NewRoster(), comm.Slots
 
 	for i := range staked.Entrys {
