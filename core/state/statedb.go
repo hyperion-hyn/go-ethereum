@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"math/big"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -106,7 +107,8 @@ type StateDB struct {
 	StorageCommits time.Duration
 
 	// ATLAS
-	validatorPool	*restaking.Storage_ValidatorPool_
+	validatorPool *restaking.Storage_ValidatorPool_
+	once          sync.Once
 }
 
 // Create a new state from a given trie.
