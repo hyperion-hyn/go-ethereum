@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/staking/network"
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	"github.com/pkg/errors"
+	"math"
 	"math/big"
 )
 
@@ -45,15 +46,10 @@ func (st *StateTransition) StakingTransitionDb() (usedGas uint64, err error) {
 		return 0, err
 	}
 	msg := st.msg
-
 	sender := vm.AccountRef(msg.From())
-	homestead := st.evm.ChainConfig().IsHomestead(st.evm.BlockNumber)
-	istanbul := st.evm.ChainConfig().IsIstanbul(st.evm.BlockNumber)
 
 	// Pay intrinsic gas
-	// TODO(ATLAS): gas?
-	gas, err := IntrinsicGas(st.data, false, homestead, istanbul)
-
+	gas, err := IntrinsicGasForStaking(st.data, msg.Type() == types.StakeCreateVal)
 	if err != nil {
 		return 0, err
 	}
@@ -107,9 +103,9 @@ func (st *StateTransition) StakingTransitionDb() (usedGas uint64, err error) {
 	}
 	st.refundGas()
 
-	// TODO(ATLAS) Txn Fees
-	//txFee := new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)
-	//st.state.AddBalance(st.evm.Coinbase, txFee)
+	// TODO(ATLAS): Txn Fees
+	txFee := new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)
+	st.state.AddBalance(st.evm.Coinbase, txFee)
 
 	return st.gasUsed(), err
 }
@@ -260,4 +256,38 @@ func (t tokenHolder) PostCreateValidator(validator common.Address, amount *big.I
 func (t tokenHolder) PostRedelegate(validator common.Address, amount *big.Int) error {
 	t.stateDB.SubBalance(t.holderAddress, amount)
 	return nil
+}
+
+// IntrinsicGas computes the 'intrinsic gas' for a message with the given data.
+func IntrinsicGasForStaking(data []byte, isValidatorCreation bool) (uint64, error) {
+	// Set the starting gas for the raw transaction
+	var gas uint64
+	if isValidatorCreation {
+		gas = params.TxGasValidatorCreation
+	} else {
+		gas = params.TxGas
+	}
+	// Bump the required gas by the amount of transactional data
+	if len(data) > 0 {
+		// Zero and non-zero bytes are priced differently
+		var nz uint64
+		for _, byt := range data {
+			if byt != 0 {
+				nz++
+			}
+		}
+		// Make sure we don't exceed uint64 for all data combinations
+		nonZeroGas := params.TxDataNonZeroGasEIP2028
+		if (math.MaxUint64-gas)/nonZeroGas < nz {
+			return 0, vm.ErrOutOfGas
+		}
+		gas += nz * nonZeroGas
+
+		z := uint64(len(data)) - nz
+		if (math.MaxUint64-gas)/params.TxDataZeroGas < z {
+			return 0, vm.ErrOutOfGas
+		}
+		gas += z * params.TxDataZeroGas
+	}
+	return gas, nil
 }
