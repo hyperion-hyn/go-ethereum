@@ -200,7 +200,7 @@ func bindStructTypeGo(kind abi.Type, structs map[string]*tmplStruct) (string, er
 			return "", err
 		}
 
-		modifier := map[bool]string{true: "*", false: ""}[GetReflectType(kind.Elem).Kind() == reflect.Ptr && GetReflectType(kind.Elem) != bigT]
+		modifier := map[bool]string{true: "*", false: ""}[isT(kind.Elem, abi.PointerTy)]
 		typ := fmt.Sprintf("[]%s%s", modifier, field)
 		var fields []*tmplField
 		fields = append(fields, &tmplField{
@@ -241,7 +241,7 @@ func bindStructTypeGo(kind abi.Type, structs map[string]*tmplStruct) (string, er
 			})
 		}
 
-		modifier := map[bool]string{true: "*", false: ""}[GetReflectType(kind.TupleElems[1]).Kind() == reflect.Ptr && GetReflectType(kind.TupleElems[1]) != bigT]
+		modifier := map[bool]string{true: "*", false: ""}[isT(kind.TupleElems[1], abi.PointerTy)]
 		typ := fmt.Sprintf("map[%s]%s%s", fields[0].Type,
 			modifier,
 			fields[1].Type)

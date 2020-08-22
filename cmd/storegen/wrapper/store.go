@@ -124,41 +124,39 @@ func sha1(input string) string {
 	return hexutil.Encode(d)
 }
 
-func isKind(val interface{}, kind reflect.Kind) bool {
+func isT(val interface{}, T byte) bool {
 	switch v := val.(type) {
-	case reflect.Type:
-		return v.Kind() == kind
 	case abi.Type:
-		return GetReflectType(&v).Kind() == kind
+		return v.T == T
 	case *abi.Type:
-		return GetReflectType(v).Kind() == kind
+		return v.T == T
 	case tmplField:
-		return GetReflectType(&v.SolKind).Kind() == kind
+		return v.SolKind.T == T
 	case *tmplField:
-		return GetReflectType(&v.SolKind).Kind() == kind
+		return v.SolKind.T == T
 	case tmplStruct:
-		return GetReflectType(&v.SolKind).Kind() == kind
+		return v.SolKind.T == T
 	case *tmplStruct:
-		return GetReflectType(&v.SolKind).Kind() == kind
+		return v.SolKind.T == T
 	default:
 		return false
 	}
 }
 
 func isptr(val interface{}) bool {
-	return isKind(val, reflect.Ptr)
+	return isT(val, abi.PointerTy)
 }
 
 func isarray(val interface{}) bool {
-	return isKind(val, reflect.Array)
+	return isT(val, abi.ArrayTy)
 }
 
 func isslice(val interface{}) bool {
-	return isKind(val, reflect.Slice)
+	return isT(val, abi.SliceTy)
 }
 
 func ismap(val interface{}) bool {
-	return isKind(val, reflect.Map)
+	return isT(val, abi.MappingTy)
 }
 
 func isFixedSizeByteArray(val interface{}) bool {
