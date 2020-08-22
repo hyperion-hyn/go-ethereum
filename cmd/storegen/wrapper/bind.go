@@ -21,37 +21,45 @@ var bindType = map[bind.Lang]func(kind abi.Type, structs map[string]*tmplStruct)
 	bind.LangGo: bindTypeGo,
 }
 
-func bindBasicTypeGo(kind abi.Type) (string, string) {
+func nameOfBasicTypeGo(kind *abi.Type) string {
 	switch kind.T {
 	case abi.AddressTy:
-		return "Address", "common.Address"
+		return "Address"
 	case abi.IntTy, abi.UintTy:
 		parts := regexp.MustCompile(`(u)?int([0-9]*)`).FindStringSubmatch(kind.String())
 		switch parts[2] {
 		case "8", "16", "32", "64":
 			name := fmt.Sprintf("%sint%s", parts[1], parts[2])
-			return capitalise(name), name
+			return capitalise(name)
 		}
-		return "BigInt", "*big.Int"
+		return "BigInt"
 	case abi.FixedBytesTy:
-		return fmt.Sprintf("Bytes%d", kind.Size), fmt.Sprintf("[%d]byte", kind.Size)
+		return fmt.Sprintf("Bytes%d", kind.Size)
 	case abi.BytesTy:
-		return "Bytes", "[]byte"
+		return "Bytes"
 	case abi.FunctionTy:
-		return "Function", "[24]byte"
+		return "Function"
 	case abi.StringTy:
-		return "String", "string"
+		return "String"
 	case abi.BoolTy:
-		return "Bool", "bool"
+		return "Bool"
 	case abi.TupleTy:
-		if kind.TupleRawName == "Decimal" {
-			return "Decimal", "common.Dec"
-		}
-		return "", ""
+		panic("basic type do not support tuple/struct")
+	case abi.PointerTy:
+		panic("basic type do not support pointer")
+	case abi.MappingTy:
+		panic("basic type do not support mapping")
+	case abi.DecimalTy:
+		return "Decimal"
 	default:
 		// string, bool types
-		return capitalise(kind.String()), kind.String()
+		return capitalise(kind.String())
 	}
+}
+
+func bindBasicTypeGo(kind abi.Type) (string, string) {
+	typ := GetReflectType(&kind)
+	return nameOfBasicTypeGo(&kind), typ.String()
 }
 
 // bindTypeGo converts solidity types to Go ones. Since there is no clear mapping
@@ -62,10 +70,10 @@ func bindTypeGo(kind abi.Type, structs map[string]*tmplStruct) string {
 	case abi.TupleTy:
 		return structs[kind.TupleRawName+kind.String()].Name
 	case abi.ArrayTy:
-		modifier := map[bool]string{true: "*", false: ""}[kind.Elem.Kind == reflect.Ptr && kind.Elem.Type != bigT]
+		modifier := map[bool]string{true: "*", false: ""}[GetReflectType(kind.Elem).Kind() == reflect.Ptr && GetReflectType(kind.Elem) != bigT]
 		return fmt.Sprintf("[%d]", kind.Size) + modifier + bindTypeGo(*kind.Elem, structs)
 	case abi.SliceTy:
-		modifier := map[bool]string{true: "*", false: ""}[kind.Elem.Kind == reflect.Ptr && kind.Elem.Type != bigT]
+		modifier := map[bool]string{true: "*", false: ""}[GetReflectType(kind.Elem).Kind() == reflect.Ptr && GetReflectType(kind.Elem) != bigT]
 		return "[]" + modifier + bindTypeGo(*kind.Elem, structs)
 	default:
 		name, _ := bindBasicTypeGo(kind)
@@ -101,10 +109,9 @@ func bindStructTypeGo(kind abi.Type, structs map[string]*tmplStruct) (string, er
 		}
 
 		if kind.TupleRawName == "Decimal" {
+			kind.T = abi.DecimalTy
 			name, typ := bindBasicTypeGo(kind)
-			kind.T = abi.FixedPointTy
-			kind.Type = decimalT
-			kind.Kind = kind.Type.Kind()
+
 			structs[name] = &tmplStruct{
 				Name:    name,
 				T:       kind.T,
@@ -116,12 +123,7 @@ func bindStructTypeGo(kind abi.Type, structs map[string]*tmplStruct) (string, er
 
 		var fields []*tmplField
 		var underlyingType reflect.Type
-		switch kind.Type.Kind() {
-		case reflect.Ptr:
-			underlyingType = kind.Type.Elem()
-		case reflect.Struct:
-			underlyingType = kind.Type
-		}
+		underlyingType = GetReflectType(&kind)
 		for i, elem := range kind.TupleElems {
 			field, err := bindStructTypeGo(*elem, structs)
 			if err != nil {
@@ -144,9 +146,10 @@ func bindStructTypeGo(kind abi.Type, structs map[string]*tmplStruct) (string, er
 			name = fmt.Sprintf("Struct%d", len(structs))
 		}
 		structs[id] = &tmplStruct{
-			Name:   name,
-			Fields: fields,
-			T:      kind.T,
+			Name:    name,
+			Fields:  fields,
+			T:       kind.T,
+			SolKind: kind,
 		}
 		return name, nil
 
@@ -197,7 +200,7 @@ func bindStructTypeGo(kind abi.Type, structs map[string]*tmplStruct) (string, er
 			return "", err
 		}
 
-		modifier := map[bool]string{true: "*", false: ""}[kind.Elem.Kind == reflect.Ptr && kind.Elem.Type != bigT]
+		modifier := map[bool]string{true: "*", false: ""}[GetReflectType(kind.Elem).Kind() == reflect.Ptr && GetReflectType(kind.Elem) != bigT]
 		typ := fmt.Sprintf("[]%s%s", modifier, field)
 		var fields []*tmplField
 		fields = append(fields, &tmplField{
@@ -238,7 +241,7 @@ func bindStructTypeGo(kind abi.Type, structs map[string]*tmplStruct) (string, er
 			})
 		}
 
-		modifier := map[bool]string{true: "*", false: ""}[kind.TupleElems[1].Kind == reflect.Ptr && kind.TupleElems[1].Type != bigT]
+		modifier := map[bool]string{true: "*", false: ""}[GetReflectType(kind.TupleElems[1]).Kind() == reflect.Ptr && GetReflectType(kind.TupleElems[1]) != bigT]
 		typ := fmt.Sprintf("map[%s]%s%s", fields[0].Type,
 			modifier,
 			fields[1].Type)
@@ -249,20 +252,17 @@ func bindStructTypeGo(kind abi.Type, structs map[string]*tmplStruct) (string, er
 			SolKind: kind,
 			Fields:  fields,
 		}
-
 		return name, nil
+
+	case abi.PointerTy:
+		name, _ := bindStructTypeGo(*kind.Elem, structs)
+		return name, nil
+
 	default:
 		name, typ := bindBasicTypeGo(kind)
 		if s, exist := structs[name]; exist {
 			return s.Name, nil
 		}
-
-		if name != "BigInt" {
-			if kind.Type.Kind() == reflect.Ptr {
-				kind.Type = kind.Type.Elem()
-				kind.Kind = kind.Type.Kind()
-			}
-		} 
 
 		structs[name] = &tmplStruct{
 			Name:    name,

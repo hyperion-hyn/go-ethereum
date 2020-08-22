@@ -129,13 +129,13 @@ func (b *SimulatedBackend) rollback() {
 	b.pendingState, _ = state.New(b.pendingBlock.Root(), statedb.Database(), nil)
 }
 
-func (b* SimulatedBackend) FlushStateInNewBlock(stateDB *state.StateDB) error {
+func (b *SimulatedBackend) FlushStateInNewBlock(stateDB *state.StateDB) error {
 	root, err := stateDB.Commit(true)
 	if err != nil {
 		return err
 	}
 
-	err = stateDB.Database().TrieDB().Commit(root, false)
+	err = stateDB.Database().TrieDB().Commit(root, false, nil)
 	if err != nil {
 		return err
 	}
@@ -156,7 +156,7 @@ func (b* SimulatedBackend) FlushStateInNewBlock(stateDB *state.StateDB) error {
 	statedb, _ := b.blockchain.State()
 
 	b.pendingBlock = blocks[0]
-	b.pendingState, _ = state.New(b.pendingBlock.Root(), statedb.Database())
+	b.pendingState, _ = state.New(b.pendingBlock.Root(), statedb.Database(), nil)
 
 	return err
 }

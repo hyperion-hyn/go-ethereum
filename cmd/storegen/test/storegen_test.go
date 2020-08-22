@@ -121,13 +121,13 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 	}
 
 	{
-		// .Name		
+		// .Name
 		verify := func(expected string) {
 			nameStorage := storage.Name().Value()
 			if nameStorage != expected {
 				t.Errorf("response from calling contract was expected to be '%v' %d instead received '%v' %d", expected, len(expected), nameStorage, len(nameStorage))
 			}
-	
+
 			if nameStorage != global.Name {
 				t.Errorf(" field expected to be %v instead received %v", global.Name, nameStorage)
 			}
@@ -148,13 +148,13 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 	storage = New(&global, stateDB, addr, big.NewInt(0))
 
 	{
-		// .Name		
+		// .Name
 		verify := func(expected string) {
 			nameStorage := storage.Name().Value()
 			if nameStorage != expected {
 				t.Errorf("response from calling contract was expected to be '%v' %d instead received '%v' %d", expected, len(expected), nameStorage, len(nameStorage))
 			}
-	
+
 			if nameStorage != global.Name {
 				t.Errorf(" field expected to be %v instead received %v", global.Name, nameStorage)
 			}
@@ -732,7 +732,7 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 				v := big.NewInt(0).Add(val, big.NewInt(0).SetInt64(int64(i)))
 				storage.Addrs().Get(i).SetValue(common.BigToAddress(v))
 			}
-			
+
 			for i := 0; i < 10; i++ {
 				v := big.NewInt(0).Add(val, big.NewInt(0).SetInt64(int64(i)))
 				addrExpected := common.BigToAddress(v)
@@ -750,7 +750,7 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 				v := big.NewInt(0).Add(val, big.NewInt(0).SetInt64(int64(i)))
 				storage.Signatures().Get(i).SetValue(v)
 			}
-			
+
 			for i := 0; i < 10; i++ {
 				v := big.NewInt(0).Add(val, big.NewInt(0).SetInt64(int64(i)))
 				signExpected := v
@@ -785,7 +785,7 @@ func (m *Middleware) SetState(addr common.Address, key, value common.Hash) {
 }
 
 func testMiddleware(t *testing.T, addr common.Address) {
-	stateDB, err := state.New(common.Hash{}, state.NewDatabase(rawdb.NewMemoryDatabase()))
+	stateDB, err := state.New(common.Hash{}, state.NewDatabase(rawdb.NewMemoryDatabase()), nil)
 	if err != nil {
 		t.Errorf("could not new state based on the current HEAD block")
 	}
@@ -817,7 +817,7 @@ func testMiddleware(t *testing.T, addr common.Address) {
 	}
 
 	var data [10]byte
-	for i :=0 ; i < len(data); i++ {
+	for i := 0; i < len(data); i++ {
 		data[i] = byte(i)
 	}
 	t.Logf("%v", data)
@@ -828,7 +828,6 @@ func testMiddleware(t *testing.T, addr common.Address) {
 func reset(data []byte) {
 	copy(data, make([]byte, len(data)))
 }
-
 
 // Tests that storage manipulation
 func TestStorageManipulationViaSimulator(t *testing.T) {

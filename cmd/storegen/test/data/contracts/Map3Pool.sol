@@ -108,7 +108,8 @@ contract Map3Pool {
     Map3Node_t node;
     int version;
     string name;
-
+    address[] addrs;
+    uint48[] signatures;
     constructor() public {
         version = 666;
         name = "Hyperion";

@@ -57,7 +57,6 @@ import (
 	"strings"
 
 	ethereum "github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -70,7 +69,6 @@ var (
 	_ = big.NewInt
 	_ = strings.NewReader
 	_ = ethereum.NotFound
-	_ = abi.U256
 	_ = common.Big1
 	_ = types.BloomLookup
 	_ = event.NewSubscription
@@ -304,7 +302,7 @@ func (s *Storage_{{.Name}}) SetValue(value {{.Type}}) {
 {{range $defines}}
 // {{.Name}} is an auto generated low-level Go binding around an user-defined struct.
 // {{ printf "%#v" . }}
-// {{ printf "%#v" .SolKind.Type.String }}
+// {{ printf "%#v" (GetReflectType .SolKind).String }}
 type {{.Name}} {{.Type}}
 
 type Storage_{{.Name}} struct {
@@ -315,7 +313,7 @@ type Storage_{{.Name}} struct {
 {{- if isarray .}}
 
 {{$elem := index .Fields 0}}
-{{ if isFixedSizeByteArray .SolKind.Type }}
+{{ if isFixedSizeByteArray (GetReflectType .SolKind) }}
 
 func (s* Storage_{{.Name}}) Value() {{.Type}} {
 	// {{ printf "%#v" . }}
@@ -364,6 +362,7 @@ func (s *Storage_{{.Name}}) SetValue(value {{.Type}}) {
 
 {{ else }}
 func (s* Storage_{{.Name}}) Length() (int) {
+	// Value: {{ printf "%#v" . }}
 	return len(s.obj)
 }
 

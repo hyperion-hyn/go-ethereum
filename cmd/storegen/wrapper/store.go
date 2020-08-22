@@ -78,6 +78,7 @@ func Store(types []string, layouts []string, pkg string, lang bind.Lang) (string
 		"ismap":                ismap,
 		"isFixedSizeByteArray": isFixedSizeByteArray,
 		"match":                match,
+		"GetReflectType":       GetReflectType,
 	}
 	tmpl := template.Must(template.New("").Funcs(funcs).Parse(tmplSource[lang]))
 	if err := tmpl.Execute(buffer, data); err != nil {
@@ -128,15 +129,17 @@ func isKind(val interface{}, kind reflect.Kind) bool {
 	case reflect.Type:
 		return v.Kind() == kind
 	case abi.Type:
-		return v.Kind == kind && v.Type.Kind() == v.Kind
+		return GetReflectType(&v).Kind() == kind
+	case *abi.Type:
+		return GetReflectType(v).Kind() == kind
 	case tmplField:
-		return v.SolKind.Kind == kind && v.SolKind.Type.Kind() == v.SolKind.Kind
+		return GetReflectType(&v.SolKind).Kind() == kind
 	case *tmplField:
-		return v.SolKind.Kind == kind && v.SolKind.Type.Kind() == v.SolKind.Kind
+		return GetReflectType(&v.SolKind).Kind() == kind
 	case tmplStruct:
-		return v.SolKind.Kind == kind && v.SolKind.Type.Kind() == v.SolKind.Kind
+		return GetReflectType(&v.SolKind).Kind() == kind
 	case *tmplStruct:
-		return v.SolKind.Kind == kind && v.SolKind.Type.Kind() == v.SolKind.Kind
+		return GetReflectType(&v.SolKind).Kind() == kind
 	default:
 		return false
 	}

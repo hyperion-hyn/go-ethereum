@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 var (
@@ -34,8 +35,8 @@ func NewType(t string, definition Type, types map[string]Type) (typ abi.Type, er
 }
 
 func newType(t string, definition Type, types map[string]Type) (typ abi.Type, err error) {
-	typ.StringKind = t
-	typ.NumberOfBytes = uint(definition.NumberOfBytes.Uint64())
+	typ.SetStringKind(t)
+	typ.SetNumberOfBytes(uint(definition.NumberOfBytes.Uint64()))
 
 	// parse the type and size of the abi-type.
 	matches := typeRegex.FindAllStringSubmatch(t, -1)
@@ -62,46 +63,77 @@ func newType(t string, definition Type, types map[string]Type) (typ abi.Type, er
 	// varType is the parsed abi type
 	switch varType := parsedType[1]; varType {
 	case "int":
-		typ.Kind, typ.Type = reflectIntKindAndType(false, varSize)
 		typ.Size = varSize
 		typ.T = abi.IntTy
 	case "uint":
-		typ.Kind, typ.Type = reflectIntKindAndType(true, varSize)
 		typ.Size = varSize
 		typ.T = abi.UintTy
 	case "bool":
-		typ.Kind = reflect.Bool
 		typ.T = abi.BoolTy
-		typ.Type = reflect.TypeOf(bool(false))
 	case "address":
-		typ.Kind = reflect.Array
-		typ.Type = addressT
 		typ.Size = 20
 		typ.T = abi.AddressTy
 	case "string", "string_storage", "string_memory_ptr":
-		typ.Kind = reflect.String
-		typ.Type = stringT
 		typ.T = abi.StringTy
 	case "bytes", "bytes_storage":
-		if varSize == 0 {
-			if definition.Encoding != "bytes" {
-				return abi.Type{}, fmt.Errorf("abi: invalid encoding for %v, expected %v but got %v", t, "bytes", definition.Encoding)
-			}
+		if varSize == 0 && definition.Encoding != "bytes" {
+			return abi.Type{}, fmt.Errorf("abi: invalid encoding for %v, expected %v but got %v", t, "bytes", definition.Encoding)
+		}
 
-			typ.T = abi.BytesTy
-			typ.Kind = reflect.Slice
-			typ.Type = reflect.SliceOf(reflect.TypeOf(byte(0)))
-		} else if varSize == 1 {
+		if varSize == 1 {
 			typ.T = abi.UintTy
-			typ.Kind = reflect.Uint8
-			typ.Type = uint8T
-			typ.StringKind = "uint8"
+			typ.Size = 8
+			typ.SetStringKind("uint8")
+		} else if varSize == 0 {
+			typ.T = abi.BytesTy
 		} else {
 			typ.T = abi.FixedBytesTy
-			typ.Kind = reflect.Array
 			typ.Size = varSize
-			typ.Type = reflect.ArrayOf(varSize, reflect.TypeOf(byte(0)))
 		}
+
+	case "struct":
+		var (
+			fields     []reflect.StructField
+			elems      []*abi.Type
+			names      []string
+			expression string // canonical parameter expression
+		)
+		expression += "("
+		overloadedNames := make(map[string]string)
+
+		for idx, c := range definition.Members {
+			cType, err := NewType(c.Type, types[c.Type], types)
+			if err != nil {
+				return abi.Type{}, err
+			}
+			fieldName, err := overloadedArgName(c.Label, overloadedNames)
+			if err != nil {
+				return abi.Type{}, err
+			}
+			overloadedNames[fieldName] = fieldName
+			fields = append(fields, reflect.StructField{
+				Name: fieldName, // reflect.StructOf will panic for any exported field.
+				Type: GetReflectType(&cType),
+				Tag:  reflect.StructTag("json:\"" + c.Label + "\"" + " " + fmt.Sprintf(`storage:"slot=%s,offset=%d"`, c.Slot.String(), c.Offset)),
+			})
+			elems = append(elems, &cType)
+			names = append(names, c.Label)
+			expression += cType.StringKind()
+			if idx != len(definition.Members)-1 {
+				expression += ","
+			}
+		}
+		expression += ")"
+
+		typ.TupleType = reflect.StructOf(fields)
+		typ.TupleElems = elems
+		typ.TupleRawNames = names
+		typ.T = abi.TupleTy
+		typ.TupleRawName = parsedType[4]
+
+	case "function":
+		typ.T = abi.FunctionTy
+		typ.Size = 24
 
 	case "array":
 		// https://solidity.readthedocs.io/en/v0.6.11/types.html
@@ -135,50 +167,19 @@ func newType(t string, definition Type, types map[string]Type) (typ abi.Type, er
 		typ.Elem = &cType
 		if varSize == 0 {
 			typ.T = abi.SliceTy
-			typ.Kind = reflect.Slice
-			switch cType.Type.Kind() {
+
+			switch GetReflectType(&cType).Kind() {
 			case reflect.Ptr, reflect.Slice, reflect.Map:
 			default:
-				cType.Type = reflect.PtrTo(cType.Type)
-				cType.Kind = cType.Type.Kind()
+				embeddedType := &abi.Type{}
+				embeddedType.T = abi.PointerTy
+				embeddedType.Elem = &cType
+				typ.Elem = embeddedType
 			}
-			typ.Type = reflect.SliceOf(cType.Type)
 		} else {
 			typ.T = abi.ArrayTy
-			typ.Kind = reflect.Array
 			typ.Size = varSize
-			typ.Type = reflect.ArrayOf(varSize, cType.Type)
 		}
-
-	case "struct":
-		var (
-			fields []reflect.StructField
-			elems  []*abi.Type
-			names  []string
-		)
-
-		for _, c := range definition.Members {
-			cType, err := NewType(c.Type, types[c.Type], types)
-			if err != nil {
-				return abi.Type{}, err
-			}
-			if abi.ToCamelCase(c.Label) == "" {
-				return abi.Type{}, errors.New("abi: purely anonymous or underscored field is not supported")
-			}
-			fields = append(fields, reflect.StructField{
-				Name: abi.ToCamelCase(c.Label), // reflect.StructOf will panic for any exported field.
-				Type: cType.Type,
-				Tag:  reflect.StructTag("json:\"" + c.Label + "\"" + " " + fmt.Sprintf(`storage:"slot=%s,offset=%d"`, c.Slot.String(), c.Offset)),
-			})
-			elems = append(elems, &cType)
-			names = append(names, c.Label)
-		}
-		typ.Kind = reflect.Struct
-		typ.Type = reflect.StructOf(fields)
-		typ.TupleElems = elems
-		typ.TupleRawNames = names
-		typ.T = abi.TupleTy
-		typ.TupleRawName = parsedType[4]
 
 	case "mapping":
 		if definition.Encoding != "mapping" {
@@ -188,7 +189,6 @@ func newType(t string, definition Type, types map[string]Type) (typ abi.Type, er
 		var (
 			elems []*abi.Type
 		)
-		typ.Kind = reflect.Map
 		typ.T = abi.MappingTy
 		kType, err := NewType(definition.Key, types[definition.Key], types)
 		if err != nil {
@@ -200,15 +200,15 @@ func newType(t string, definition Type, types map[string]Type) (typ abi.Type, er
 			return abi.Type{}, err
 		}
 
-		switch vType.Type.Kind() {
+		var embeddedType *abi.Type = &vType
+		switch GetReflectType(&vType).Kind() {
 		case reflect.Ptr, reflect.Slice, reflect.Map:
 		default:
-			vType.Type = reflect.PtrTo(vType.Type)
-			vType.Kind = vType.Type.Kind()
+			embeddedType = &abi.Type{}
+			embeddedType.T = abi.PointerTy
+			embeddedType.Elem = &vType
 		}
-		elems = append(elems, &kType, &vType)
-
-		typ.Type = reflect.MapOf(kType.Type, vType.Type)
+		elems = append(elems, &kType, embeddedType)
 		typ.TupleElems = elems
 
 	default:
@@ -218,30 +218,58 @@ func newType(t string, definition Type, types map[string]Type) (typ abi.Type, er
 	return
 }
 
-// reflectIntKind returns the reflect using the given size and
-// unsignedness.
-func reflectIntKindAndType(unsigned bool, size int) (reflect.Kind, reflect.Type) {
-	switch size {
-	case 8:
-		if unsigned {
-			return reflect.Uint8, uint8T
-		}
-		return reflect.Int8, int8T
-	case 16:
-		if unsigned {
-			return reflect.Uint16, uint16T
-		}
-		return reflect.Int16, int16T
-	case 32:
-		if unsigned {
-			return reflect.Uint32, uint32T
-		}
-		return reflect.Int32, int32T
-	case 64:
-		if unsigned {
-			return reflect.Uint64, uint64T
-		}
-		return reflect.Int64, int64T
+// GetReflectType returns the reflection type of the ABI type.
+func GetReflectType(t *abi.Type) reflect.Type {
+	switch t.T {
+	case abi.IntTy:
+		return abi.ReflectIntType(false, t.Size)
+	case abi.UintTy:
+		return abi.ReflectIntType(true, t.Size)
+	case abi.BoolTy:
+		return reflect.TypeOf(false)
+	case abi.StringTy:
+		return reflect.TypeOf("")
+	case abi.SliceTy:
+		return reflect.SliceOf(GetReflectType(t.Elem))
+	case abi.ArrayTy:
+		return reflect.ArrayOf(t.Size, GetReflectType(t.Elem))
+	case abi.TupleTy:
+		return t.TupleType
+	case abi.AddressTy:
+		return reflect.TypeOf(common.Address{})
+	case abi.FixedBytesTy:
+		return reflect.ArrayOf(t.Size, reflect.TypeOf(byte(0)))
+	case abi.BytesTy:
+		return reflect.SliceOf(reflect.TypeOf(byte(0)))
+	case abi.HashTy:
+		// hashtype currently not used
+		return reflect.ArrayOf(32, reflect.TypeOf(byte(0)))
+	case abi.FixedPointTy:
+		// fixedpoint type currently not used
+		return reflect.ArrayOf(32, reflect.TypeOf(byte(0)))
+	case abi.FunctionTy:
+		return reflect.ArrayOf(24, reflect.TypeOf(byte(0)))
+	case abi.PointerTy:
+		return reflect.PtrTo(GetReflectType(t.Elem))
+	case abi.MappingTy:
+		return reflect.MapOf(GetReflectType(t.TupleElems[0]), GetReflectType(t.TupleElems[1]))
+	case abi.DecimalTy:
+		return reflect.TypeOf(common.Dec{})
+	default:
+		panic("Invalid type")
 	}
-	return reflect.Ptr, bigT
+}
+
+func overloadedArgName(rawName string, names map[string]string) (string, error) {
+	fieldName := abi.ToCamelCase(rawName)
+	if fieldName == "" {
+		return "", errors.New("abi: purely anonymous or underscored field is not supported")
+	}
+	// Handle overloaded fieldNames
+	_, ok := names[fieldName]
+	for idx := 0; ok; idx++ {
+		fieldName = fmt.Sprintf("%s%d", abi.ToCamelCase(rawName), idx)
+		_, ok = names[fieldName]
+	}
+	return fieldName, nil
 }
