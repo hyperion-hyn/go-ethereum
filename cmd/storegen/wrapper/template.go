@@ -57,7 +57,6 @@ import (
 	"strings"
 
 	ethereum "github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -70,7 +69,6 @@ var (
 	_ = big.NewInt
 	_ = strings.NewReader
 	_ = ethereum.NotFound
-	_ = abi.U256
 	_ = common.Big1
 	_ = types.BloomLookup
 	_ = event.NewSubscription
@@ -208,7 +206,7 @@ type Storage_{{.Name}} struct {
 }
 
 func (s *Storage_{{.Name}}) Value() {{.Type}} {
-// {{ printf "%#v" . }}
+	// {{ printf "%#v" . }}
 {{- if eq .Name "String"}}
 	rv := GetStateAsBytes(s.db, s.addr, s.slot)
 	*s.obj = {{.Type}}(rv)
@@ -304,7 +302,7 @@ func (s *Storage_{{.Name}}) SetValue(value {{.Type}}) {
 {{range $defines}}
 // {{.Name}} is an auto generated low-level Go binding around an user-defined struct.
 // {{ printf "%#v" . }}
-// {{ printf "%#v" .SolKind.Type.String }}
+// {{ printf "%#v" (GetReflectType .SolKind).String }}
 type {{.Name}} {{.Type}}
 
 type Storage_{{.Name}} struct {
@@ -315,7 +313,7 @@ type Storage_{{.Name}} struct {
 {{- if isarray .}}
 
 {{$elem := index .Fields 0}}
-{{ if isFixedSizeByteArray .SolKind.Type }}
+{{ if isFixedSizeByteArray (GetReflectType .SolKind) }}
 
 func (s* Storage_{{.Name}}) Value() {{.Type}} {
 	// {{ printf "%#v" . }}
@@ -364,6 +362,7 @@ func (s *Storage_{{.Name}}) SetValue(value {{.Type}}) {
 
 {{ else }}
 func (s* Storage_{{.Name}}) Length() (int) {
+	// Value: {{ printf "%#v" . }}
 	return len(s.obj)
 }
 
@@ -379,7 +378,7 @@ func (s* Storage_{{.Name}}) Get(index int) ( *Storage_{{$elem.Type}} ) {
 	actual := big.NewInt(0).Add(base, big.NewInt(0).SetUint64(uint64(index * slotsPerItem)))
 	offset := 0
 {{end}}
-{{- if or (isptr $elem) (isslice $elem) (ismap $elem) }}
+{{- if or (isptr $elem) (isslice $elem) (ismap $elem) (eq $elem.Type "BigInt") }}
 	if s.obj[index] == nil {
 		{{template "new_instance" $elem}}
 		s.obj[index] = instance
@@ -387,7 +386,7 @@ func (s* Storage_{{.Name}}) Get(index int) ( *Storage_{{$elem.Type}} ) {
 {{end}}
 
 	return &Storage_{{ $elem.Type }} {
-{{- if or (isptr $elem) (ismap $elem)}}
+{{- if or (isptr $elem) (ismap $elem) (eq $elem.Type "BigInt") }}
 		obj: s.obj[index],
 {{else}}
 		obj: &s.obj[index],
@@ -442,7 +441,7 @@ func (s* Storage_{{.Name}}) Get(index int) ( *Storage_{{$elem.Type}} ) {
 	offset := 0
 {{end}}
 
-{{- if or (isptr $elem) (isslice $elem) (ismap $elem) }}
+{{- if or (isptr $elem) (isslice $elem) (ismap $elem) (eq $elem.Type "BigInt") }}
 	if (*s.obj)[index] == nil {
 		{{template "new_instance" $elem}}
 		(*s.obj)[index] = instance
@@ -491,7 +490,7 @@ func (s* Storage_{{.Name}}) Get(key {{$elemKey.Type}}) ( *Storage_{{$elemValue.T
 	actual := hash.Big()
 	offset := 0
 
-{{- if or (isptr $elemValue) (isslice $elemValue) (ismap $elemValue) }}
+{{- if or (isptr $elemValue) (isslice $elemValue) (ismap $elemValue) (eq $elemValue.Type "BigInt") }}
 	if s.obj[key] == nil {
 		{{template "new_instance" $elemValue}}
 		s.obj[key] = instance
@@ -499,7 +498,7 @@ func (s* Storage_{{.Name}}) Get(key {{$elemKey.Type}}) ( *Storage_{{$elemValue.T
 {{end}}
 
 	return &Storage_{{ $elemValue.Type }} {
-{{- if or (isptr $elemValue) (ismap $elemValue)}}
+{{- if or (isptr $elemValue) (ismap $elemValue) (eq $elemValue.Type "BigInt") }}
 		obj: s.obj[key],
 {{else}}
 		obj: &s.obj[key],
@@ -557,14 +556,14 @@ func (s *Storage_{{ $typeName }}) {{$field.Name}}() (*Storage_{{$field.Type}}) {
 	offset := {{$field.Offset}}
 	
 	var actual *big.Int = big.NewInt(0).Add(s.slot, slot)
-{{- if or (isptr $field) (isslice $field) (ismap $field) }}
+{{- if or (isptr $field) (isslice $field) (ismap $field) (eq $field.Type "BigInt") }}
 	if s.obj.{{$field.Name}} == nil {
 		{{template "new_instance" $field}}
 		s.obj.{{$field.Name}} = instance
 	}
 {{end}}
 	return &Storage_{{ $field.Type }} {
-{{- if or (isptr $field) (ismap $field)}}
+{{- if or (isptr $field) (ismap $field) (eq $field.Type "BigInt") }}
 		obj: s.obj.{{$field.Name}},
 {{else}}
 		obj: &s.obj.{{$field.Name}},

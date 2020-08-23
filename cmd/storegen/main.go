@@ -31,6 +31,7 @@ import (
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/common/compiler"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/internal/flags"
 	"github.com/ethereum/go-ethereum/log"
 	"gopkg.in/urfave/cli.v1"
 )
@@ -105,7 +106,7 @@ var (
 )
 
 func init() {
-	app = utils.NewApp(gitCommit, gitDate, "ethereum checkpoint helper tool")
+	app = flags.NewApp(gitCommit, gitDate, "ethereum checkpoint helper tool")
 	app.Flags = []cli.Flag{
 		storeFlag,
 		abiFlag,
@@ -123,7 +124,7 @@ func init() {
 		aliasFlag,
 	}
 	app.Action = utils.MigrateFlags(abigen)
-	cli.CommandHelpTemplate = utils.OriginCommandHelpTemplate
+	cli.CommandHelpTemplate = flags.OriginCommandHelpTemplate
 }
 
 func abigen(c *cli.Context) error {

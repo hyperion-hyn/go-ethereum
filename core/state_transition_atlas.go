@@ -34,16 +34,16 @@ func NewStateTransitionWithChainContext(evm *vm.EVM, msg Message, gp *GasPool, b
 }
 
 // ApplyStakingMessage computes the new state for staking message
-func ApplyStakingMessage(evm *vm.EVM, msg Message, gp *GasPool, bc ChainContext) (uint64, error) {
+func ApplyStakingMessage(evm *vm.EVM, msg Message, gp *GasPool, bc ChainContext) (*ExecutionResult, error) {
 	return NewStateTransitionWithChainContext(evm, msg, gp, bc).StakingTransitionDb()
 }
 
 // StakingTransitionDb will transition the state by applying the staking message and
 // returning the result including the used gas. It returns an error if failed.
 // It is used for staking transaction only
-func (st *StateTransition) StakingTransitionDb() (usedGas uint64, err error) {
-	if err = st.preCheck(); err != nil {
-		return 0, err
+func (st *StateTransition) StakingTransitionDb() (*ExecutionResult, error) {
+	if err := st.preCheck(); err != nil {
+		return nil, err
 	}
 	msg := st.msg
 	sender := vm.AccountRef(msg.From())
@@ -51,55 +51,56 @@ func (st *StateTransition) StakingTransitionDb() (usedGas uint64, err error) {
 	// Pay intrinsic gas
 	gas, err := IntrinsicGasForStaking(st.data, msg.Type() == types.StakeCreateVal)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	if err = st.useGas(gas); err != nil {
-		return 0, err
+	if st.gas < gas {
+		return nil, ErrIntrinsicGas
 	}
+	st.gas -= gas
 
 	// Increment the nonce for the next transaction
 	defer st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
-
+	// TODO(ATLAS): handle staking error
 	switch msg.Type() {
 	case types.StakeCreateVal:
 		stkMsg := &restaking.CreateValidator{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
-			return 0, err
+			return nil, err
 		}
 		if err = st.verifyAndApplyCreateValidatorTx(stkMsg, msg.From()); err != nil {
-			return 0, err
+			return nil, err
 		}
 		st.state.IncrementValidatorNonce()
 	case types.StakeEditVal:
 		stkMsg := &restaking.EditValidator{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
-			return 0, err
+			return nil, err
 		}
 		err = st.verifyAndApplyEditValidatorTx(stkMsg, msg.From())
 	case types.Redelegate:
 		stkMsg := &restaking.Redelegate{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
-			return 0, err
+			return nil, err
 		}
 		err = st.verifyAndApplyRedelegateTx(stkMsg, msg.From())
 	case types.Unredelegate:
 		stkMsg := &restaking.Unredelegate{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
-			return 0, err
+			return nil, err
 		}
 		err = st.verifyAndApplyUnredelegateTx(stkMsg, msg.From())
 	case types.CollectRedelRewards:
 		stkMsg := &restaking.CollectReward{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
-			return 0, err
+			return nil, err
 		}
 		_, err := st.verifyAndApplyCollectRedelRewards(stkMsg, msg.From())
 		if err != nil {
-			return 0, err
+			return nil, err
 		}
 		// TODO: Add log for reward ?
 	default:
-		return 0, ErrInvalidStakingKind
+		return nil, ErrInvalidStakingKind
 	}
 	st.refundGas()
 
@@ -107,7 +108,7 @@ func (st *StateTransition) StakingTransitionDb() (usedGas uint64, err error) {
 	txFee := new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)
 	st.state.AddBalance(st.evm.Coinbase, txFee)
 
-	return st.gasUsed(), err
+	return nil, err
 }
 
 func (st *StateTransition) verifyAndApplyCreateValidatorTx(msg *restaking.CreateValidator, signer common.Address) error {

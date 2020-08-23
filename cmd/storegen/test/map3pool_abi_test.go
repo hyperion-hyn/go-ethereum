@@ -20,7 +20,6 @@ var (
 	_ = big.NewInt
 	_ = strings.NewReader
 	_ = ethereum.NotFound
-	_ = abi.U256
 	_ = bind.Bind
 	_ = common.Big1
 	_ = types.BloomLookup
@@ -174,7 +173,7 @@ func (_Map3PoolWrapper *Map3PoolWrapperTransactorRaw) Transact(opts *bind.Transa
 
 // Length is a free data retrieval call binding the contract method 0x82172882.
 //
-// Solidity: function Length() constant returns(uint256)
+// Solidity: function Length() view returns(uint256)
 func (_Map3PoolWrapper *Map3PoolWrapperCaller) Length(opts *bind.CallOpts) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
@@ -186,21 +185,21 @@ func (_Map3PoolWrapper *Map3PoolWrapperCaller) Length(opts *bind.CallOpts) (*big
 
 // Length is a free data retrieval call binding the contract method 0x82172882.
 //
-// Solidity: function Length() constant returns(uint256)
+// Solidity: function Length() view returns(uint256)
 func (_Map3PoolWrapper *Map3PoolWrapperSession) Length() (*big.Int, error) {
 	return _Map3PoolWrapper.Contract.Length(&_Map3PoolWrapper.CallOpts)
 }
 
 // Length is a free data retrieval call binding the contract method 0x82172882.
 //
-// Solidity: function Length() constant returns(uint256)
+// Solidity: function Length() view returns(uint256)
 func (_Map3PoolWrapper *Map3PoolWrapperCallerSession) Length() (*big.Int, error) {
 	return _Map3PoolWrapper.Contract.Length(&_Map3PoolWrapper.CallOpts)
 }
 
 // Version is a free data retrieval call binding the contract method 0xbb62860d.
 //
-// Solidity: function Version() constant returns(int256)
+// Solidity: function Version() view returns(int256)
 func (_Map3PoolWrapper *Map3PoolWrapperCaller) Version(opts *bind.CallOpts) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
@@ -212,14 +211,14 @@ func (_Map3PoolWrapper *Map3PoolWrapperCaller) Version(opts *bind.CallOpts) (*bi
 
 // Version is a free data retrieval call binding the contract method 0xbb62860d.
 //
-// Solidity: function Version() constant returns(int256)
+// Solidity: function Version() view returns(int256)
 func (_Map3PoolWrapper *Map3PoolWrapperSession) Version() (*big.Int, error) {
 	return _Map3PoolWrapper.Contract.Version(&_Map3PoolWrapper.CallOpts)
 }
 
 // Version is a free data retrieval call binding the contract method 0xbb62860d.
 //
-// Solidity: function Version() constant returns(int256)
+// Solidity: function Version() view returns(int256)
 func (_Map3PoolWrapper *Map3PoolWrapperCallerSession) Version() (*big.Int, error) {
 	return _Map3PoolWrapper.Contract.Version(&_Map3PoolWrapper.CallOpts)
 }

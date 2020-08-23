@@ -22,7 +22,9 @@ package les
 import (
 	"context"
 	"crypto/rand"
+	"fmt"
 	"math/big"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -156,11 +158,11 @@ func prepare(n int, backend *backends.SimulatedBackend) {
 }
 
 // testIndexers creates a set of indexers with specified params for testing purpose.
-func testIndexers(db ethdb.Database, odr light.OdrBackend, config *light.IndexerConfig) []*core.ChainIndexer {
+func testIndexers(db ethdb.Database, odr light.OdrBackend, config *light.IndexerConfig, disablePruning bool) []*core.ChainIndexer {
 	var indexers [3]*core.ChainIndexer
-	indexers[0] = light.NewChtIndexer(db, odr, config.ChtSize, config.ChtConfirms)
+	indexers[0] = light.NewChtIndexer(db, odr, config.ChtSize, config.ChtConfirms, disablePruning)
 	indexers[1] = eth.NewBloomIndexer(db, config.BloomSize, config.BloomConfirms)
-	indexers[2] = light.NewBloomTrieIndexer(db, odr, config.BloomSize, config.BloomTrieSize)
+	indexers[2] = light.NewBloomTrieIndexer(db, odr, config.BloomSize, config.BloomTrieSize, disablePruning)
 	// make bloomTrieIndexer as a child indexer of bloom indexer.
 	indexers[1].AddChildIndexer(indexers[2])
 	return indexers[:]
@@ -221,6 +223,7 @@ func newTestClientHandler(backend *backends.SimulatedBackend, odr *LesOdr, index
 	if client.oracle != nil {
 		client.oracle.Start(backend)
 	}
+	client.handler.start()
 	return client.handler
 }
 
@@ -347,7 +350,7 @@ func (p *testPeer) close() {
 	p.app.Close()
 }
 
-func newTestPeerPair(name string, version int, server *serverHandler, client *clientHandler) (*testPeer, <-chan error, *testPeer, <-chan error) {
+func newTestPeerPair(name string, version int, server *serverHandler, client *clientHandler) (*testPeer, *testPeer, error) {
 	// Create a message pipe to communicate through
 	app, net := p2p.MsgPipe()
 
@@ -371,11 +374,25 @@ func newTestPeerPair(name string, version int, server *serverHandler, client *cl
 	go func() {
 		select {
 		case <-client.closeCh:
-			errc1 <- p2p.DiscQuitting
-		case errc1 <- client.handle(peer2):
+			errc2 <- p2p.DiscQuitting
+		case errc2 <- client.handle(peer2):
 		}
 	}()
-	return &testPeer{cpeer: peer1, net: net, app: app}, errc1, &testPeer{speer: peer2, net: app, app: net}, errc2
+	// Ensure the connection is established or exits when any error occurs
+	for {
+		select {
+		case err := <-errc1:
+			return nil, nil, fmt.Errorf("Failed to establish protocol connection %v", err)
+		case err := <-errc2:
+			return nil, nil, fmt.Errorf("Failed to establish protocol connection %v", err)
+		default:
+		}
+		if atomic.LoadUint32(&peer1.serving) == 1 && atomic.LoadUint32(&peer2.serving) == 1 {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	return &testPeer{cpeer: peer1, net: net, app: app}, &testPeer{speer: peer2, net: app, app: net}, nil
 }
 
 // handshake simulates a trivial handshake that expects the same state from the
@@ -440,7 +457,7 @@ type testServer struct {
 
 func newServerEnv(t *testing.T, blocks int, protocol int, callback indexerCallback, simClock bool, newPeer bool, testCost uint64) (*testServer, func()) {
 	db := rawdb.NewMemoryDatabase()
-	indexers := testIndexers(db, nil, light.TestServerIndexerConfig)
+	indexers := testIndexers(db, nil, light.TestServerIndexerConfig, true)
 
 	var clock mclock.Clock = &mclock.System{}
 	if simClock {
@@ -483,7 +500,7 @@ func newServerEnv(t *testing.T, blocks int, protocol int, callback indexerCallba
 	return server, teardown
 }
 
-func newClientServerEnv(t *testing.T, blocks int, protocol int, callback indexerCallback, ulcServers []string, ulcFraction int, simClock bool, connect bool) (*testServer, *testClient, func()) {
+func newClientServerEnv(t *testing.T, blocks int, protocol int, callback indexerCallback, ulcServers []string, ulcFraction int, simClock bool, connect bool, disablePruning bool) (*testServer, *testClient, func()) {
 	sdb, cdb := rawdb.NewMemoryDatabase(), rawdb.NewMemoryDatabase()
 	speers, cpeers := newServerPeerSet(), newClientPeerSet()
 
@@ -492,11 +509,11 @@ func newClientServerEnv(t *testing.T, blocks int, protocol int, callback indexer
 		clock = &mclock.Simulated{}
 	}
 	dist := newRequestDistributor(speers, clock)
-	rm := newRetrieveManager(speers, dist, nil)
+	rm := newRetrieveManager(speers, dist, func() time.Duration { return time.Millisecond * 500 })
 	odr := NewLesOdr(cdb, light.TestClientIndexerConfig, rm)
 
-	sindexers := testIndexers(sdb, nil, light.TestServerIndexerConfig)
-	cIndexers := testIndexers(cdb, odr, light.TestClientIndexerConfig)
+	sindexers := testIndexers(sdb, nil, light.TestServerIndexerConfig, true)
+	cIndexers := testIndexers(cdb, odr, light.TestClientIndexerConfig, disablePruning)
 
 	scIndexer, sbIndexer, sbtIndexer := sindexers[0], sindexers[1], sindexers[2]
 	ccIndexer, cbIndexer, cbtIndexer := cIndexers[0], cIndexers[1], cIndexers[2]
@@ -514,17 +531,20 @@ func newClientServerEnv(t *testing.T, blocks int, protocol int, callback indexer
 		callback(scIndexer, sbIndexer, sbtIndexer)
 	}
 	var (
+		err          error
 		speer, cpeer *testPeer
-		err1, err2   <-chan error
 	)
 	if connect {
-		cpeer, err1, speer, err2 = newTestPeerPair("peer", protocol, server, client)
+		done := make(chan struct{})
+		client.syncDone = func() { close(done) }
+		cpeer, speer, err = newTestPeerPair("peer", protocol, server, client)
+		if err != nil {
+			t.Fatalf("Failed to connect testing peers %v", err)
+		}
 		select {
-		case <-time.After(time.Millisecond * 300):
-		case err := <-err1:
-			t.Fatalf("peer 1 handshake error: %v", err)
-		case err := <-err2:
-			t.Fatalf("peer 2 handshake error: %v", err)
+		case <-done:
+		case <-time.After(10 * time.Second):
+			t.Fatal("test peer did not connect and sync within 3s")
 		}
 	}
 	s := &testServer{

@@ -97,14 +97,11 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 	vmenv := vm.NewEVM(context, statedb, config, cfg)
 
 	// ATLAS: Apply the transaction to the current state (included in the env)
-	var (
-		gas uint64
-		failed bool
-	)
+	var result *ExecutionResult
 	if msg.Type() == types.Normal {
-		_, gas, failed, err = ApplyMessage(vmenv, msg, gp)
+		result, err = ApplyMessage(vmenv, msg, gp)
 	} else {
-		gas, err = ApplyStakingMessage(vmenv, msg, gp, bc)
+		result, err = ApplyStakingMessage(vmenv, msg, gp, bc)
 	}
 	// ATLAS - END
 
@@ -118,13 +115,13 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 	} else {
 		root = statedb.IntermediateRoot(config.IsEIP158(header.Number)).Bytes()
 	}
-	*usedGas += gas
+	*usedGas += result.UsedGas
 
 	// Create a new receipt for the transaction, storing the intermediate root and gas used by the tx
 	// based on the eip phase, we're passing whether the root touch-delete accounts.
-	receipt := types.NewReceipt(root, failed, *usedGas)
+	receipt := types.NewReceipt(root, result.Failed(), *usedGas)
 	receipt.TxHash = tx.Hash()
-	receipt.GasUsed = gas
+	receipt.GasUsed = result.UsedGas
 	// if the transaction created a contract, store the creation address in the receipt.
 	if msg.To() == nil ||
 		msg.Type() == types.StakeCreateVal { // ATLAS

@@ -78,6 +78,7 @@ func Store(types []string, layouts []string, pkg string, lang bind.Lang) (string
 		"ismap":                ismap,
 		"isFixedSizeByteArray": isFixedSizeByteArray,
 		"match":                match,
+		"GetReflectType":       GetReflectType,
 	}
 	tmpl := template.Must(template.New("").Funcs(funcs).Parse(tmplSource[lang]))
 	if err := tmpl.Execute(buffer, data); err != nil {
@@ -123,39 +124,39 @@ func sha1(input string) string {
 	return hexutil.Encode(d)
 }
 
-func isKind(val interface{}, kind reflect.Kind) bool {
+func isT(val interface{}, T byte) bool {
 	switch v := val.(type) {
-	case reflect.Type:
-		return v.Kind() == kind
 	case abi.Type:
-		return v.Kind == kind && v.Type.Kind() == v.Kind
+		return v.T == T
+	case *abi.Type:
+		return v.T == T
 	case tmplField:
-		return v.SolKind.Kind == kind && v.SolKind.Type.Kind() == v.SolKind.Kind
+		return v.SolKind.T == T
 	case *tmplField:
-		return v.SolKind.Kind == kind && v.SolKind.Type.Kind() == v.SolKind.Kind
+		return v.SolKind.T == T
 	case tmplStruct:
-		return v.SolKind.Kind == kind && v.SolKind.Type.Kind() == v.SolKind.Kind
+		return v.SolKind.T == T
 	case *tmplStruct:
-		return v.SolKind.Kind == kind && v.SolKind.Type.Kind() == v.SolKind.Kind
+		return v.SolKind.T == T
 	default:
 		return false
 	}
 }
 
 func isptr(val interface{}) bool {
-	return isKind(val, reflect.Ptr)
+	return isT(val, abi.PointerTy)
 }
 
 func isarray(val interface{}) bool {
-	return isKind(val, reflect.Array)
+	return isT(val, abi.ArrayTy)
 }
 
 func isslice(val interface{}) bool {
-	return isKind(val, reflect.Slice)
+	return isT(val, abi.SliceTy)
 }
 
 func ismap(val interface{}) bool {
-	return isKind(val, reflect.Map)
+	return isT(val, abi.MappingTy)
 }
 
 func isFixedSizeByteArray(val interface{}) bool {
