@@ -37,7 +37,7 @@ import (
 func TestSign(t *testing.T) {
 	b := newBackend()
 	data := []byte("Here is a string....")
-	sig, key, err := b.Sign(data)
+	sig, key, _, err := b.Sign(data)
 	if err != nil {
 		t.Errorf("error mismatch: have %v, want nil", err)
 	}

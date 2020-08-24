@@ -57,9 +57,9 @@ type roundState struct {
 	sequence       *big.Int
 	Preprepare     *atlas.Preprepare
 	Prepares       *messageSet
-	Expect         *atlas.Expect
+	Expect         *atlas.SignedSubject
 	Commits        *messageSet
-	Confirm        *atlas.Confirm
+	Confirm        *atlas.SignedSubject
 	lockedHash     common.Hash
 	pendingRequest *atlas.Request
 
@@ -110,14 +110,14 @@ func (s *roundState) SetPreprepare(preprepare *atlas.Preprepare) {
 	s.Preprepare = preprepare
 }
 
-func (s *roundState) SetExpect(expect *atlas.Expect) {
+func (s *roundState) SetExpect(expect *atlas.SignedSubject) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	s.Expect = expect
 }
 
-func (s *roundState) SetCommitted(committed *atlas.Confirm) {
+func (s *roundState) SetCommitted(committed *atlas.SignedSubject) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

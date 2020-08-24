@@ -26,7 +26,8 @@ import (
 )
 
 func TestRoundChangeSet(t *testing.T) {
-	vset := validator.NewSet(generateValidators(4), atlas.RoundRobin)
+	vals, _ := generateValidators(4)
+	vset := validator.NewSet(vals, atlas.RoundRobin)
 	rc := newRoundChangeSet(vset)
 
 	view := &atlas.View{

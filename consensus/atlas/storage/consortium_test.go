@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/ecdsa"
-	"encoding/hex"
 	"encoding/json"
 	"io/ioutil"
 	"math/big"
@@ -145,15 +144,15 @@ func testReadViaStorageAndWriteFromContract(t *testing.T, sim *backends.Simulate
 		for i := 0; i < numberOfCandidates; i++ {
 			currentCandidate := candidates[i]
 
-			acctPrivKeyHex := hex.EncodeToString(crypto.FromECDSA(currentCandidate.acctPrivKey))
-			acctPubKeyHex := crypto.PubkeyToAddress(currentCandidate.acctPubKey).String()
-			signerPrivKeyHex := hex.EncodeToString(currentCandidate.signerPrivKey.Serialize())
-			signerPubKeyHex := hex.EncodeToString(currentCandidate.signerPubKey.Serialize())
-
-			t.Logf("%d: acct   (priv): %s", i, acctPrivKeyHex)
-			t.Logf("%d: acct   (addr): %s", i, acctPubKeyHex)
-			t.Logf("%d: signer (priv): %s", i, signerPrivKeyHex)
-			t.Logf("%d: signer (pub) : %s", i, signerPubKeyHex)
+			// acctPrivKeyHex := hex.EncodeToString(crypto.FromECDSA(currentCandidate.acctPrivKey))
+			// acctPubKeyHex := crypto.PubkeyToAddress(currentCandidate.acctPubKey).String()
+			// signerPrivKeyHex := hex.EncodeToString(currentCandidate.signerPrivKey.Serialize())
+			// signerPubKeyHex := hex.EncodeToString(currentCandidate.signerPubKey.Serialize())
+			//
+			// t.Logf("%d: acct   (priv): %s", i, acctPrivKeyHex)
+			// t.Logf("%d: acct   (addr): %s", i, acctPubKeyHex)
+			// t.Logf("%d: signer (priv): %s", i, signerPrivKeyHex)
+			// t.Logf("%d: signer (pub) : %s", i, signerPubKeyHex)
 
 			currentStorage := membersStorage.Get(i)
 			currentStorage.Coinbase().SetValue(crypto.PubkeyToAddress(currentCandidate.acctPubKey))

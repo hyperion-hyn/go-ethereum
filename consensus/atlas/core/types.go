@@ -128,7 +128,7 @@ func (m *message) DecodeRLP(s *rlp.Stream) error {
 //
 // define the functions that needs to be provided for core.
 
-func (m *message) FromPayload(b []byte, validateFn func([]byte, []byte, []byte) (common.Address, error)) error {
+func (m *message) FromPayload(b []byte, validateFn func(payload []byte, signature []byte, publicKey []byte) (common.Address, error)) error {
 	// Decode message
 	err := rlp.DecodeBytes(b, &m)
 	if err != nil {

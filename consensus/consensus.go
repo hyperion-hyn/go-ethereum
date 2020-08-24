@@ -152,9 +152,9 @@ type Istanbul interface {
 	Stop() error
 }
 
-// SignerFn is a signer callback function to request a header to be signed by a
+// SignHashFn is a signer callback function to request a header to be signed by a
 // backing account.
-type SignerFn func(accounts.Account, string, []byte) ([]byte, []byte, error)
+type SignHashFn func(accounts.Account, common.Hash) (signature []byte, publicKey []byte, mask []byte, err error)
 
 type EngineEx interface {
 	Engine
@@ -165,7 +165,7 @@ type EngineEx interface {
 	// Stop stops the engine
 	Stop() error
 
-	Authorize(signer common.Address, signFn SignerFn)
+	Authorize(signer common.Address, signFn SignHashFn)
 }
 
 // Atlas is a consensus engine

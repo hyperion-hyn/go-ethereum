@@ -56,7 +56,8 @@ type Backend interface {
 	Verify(Proposal) (time.Duration, error)
 
 	// Sign signs input data with the backend's private key
-	Sign([]byte) ([]byte, []byte, error)
+	// NOTE: input data SHOULD be hash data.
+	Sign([]byte) (signature []byte, publicKey []byte, mask []byte, err error)
 
 	// CheckSignature verifies the signature by checking if it's signed by
 	// the given validator

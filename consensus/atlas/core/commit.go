@@ -18,56 +18,31 @@ package core
 
 import (
 	"github.com/hyperion-hyn/bls/ffi/go/bls"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
 	bls_cosi "github.com/ethereum/go-ethereum/crypto/bls"
-	"github.com/ethereum/go-ethereum/rlp"
 )
-
-type CommitPayload struct {
-	Digest    common.Hash
-	Signature []byte
-	PubKey    []byte
-	Bitmap    []byte
-}
 
 func (c *core) sendCommit() {
 	logger := c.logger.New("state", c.state)
 
 	// If I'm the proposer and I have the same sequence with the proposal
 	if c.IsProposer() {
-		curView := c.currentView()
-
-		hash := c.current.Preprepare.Proposal.Hash()
-		sign := c.current.aggregatedConfirmSig.Serialize()
-		pubKey := c.current.confirmBitmap.AggregatePublic.Serialize()
-		bitmap := c.current.confirmBitmap.Bitmap
-
-		payload := ExpectPayload{
-			Digest:    hash,
-			Signature: sign,
-			PubKey:    pubKey,
-			Bitmap:    bitmap,
+		sub, err := c.AssembleSignedSubject()
+		if err != nil {
+			logger.Error("Failed to sign", "view", c.currentView(), "err", err)
 		}
 
-		proposal, err := rlp.EncodeToBytes(payload);
+		encodedSubject, err := Encode(sub)
 		if err != nil {
-			logger.Error("failed to encode payload", "view", curView)
-			return
-		}
-
-		confirmed, err := Encode(&atlas.Confirm{
-			View:     curView,
-			Proposal: proposal,
-		})
-		if err != nil {
-			logger.Error("Failed to encode", "view", curView)
+			logger.Error("Failed to encode", "subject", sub, "err", err)
 			return
 		}
 
 		c.broadcast(&message{
 			Code: msgConfirm,
-			Msg:  confirmed,
+			Msg:  encodedSubject,
 		})
 	}
 }
@@ -96,7 +71,7 @@ func (c *core) broadcastCommit(sub *atlas.Subject) {
 
 func (c *core) handleCommit(msg *message, src atlas.Validator) error {
 	// Decode COMMIT message
-	var commit *atlas.Commit
+	var commit *atlas.SignedSubject
 	err := msg.Decode(&commit)
 	if err != nil {
 		return errFailedDecodeCommit
@@ -127,7 +102,7 @@ func (c *core) handleCommit(msg *message, src atlas.Validator) error {
 }
 
 // verifyCommit verifies if the received COMMIT message is equivalent to our subject
-func (c *core) verifyCommit(commit *atlas.Commit, src atlas.Validator) error {
+func (c *core) verifyCommit(commit *atlas.SignedSubject, src atlas.Validator) error {
 	return nil
 }
 
@@ -140,46 +115,40 @@ func (c *core) acceptCommit(msg *message, src atlas.Validator, validatorSet atla
 		return err
 	}
 
-	var commit *atlas.Commit
+	var commit *atlas.SignedSubject
 	if err := msg.Decode(&commit); err != nil {
 		return errFailedDecodePrepare
 	}
 
-	var proposal CommitPayload
-	if err := rlp.DecodeBytes(commit.Proposal, proposal); err != nil {
-		logger.Error("Failed to decode payload", "view", c.currentView(), "err", err)
-		return err
-	}
-
-	if proposal.Digest != c.current.Preprepare.Proposal.Hash() {
-		logger.Warn("Inconsistent subjects between EXPECT and proposal", "expected", c.current.Preprepare.Proposal.Hash(), "got", proposal.Digest)
+	if commit.Digest != c.current.Preprepare.Proposal.Hash() {
+		logger.Warn("Inconsistent subjects between EXPECT and proposal", "expected", c.current.Preprepare.Proposal.Hash(), "got", commit.Digest)
 		return errInconsistentSubject
 	}
 
 	var sign bls.Sign
-	if err := sign.Deserialize(proposal.Signature); err != nil {
+	if err := sign.Deserialize(commit.Signature); err != nil {
 		logger.Error("Failed to deserialize signature", "msg", msg, "err", err)
 		return err
 	}
 
 	var pubKey bls.PublicKey
-	if err := pubKey.Deserialize(proposal.PubKey); err != nil {
+	if err := pubKey.Deserialize(commit.PublicKey); err != nil {
 		logger.Error("Failed to deserialize signer's public key", "msg", msg, "err", err)
 		return err
 	}
 
-	if sign.Verify(&pubKey, proposal.Digest.String()) == false {
+	if sign.Verify(&pubKey, commit.Digest.String()) == false {
 		logger.Error("Failed to verify signature with signer's public key", "msg", msg)
 		return errInvalidSignature
 	}
 
 	bitmap, _ := bls_cosi.NewMask(validatorSet.GetPublicKeys(), nil)
-	if err := bitmap.SetMask(proposal.Bitmap); err != nil {
+	if err := bitmap.SetMask(commit.Mask); err != nil {
 		logger.Error("Failed to SetMask", "view", c.currentView(), "err", err)
 		return err
 	}
 
-	if bitmap.CountEnabled()  < c.QuorumSize() {
+	if bitmap.CountEnabled() < c.QuorumSize() {
 		return errNotSatisfyQuorum
 	}
 

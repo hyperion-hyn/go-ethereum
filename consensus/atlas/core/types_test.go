@@ -141,7 +141,7 @@ func testSubjectWithSignature(t *testing.T) {
 	// 2. Decode test
 	// 2.1 Test normal validate func
 	decodedMsg := new(message)
-	err = decodedMsg.FromPayload(msgPayload, func(data []byte, sig []byte) (common.Address, error) {
+	err = decodedMsg.FromPayload(msgPayload, func(data []byte, sig []byte, publicKey []byte) (common.Address, error) {
 		return address, nil
 	})
 	if err != nil {
@@ -165,7 +165,7 @@ func testSubjectWithSignature(t *testing.T) {
 
 	// 2.3 Test failed validate func
 	decodedMsg = new(message)
-	err = decodedMsg.FromPayload(msgPayload, func(data []byte, sig []byte) (common.Address, error) {
+	err = decodedMsg.FromPayload(msgPayload, func(data []byte, sig []byte, publicKey []byte) (common.Address, error) {
 		return common.Address{}, atlas.ErrUnauthorizedAddress
 	})
 	if err != atlas.ErrUnauthorizedAddress {

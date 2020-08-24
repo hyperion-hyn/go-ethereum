@@ -17,9 +17,12 @@
 package atlas
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"math/big"
+
+	"golang.org/x/crypto/sha3"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -96,27 +99,6 @@ type Preprepare struct {
 	Proposal Proposal
 }
 
-type Prepare struct {
-	View     *View
-	Proposal []byte
-}
-
-type Expect struct {
-	View     *View
-	Proposal []byte
-}
-
-type Confirm struct {
-	View     *View
-	Proposal []byte
-}
-
-type Commit struct {
-	View     *View
-	Proposal []byte
-}
-
-
 // EncodeRLP serializes b into the Ethereum RLP format.
 func (b *Preprepare) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{b.View, b.Proposal})
@@ -140,7 +122,6 @@ func (b *Preprepare) DecodeRLP(s *rlp.Stream) error {
 type Subject struct {
 	View   *View
 	Digest common.Hash
-	Signature []byte
 }
 
 // EncodeRLP serializes b into the Ethereum RLP format.
@@ -166,4 +147,102 @@ func (b *Subject) String() string {
 	return fmt.Sprintf("{View: %v, Digest: %v}", b.View, b.Digest.String())
 }
 
-// ATLAS(zgx): different Prepare/Expect/Confirm/Commit messages
+type SignedSubject struct {
+	Subject
+	Signature []byte
+	PublicKey []byte
+	Mask      []byte
+}
+
+// EncodeRLP serializes b into the Ethereum RLP format.
+func (b *SignedSubject) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{b.Subject, b.Signature, b.PublicKey, b.Mask})
+}
+
+// DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
+func (b *SignedSubject) DecodeRLP(s *rlp.Stream) error {
+	var obj SignedSubject
+
+	if err := s.Decode(&obj); err != nil {
+		return err
+	}
+	b.Subject, b.Signature, b.PublicKey, b.Mask = obj.Subject, obj.Signature, obj.PublicKey, obj.Mask
+	return nil
+}
+
+func (b *SignedSubject) String() string {
+	return fmt.Sprintf("{View: %v, Digest: %v}", b.View, b.Digest.String())
+}
+
+// SealHash returns the hash of a block prior to it being sealed.
+func SealHash(header *types.Header) (hash common.Hash) {
+	hasher := sha3.NewLegacyKeccak256()
+	encodeSigHeader(hasher, header)
+	hasher.Sum(hash[:0])
+	return hash
+}
+
+// AtlasRLP returns the rlp bytes which needs to be signed for
+// sealing. The RLP to sign consists of the entire header apart from the signature
+// contained at the end of the extra data.
+//
+// Note, the method requires the extra data to be at least 65 bytes, otherwise it
+// panics. This is done to avoid accidentally using both forms (signature present
+// or not), which could be abused to produce different hashes for the same header.
+func AtlasRLP(header *types.Header) []byte {
+	b := new(bytes.Buffer)
+	encodeSigHeader(b, header)
+	return b.Bytes()
+}
+
+func encodeSigHeader(w io.Writer, header *types.Header) {
+	extra := make([]byte, len(header.Extra))
+	copy(extra[:types.AtlasExtraVanity], header.Extra[:types.AtlasExtraVanity])
+	err := rlp.Encode(w, []interface{}{
+		header.ParentHash,
+		header.UncleHash,
+		header.Coinbase,
+		header.Root,
+		header.TxHash,
+		header.ReceiptHash,
+		header.Bloom,
+		header.Difficulty,
+		header.Number,
+		header.GasLimit,
+		header.GasUsed,
+		header.Time,
+		extra,
+		header.MixDigest,
+		header.Nonce,
+	})
+	if err != nil {
+		panic("can't encode: " + err.Error())
+	}
+}
+
+type SignHashFn func(hash common.Hash) (signature []byte, publicKey []byte, mask []byte, err error)
+
+func SignSubject(subject *Subject, signFn SignHashFn) (*SignedSubject, error) {
+	hw := sha3.NewLegacyKeccak256()
+
+	// WARNING: should only include Digest here, signature will be aggregated in some situation
+	rlp.Encode(hw, []interface{}{
+		subject.Digest,
+	})
+
+	var hash common.Hash
+	hw.Sum(hash[:0])
+	signature, publicKey, mask, err := signFn(hash)
+	if err != nil {
+		return nil, err
+	}
+
+	retval := SignedSubject{
+		Subject: *subject,
+	}
+	retval.Signature = signature
+	retval.PublicKey = publicKey
+	retval.Mask = mask
+
+	return &retval, nil
+}

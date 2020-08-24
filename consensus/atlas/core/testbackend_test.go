@@ -28,7 +28,9 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/atlas"
 	"github.com/ethereum/go-ethereum/consensus/atlas/validator"
 	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	bls2 "github.com/ethereum/go-ethereum/crypto/bls"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	elog "github.com/ethereum/go-ethereum/log"
@@ -124,12 +126,15 @@ func (self *testSystemBackend) Verify(proposal atlas.Proposal) (time.Duration, e
 	return 0, nil
 }
 
-func (self *testSystemBackend) Sign(data []byte) ([]byte, []byte, error) {
+func (self *testSystemBackend) Sign(data []byte) ([]byte, []byte, []byte, error) {
 	testLogger.Info("returning current backend address so that CheckValidatorSignature returns the same value")
 	sighash := self.signerKey.SignHash(data).Serialize()
 	pubkey := self.signerKey.GetPublicKey().Serialize()
-
-	return sighash, pubkey, nil
+	mask, err := bls2.NewMask(make([]*bls.PublicKey, types.AtlasMaxValidator), nil)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return sighash, pubkey, mask.Mask(), nil
 }
 
 func (self *testSystemBackend) CheckSignature([]byte, common.Address, []byte) error {

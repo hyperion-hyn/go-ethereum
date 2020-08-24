@@ -18,6 +18,8 @@ package core
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"math"
 	"math/big"
 	"sync"
@@ -120,7 +122,7 @@ func (c *core) finalizeMessage(msg *message) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	msg.Signature, _, err = c.backend.Sign(data)
+	msg.Signature, _, _, err = c.backend.Sign(data)
 	if err != nil {
 		return nil, err
 	}
@@ -351,4 +353,38 @@ func PrepareCommittedSeal(hash common.Hash) []byte {
 	buf.Write(hash.Bytes())
 	buf.Write([]byte{byte(msgCommit)})
 	return buf.Bytes()
+}
+
+func (c *core) SignSubject(subject *atlas.Subject) (*atlas.SignedSubject, error) {
+	signedSubject, err := atlas.SignSubject(c.current.Subject(), func(hash common.Hash) (signature []byte, publicKey []byte, mask []byte, err error) {
+		signature, publicKey, mask, err = c.backend.Sign(hash.Bytes())
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		return signature, publicKey, mask, nil
+	})
+	return signedSubject, err
+}
+
+func (c *core) AssembleSignedSubject() (*atlas.SignedSubject, error) {
+	switch c.state {
+	case StatePrepared:
+		signedSubject := atlas.SignedSubject{
+			Subject:   *c.current.Subject(),
+			Signature: c.current.aggregatedPrepareSig.Serialize(),
+			PublicKey: c.current.aggregatedPreparePublicKey.Serialize(),
+			Mask:      c.current.prepareBitmap.Mask(),
+		}
+		return &signedSubject, nil
+	case StateConfirmed:
+		signedSubject := atlas.SignedSubject{
+			Subject:   *c.current.Subject(),
+			Signature: c.current.aggregatedConfirmSig.Serialize(),
+			PublicKey: c.current.aggregatedConfirmPublicKey.Serialize(),
+			Mask:      c.current.confirmBitmap.Mask(),
+		}
+		return &signedSubject, nil
+	default:
+		return nil, errors.New(fmt.Sprintf("invalid state: %v", c.current))
+	}
 }

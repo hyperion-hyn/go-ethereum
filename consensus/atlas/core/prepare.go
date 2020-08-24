@@ -21,47 +21,25 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
-	"github.com/ethereum/go-ethereum/rlp"
 )
-
-type PreparePayload struct {
-	Digest    common.Hash
-	Signature []byte
-	Signer    []byte
-}
 
 func (c *core) sendPrepare() {
 	logger := c.logger.New("state", c.state)
 
-	hash := c.current.Preprepare.Proposal.Hash()
-	sign, _, err := c.backend.Sign(hash.Bytes())
-	signer := c.backend.Signer().Bytes()
+	sub, err := c.SignSubject(c.current.Subject())
 	if err != nil {
-		logger.Error("Failed to sign", "view", c.currentView())
-		return
+		logger.Error("Failed to sign", "view", c.currentView(), "err", err)
 	}
 
-	proposal, err := rlp.EncodeToBytes(&PreparePayload{
-		Digest:    hash ,
-		Signature: sign,
-		Signer:    signer,
-	})
+	encodedSubject, err := Encode(sub)
 	if err != nil {
-		logger.Error("Failed to encode proposal", "view", c.currentView())
-	}
-
-	encoded, err := Encode(&atlas.Prepare{
-		View:     c.currentView(),
-		Proposal: proposal,
-	})
-	if err != nil {
-		logger.Error("Failed to encode payload", "view", c.currentView())
+		logger.Error("Failed to encode", "subject", sub, "err", err)
 		return
 	}
 
 	c.broadcast(&message{
 		Code: msgPrepare,
-		Msg:  encoded,
+		Msg:  encodedSubject,
 	})
 }
 
@@ -69,7 +47,7 @@ func (c *core) handlePrepare(msg *message, src atlas.Validator) error {
 	logger := c.logger.New("from", src, "state", c.state)
 
 	// Decode PREPARE message
-	var prepare *atlas.Prepare
+	var prepare *atlas.SignedSubject
 	err := msg.Decode(&prepare)
 	if err != nil {
 		return errFailedDecodePrepare
@@ -93,18 +71,13 @@ func (c *core) handlePrepare(msg *message, src atlas.Validator) error {
 	c.acceptPrepare(msg, src)
 
 	if !c.IsProposer() {
+		logger.Error("message come from no-proposer", "msg", msg)
 		return nil
-	}
-
-	var proposal PreparePayload
-	if err := rlp.DecodeBytes(prepare.Proposal, proposal); err != nil {
-		logger.Error("Failed to decode payload", "view", c.currentView(), "err", err)
-		return err
 	}
 
 	// Change to Expect state if we've received enough PREPARE messages or it is locked
 	// and we are in earlier state before Expect state.
-	if ((c.current.IsHashLocked() && proposal.Digest == c.current.GetLockedHash()) || c.current.GetPrepareSize() >= c.QuorumSize()) &&
+	if ((c.current.IsHashLocked() && prepare.Digest == c.current.GetLockedHash()) || c.current.GetPrepareSize() >= c.QuorumSize()) &&
 		c.state.Cmp(StatePrepared) < 0 {
 		c.current.LockHash()
 		c.setState(StatePrepared)
@@ -115,7 +88,7 @@ func (c *core) handlePrepare(msg *message, src atlas.Validator) error {
 }
 
 // verifyPrepare verifies if the received PREPARE message is equivalent to our subject
-func (c *core) verifyPrepare(prepare *atlas.Prepare, src atlas.Validator) error {
+func (c *core) verifyPrepare(prepare *atlas.SignedSubject, src atlas.Validator) error {
 	return nil
 }
 
@@ -128,30 +101,24 @@ func (c *core) acceptPrepare(msg *message, src atlas.Validator) error {
 		return err
 	}
 
-	var prepare *atlas.Prepare
+	var prepare *atlas.SignedSubject
 	if err := msg.Decode(&prepare); err != nil {
 		return errFailedDecodePrepare
 	}
 
-	var proposal PreparePayload
-	if err := rlp.DecodeBytes(prepare.Proposal, proposal); err != nil {
-		logger.Error("Failed to decode payload", "view", c.currentView(), "err", err)
-		return err
-	}
-
-	if proposal.Digest != c.current.Preprepare.Proposal.Hash() {
-		logger.Warn("Inconsistent subjects between PREPARE and proposal", "expected", c.current.Preprepare.Proposal.Hash(), "got", proposal.Digest)
+	if prepare.Digest != c.current.Preprepare.Proposal.Hash() {
+		logger.Warn("Inconsistent subjects between PREPARE and proposal", "expected", c.current.Preprepare.Proposal.Hash(), "got", prepare.Digest)
 		return errInconsistentSubject
 	}
 
 	var sign bls.Sign
-	if err := sign.Deserialize(proposal.Signature); err != nil {
+	if err := sign.Deserialize(prepare.Signature); err != nil {
 		logger.Error("Failed to deserialize signature", "msg", msg, "err", err)
 		return err
 	}
 
 	var signer common.Address
-	signer.SetBytes(proposal.Signer)
+	signer = src.Address()
 
 	_, validator := c.valSet.GetByAddress(signer)
 	if validator == nil {
@@ -163,7 +130,7 @@ func (c *core) acceptPrepare(msg *message, src atlas.Validator) error {
 		return errInvalidSigner
 	}
 
-	if sign.Verify(pubKey, proposal.Digest.String()) == false {
+	if sign.Verify(pubKey, prepare.Digest.String()) == false {
 		logger.Error("Failed to verify signature with signer's public key", "msg", msg)
 		return errInvalidSignature
 	}

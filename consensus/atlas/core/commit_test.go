@@ -17,14 +17,12 @@
 package core
 
 import (
-	"bytes"
 	"math/big"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
 	"github.com/ethereum/go-ethereum/consensus/atlas/validator"
-	"github.com/ethereum/go-ethereum/crypto"
 )
 
 func TestHandleCommit(t *testing.T) {
@@ -206,16 +204,7 @@ OUTER:
 		}
 
 		// check signatures large than F
-		signedCount := 0
-		committedSeals := v0.committedMsgs[0].committedSeals
-		for _, validator := range r0.valSet.List() {
-			for _, seal := range committedSeals {
-				if bytes.Compare(validator.Address().Bytes(), seal[:common.AddressLength]) == 0 {
-					signedCount++
-					break
-				}
-			}
-		}
+		signedCount := r0.current.confirmBitmap.CountEnabled()
 		if signedCount <= r0.valSet.F() {
 			t.Errorf("the expected signed count should be larger than %v, but got %v", r0.valSet.F(), signedCount)
 		}
@@ -228,9 +217,11 @@ OUTER:
 // round is not checked for now
 func TestVerifyCommit(t *testing.T) {
 	// for log purpose
-	privateKey, _ := crypto.GenerateKey()
-	peer := validator.New(getPublicKeyAddress(privateKey))
-	valSet := validator.NewSet([]common.Address{peer.Address()}, atlas.RoundRobin)
+	peer, _, _, err := newValidator()
+	if err != nil {
+		t.Errorf("failed to new a validator: %v", err)
+	}
+	valSet := validator.NewSet([]atlas.Validator{peer}, atlas.RoundRobin)
 
 	sys := NewTestSystemWithBackend(uint64(1), uint64(0))
 
@@ -316,7 +307,12 @@ func TestVerifyCommit(t *testing.T) {
 		c := sys.backends[0].engine.(*core)
 		c.current = test.roundState
 
-		if err := c.verifyCommit(test.commit, peer); err != nil {
+		signedSubject, err := c.SignSubject(test.commit)
+		if err != nil {
+			t.Errorf("failed to sign subject: %v", err)
+		}
+
+		if err := c.verifyCommit(signedSubject, peer); err != nil {
 			if err != test.expected {
 				t.Errorf("result %d: error mismatch: have %v, want %v", i, err, test.expected)
 			}

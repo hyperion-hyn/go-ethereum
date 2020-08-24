@@ -30,12 +30,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus"
+	"github.com/ethereum/go-ethereum/consensus/atlas"
+	atlasBackend "github.com/ethereum/go-ethereum/consensus/atlas/backend"
 	"github.com/ethereum/go-ethereum/consensus/clique"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
 	"github.com/ethereum/go-ethereum/consensus/istanbul"
-	"github.com/ethereum/go-ethereum/consensus/atlas"
 	istanbulBackend "github.com/ethereum/go-ethereum/consensus/istanbul/backend"
-	atlasBackend "github.com/ethereum/go-ethereum/consensus/atlas/backend"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/bloombits"
 	"github.com/ethereum/go-ethereum/core/rawdb"
@@ -69,8 +69,8 @@ type LesServer interface {
 
 // Ethereum implements the Ethereum full node service.
 type Ethereum struct {
-	ctx *node.ServiceContext
-	config *Config
+	ctx         *node.ServiceContext
+	config      *Config
 	chainConfig *params.ChainConfig
 
 	// Channel for shutting down the service
@@ -286,7 +286,6 @@ func CreateConsensusEngine(ctx *node.ServiceContext, chainConfig *params.ChainCo
 
 		return atlasBackend.New(&config.Atlas, ctx.NodeKey(), db, ctx.SignerKey())
 	}
-
 
 	// Otherwise assume proof-of-work
 	switch config.Ethash.PowMode {
@@ -514,12 +513,12 @@ func (s *Ethereum) StartMining(threads int) error {
 		if atlas, ok := s.engine.(consensus.EngineEx); ok {
 			// ATLAS(zgx): should put signer key into eth.Config instead of p2p.Config, because signer key can be indepent to p2p
 			signer := crypto.PubkeyToSigner(s.ctx.SignerKey().GetPublicKey())
-			signFn := func(account accounts.Account, mimeType string, data []byte) ([]byte, []byte, error) {
+			signFn := func(account accounts.Account, hash common.Hash) ([]byte, []byte, []byte, error) {
 				secrectKey := s.ctx.SignerKey()
-				hashData := crypto.Keccak256([]byte(data))
-				sign := secrectKey.Sign(string(hashData))
+				sign := secrectKey.SignHash(hash.Bytes())
 
-				return sign.Serialize(), secrectKey.GetPublicKey().Serialize(), nil
+				// ATLAS(zgx): only one signer, so set mask to byte 1 here.
+				return sign.Serialize(), secrectKey.GetPublicKey().Serialize(), []byte{1}, nil
 			}
 
 			atlas.Authorize(signer, signFn)

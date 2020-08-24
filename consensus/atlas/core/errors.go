@@ -56,4 +56,6 @@ var (
 	errInvalidSigner = errors.New("message not signed by the sender")
 	// errNotSatisfyQuorum is returned when the message is signed without enough validators
 	errNotSatisfyQuorum = errors.New("message not signed by enough validators")
+	// errInvalidState is returned when state is invalid
+	errInvalidState = errors.New("invalid state")
 )

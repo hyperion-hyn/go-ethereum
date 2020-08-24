@@ -21,56 +21,29 @@ import (
 
 	"github.com/hyperion-hyn/bls/ffi/go/bls"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
 	bls_cosi "github.com/ethereum/go-ethereum/crypto/bls"
-	"github.com/ethereum/go-ethereum/rlp"
 )
-
-type ExpectPayload struct {
-	Digest    common.Hash
-	Signature []byte
-	PubKey    []byte
-	Bitmap    []byte
-}
 
 func (c *core) sendExpect() {
 	logger := c.logger.New("state", c.state)
 
 	// If I'm the proposer and I have the same sequence with the proposal
 	if c.IsProposer() {
-		curView := c.currentView()
-
-		hash := c.current.Preprepare.Proposal.Hash()
-		sign := c.current.aggregatedPrepareSig.Serialize()
-		pubKey := c.current.prepareBitmap.AggregatePublic.Serialize()
-		bitmap := c.current.prepareBitmap.Bitmap
-
-		payload := ExpectPayload{
-			Digest: hash,
-			Signature: sign,
-			PubKey: pubKey,
-			Bitmap: bitmap,
+		sub, err := c.AssembleSignedSubject()
+		if err != nil {
+			logger.Error("Failed to sign", "view", c.currentView(), "err", err)
 		}
 
-		proposal, err := rlp.EncodeToBytes(payload);
+		encodedSubject, err := Encode(sub)
 		if err != nil {
-			logger.Error("failed to encode payload", "view", curView)
-			return
-		}
-
-		prepared, err := Encode(&atlas.Expect{
-			View:     curView,
-			Proposal: proposal,
-		})
-		if err != nil {
-			logger.Error("Failed to encode", "view", curView)
+			logger.Error("Failed to encode", "subject", sub, "err", err)
 			return
 		}
 
 		c.broadcast(&message{
 			Code: msgExpect,
-			Msg:  prepared,
+			Msg:  encodedSubject,
 		})
 	}
 }
@@ -79,7 +52,7 @@ func (c *core) handleExpect(msg *message, src atlas.Validator) error {
 	logger := c.logger.New("from", src, "state", c.state)
 
 	// Decode EXPECT
-	var expect *atlas.Expect
+	var expect *atlas.SignedSubject
 	err := msg.Decode(&expect)
 	if err != nil {
 		return errFailedDecodePrepared
@@ -124,19 +97,13 @@ func (c *core) handleExpect(msg *message, src atlas.Validator) error {
 			return err
 		}
 
-		var proposal ExpectPayload
-		if err := rlp.DecodeBytes(expect.Proposal, proposal); err != nil {
-			logger.Error("Failed to decode payload", "view", c.currentView(), "err", err)
-			return err
-		}
-
-		if proposal.Digest != c.current.Preprepare.Proposal.Hash() {
+		if expect.Digest != c.current.Preprepare.Proposal.Hash() {
 			return errInconsistentSubject
 		}
 
 		// Send ROUND CHANGE if the locked proposal and the received proposal are different
 		if c.IsProposer() && c.current.IsHashLocked() {
-			if proposal.Digest == c.current.GetLockedHash() {
+			if expect.Digest == c.current.GetLockedHash() {
 				// Broadcast COMMIT and enters Expect state directly
 				c.acceptExpect(expect)
 				// ATLAS(zgx): LockHash in handlePrepare, so set state to StatePrepared directly
@@ -159,8 +126,7 @@ func (c *core) handleExpect(msg *message, src atlas.Validator) error {
 	return nil
 }
 
-
-func (c *core) acceptExpect(prepare *atlas.Expect) {
+func (c *core) acceptExpect(prepare *atlas.SignedSubject) {
 	c.consensusTimestamp = time.Now()
 	c.current.SetExpect(prepare)
 }
@@ -168,46 +134,40 @@ func (c *core) acceptExpect(prepare *atlas.Expect) {
 func (c *core) verifyExpect(msg *message, src atlas.Validator, validatorSet atlas.ValidatorSet) error {
 	logger := c.logger.New("from", src, "state", c.state)
 
-	var expect *atlas.Expect
+	var expect *atlas.SignedSubject
 	if err := msg.Decode(&expect); err != nil {
 		return errFailedDecodePrepare
 	}
 
-	var proposal ExpectPayload
-	if err := rlp.DecodeBytes(expect.Proposal, proposal); err != nil {
-		logger.Error("Failed to decode payload", "view", c.currentView(), "err", err)
-		return err
-	}
-
-	if proposal.Digest != c.current.Preprepare.Proposal.Hash() {
-		logger.Warn("Inconsistent subjects between EXPECT and proposal", "expected", c.current.Preprepare.Proposal.Hash(), "got", proposal.Digest)
+	if expect.Digest != c.current.Preprepare.Proposal.Hash() {
+		logger.Warn("Inconsistent subjects between EXPECT and proposal", "expected", c.current.Preprepare.Proposal.Hash(), "got", expect.Digest)
 		return errInconsistentSubject
 	}
 
 	var sign bls.Sign
-	if err := sign.Deserialize(proposal.Signature); err != nil {
+	if err := sign.Deserialize(expect.Signature); err != nil {
 		logger.Error("Failed to deserialize signature", "msg", msg, "err", err)
 		return err
 	}
 
 	var pubKey bls.PublicKey
-	if err := pubKey.Deserialize(proposal.PubKey); err != nil {
+	if err := pubKey.Deserialize(expect.PublicKey); err != nil {
 		logger.Error("Failed to deserialize signer's public key", "msg", msg, "err", err)
 		return err
 	}
 
-	if sign.Verify(&pubKey, proposal.Digest.String()) == false {
+	if sign.Verify(&pubKey, expect.Digest.String()) == false {
 		logger.Error("Failed to verify signature with signer's public key", "msg", msg)
 		return errInvalidSignature
 	}
 
 	bitmap, _ := bls_cosi.NewMask(validatorSet.GetPublicKeys(), nil)
-	if err := bitmap.SetMask(proposal.Bitmap); err != nil {
+	if err := bitmap.SetMask(expect.Mask); err != nil {
 		logger.Error("Failed to SetMask", "view", c.currentView(), "err", err)
 		return err
 	}
 
-	if bitmap.CountEnabled()  < c.QuorumSize() {
+	if bitmap.CountEnabled() < c.QuorumSize() {
 		return errNotSatisfyQuorum
 	}
 

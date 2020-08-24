@@ -17,7 +17,13 @@
 package core
 
 import (
-	"github.com/ethereum/go-ethereum/common"
+	"crypto/ecdsa"
+
+	"github.com/hyperion-hyn/bls/ffi/go/bls"
+
+	"github.com/ethereum/go-ethereum/consensus/atlas/validator"
+	"github.com/ethereum/go-ethereum/crypto"
+
 	"math/big"
 	"reflect"
 	"testing"
@@ -42,6 +48,18 @@ func makeBlock(number int64) *types.Block {
 
 func newTestProposal() atlas.Proposal {
 	return makeBlock(1)
+}
+
+func newValidator() (atlas.Validator, *ecdsa.PrivateKey, *bls.SecretKey, error) {
+	privateKey, _ := crypto.GenerateKey()
+	secretKey, _ := crypto.GenerateBLSKey()
+
+	peer, err := validator.New(crypto.PubkeyToAddress(privateKey.PublicKey), secretKey.GetPublicKey().Serialize())
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return peer, privateKey, secretKey, nil
 }
 
 func TestNewRequest(t *testing.T) {
@@ -92,7 +110,12 @@ func TestQuorumSize(t *testing.T) {
 
 	valSet := c.valSet
 	for i := 1; i <= 1000; i++ {
-		valSet.AddValidator(common.StringToAddress(string(i)))
+		peer, _, _, err := newValidator()
+		if err != nil {
+			t.Errorf("failed to new a validator: %v", err)
+		}
+
+		valSet.AddValidator(peer)
 		if 2*c.QuorumSize() <= (valSet.Size()+valSet.F()) || 2*c.QuorumSize() > (valSet.Size()+valSet.F()+2) {
 			t.Errorf("quorumSize constraint failed, expected value (2*QuorumSize > Size+F && 2*QuorumSize <= Size+F+2) to be:%v, got: %v, for size: %v", true, false, valSet.Size())
 		}

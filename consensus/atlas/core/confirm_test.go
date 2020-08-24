@@ -17,9 +17,7 @@
 package core
 
 import (
-	"math"
 	"math/big"
-	"reflect"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -27,7 +25,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/atlas/validator"
 )
 
-func TestHandlePrepare(t *testing.T) {
+func TestHandleConfirm(t *testing.T) {
 	N := uint64(4)
 	F := uint64(1)
 
@@ -62,7 +60,7 @@ func TestHandlePrepare(t *testing.T) {
 
 					if i == 0 {
 						// replica 0 is the proposer
-						c.state = StatePreprepared
+						c.state = StatePrepared
 					}
 				}
 				return sys
@@ -128,50 +126,26 @@ func TestHandlePrepare(t *testing.T) {
 			errOldMessage,
 		},
 		{
-			// subject not match
+			// jump state
 			func() *testSystem {
 				sys := NewTestSystemWithBackend(N, F)
-
-				for i, backend := range sys.backends {
-					c := backend.engine.(*core)
-					c.valSet = backend.peers
-					if i == 0 {
-						// replica 0 is the proposer
-						c.current = newTestRoundState(
-							expectedSubject.View,
-							c.valSet,
-						)
-						c.state = StatePreprepared
-					} else {
-						c.current = newTestRoundState(
-							&atlas.View{
-								Round:    big.NewInt(0),
-								Sequence: big.NewInt(1)},
-							c.valSet,
-						)
-					}
-				}
-				return sys
-			}(),
-			errInconsistentSubject,
-		},
-		{
-			func() *testSystem {
-				sys := NewTestSystemWithBackend(N, F)
-
-				// save less than Ceil(2*N/3) replica
-				sys.backends = sys.backends[int(math.Ceil(float64(2*N)/3)):]
 
 				for i, backend := range sys.backends {
 					c := backend.engine.(*core)
 					c.valSet = backend.peers
 					c.current = newTestRoundState(
-						expectedSubject.View,
+						&atlas.View{
+							Round:    big.NewInt(0),
+							Sequence: proposal.Number(),
+						},
 						c.valSet,
 					)
 
-					if i == 0 {
-						// replica 0 is the proposer
+					// only replica0 stays at StatePreprepared
+					// other replicas are at StatePrepared
+					if i != 0 {
+						c.state = StatePrepared
+					} else {
 						c.state = StatePreprepared
 					}
 				}
@@ -192,10 +166,12 @@ OUTER:
 		for i, v := range test.system.backends {
 			validator := r0.valSet.GetByIndex(uint64(i))
 			m, _ := Encode(v.engine.(*core).current.Subject())
-			if err := r0.handlePrepare(&message{
-				Code:    msgPrepare,
-				Msg:     m,
-				Address: validator.Address(),
+			if err := r0.handleCommit(&message{
+				Code:          msgCommit,
+				Msg:           m,
+				Address:       validator.Address(),
+				Signature:     []byte{},
+				CommittedSeal: validator.Address().Bytes(), // small hack
 			}, validator); err != nil {
 				if err != test.expectedErr {
 					t.Errorf("error mismatch: have %v, want %v", err, test.expectedErr)
@@ -208,48 +184,29 @@ OUTER:
 		}
 
 		// prepared is normal case
-		if r0.state != StatePrepared {
-			// There are not enough PREPARE messages in core
-			if r0.state != StatePreprepared {
-				t.Errorf("state mismatch: have %v, want %v", r0.state, StatePreprepared)
+		if r0.state != StateCommitted {
+			// There are not enough commit messages in core
+			if r0.state != StatePrepared {
+				t.Errorf("state mismatch: have %v, want %v", r0.state, StatePrepared)
 			}
-			if r0.current.Prepares.Size() >= r0.QuorumSize() {
-				t.Errorf("the size of PREPARE messages should be less than %v", r0.QuorumSize())
+			if r0.current.Commits.Size() >= r0.QuorumSize() {
+				t.Errorf("the size of commit messages should be less than %v", r0.QuorumSize())
 			}
 			if r0.current.IsHashLocked() {
 				t.Errorf("block should not be locked")
 			}
-
 			continue
 		}
 
-		// core should have 2F+1 before Ceil2Nby3Block and Ceil(2N/3) after Ceil2Nby3Block PREPARE messages
-		if r0.current.Prepares.Size() < r0.QuorumSize() {
-			t.Errorf("the size of PREPARE messages should be larger than 2F+1 or ceil(2N/3): size %v", r0.current.Commits.Size())
+		// core should have 2F+1 before Ceil2Nby3Block or Ceil(2N/3) prepare messages
+		if r0.current.Commits.Size() < r0.QuorumSize() {
+			t.Errorf("the size of commit messages should be larger than 2F+1 or Ceil(2N/3): size %v", r0.QuorumSize())
 		}
 
-		// a message will be delivered to backend if ceil(2N/3)
-		if int64(len(v0.sentMsgs)) != 1 {
-			t.Errorf("the Send() should be called once: times %v", len(test.system.backends[0].sentMsgs))
-		}
-
-		// verify COMMIT messages
-		decodedMsg := new(message)
-		err := decodedMsg.FromPayload(v0.sentMsgs[0], nil)
-		if err != nil {
-			t.Errorf("error mismatch: have %v, want nil", err)
-		}
-
-		if decodedMsg.Code != msgCommit {
-			t.Errorf("message code mismatch: have %v, want %v", decodedMsg.Code, msgCommit)
-		}
-		var m *atlas.Subject
-		err = decodedMsg.Decode(&m)
-		if err != nil {
-			t.Errorf("error mismatch: have %v, want nil", err)
-		}
-		if !reflect.DeepEqual(m, expectedSubject) {
-			t.Errorf("subject mismatch: have %v, want %v", m, expectedSubject)
+		// check signatures large than F
+		signedCount := r0.current.confirmBitmap.CountEnabled()
+		if signedCount <= r0.valSet.F() {
+			t.Errorf("the expected signed count should be larger than %v, but got %v", r0.valSet.F(), signedCount)
 		}
 		if !r0.current.IsHashLocked() {
 			t.Errorf("block should be locked")
@@ -258,27 +215,25 @@ OUTER:
 }
 
 // round is not checked for now
-func TestVerifyPrepare(t *testing.T) {
+func TestVerifyConfirm(t *testing.T) {
 	// for log purpose
 	peer, _, _, err := newValidator()
 	if err != nil {
 		t.Errorf("failed to new a validator: %v", err)
 	}
-
 	valSet := validator.NewSet([]atlas.Validator{peer}, atlas.RoundRobin)
 
 	sys := NewTestSystemWithBackend(uint64(1), uint64(0))
 
 	testCases := []struct {
-		expected error
-
-		prepare    *atlas.Subject
+		expected   error
+		commit     *atlas.Subject
 		roundState *roundState
 	}{
 		{
 			// normal case
 			expected: nil,
-			prepare: &atlas.Subject{
+			commit: &atlas.Subject{
 				View:   &atlas.View{Round: big.NewInt(0), Sequence: big.NewInt(0)},
 				Digest: newTestProposal().Hash(),
 			},
@@ -290,7 +245,7 @@ func TestVerifyPrepare(t *testing.T) {
 		{
 			// old message
 			expected: errInconsistentSubject,
-			prepare: &atlas.Subject{
+			commit: &atlas.Subject{
 				View:   &atlas.View{Round: big.NewInt(0), Sequence: big.NewInt(0)},
 				Digest: newTestProposal().Hash(),
 			},
@@ -302,7 +257,7 @@ func TestVerifyPrepare(t *testing.T) {
 		{
 			// different digest
 			expected: errInconsistentSubject,
-			prepare: &atlas.Subject{
+			commit: &atlas.Subject{
 				View:   &atlas.View{Round: big.NewInt(0), Sequence: big.NewInt(0)},
 				Digest: common.StringToHash("1234567890"),
 			},
@@ -314,7 +269,7 @@ func TestVerifyPrepare(t *testing.T) {
 		{
 			// malicious package(lack of sequence)
 			expected: errInconsistentSubject,
-			prepare: &atlas.Subject{
+			commit: &atlas.Subject{
 				View:   &atlas.View{Round: big.NewInt(0), Sequence: nil},
 				Digest: newTestProposal().Hash(),
 			},
@@ -324,9 +279,9 @@ func TestVerifyPrepare(t *testing.T) {
 			),
 		},
 		{
-			// wrong PREPARE message with same sequence but different round
+			// wrong prepare message with same sequence but different round
 			expected: errInconsistentSubject,
-			prepare: &atlas.Subject{
+			commit: &atlas.Subject{
 				View:   &atlas.View{Round: big.NewInt(1), Sequence: big.NewInt(0)},
 				Digest: newTestProposal().Hash(),
 			},
@@ -336,9 +291,9 @@ func TestVerifyPrepare(t *testing.T) {
 			),
 		},
 		{
-			// wrong PREPARE message with same round but different sequence
+			// wrong prepare message with same round but different sequence
 			expected: errInconsistentSubject,
-			prepare: &atlas.Subject{
+			commit: &atlas.Subject{
 				View:   &atlas.View{Round: big.NewInt(0), Sequence: big.NewInt(1)},
 				Digest: newTestProposal().Hash(),
 			},
@@ -351,12 +306,13 @@ func TestVerifyPrepare(t *testing.T) {
 	for i, test := range testCases {
 		c := sys.backends[0].engine.(*core)
 		c.current = test.roundState
-		signedSubject, err := c.SignSubject(test.prepare)
+
+		signedSubject, err := c.SignSubject(test.commit)
 		if err != nil {
 			t.Errorf("failed to sign subject: %v", err)
 		}
 
-		if err := c.verifyPrepare(signedSubject, peer); err != nil {
+		if err := c.verifyCommit(signedSubject, peer); err != nil {
 			if err != test.expected {
 				t.Errorf("result %d: error mismatch: have %v, want %v", i, err, test.expected)
 			}

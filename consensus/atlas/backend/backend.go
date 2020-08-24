@@ -91,8 +91,8 @@ type backend struct {
 
 	signerKey *bls.SecretKey
 	signer    common.Address
-	signFn    consensus.SignerFn // Signer function to authorize hashes with
-	lock      sync.RWMutex       // Protects the signer fields
+	signFn    consensus.SignHashFn // Signer function to authorize hashes with
+	lock      sync.RWMutex         // Protects the signer fields
 
 	core         kernel.Engine
 	logger       log.Logger
@@ -280,13 +280,13 @@ func (sb *backend) Verify(proposal atlas.Proposal) (time.Duration, error) {
 }
 
 // Sign implements atlas.Backend.Sign
-func (sb *backend) Sign(data []byte) ([]byte, []byte, error) {
+func (sb *backend) Sign(data []byte) (signature []byte, publicKey []byte, mask []byte, err error) {
 	// ATLAS(zgx): Sign is called by finalizeMessage and updateBlock, the former sign message, the latter sign block
-	sighash, pubkey, err := sb.signFn(accounts.Account{Address: sb.signer}, "", data)
+	signature, publicKey, mask, err = sb.signFn(accounts.Account{Address: sb.signer}, crypto.Keccak256Hash(data))
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
-	return sighash, pubkey, nil
+	return signature, publicKey, mask, nil
 }
 
 // CheckSignature implements atlas.Backend.CheckSignature
@@ -363,7 +363,7 @@ func (sb *backend) Close() error {
 
 // Authorize injects a private key into the consensus engine to mint new blocks
 // with.
-func (c *backend) Authorize(signer common.Address, signFn consensus.SignerFn) {
+func (c *backend) Authorize(signer common.Address, signFn consensus.SignHashFn) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
