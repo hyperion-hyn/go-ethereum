@@ -788,10 +788,10 @@ func handleMap3AndAtlasStaking(chain consensus.ChainReader, header *types.Header
 		}
 	}
 
-	payout, err := accumulateRewardsAndCountSigs(chain, stateDB, header)
-	if err != nil {
-		return nil, errors.New("cannot pay block reward")
-	}
+	//payout, err := accumulateRewardsAndCountSigs(chain, stateDB, header)
+	//if err != nil {
+	//	return nil, errors.New("cannot pay block reward")
+	//}
 	// TODO(ATLAS): slash
 
 	if isNewEpoch {
@@ -812,7 +812,8 @@ func handleMap3AndAtlasStaking(chain consensus.ChainReader, header *types.Header
 			return nil, err
 		}
 	}
-	return payout, nil
+	//return payout, nil
+	return network.EmptyPayout, nil
 }
 
 func setLastEpochInCommittee(comm *restaking.Committee_, stateDB *state.StateDB) error {

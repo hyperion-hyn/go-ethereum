@@ -88,6 +88,9 @@ type Backend interface {
 
 	ChainConfig() *params.ChainConfig
 	Engine() consensus.Engine
+
+	// ATLAS
+	ChainContext() core.ChainContext
 }
 
 func GetAPIs(apiBackend Backend) []rpc.API {

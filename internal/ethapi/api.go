@@ -877,7 +877,16 @@ func DoCall(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.Blo
 	// Setup the gas pool (also for unmetered requests)
 	// and apply the message.
 	gp := new(core.GasPool).AddGas(math.MaxUint64)
-	result, err := core.ApplyMessage(evm, msg, gp)
+
+	// ATLAS
+	var result *core.ExecutionResult
+	if msg.Type() == types.Normal {
+		result, err = core.ApplyMessage(evm, msg, gp)
+	} else {
+		result, err = core.ApplyStakingMessage(evm, msg, gp, b.ChainContext())
+	}
+	// ATLAS - END
+
 	if err := vmError(); err != nil {
 		return nil, err
 	}

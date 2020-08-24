@@ -606,7 +606,7 @@ func makeTestStorageWrapper(addr common.Address, numSigned, numToSign int64) *re
 // newTestStateDB return an empty test StateDB
 func newTestStateDB() *state.StateDB {
 	db := rawdb.NewMemoryDatabase()
-	sdb, _ := state.New(common.Hash{}, state.NewDatabase(db))
+	sdb, _ := state.New(common.Hash{}, state.NewDatabase(db), nil)
 	return sdb
 }
 
