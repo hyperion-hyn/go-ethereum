@@ -12,8 +12,17 @@ var (
 	emptyBLSPubKey = BLSPublicKey_{}
 )
 
-// BLSSignature defines the bls signature
-type BLSSignature [BLSSignatureSizeInBytes]byte
+
+func NewEmptyBLSKeys() BLSPublicKeys_ {
+	return BLSPublicKeys_{Keys: make([]*BLSPublicKey_, 0)}
+}
+
+func NewBLSKeysWithBLSKey(key BLSPublicKey_) BLSPublicKeys_ {
+	keys := NewEmptyBLSKeys()
+	keys.Keys = append(keys.Keys, &key)
+	return keys
+}
+
 
 // Big ..
 func (pk BLSPublicKey_) Big() *big.Int {

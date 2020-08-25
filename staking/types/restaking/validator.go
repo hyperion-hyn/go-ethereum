@@ -2,13 +2,14 @@ package restaking
 
 import (
 	"github.com/ethereum/go-ethereum/common"
+	common2 "github.com/ethereum/go-ethereum/staking/types/common"
 	"github.com/pkg/errors"
 	"math/big"
 )
 
 const (
+	MaxPubKeyAllowed         = 1
 	DoNotEnforceMaxBLS       = -1
-	BLSSignatureSizeInBytes  = 96
 	MaxNameLength            = 140
 	MaxIdentityLength        = 140
 	MaxWebsiteLength         = 140
@@ -17,14 +18,31 @@ const (
 )
 
 var (
-	errCommissionRateTooLarge = errors.New("commission rate and change rate can not be larger than max commission rate")
-	errInvalidCommissionRate  = errors.New("commission rate, change rate and max rate should be a value ranging from 0.0 to 1.0")
-	errNeedAtLeastOneSlotKey  = errors.New("need at least one slot key")
-	ErrExcessiveBLSKeys       = errors.New("more slot keys provided than allowed")
-	errDuplicateSlotKeys      = errors.New("slot keys can not have duplicates")
-	ErrCommitteeNil           = errors.New("subcommittee is nil pointer")
-	errNilMaxTotalDelegation  = errors.New("MaxTotalDelegation can not be nil")
+	errCommissionRateTooLarge  = errors.New("commission rate and change rate can not be larger than max commission rate")
+	errInvalidCommissionRate   = errors.New("commission rate, change rate and max rate should be a value ranging from 0.0 to 1.0")
+	errNeedAtLeastOneSlotKey   = errors.New("need at least one slot key")
+	ErrExcessiveBLSKeys        = errors.New("more slot keys provided than allowed")
+	errDuplicateSlotKeys       = errors.New("slot keys can not have duplicates")
+	ErrCommitteeNil            = errors.New("subcommittee is nil pointer")
+	errNilMaxTotalDelegation   = errors.New("MaxTotalDelegation can not be nil")
+	errAddressNotMatch         = errors.New("validator key not match")
+	errSlotKeyToRemoveNotFound = errors.New("slot key to remove not found")
+	errSlotKeyToAddExists      = errors.New("slot key to add already exists")
+	errCannotChangeBannedTrait = errors.New("cannot change validator banned status")
 )
+
+func NewEmptyAddressSet() AddressSet_ {
+	return AddressSet_{
+		Keys: []*Address{},
+		Set:  make(map[Address]*Bool),
+	}
+}
+
+func NewAddressSetWithAddress(address common.Address) AddressSet_ {
+	set := NewEmptyAddressSet()
+	set.Put(address)
+	return set
+}
 
 func (a *AddressSet_) Contain(address common.Address) bool {
 	_, ok := a.Set[address]
@@ -38,7 +56,6 @@ func (a *AddressSet_) Put(address common.Address) {
 	a.Keys = append(a.Keys, &address)
 	a.Set[address] = func() *bool { t := true; return &t }()
 }
-
 
 // Storage_AddressSet_
 func (s *Storage_AddressSet_) AllKeys() []common.Address {
@@ -70,7 +87,6 @@ func (s *Storage_AddressSet_) Load() *AddressSet_ {
 	}
 	return s.obj
 }
-
 
 var (
 	hundredPercent = common.OneDec()
@@ -149,7 +165,6 @@ func (v *Validator_) SanityCheck(maxSlotKeyAllowed int) error {
 	}
 	return nil
 }
-
 
 // Storage_Validator_
 func (s *Storage_Validator_) Load() *Validator_ {
@@ -317,7 +332,6 @@ func (s *Storage_ValidatorWrapper_) Load() *ValidatorWrapper_ {
 	return s.obj
 }
 
-
 // Storage_ValidatorWrapperMap_
 func (s *Storage_ValidatorWrapperMap_) AllKeys() []common.Address {
 	addressSlice := make([]common.Address, 0)
@@ -356,7 +370,6 @@ func (s *Storage_ValidatorWrapperMap_) Get(key common.Address) (*Storage_Validat
 	return nil, false
 }
 
-
 // Storage_ValidatorPool_
 func (s *Storage_ValidatorPool_) UpdateCommittee(committee *Committee_) {
 	if committee.Epoch != nil {
@@ -365,4 +378,97 @@ func (s *Storage_ValidatorPool_) UpdateCommittee(committee *Committee_) {
 	if committee.Slots.Entrys != nil {
 		s.Committee().Slots().UpdateSlots(committee.Slots)
 	}
+}
+
+// CreateValidatorFromNewMsg creates validator from NewValidator message
+func CreateValidatorFromNewMsg(msg *CreateValidator, valAddr common.Address, blockNum *big.Int) (*Validator_, error) {
+	if err := msg.Description.EnsureLength(); err != nil {
+		return nil, err
+	}
+	// TODO(ATLAS): default max?
+	commission := Commission_{msg.CommissionRates, blockNum}
+
+	if err := common2.VerifyBLSKey(&msg.SlotPubKey, &msg.SlotKeySig); err != nil {
+		return nil, err
+	}
+
+	v := Validator_{
+		ValidatorAddress:     valAddr,
+		OperatorAddresses:    NewAddressSetWithAddress(msg.OperatorAddress),
+		SlotPubKeys:          NewBLSKeysWithBLSKey(msg.SlotPubKey),
+		LastEpochInCommittee: new(big.Int),
+		MaxTotalDelegation:   msg.MaxTotalDelegation, // TODO(ATLAS): default max?
+		Status:               uint8(Active),
+		Commission:           commission,
+		Description:          msg.Description,
+		CreationHeight:       blockNum,
+	}
+	return &v, nil
+}
+
+// UpdateValidatorFromEditMsg updates validator from EditValidator message
+func UpdateValidatorFromEditMsg(validator *Validator_, edit *EditValidator) error {
+	if validator.ValidatorAddress != edit.ValidatorAddress {
+		return errAddressNotMatch
+	}
+
+	if err := validator.Description.UpdateFrom(edit.Description); err != nil {
+		return err
+	}
+
+	if edit.CommissionRate != nil {
+		validator.Commission.CommissionRates.Rate = *edit.CommissionRate
+	}
+
+	if edit.MaxTotalDelegation != nil && edit.MaxTotalDelegation.Sign() != 0 {
+		validator.MaxTotalDelegation = edit.MaxTotalDelegation
+	}
+
+	if edit.SlotKeyToRemove != nil {
+		index := -1
+		for i, key := range validator.SlotPubKeys.Keys {
+			if *key == *edit.SlotKeyToRemove {
+				index = i
+				break
+			}
+		}
+		// we found key to be removed
+		if index >= 0 {
+			validator.SlotPubKeys.Keys = append(
+				validator.SlotPubKeys.Keys[:index], validator.SlotPubKeys.Keys[index+1:]...,
+			)
+		} else {
+			return errSlotKeyToRemoveNotFound
+		}
+	}
+
+	if edit.SlotKeyToAdd != nil {
+		found := false
+		for _, key := range validator.SlotPubKeys.Keys {
+			if *key == *edit.SlotKeyToAdd {
+				found = true
+				break
+			}
+		}
+		if !found {
+			if err := common2.VerifyBLSKey(edit.SlotKeyToAdd, edit.SlotKeyToAddSig); err != nil {
+				return err
+			}
+			validator.SlotPubKeys.Keys = append(validator.SlotPubKeys.Keys, edit.SlotKeyToAdd)
+		} else {
+			return errSlotKeyToAddExists
+		}
+	}
+
+	switch validator.Status {
+	case Uint8(Banned):
+		return errCannotChangeBannedTrait
+	default:
+		switch edit.EPOSStatus {
+		case Active, Inactive:
+			validator.Status = Uint8(edit.EPOSStatus)
+		default:
+		}
+	}
+	return nil
 }

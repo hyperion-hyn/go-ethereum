@@ -115,7 +115,7 @@ func IncrementValidatorSigningCounts(
 // ComputeCurrentSigning returns (signed, toSign, quotient, error)
 func ComputeCurrentSigning(
 	snapshot, wrapper *restaking.Storage_ValidatorWrapper_,
-) *restaking.Computed {
+) *Computed {
 	statsNow, snapSigned, snapToSign :=
 		wrapper.Counters(),
 		snapshot.Counters().NumBlocksSigned().Value(),
@@ -125,7 +125,7 @@ func ComputeCurrentSigning(
 		new(big.Int).Sub(statsNow.NumBlocksSigned().Value(), snapSigned),
 		new(big.Int).Sub(statsNow.NumBlocksToSign().Value(), snapToSign)
 
-	computed := restaking.NewComputed(
+	computed := NewComputed(
 		signed, toSign, 0, common.ZeroDec(), true,
 	)
 
@@ -196,4 +196,23 @@ func ComputeAndMutateEPOSStatus(
 		// to leave the committee can actually leave.
 	}
 	return nil
+}
+
+// Computed represents current epoch
+// availability measures, mostly for RPC
+type Computed struct {
+	Signed            *big.Int   `json:"current-epoch-signed"`
+	ToSign            *big.Int   `json:"current-epoch-to-sign"`
+	BlocksLeftInEpoch uint64     `json:"-"`
+	Percentage        common.Dec `json:"current-epoch-signing-percentage"`
+	IsBelowThreshold  bool       `json:"-"`
+}
+
+// NewComputed ..
+func NewComputed(
+	signed, toSign *big.Int,
+	blocksLeft uint64,
+	percent common.Dec,
+	isBelowNow bool) *Computed {
+	return &Computed{signed, toSign, blocksLeft, percent, isBelowNow}
 }
