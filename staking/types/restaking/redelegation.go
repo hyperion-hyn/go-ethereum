@@ -5,6 +5,22 @@ import (
 	"math/big"
 )
 
+// NewDelegation creates a new delegation object
+func NewRedelegation(delegatorAddr common.Address, amount *big.Int) Redelegation_ {
+	return Redelegation_{
+		DelegatorAddress: delegatorAddr,
+		Amount:           amount,
+		Reward:           big.NewInt(0),
+	}
+}
+
+func NewRedelegationMap() RedelegationMap_ {
+	return RedelegationMap_{
+		Keys: []*Address{},
+		Map:  map[Address]*RedelegationMapEntry_{},
+	}
+}
+
 func (r *RedelegationMap_) Contain(delegator Address) bool {
 	_, ok := r.Map[delegator]
 	return ok
