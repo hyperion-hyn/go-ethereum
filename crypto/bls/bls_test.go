@@ -3,8 +3,11 @@ package bls
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hyperion-hyn/bls/ffi/go/bls"
+
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 // Test the basic functionality of a BLS multi-sig mask.
@@ -246,8 +249,98 @@ func TestSetMask(test *testing.T) {
 }
 
 func TestSignVerify(t *testing.T) {
-	var publicKey bls.PublicKey
-	var sign bls.PublicKey
-	publicKey.Deserialize("")
+	var signature []byte
+	secretKey, err := crypto.GenerateBLSKey()
+	if err != nil {
+		t.Errorf("failed to generate bls key: %v", err)
+	}
 
+	data := time.Now().String()
+	hash := crypto.Keccak256Hash([]byte(data)).Bytes()
+
+	{
+		sign := secretKey.SignHash(hash)
+		signature = sign.Serialize()
+	}
+
+	{
+		var sign bls.Sign
+		err := sign.Deserialize(signature)
+		if err != nil {
+			t.Errorf("failed to deserialize signature: %v", err)
+		}
+
+		publicKey := secretKey.GetPublicKey()
+		ok := sign.VerifyHash(publicKey, hash)
+		if !ok {
+			t.Errorf("failed to verify hash")
+		}
+	}
+}
+
+func TestMultipleSign(t *testing.T) {
+	const KEY_COUNT = 10
+	var keys [KEY_COUNT]*bls.SecretKey
+	for i := 0; i < KEY_COUNT; i++ {
+		keys[i] = RandPrivateKey()
+	}
+
+	data := time.Now().String()
+	hash := crypto.Keccak256Hash([]byte(data)).Bytes()
+
+	var aggregatedPublicKey bls.PublicKey
+	var aggregatedSign bls.Sign
+	for i := 0; i < KEY_COUNT - 1; i++ {
+		aggregatedPublicKey.Add(keys[i].GetPublicKey())
+		sign := keys[i].SignHash(hash)
+		aggregatedSign.Add(sign)
+	}
+
+	if ok := aggregatedSign.VerifyHash(&aggregatedPublicKey, hash); !ok {
+		t.Errorf("failed to verify aggregated signatures.")
+	}
+
+	{
+		if ok := aggregatedSign.VerifyHash(keys[0].GetPublicKey(), hash); ok {
+			t.Errorf("failed to verify aggregated signatures.")
+		}
+	}
+
+	{
+		sign := keys[1].SignHash(hash)
+		if ok := sign.VerifyHash(keys[0].GetPublicKey(), hash); ok {
+			t.Errorf("failed to verify aggregated signatures.")
+		}
+	}
+
+	{
+		// repeat
+		aggregatedPublicKey.Add(keys[0].GetPublicKey())
+		if ok := aggregatedSign.VerifyHash(&aggregatedPublicKey, hash); ok {
+			t.Errorf("failed to verify aggregated signatures.")
+		}
+		aggregatedPublicKey.Sub(keys[0].GetPublicKey())
+	}
+
+	{
+		// additional
+		aggregatedPublicKey.Add(keys[KEY_COUNT-1].GetPublicKey())
+		if ok := aggregatedSign.VerifyHash(&aggregatedPublicKey, hash); ok {
+			t.Errorf("failed to verify aggregated signatures.")
+		}
+		aggregatedPublicKey.Sub(keys[KEY_COUNT-1].GetPublicKey())
+	}
+
+	{
+		// removal
+		aggregatedPublicKey.Sub(keys[0].GetPublicKey())
+		if ok := aggregatedSign.VerifyHash(&aggregatedPublicKey, hash); ok {
+			t.Errorf("failed to verify aggregated signatures.")
+		}
+		aggregatedPublicKey.Add(keys[0].GetPublicKey())
+	}
+
+	if ok := aggregatedSign.VerifyHash(&aggregatedPublicKey, hash); !ok {
+		t.Errorf("failed to verify aggregated signatures.")
+	}
 }
