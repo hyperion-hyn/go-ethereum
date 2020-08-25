@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	errValidatorNotExist    = errors.New("staking validator does not exist")
+	ErrValidatorNotExist    = errors.New("staking validator does not exist")
 	errRedelegationNotExist = errors.New("redelegation does not exist")
 
 	validatorStorageAddress = common.BigToAddress(common.Big1) // TODO(ATLAS): what address?
@@ -28,7 +28,7 @@ func (s *StateDB) ValidatorPool() *restaking.Storage_ValidatorPool_ {
 func (s *StateDB) ValidatorByAddress(validatorAddress common.Address) (*restaking.Storage_ValidatorWrapper_, error) {
 	validator, ok := s.ValidatorPool().Validators().Get(validatorAddress)
 	if !ok {
-		return nil, errValidatorNotExist
+		return nil, ErrValidatorNotExist
 	}
 	return validator, nil
 }

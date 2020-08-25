@@ -9,3 +9,7 @@ import (
 func (lc *LightChain) ReadValidatorAtEpoch(*big.Int, common.Address) (*restaking.Storage_ValidatorWrapper_, error) {
 	panic("implement me")
 }
+
+func (lc *LightChain) ReadValidatorAtEpochOrCurrentBlock(*big.Int, common.Address) (*restaking.Storage_ValidatorWrapper_, error) {
+	panic("implement me")
+}

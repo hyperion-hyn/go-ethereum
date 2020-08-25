@@ -37,6 +37,7 @@ type ChainContext interface {
 
 	// ATLAS
 	ReadValidatorAtEpoch(*big.Int, common.Address) (*restaking.Storage_ValidatorWrapper_, error)
+	ReadValidatorAtEpochOrCurrentBlock(*big.Int, common.Address) (*restaking.Storage_ValidatorWrapper_, error)
 }
 
 // NewEVMContext creates a new context for use in the EVM.
@@ -59,6 +60,7 @@ func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author
 		Difficulty:  new(big.Int).Set(header.Difficulty),
 		GasLimit:    header.GasLimit,
 		GasPrice:    new(big.Int).Set(msg.GasPrice()),
+		EpochNumber: header.Epoch, //ATLAS
 	}
 }
 

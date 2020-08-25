@@ -225,7 +225,7 @@ func VerifyEditValidatorMsg(stateDB vm.StateDB, chainContext ChainContext, epoch
 
 	// check max change at one epoch
 	newRate := validator.Commission.CommissionRates.Rate
-	validatorSnapshot, err := chainContext.ReadValidatorAtEpoch(epoch, msg.ValidatorAddress)
+	validatorSnapshot, err := chainContext.ReadValidatorAtEpochOrCurrentBlock(epoch, msg.ValidatorAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -234,8 +234,8 @@ func VerifyEditValidatorMsg(stateDB vm.StateDB, chainContext ChainContext, epoch
 		return nil, errCommissionRateChangeTooFast
 	}
 
-	if msg.MaxTotalDelegation != nil {
-		if err = sanityCheckForDelegation(msg.MaxTotalDelegation, validator.MaxTotalDelegation, common.Big0); err != nil {
+	if msg.MaxTotalDelegation != nil && msg.MaxTotalDelegation.Sign() != 0 {
+		if err = sanityCheckForDelegation(msg.MaxTotalDelegation, wrapperSt.TotalDelegation().Value(), common.Big0); err != nil {
 			return nil, err
 		}
 	}
