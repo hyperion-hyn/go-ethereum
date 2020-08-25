@@ -46,9 +46,9 @@ struct AddressSet_ {
 }
 
 struct Validator_ {
-    // ECDSA address of the validatorÒ
+    // ECDSA address of the validator
     address ValidatorAddress;
-    // validator's operator (node address)
+    // validator's operator (map3 node address)
     AddressSet_ OperatorAddresses;
     // The BLS public key of the validator for consensus
     BLSPublicKeys_ SlotPubKeys;
