@@ -36,7 +36,7 @@ func (pool *TxPool) validateStakingTx(tx *types.Transaction) error {
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return err
 		}
-		_, err := VerifyEditValidatorMsg(pool.currentState, chainContext, pendingBlockNumber, pendingBlockNumber, stkMsg, msg.From())
+		_, err := VerifyEditValidatorMsg(pool.currentState, chainContext, pendingEpoch, pendingBlockNumber, stkMsg, msg.From())
 		return err
 	case types.Redelegate:
 		stkMsg := &restaking.Redelegate{}
