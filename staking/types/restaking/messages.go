@@ -2,30 +2,31 @@ package restaking
 
 import (
 	"github.com/ethereum/go-ethereum/common"
+	common2 "github.com/ethereum/go-ethereum/staking/types/common"
 	"math/big"
 )
 
 // CreateValidator - type for creating a new validator
 type CreateValidator struct {
-	OperatorAddress    common.Address   `json:"operator-address"`
-	Description        Description_     `json:"description"`
-	CommissionRates    CommissionRates_ `json:"commission"`
-	MaxTotalDelegation *big.Int         `json:"max-total-delegation"`
-	SlotPubKey         BLSPublicKey_    `json:"slot-pub-key"`
-	SlotKeySig         BLSSignature     `json:"slot-key-sig"`
+	OperatorAddress    common.Address       `json:"operator-address"`
+	Description        Description_         `json:"description"`
+	CommissionRates    CommissionRates_     `json:"commission"`
+	MaxTotalDelegation *big.Int             `json:"max-total-delegation"`
+	SlotPubKey         BLSPublicKey_        `json:"slot-pub-key"`
+	SlotKeySig         common2.BLSSignature `json:"slot-key-sig"`
 }
 
 // EditValidator - type for edit existing validator
 type EditValidator struct {
-	ValidatorAddress   common.Address  `json:"validator-address"`
-	OperatorAddress    common.Address  `json:"operator-address"`
-	Description        Description_    `json:"description"`
-	CommissionRate     *common.Dec     `json:"commission-rate" rlp:"nil"`
-	MaxTotalDelegation *big.Int        `json:"max-total-delegation" rlp:"nil"`
-	SlotKeyToRemove    *BLSPublicKey_  `json:"slot-key-to-remove" rlp:"nil"`
-	SlotKeyToAdd       *BLSPublicKey_  `json:"slot-key-to-add" rlp:"nil"`
-	SlotKeyToAddSig    *BLSSignature   `json:"slot-key-to-add-sig" rlp:"nil"`
-	EPOSStatus         ValidatorStatus `json:"epos-eligibility-status"`
+	ValidatorAddress   common.Address        `json:"validator-address"`
+	OperatorAddress    common.Address        `json:"operator-address"`
+	Description        Description_          `json:"description"`
+	CommissionRate     *common.Dec           `json:"commission-rate" rlp:"nil"`
+	MaxTotalDelegation *big.Int              `json:"max-total-delegation" rlp:"nil"`
+	SlotKeyToRemove    *BLSPublicKey_        `json:"slot-key-to-remove" rlp:"nil"`
+	SlotKeyToAdd       *BLSPublicKey_        `json:"slot-key-to-add" rlp:"nil"`
+	SlotKeyToAddSig    *common2.BLSSignature `json:"slot-key-to-add-sig" rlp:"nil"`
+	EPOSStatus         ValidatorStatus       `json:"epos-eligibility-status"`
 }
 
 // Redelegate - type for delegating to a validator
