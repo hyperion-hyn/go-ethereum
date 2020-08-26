@@ -25,10 +25,10 @@ import (
 )
 
 type Validator interface {
-	// Address returns validator's id (address format)
+	// Address returns validator's id
 	Address() common.Address
 
-	// Signer returns validator's coinbase address
+	// Coinbase returns validator's coinbase address
 	Coinbase() common.Address
 
 	PublicKey() *bls.PublicKey
@@ -75,7 +75,7 @@ type ValidatorSet interface {
 	// Add validator
 	AddValidator(validator Validator) bool
 	// Remove validator
-	RemoveValidatorBySigner(address common.Address) bool
+	RemoveValidator(address common.Address) bool
 	// Copy validator set
 	Copy() ValidatorSet
 	// Get the maximum number of faulty nodes

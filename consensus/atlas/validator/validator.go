@@ -17,11 +17,11 @@
 package validator
 
 import (
-
-	"github.com/hyperion-hyn/bls/ffi/go/bls"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/hyperion-hyn/bls/ffi/go/bls"
 )
 
 func New(coinbase common.Address, publicKey []byte) (atlas.Validator, error) {
@@ -34,7 +34,7 @@ func New(coinbase common.Address, publicKey []byte) (atlas.Validator, error) {
 	return &defaultValidator{
 		address:  signer,
 		coinbase: coinbase,
-		pubKey:   blsPublicKey,
+		pubKey:   &blsPublicKey,
 	}, nil
 }
 
@@ -42,17 +42,7 @@ func NewSet(addrs []atlas.Validator, policy atlas.ProposerPolicy) atlas.Validato
 	return newDefaultSet(addrs, policy)
 }
 
-func ExtractValidators(extraData []byte) []common.Address {
-	// get the validator addresses
-	addrs := make([]common.Address, (len(extraData) / common.AddressLength))
-	for i := 0; i < len(addrs); i++ {
-		copy(addrs[i][:], extraData[i*common.AddressLength:])
-	}
-
-	return addrs
-}
-
 // Check whether the extraData is presented in prescribed form
 func ValidExtraData(extraData []byte) bool {
-	return len(extraData)%common.AddressLength == 0
+	return len(extraData) == types.AtlasExtraSeal
 }

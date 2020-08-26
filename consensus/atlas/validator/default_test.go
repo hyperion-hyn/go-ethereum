@@ -18,7 +18,9 @@ package validator
 
 import (
 	"bytes"
+	"crypto/ecdsa"
 	"reflect"
+	"sort"
 	"strings"
 	"testing"
 
@@ -29,10 +31,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
-var (
-	testAddress  = "70524d664ffe731100208a0154e556f9bb679ae6"
-	testAddress2 = "b37866a925bccd69cfa98d43b510f1d23d78a851"
-)
+var ()
 
 func TestValidatorSet(t *testing.T) {
 	testNewValidatorSet(t)
@@ -42,22 +41,37 @@ func TestValidatorSet(t *testing.T) {
 	testAddAndRemoveValidator(t)
 }
 
-func testNewValidatorSet(t *testing.T) {
+func newValidator() (atlas.Validator, *ecdsa.PrivateKey, *bls.SecretKey, error) {
+	privateKey, _ := crypto.GenerateKey()
+	secretKey, _ := crypto.GenerateBLSKey()
+
+	peer, err := New(crypto.PubkeyToAddress(privateKey.PublicKey), secretKey.GetPublicKey().Serialize())
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return peer, privateKey, secretKey, nil
+}
+
+func generateValidators(count int) ([]atlas.Validator, error) {
 	var validators []atlas.Validator
-	const ValCnt = 100
 
 	// Create 100 validators with random addresses
-	b := []byte{}
-	for i := 0; i < ValCnt; i++ {
-		key, _ := crypto.GenerateKey()
-		coinbase := crypto.PubkeyToAddress(key.PublicKey)
-		blsKey, _ := crypto.GenerateBLSKey()
-		val, err := New(coinbase, blsKey.GetPublicKey().Serialize())
+	for i := 0; i < count; i++ {
+		val, _, _, err := newValidator()
 		if err != nil {
-			t.Errorf("failed to new a validator: %v", err)
+			return nil, err
 		}
 		validators = append(validators, val)
-		b = append(b, val.Address().Bytes()...)
+	}
+	return validators, nil
+}
+
+func testNewValidatorSet(t *testing.T) {
+	const ValCnt = 100
+	validators, err := generateValidators(ValCnt)
+	if err != nil {
+		t.Errorf("failed to new a validator: %v", err)
 	}
 
 	// Create ValidatorSet
@@ -78,25 +92,21 @@ func testNewValidatorSet(t *testing.T) {
 }
 
 func testNormalValSet(t *testing.T) {
-	b1 := common.Hex2Bytes(testAddress)
-	b2 := common.Hex2Bytes(testAddress2)
-	addr1 := common.BytesToAddress(b1)
-	addr2 := common.BytesToAddress(b2)
-
-	secretKey1, _ := crypto.GenerateBLSKey()
-	secretKey2, _ := crypto.GenerateBLSKey()
-	if strings.Compare(crypto.PubkeyToSigner(secretKey1.GetPublicKey()).String(), crypto.PubkeyToSigner(secretKey2.GetPublicKey()).String()) == 1 {
-		secretKey1, secretKey2 = secretKey2, secretKey1
+	validators, err := generateValidators(2)
+	if err != nil {
+		t.Errorf("failed to generate validators: %v", err)
 	}
+	sort.Slice(validators, func(i, j int) bool {
+		return bytes.Compare(validators[i].Address().Bytes(), validators[j].Address().Bytes()) == 1
+	})
 
-	publicKey1 := secretKey1.GetPublicKey()
-	publicKey2 := secretKey2.GetPublicKey()
-	// s1 := crypto.PubkeyToSigner(publicKey1)
-	s2 := crypto.PubkeyToSigner(publicKey2)
-	val1, _ := New(addr1, publicKey1.Serialize())
-	val2, _ := New(addr2, publicKey2.Serialize())
-
-	valSet := newDefaultSet([]atlas.Validator{val1, val2}, atlas.RoundRobin)
+	if bytes.Compare(validators[0].Address().Bytes(), validators[1].Address().Bytes()) < 1 {
+		t.Errorf("validators should be in descending order")
+	}
+	if err != nil {
+		t.Errorf("failed to new a validator: %v", err)
+	}
+	valSet := newDefaultSet(validators, atlas.RoundRobin)
 	if valSet == nil {
 		t.Errorf("the format of validator set is invalid")
 		t.FailNow()
@@ -107,28 +117,32 @@ func testNormalValSet(t *testing.T) {
 		t.Errorf("the size of validator set is wrong: have %v, want 2", size)
 	}
 	// test get by index
-	if val := valSet.GetByIndex(uint64(0)); !reflect.DeepEqual(val, val1) {
-		t.Errorf("validator mismatch: have %v, want %v", val, val1)
+	if val := valSet.GetByIndex(uint64(0)); !reflect.DeepEqual(val, validators[1]) {
+		t.Errorf("validator mismatch: have %v, want %v", val, validators[1])
 	}
 	// test get by invalid index
 	if val := valSet.GetByIndex(uint64(2)); val != nil {
 		t.Errorf("validator mismatch: have %v, want nil", val)
 	}
 	// test get by address
-	if _, val := valSet.GetByAddress(s2); !reflect.DeepEqual(val, val2) {
-		t.Errorf("validator mismatch: have %v, want %v", val, val2)
+	if _, val := valSet.GetByAddress(validators[0].Address()); !reflect.DeepEqual(val, validators[0]) {
+		t.Errorf("validator mismatch: have %v, want %v", val, validators[0])
 	}
 	// test get by invalid address
 	invalidAddr := common.HexToAddress("0x9535b2e7faaba5288511d89341d94a38063a349b")
 	if _, val := valSet.GetByAddress(invalidAddr); val != nil {
 		t.Errorf("validator mismatch: have %v, want nil", val)
 	}
+
+	val1 := validators[1]
+	val2 := validators[0]
+
 	// test get proposer
 	if val := valSet.GetProposer(); !reflect.DeepEqual(val, val1) {
 		t.Errorf("proposer mismatch: have %v, want %v", val, val1)
 	}
 	// test calculate proposer
-	lastProposer := addr1
+	lastProposer := val1.Address()
 	valSet.CalcProposer(lastProposer, uint64(0))
 	if val := valSet.GetProposer(); !reflect.DeepEqual(val, val2) {
 		t.Errorf("proposer mismatch: have %v, want %v", val, val2)
@@ -152,46 +166,32 @@ func testEmptyValSet(t *testing.T) {
 	}
 }
 
-func generateSecretKeys(n int) []*bls.SecretKey {
-	secretKeys := make([]*bls.SecretKey, n)
-	for i := 0; i < n; i++ {
-		key, _ := crypto.GenerateBLSKey()
-		secretKeys[i] = key
-	}
-	return secretKeys
-}
-
-func sortSecretKeys(secretKeys []*bls.SecretKey) {
-	for i := 0; i < len(secretKeys); i++ {
-		for j := i; j < len(secretKeys); j++ {
-			if bytes.Compare(crypto.PubkeyToSigner(secretKeys[i].GetPublicKey()).Bytes()[:], crypto.PubkeyToSigner(secretKeys[j].GetPublicKey()).Bytes()[:]) > 0 {
-				secretKeys[i], secretKeys[j] = secretKeys[j], secretKeys[i]
-			}
-		}
-	}
-}
-
 func testAddAndRemoveValidator(t *testing.T) {
 	valSet := NewSet([]atlas.Validator{}, atlas.RoundRobin)
 
-	secretKeys := generateSecretKeys(3)
-	sortSecretKeys(secretKeys)
+	validators, err := generateValidators(3)
+	if err != nil {
+		t.Errorf("failed to generate validators: %v", err)
+	}
+	sort.Slice(validators, func(i, j int) bool {
+		return bytes.Compare(validators[i].Address().Bytes(), validators[j].Address().Bytes()) == 1
+	})
 
 	{
-		validator, _ := New(common.StringToAddress(string(2)), secretKeys[2].GetPublicKey().Serialize())
-		if !valSet.AddValidator(validator) {
+		validator := validators[0]
+		if ok := valSet.AddValidator(validator); !ok {
 			t.Error("the validator should be added")
 		}
-		if valSet.AddValidator(validator) {
+		if ok := valSet.AddValidator(validator); ok {
 			t.Error("the existing validator should not be added")
 		}
 	}
 	{
-		validator, _ := New(common.StringToAddress(string(1)), secretKeys[1].GetPublicKey().Serialize())
+		validator := validators[1]
 		valSet.AddValidator(validator)
 	}
 	{
-		validator, _ := New(common.StringToAddress(string(0)), secretKeys[0].GetPublicKey().Serialize())
+		validator := validators[2]
 		valSet.AddValidator(validator)
 	}
 	if len(valSet.List()) != 3 {
@@ -199,56 +199,51 @@ func testAddAndRemoveValidator(t *testing.T) {
 	}
 
 	for i, v := range valSet.List() {
-		expected := crypto.PubkeyToSigner(secretKeys[i].GetPublicKey())
-		if v.Address() != expected {
-			t.Errorf("the order of validators is wrong: have %v, want %v", v.Address().Hex(), expected.Hex())
+		expected := validators[len(validators)-1-i]
+		if v.Address() != expected.Address() {
+			t.Errorf("the order of validators is wrong: have %v, want %v", v.Address().Hex(), expected.Address().Hex())
 		}
 	}
 
-	if !valSet.RemoveValidatorBySigner(crypto.PubkeyToSigner(secretKeys[2].GetPublicKey())) {
+	if ok := valSet.RemoveValidator(validators[2].Address()); !ok {
 		t.Error("the validator should be removed")
 	}
-	if valSet.RemoveValidatorBySigner(crypto.PubkeyToSigner(secretKeys[2].GetPublicKey())) {
+	if ok := valSet.RemoveValidator(validators[2].Address()); ok {
 		t.Error("the non-existing validator should not be removed")
 	}
 	if len(valSet.List()) != 2 {
 		t.Error("the size of validator set should be 2")
 	}
-	valSet.RemoveValidatorBySigner(crypto.PubkeyToSigner(secretKeys[1].GetPublicKey()))
+	valSet.RemoveValidator(validators[1].Address())
 	if len(valSet.List()) != 1 {
 		t.Error("the size of validator set should be 1")
 	}
-	valSet.RemoveValidatorBySigner(crypto.PubkeyToSigner(secretKeys[0].GetPublicKey()))
+	valSet.RemoveValidator(validators[0].Address())
 	if len(valSet.List()) != 0 {
 		t.Error("the size of validator set should be 0")
 	}
 }
 
 func testStickyProposer(t *testing.T) {
-	b1 := common.Hex2Bytes(testAddress)
-	b2 := common.Hex2Bytes(testAddress2)
-	addr1 := common.BytesToAddress(b1)
-	addr2 := common.BytesToAddress(b2)
-
-	blsKey1, _ := crypto.GenerateBLSKey()
-	blsKey2, _ := crypto.GenerateBLSKey()
-	if strings.Compare(crypto.PubkeyToSigner(blsKey1.GetPublicKey()).String(), crypto.PubkeyToSigner(blsKey2.GetPublicKey()).String()) == 1 {
-		blsKey1, blsKey2 = blsKey2, blsKey1
+	validators, err := generateValidators(2)
+	if err != nil {
+		t.Errorf("failed to generate validators: %v", err)
 	}
+	sort.Slice(validators, func(i, j int) bool {
+		return bytes.Compare(validators[i].Address().Bytes(), validators[j].Address().Bytes()) == 1
+	})
 
-	s1 := blsKey1.GetPublicKey().Serialize()
-	s2 := blsKey2.GetPublicKey().Serialize()
-	val1, _ := New(addr1, s1)
-	val2, _ := New(addr2, s2)
+	val1 := validators[1]
+	val2 := validators[0]
 
-	valSet := newDefaultSet([]atlas.Validator{val1, val2}, atlas.Sticky)
+	valSet := newDefaultSet(validators, atlas.Sticky)
 
 	// test get proposer
 	if val := valSet.GetProposer(); !reflect.DeepEqual(val, val1) {
 		t.Errorf("proposer mismatch: have %v, want %v", val, val1)
 	}
 	// test calculate proposer
-	lastProposer := addr1
+	lastProposer := val1.Address()
 	valSet.CalcProposer(lastProposer, uint64(0))
 	if val := valSet.GetProposer(); !reflect.DeepEqual(val, val1) {
 		t.Errorf("proposer mismatch: have %v, want %v", val, val1)

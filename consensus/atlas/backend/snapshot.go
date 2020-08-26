@@ -229,7 +229,7 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 	// 		if tally.Authorize {
 	// 			snap.ValSet.AddValidator(header.Coinbase)
 	// 		} else {
-	// 			snap.ValSet.RemoveValidatorBySigner(header.Coinbase)
+	// 			snap.ValSet.RemoveValidator(header.Coinbase)
 	//
 	// 			// Discard any previous votes the deauthorized validator cast
 	// 			for i := 0; i < len(snap.Votes); i++ {
