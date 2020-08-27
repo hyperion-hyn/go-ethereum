@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/staking/network"
+	"github.com/ethereum/go-ethereum/staking/types/microstaking"
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	"github.com/pkg/errors"
 	"math"
@@ -92,6 +93,44 @@ func (st *StateTransition) StakingTransitionDb() (*ExecutionResult, error) {
 			return nil, err
 		}
 		_, err = st.verifyAndApplyCollectRedelRewards(stkMsg, msg.From())
+		// TODO: Add log for reward ?
+	case types.CreateMap3:
+		stkMsg := &microstaking.CreateMap3Node{}
+		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
+			return nil, err
+		}
+		st.state.IncrementValidatorNonce()
+		err = st.verifyAndApplyCreateMap3NodeTx(stkMsg, msg.From())
+	case types.EditMap3:
+		stkMsg := &microstaking.EditMap3Node{}
+		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
+			return nil, err
+		}
+		err = st.verifyAndApplyEditMap3NodeTx(stkMsg, msg.From())
+	case types.TerminateMap3:
+		stkMsg := &microstaking.TerminateMap3Node{}
+		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
+			return nil, err
+		}
+		err = st.verifyAndApplyTerminateMap3NodeTx(stkMsg, msg.From())
+	case types.Microdelegate:
+		stkMsg := &microstaking.Microdelegate{}
+		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
+			return nil, err
+		}
+		err = st.verifyAndApplyMicrodelegateTx(stkMsg, msg.From())
+	case types.Unmicrodelegate:
+		stkMsg := &microstaking.Unmicrodelegate{}
+		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
+			return nil, err
+		}
+		err = st.verifyAndApplyUnmicrodelegateTx(stkMsg, msg.From())
+	case types.CollectMap3Rewards:
+		stkMsg := &microstaking.CollectRewards{}
+		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
+			return nil, err
+		}
+		_, err = st.verifyAndApplyCollectMicrodelRewardsTx(stkMsg, msg.From())
 		// TODO: Add log for reward ?
 	default:
 		return nil, ErrInvalidStakingKind
@@ -207,7 +246,7 @@ func payoutRedelegationReward(s *restaking.Storage_ValidatorWrapper_, delegator 
 	epoch *big.Int) (*big.Int, error) {
 	redelegation, ok := s.Redelegations().Get(delegator)
 	if !ok {
-		return nil, errRedelegationNotExist
+		return nil, errMicrodelegationNotExist
 	}
 
 	r := redelegation.Reward().Value()

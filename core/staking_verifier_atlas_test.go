@@ -703,7 +703,7 @@ func TestVerifyUnredelegateMsg(t *testing.T) {
 				}(),
 				signer: makeTestAddr("addr not in chain"),
 			},
-			wantErr: errRedelegationNotExist,
+			wantErr: errMicrodelegationNotExist,
 		},
 		{
 			name: "insufficient balance to undelegate",
@@ -831,7 +831,7 @@ func TestVerifyCollectRedelRewardsMsg(t *testing.T) {
 				}(),
 				signer: makeTestAddr("addr not in chain"),
 			},
-			wantErr: errRedelegationNotExist,
+			wantErr: errMicrodelegationNotExist,
 		},
 		{
 			name: "no reward",

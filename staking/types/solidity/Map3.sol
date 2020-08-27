@@ -21,15 +21,21 @@ struct BLSPublicKeys_ {
     BLSPublicKey_[] Keys;
 }
 
+struct Commission_ {
+    Decimal Rate;
+    Decimal RateForNextPeriod;
+    uint256 UpdateHeight;
+}
+
 struct Map3Node_ {
     // ECDSA address of the map3 node
-    address NodeAddress;
+    address Map3Address;
     // Map3's operator
     address OperatorAddress;
     // The BLS public key of the map3 node
-    BLSPublicKeys_ PubKeys;
+    BLSPublicKeys_ NodeKeys;
     // commission parameter
-    Decimal Commission;
+    Commission_ Commission;
     // description for the map3 node
     Description_ Description;
     // CreationHeight is the height of creation
@@ -40,24 +46,24 @@ struct Map3Node_ {
     Decimal ReleaseEpoch;
 }
 
-// Undelegation represents one undelegation entry
-struct Undelegation_ {
-    uint256 Amount;
-    uint256 Epoch;
-}
-
 // PendingDelegation represents tokens during map3 in pending state
 struct PendingDelegation_ {
     uint256 Amount;
     Decimal UnlockedEpoch;
 }
 
+// Undelegation represents one undelegation entry
+struct Undelegation_ {
+    uint256 Amount;
+    uint256 Epoch;
+}
+
 struct Microdelegation_ {
     address DelegatorAddress;
     uint256 Amount;
     uint256 Reward;
-    Undelegation_ Undelegation;
     PendingDelegation_ PendingDelegation;
+    Undelegation_ Undelegation;
     Renewal_ Renewal;
 }
 
@@ -101,7 +107,7 @@ struct Map3NodeWrapperMap_ {
 }
 
 struct DelegationIndex_ {
-    address NodeAddress;
+    address Map3Address;
     bool IsOperator;
 }
 
@@ -118,7 +124,7 @@ struct DelegationIndexMap_ {
 struct Map3NodePool_ {
     Map3NodeWrapperMap_ Nodes;
     mapping (address => DelegationIndexMap_) DelegationIndexMapByDelegator;
-    mapping (string => bool) SlotKeySet;
+    mapping (string => bool) NodeKeySet;
     mapping (string => bool) DescriptionIdentitySet;
 }
 

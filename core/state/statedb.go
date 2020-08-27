@@ -20,6 +20,7 @@ package state
 import (
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/staking/types/microstaking"
 	"math/big"
 	"sort"
 	"sync"
@@ -119,6 +120,8 @@ type StateDB struct {
 	// ATLAS
 	validatorPool *restaking.Storage_ValidatorPool_
 	once          sync.Once
+	map3NodePool  *microstaking.Storage_Map3NodePool_
+	once4Map3     sync.Once
 }
 
 // New creates a new state from a given trie.

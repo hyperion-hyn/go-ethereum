@@ -17,6 +17,7 @@
 package core
 
 import (
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	"math/big"
 
@@ -37,6 +38,7 @@ type ChainContext interface {
 
 	// ATLAS
 	ReadValidatorAtEpoch(*big.Int, common.Address) (*restaking.Storage_ValidatorWrapper_, error)
+	Config() *params.ChainConfig
 }
 
 // NewEVMContext creates a new context for use in the EVM.

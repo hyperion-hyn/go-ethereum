@@ -18,6 +18,14 @@ const (
 	Redelegate
 	Unredelegate
 	CollectRedelRewards
+
+	// map3 node
+	CreateMap3
+	EditMap3
+	TerminateMap3
+	Microdelegate
+	Unmicrodelegate
+	CollectMap3Rewards
 )
 
 func NewStakingTransaction(nonce uint64, gasLimit uint64, gasPrice *big.Int, data []byte, txType TransactionType) *Transaction {
@@ -27,7 +35,6 @@ func NewStakingTransaction(nonce uint64, gasLimit uint64, gasPrice *big.Int, dat
 }
 
 func (txType TransactionType) String() string {
-	// TODO(ATLAS)
 	if txType == Normal {
 		return "Normal"
 	} else if txType == StakeCreateVal {
@@ -40,6 +47,18 @@ func (txType TransactionType) String() string {
 		return "UndelegateValidator"
 	} else if txType == CollectRedelRewards {
 		return "CollectRedelegationRewards"
+	} else if txType == CreateMap3 {
+		return "CreateMap3Node"
+	} else if txType == EditMap3 {
+		return "EditMap3Node"
+	} else if txType == TerminateMap3 {
+		return "TerminateMap3Node"
+	} else if txType == Microdelegate {
+		return "Microdelegate"
+	} else if txType == Unmicrodelegate {
+		return "Unmicrodelegate"
+	} else if txType == CollectMap3Rewards {
+		return "CollectMap3Rewards"
 	}
 	return "Normal"
 }

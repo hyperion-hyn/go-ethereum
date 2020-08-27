@@ -782,6 +782,9 @@ func handleMap3AndAtlasStaking(chain consensus.ChainReader, header *types.Header
 			}
 		}
 
+		// TODO(ATLAS): renew map3 node and unmicrodelegate and unredelegate
+		// TODO(ATLAS): reset renewal config
+
 		// update committee
 		if _, err := updateCommitteeForNextEpoch(chain, header, stateDB); err != nil {
 			return nil, err
@@ -807,6 +810,9 @@ func handleMap3AndAtlasStaking(chain consensus.ChainReader, header *types.Header
 		undelegationReleaser := undelegationToBalance{
 			rewardHandler: &core.RewardToBalance{StateDB: stateDB},
 		}
+
+		// TODO(ATLAS): payout microdelegation and reward
+
 		// Need to be after accumulateRewardsAndCountSigs because unredelegation may release
 		if err := payoutUnredelegations(header, stateDB, &undelegationReleaser); err != nil {
 			return nil, err
