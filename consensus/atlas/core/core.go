@@ -68,7 +68,7 @@ func New(backend atlas.Backend, config *atlas.Config) Engine {
 
 type core struct {
 	config  *atlas.Config
-	address common.Address
+	address common.Address // owner's address
 	state   State
 	logger  log.Logger
 
@@ -161,7 +161,7 @@ func (c *core) IsProposer() bool {
 	if v == nil {
 		return false
 	}
-	return v.IsProposer(c.backend.Address())
+	return v.IsProposer(c.backend.Signer())
 }
 
 func (c *core) IsCurrentProposal(blockHash common.Hash) bool {

@@ -90,7 +90,7 @@ func (ms *messageSet) Get(addr common.Address) *message {
 
 func (ms *messageSet) verify(msg *message) error {
 	// verify if the message comes from one of the validators
-	if _, v := ms.valSet.GetByAddress(msg.Address); v == nil {
+	if _, v := ms.valSet.GetBySigner(msg.Address); v == nil {
 		return atlas.ErrUnauthorizedAddress
 	}
 

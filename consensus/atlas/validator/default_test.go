@@ -21,7 +21,6 @@ import (
 	"crypto/ecdsa"
 	"reflect"
 	"sort"
-	"strings"
 	"testing"
 
 	"github.com/hyperion-hyn/bls/ffi/go/bls"
@@ -31,9 +30,13 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
-var ()
-
 func TestValidatorSet(t *testing.T) {
+	for i := 0; i < 20; i++ {
+		testValidatorSet(t)
+	}
+}
+
+func testValidatorSet(t *testing.T) {
 	testNewValidatorSet(t)
 	testNormalValSet(t)
 	testEmptyValSet(t)
@@ -45,7 +48,8 @@ func newValidator() (atlas.Validator, *ecdsa.PrivateKey, *bls.SecretKey, error) 
 	privateKey, _ := crypto.GenerateKey()
 	secretKey, _ := crypto.GenerateBLSKey()
 
-	peer, err := New(crypto.PubkeyToAddress(privateKey.PublicKey), secretKey.GetPublicKey().Serialize())
+	coinbase := crypto.PubkeyToAddress(privateKey.PublicKey)
+	peer, err := New(secretKey.GetPublicKey().Serialize(), coinbase)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -85,7 +89,7 @@ func testNewValidatorSet(t *testing.T) {
 	for i := 0; i < ValCnt-1; i++ {
 		val := valSet.GetByIndex(uint64(i))
 		nextVal := valSet.GetByIndex(uint64(i + 1))
-		if strings.Compare(val.Address().String(), nextVal.Address().String()) >= 0 {
+		if bytes.Compare(val.Signer().Bytes(), nextVal.Signer().Bytes()) >= 0 {
 			t.Errorf("validator set is not sorted in ascending order")
 		}
 	}
@@ -97,10 +101,10 @@ func testNormalValSet(t *testing.T) {
 		t.Errorf("failed to generate validators: %v", err)
 	}
 	sort.Slice(validators, func(i, j int) bool {
-		return bytes.Compare(validators[i].Address().Bytes(), validators[j].Address().Bytes()) == 1
+		return bytes.Compare(validators[i].Signer().Bytes(), validators[j].Signer().Bytes()) == 1
 	})
 
-	if bytes.Compare(validators[0].Address().Bytes(), validators[1].Address().Bytes()) < 1 {
+	if bytes.Compare(validators[0].Signer().Bytes(), validators[1].Signer().Bytes()) < 1 {
 		t.Errorf("validators should be in descending order")
 	}
 	if err != nil {
@@ -125,12 +129,12 @@ func testNormalValSet(t *testing.T) {
 		t.Errorf("validator mismatch: have %v, want nil", val)
 	}
 	// test get by address
-	if _, val := valSet.GetByAddress(validators[0].Address()); !reflect.DeepEqual(val, validators[0]) {
+	if _, val := valSet.GetBySigner(validators[0].Signer()); !reflect.DeepEqual(val, validators[0]) {
 		t.Errorf("validator mismatch: have %v, want %v", val, validators[0])
 	}
 	// test get by invalid address
 	invalidAddr := common.HexToAddress("0x9535b2e7faaba5288511d89341d94a38063a349b")
-	if _, val := valSet.GetByAddress(invalidAddr); val != nil {
+	if _, val := valSet.GetBySigner(invalidAddr); val != nil {
 		t.Errorf("validator mismatch: have %v, want nil", val)
 	}
 
@@ -142,7 +146,7 @@ func testNormalValSet(t *testing.T) {
 		t.Errorf("proposer mismatch: have %v, want %v", val, val1)
 	}
 	// test calculate proposer
-	lastProposer := val1.Address()
+	lastProposer := val1.Signer()
 	valSet.CalcProposer(lastProposer, uint64(0))
 	if val := valSet.GetProposer(); !reflect.DeepEqual(val, val2) {
 		t.Errorf("proposer mismatch: have %v, want %v", val, val2)
@@ -174,7 +178,7 @@ func testAddAndRemoveValidator(t *testing.T) {
 		t.Errorf("failed to generate validators: %v", err)
 	}
 	sort.Slice(validators, func(i, j int) bool {
-		return bytes.Compare(validators[i].Address().Bytes(), validators[j].Address().Bytes()) == 1
+		return bytes.Compare(validators[i].Signer().Bytes(), validators[j].Signer().Bytes()) == 1
 	})
 
 	{
@@ -200,25 +204,25 @@ func testAddAndRemoveValidator(t *testing.T) {
 
 	for i, v := range valSet.List() {
 		expected := validators[len(validators)-1-i]
-		if v.Address() != expected.Address() {
-			t.Errorf("the order of validators is wrong: have %v, want %v", v.Address().Hex(), expected.Address().Hex())
+		if v.Signer() != expected.Signer() {
+			t.Errorf("the order of validators is wrong: have %v, want %v", v.Signer().Hex(), expected.Signer().Hex())
 		}
 	}
 
-	if ok := valSet.RemoveValidator(validators[2].Address()); !ok {
+	if ok := valSet.RemoveValidator(validators[2].Signer()); !ok {
 		t.Error("the validator should be removed")
 	}
-	if ok := valSet.RemoveValidator(validators[2].Address()); ok {
+	if ok := valSet.RemoveValidator(validators[2].Signer()); ok {
 		t.Error("the non-existing validator should not be removed")
 	}
 	if len(valSet.List()) != 2 {
 		t.Error("the size of validator set should be 2")
 	}
-	valSet.RemoveValidator(validators[1].Address())
+	valSet.RemoveValidator(validators[1].Signer())
 	if len(valSet.List()) != 1 {
 		t.Error("the size of validator set should be 1")
 	}
-	valSet.RemoveValidator(validators[0].Address())
+	valSet.RemoveValidator(validators[0].Signer())
 	if len(valSet.List()) != 0 {
 		t.Error("the size of validator set should be 0")
 	}
@@ -230,7 +234,7 @@ func testStickyProposer(t *testing.T) {
 		t.Errorf("failed to generate validators: %v", err)
 	}
 	sort.Slice(validators, func(i, j int) bool {
-		return bytes.Compare(validators[i].Address().Bytes(), validators[j].Address().Bytes()) == 1
+		return bytes.Compare(validators[i].Signer().Bytes(), validators[j].Signer().Bytes()) == 1
 	})
 
 	val1 := validators[1]
@@ -243,7 +247,7 @@ func testStickyProposer(t *testing.T) {
 		t.Errorf("proposer mismatch: have %v, want %v", val, val1)
 	}
 	// test calculate proposer
-	lastProposer := val1.Address()
+	lastProposer := val1.Signer()
 	valSet.CalcProposer(lastProposer, uint64(0))
 	if val := valSet.GetProposer(); !reflect.DeepEqual(val, val1) {
 		t.Errorf("proposer mismatch: have %v, want %v", val, val1)

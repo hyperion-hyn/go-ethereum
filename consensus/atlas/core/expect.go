@@ -75,7 +75,7 @@ func (c *core) handleExpect(msg *message, src atlas.Validator) error {
 			// Broadcast COMMIT if it is an existing block
 			// 1. The proposer needs to be a proposer matches the given (Sequence + Round)
 			// 2. The given block must exist
-			if valSet.IsProposer(src.Address()) && c.backend.HasPropsal(c.current.Preprepare.Proposal.Hash(), c.current.Preprepare.Proposal.Number()) {
+			if valSet.IsProposer(src.Signer()) && c.backend.HasPropsal(c.current.Preprepare.Proposal.Hash(), c.current.Preprepare.Proposal.Number()) {
 				// ATLAS(zgx): maybe nothing can be done for old block for lacking multiple-signature.
 				// c.sendCommitForOldBlock(c.current.Preprepare.View, c.current.Preprepare.Proposal.Hash())
 				return nil
@@ -85,7 +85,7 @@ func (c *core) handleExpect(msg *message, src atlas.Validator) error {
 	}
 
 	// Check if the message comes from current proposer
-	if !c.valSet.IsProposer(src.Address()) {
+	if !c.valSet.IsProposer(src.Signer()) {
 		logger.Warn("Ignore expect messages from non-proposer")
 		return errNotFromProposer
 	}

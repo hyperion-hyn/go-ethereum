@@ -78,7 +78,7 @@ func (c *core) checkMessage(msgCode uint64, view *atlas.View) error {
 func (c *core) storeBacklog(msg *message, src atlas.Validator) {
 	logger := c.logger.New("from", src, "state", c.state)
 
-	if src.Address() == c.Address() {
+	if src.Signer() == c.Address() {
 		logger.Warn("Backlog from self")
 		return
 	}
@@ -88,8 +88,8 @@ func (c *core) storeBacklog(msg *message, src atlas.Validator) {
 	c.backlogsMu.Lock()
 	defer c.backlogsMu.Unlock()
 
-	logger.Debug("Retrieving backlog queue", "for", src.Address(), "backlogs_size", len(c.backlogs))
-	backlog := c.backlogs[src.Address()]
+	logger.Debug("Retrieving backlog queue", "for", src.Signer(), "backlogs_size", len(c.backlogs))
+	backlog := c.backlogs[src.Signer()]
 	if backlog == nil {
 		backlog = prque.New()
 	}
@@ -108,7 +108,7 @@ func (c *core) storeBacklog(msg *message, src atlas.Validator) {
 			backlog.Push(msg, toPriority(msg.Code, p.View))
 		}
 	}
-	c.backlogs[src.Address()] = backlog
+	c.backlogs[src.Signer()] = backlog
 }
 
 func (c *core) processBacklog() {
@@ -119,7 +119,7 @@ func (c *core) processBacklog() {
 		if backlog == nil {
 			continue
 		}
-		_, src := c.valSet.GetByAddress(srcAddress)
+		_, src := c.valSet.GetBySigner(srcAddress)
 		if src == nil {
 			// validator is not available
 			delete(c.backlogs, srcAddress)

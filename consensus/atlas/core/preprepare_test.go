@@ -155,7 +155,7 @@ OUTER:
 			c := v.engine.(*core)
 
 			m, _ := Encode(preprepare)
-			_, val := r0.valSet.GetByAddress(v0.Address())
+			_, val := r0.valSet.GetBySigner(v0.Address())
 			// run each backends and verify handlePreprepare function.
 			if err := c.handlePreprepare(&message{
 				Code:    msgPreprepare,
@@ -264,7 +264,7 @@ func TestHandlePreprepareWithLock(t *testing.T) {
 			c.current.SetPreprepare(lockPreprepare)
 			c.current.LockHash()
 			m, _ := Encode(preprepare)
-			_, val := r0.valSet.GetByAddress(v0.Address())
+			_, val := r0.valSet.GetBySigner(v0.Address())
 			if err := c.handlePreprepare(&message{
 				Code:    msgPreprepare,
 				Msg:     m,

@@ -17,7 +17,7 @@
 package atlas
 
 import (
-	"strings"
+	"bytes"
 
 	"github.com/hyperion-hyn/bls/ffi/go/bls"
 
@@ -25,8 +25,8 @@ import (
 )
 
 type Validator interface {
-	// Address returns validator's id
-	Address() common.Address
+	// Signer returns validator's id (address format)
+	Signer() common.Address
 
 	// Coinbase returns validator's coinbase address
 	Coinbase() common.Address
@@ -46,7 +46,7 @@ func (slice Validators) Len() int {
 }
 
 func (slice Validators) Less(i, j int) bool {
-	return strings.Compare(slice[i].Address().String(), slice[j].Address().String()) < 0
+	return bytes.Compare(slice[i].Signer().Bytes(), slice[j].Signer().Bytes()) < 0
 }
 
 func (slice Validators) Swap(i, j int) {
@@ -65,7 +65,7 @@ type ValidatorSet interface {
 	// Get validator by index
 	GetByIndex(i uint64) Validator
 	// Get validator by given address
-	GetByAddress(addr common.Address) (int, Validator)
+	GetBySigner(addr common.Address) (int, Validator)
 	// Get validator by public key
 	GetByPublicKey(pubKey *bls.PublicKey) (int, Validator)
 	// Get current proposer

@@ -49,9 +49,9 @@ type testSystemBackend struct {
 	committedMsgs []testCommittedMsgs
 	sentMsgs      [][]byte // store the message when Send is called by core
 
-	signer    common.Address
+	signer    common.Address // signer's id (address format)
 	signerKey *bls.SecretKey
-	address   common.Address // TODO(zgx): should be address or coinbase?
+	address   common.Address // owner's address
 	db        ethdb.Database
 }
 
@@ -240,7 +240,8 @@ func NewTestSystemWithBackend(n, f uint64) *testSystem {
 		backend := sys.NewBackend(i)
 		backend.peers = vset
 		backend.address = vset.GetByIndex(i).Coinbase()
-		backend.signerKey = findSecretKeyBySigner(keys, backend.address)
+		backend.signer = vset.GetByIndex(i).Address()
+		backend.signerKey = findSecretKeyBySigner(keys, vset.GetByIndex(i).Address())
 
 		core := New(backend, config).(*core)
 		core.state = StateAcceptRequest

@@ -29,13 +29,13 @@ import (
 )
 
 type defaultValidator struct {
-	address  common.Address // signer
-	coinbase common.Address // account
+	signer   common.Address // validator's id (address format)
+	coinbase common.Address // validator's account address
 	pubKey   *bls.PublicKey
 }
 
-func (val *defaultValidator) Address() common.Address {
-	return val.address
+func (val *defaultValidator) Signer() common.Address {
+	return val.signer
 }
 
 func (val *defaultValidator) Coinbase() common.Address {
@@ -47,7 +47,7 @@ func (val *defaultValidator) PublicKey() *bls.PublicKey {
 }
 
 func (val *defaultValidator) String() string {
-	return "signer: " + val.Address().String() + ", account: " + val.Coinbase().String()
+	return "signer: " + val.Signer().String() + ", account: " + val.Coinbase().String()
 }
 
 // ----------------------------------------------------------------------------
@@ -109,9 +109,9 @@ func (valSet *defaultSet) GetByIndex(i uint64) atlas.Validator {
 	return nil
 }
 
-func (valSet *defaultSet) GetByAddress(addr common.Address) (int, atlas.Validator) {
+func (valSet *defaultSet) GetBySigner(addr common.Address) (int, atlas.Validator) {
 	for i, val := range valSet.List() {
-		if addr == val.Address() {
+		if addr == val.Signer() {
 			return i, val
 		}
 	}
@@ -141,7 +141,7 @@ func (valSet *defaultSet) GetProposer() atlas.Validator {
 }
 
 func (valSet *defaultSet) IsProposer(address common.Address) bool {
-	_, val := valSet.GetByAddress(address)
+	_, val := valSet.GetBySigner(address)
 	return reflect.DeepEqual(valSet.GetProposer(), val)
 }
 
@@ -153,7 +153,7 @@ func (valSet *defaultSet) CalcProposer(lastProposer common.Address, round uint64
 
 func calcSeed(valSet atlas.ValidatorSet, proposer common.Address, round uint64) uint64 {
 	offset := 0
-	if idx, val := valSet.GetByAddress(proposer); val != nil {
+	if idx, val := valSet.GetBySigner(proposer); val != nil {
 		offset = idx
 	}
 	return uint64(offset) + round
@@ -195,7 +195,7 @@ func (valSet *defaultSet) AddValidator(validator atlas.Validator) bool {
 	valSet.validatorMu.Lock()
 	defer valSet.validatorMu.Unlock()
 	for _, v := range valSet.validators {
-		if v.Address() == validator.Address() {
+		if v.Signer() == validator.Signer() {
 			return false
 		}
 	}
@@ -210,7 +210,7 @@ func (valSet *defaultSet) RemoveValidator(address common.Address) bool {
 	defer valSet.validatorMu.Unlock()
 
 	for i, v := range valSet.validators {
-		if v.Address() == address {
+		if v.Signer() == address {
 			valSet.validators = append(valSet.validators[:i], valSet.validators[i+1:]...)
 			return true
 		}

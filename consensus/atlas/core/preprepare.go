@@ -57,7 +57,7 @@ func (c *core) handlePreprepare(msg *message, src atlas.Validator) error {
 	}
 
 	// Check if the message comes from current proposer
-	if !c.valSet.IsProposer(src.Address()) {
+	if !c.valSet.IsProposer(src.Signer()) {
 		logger.Warn("Ignore preprepare messages from non-proposer")
 		return errNotFromProposer
 	}
@@ -74,7 +74,7 @@ func (c *core) handlePreprepare(msg *message, src atlas.Validator) error {
 			// Broadcast COMMIT if it is an existing block
 			// 1. The proposer needs to be a proposer matches the given (Sequence + Round)
 			// 2. The given block must exist
-			if valSet.IsProposer(src.Address()) && c.backend.HasPropsal(preprepare.Proposal.Hash(), preprepare.Proposal.Number()) {
+			if valSet.IsProposer(src.Signer()) && c.backend.HasPropsal(preprepare.Proposal.Hash(), preprepare.Proposal.Number()) {
 				// ATLAS(zgx): maybe nothing can be done for old block for lacking multiple-signature.
 				// c.sendCommitForOldBlock(preprepare.View, preprepare.Proposal.Hash())
 				return nil

@@ -475,7 +475,7 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 		return err
 	}
 
-	if _, v := snap.ValSet.GetByAddress(sb.address); v == nil {
+	if _, v := snap.ValSet.GetBySigner(sb.address); v == nil {
 		return errUnauthorized
 	}
 
@@ -839,7 +839,7 @@ func getValidators(state *state.StateDB, numVal int) ([]atlas.Validator, error) 
 	validators := make([]atlas.Validator, length)
 	for i := 0; i < length; i++ {
 		member := wrapper.Committee().Members().Get(i)
-		validator, err := validator.New(member.Coinbase().Value(), member.PublicKey().Value())
+		validator, err := validator.New(member.PublicKey().Value(), member.Coinbase().Value())
 		if err != nil {
 			return nil, err
 		}

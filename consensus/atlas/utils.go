@@ -71,7 +71,7 @@ func CheckValidatorSignature(valSet ValidatorSet, data []byte, sig []byte, pubKe
 
 	// 5. Check validator
 	if _, val := valSet.GetByPublicKey(&publicKey); val != nil {
-		return val.Address(), nil
+		return val.Signer(), nil
 	}
 
 	return common.Address{}, ErrUnauthorizedAddress

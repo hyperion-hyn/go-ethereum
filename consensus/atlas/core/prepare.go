@@ -64,7 +64,7 @@ func (c *core) handlePrepare(msg *message, src atlas.Validator) error {
 	}
 
 	// Signer should be in the validator set
-	if _, v := c.valSet.GetByAddress(src.Address()); v == nil {
+	if _, v := c.valSet.GetBySigner(src.Signer()); v == nil {
 		return errNotFromCommittee
 	}
 
@@ -118,9 +118,9 @@ func (c *core) acceptPrepare(msg *message, src atlas.Validator) error {
 	}
 
 	var signer common.Address
-	signer = src.Address()
+	signer = src.Signer()
 
-	_, validator := c.valSet.GetByAddress(signer)
+	_, validator := c.valSet.GetBySigner(signer)
 	if validator == nil {
 		return errInvalidSigner
 	}

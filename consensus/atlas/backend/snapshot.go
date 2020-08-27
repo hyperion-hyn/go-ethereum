@@ -117,7 +117,7 @@ func (s *Snapshot) copy() *Snapshot {
 
 // checkVote return whether it's a valid vote
 func (s *Snapshot) checkVote(address common.Address, authorize bool) bool {
-	_, validator := s.ValSet.GetByAddress(address)
+	_, validator := s.ValSet.GetBySigner(address)
 	return (validator != nil && !authorize) || (validator == nil && authorize)
 }
 
@@ -190,7 +190,7 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 	// 	if err != nil {
 	// 		return nil, err
 	// 	}
-	// 	if _, v := snap.ValSet.GetByAddress(validator); v == nil {
+	// 	if _, v := snap.ValSet.GetBySigner(validator); v == nil {
 	// 		return nil, errUnauthorized
 	// 	}
 	//
@@ -268,8 +268,8 @@ func (s *Snapshot) validators() []atlas.Validator {
 	}
 	for i := 0; i < len(validators); i++ {
 		for j := i + 1; j < len(validators); j++ {
-			addri := validators[i].Address()
-			addrj := validators[j].Address()
+			addri := validators[i].Signer()
+			addrj := validators[j].Signer()
 			if bytes.Compare(addri[:], addrj[:]) > 0 {
 				validators[i], validators[j] = validators[j], validators[i]
 			}

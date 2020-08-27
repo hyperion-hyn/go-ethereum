@@ -24,7 +24,7 @@ import (
 	"github.com/hyperion-hyn/bls/ffi/go/bls"
 )
 
-func New(coinbase common.Address, publicKey []byte) (atlas.Validator, error) {
+func New(publicKey []byte, coinbase common.Address) (atlas.Validator, error) {
 	var blsPublicKey bls.PublicKey
 	if err := blsPublicKey.Deserialize(publicKey); err != nil {
 		return &defaultValidator{}, err
@@ -32,7 +32,7 @@ func New(coinbase common.Address, publicKey []byte) (atlas.Validator, error) {
 
 	signer := crypto.PubkeyToSigner(&blsPublicKey)
 	return &defaultValidator{
-		address:  signer,
+		signer:   signer,
 		coinbase: coinbase,
 		pubKey:   &blsPublicKey,
 	}, nil

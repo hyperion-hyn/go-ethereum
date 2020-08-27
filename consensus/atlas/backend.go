@@ -26,7 +26,7 @@ import (
 
 // Backend provides application specific functions for Atlas core
 type Backend interface {
-	// Address returns the signer's account address
+	// Address returns the owner's address
 	Address() common.Address
 
 	// Signer returns the signer's id (address format)
