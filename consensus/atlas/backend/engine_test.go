@@ -27,6 +27,7 @@ import (
 
 	"github.com/hyperion-hyn/bls/ffi/go/bls"
 
+	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
@@ -46,11 +47,11 @@ import (
 // block by one node. Otherwise, if n is larger than 1, we have to generate
 // other fake events to process Atlas.
 func newBlockChain(n int) (*core.BlockChain, *backend, []*bls.SecretKey) {
-	genesis, nodeKeys, signerKeys := getGenesisAndKeys(n)
+	genesis, _, signerKeys := getGenesisAndKeys(n)
 	memDB := rawdb.NewMemoryDatabase()
 	config := atlas.DefaultConfig
 	// Use the first key as private key
-	b, _ := New(config, nodeKeys[0], memDB, signerKeys[0]).(*backend)
+	b, _ := New(config, memDB).(*backend)
 	genesis.MustCommit(memDB)
 	blockchain, err := core.NewBlockChain(memDB, nil, genesis.Config, b, vm.Config{}, nil)
 	if err != nil {
@@ -64,13 +65,16 @@ func newBlockChain(n int) (*core.BlockChain, *backend, []*bls.SecretKey) {
 	if snap == nil {
 		panic("failed to get snapshot")
 	}
-	proposerAddr := snap.ValSet.GetProposer().Address()
+	proposerAddr := snap.ValSet.GetProposer().Signer()
 
 	// find proposer key
 	for _, key := range signerKeys {
 		addr := crypto.PubkeyToSigner(key.GetPublicKey())
 		if addr.String() == proposerAddr.String() {
-			b.signerKey = key
+			b.signFn = func(accounts.Account, common.Hash) (signature []byte, publicKey []byte, mask []byte, err error) {
+				// ATLAX(zgx): implement signFn
+				return nil, nil, nil, nil
+			}
 			b.signer = addr
 		}
 	}
@@ -420,7 +424,6 @@ func TestVerifySeal(t *testing.T) {
 	}
 
 	// unauthorized users but still can get correct signer address
-	engine.privateKey, _ = crypto.GenerateKey()
 	err = engine.VerifySeal(chain, block.Header())
 	if err != nil {
 		t.Errorf("error mismatch: have %v, want nil", err)

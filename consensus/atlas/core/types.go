@@ -92,7 +92,7 @@ const (
 type message struct {
 	Code          uint64
 	Msg           []byte
-	Address       common.Address
+	Signer        common.Address
 	SignerPubKey  []byte
 	Signature     []byte
 	CommittedSeal []byte
@@ -104,7 +104,7 @@ type message struct {
 
 // EncodeRLP serializes m into the Ethereum RLP format.
 func (m *message) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.Code, m.Msg, m.Address, m.Signature})
+	return rlp.Encode(w, []interface{}{m.Code, m.Msg, m.Signer, m.Signature})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
@@ -120,7 +120,7 @@ func (m *message) DecodeRLP(s *rlp.Stream) error {
 	if err := s.Decode(&msg); err != nil {
 		return err
 	}
-	m.Code, m.Msg, m.Address, m.Signature, m.CommittedSeal = msg.Code, msg.Msg, msg.Address, msg.Signature, msg.CommittedSeal
+	m.Code, m.Msg, m.Signer, m.Signature, m.CommittedSeal = msg.Code, msg.Msg, msg.Address, msg.Signature, msg.CommittedSeal
 	return nil
 }
 
@@ -148,7 +148,7 @@ func (m *message) FromPayload(b []byte, validateFn func(payload []byte, signatur
 			return err
 		}
 
-		if bytes.Compare(signerAddr.Bytes(), m.Address.Bytes()) != 0 {
+		if bytes.Compare(signerAddr.Bytes(), m.Signer.Bytes()) != 0 {
 			return errInvalidSigner
 		}
 	}
@@ -164,7 +164,7 @@ func (m *message) PayloadNoSig() ([]byte, error) {
 	return rlp.EncodeToBytes(&message{
 		Code:          m.Code,
 		Msg:           m.Msg,
-		Address:       m.Address,
+		Signer:        m.Signer,
 		SignerPubKey:  m.SignerPubKey,
 		Signature:     []byte{},
 		CommittedSeal: m.CommittedSeal,
@@ -176,7 +176,7 @@ func (m *message) Decode(val interface{}) error {
 }
 
 func (m *message) String() string {
-	return fmt.Sprintf("{Code: %v, Address: %v}", m.Code, m.Address.String())
+	return fmt.Sprintf("{Code: %v, Address: %v}", m.Code, m.Signer.String())
 }
 
 // ==============================================

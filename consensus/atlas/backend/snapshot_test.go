@@ -59,7 +59,7 @@ func generateValidators(n int) ([]atlas.Validator, []*bls.SecretKey) {
 	for i := 0; i < n; i++ {
 		privateKey, _ := crypto.GenerateKey()
 		secretKey, _ := crypto.GenerateBLSKey()
-		val, _ := validator.New(crypto.PubkeyToAddress(privateKey.PublicKey), secretKey.GetPublicKey().Serialize())
+		val, _ := validator.New(secretKey.GetPublicKey().Serialize(), crypto.PubkeyToAddress(privateKey.PublicKey))
 		keys[i] = secretKey
 		vals[i] = val
 	}
@@ -369,7 +369,7 @@ func TestVoting(t *testing.T) {
 			config.Epoch = tt.epoch
 		}
 		// ATLAS(zgx): should mapping accounts and keys
-		engine := New(config, accounts.accounts[tt.validators[0]], db, keys[0]).(*backend)
+		engine := New(config, db).(*backend)
 		chain, err := core.NewBlockChain(db, nil, genesis.Config, engine, vm.Config{}, nil)
 
 		// Assemble a chain of headers from the cast votes

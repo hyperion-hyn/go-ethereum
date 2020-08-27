@@ -54,7 +54,7 @@ func newValidator() (atlas.Validator, *ecdsa.PrivateKey, *bls.SecretKey, error) 
 	privateKey, _ := crypto.GenerateKey()
 	secretKey, _ := crypto.GenerateBLSKey()
 
-	peer, err := validator.New(crypto.PubkeyToAddress(privateKey.PublicKey), secretKey.GetPublicKey().Serialize())
+	peer, err := validator.New(secretKey.GetPublicKey().Serialize(), crypto.PubkeyToAddress(privateKey.PublicKey))
 	if err != nil {
 		return nil, nil, nil, err
 	}

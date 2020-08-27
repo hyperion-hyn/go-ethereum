@@ -193,9 +193,9 @@ OUTER:
 			validator := r0.valSet.GetByIndex(uint64(i))
 			m, _ := Encode(v.engine.(*core).current.Subject())
 			if err := r0.handlePrepare(&message{
-				Code:    msgPrepare,
-				Msg:     m,
-				Address: validator.Address(),
+				Code:   msgPrepare,
+				Msg:    m,
+				Signer: validator.Signer(),
 			}, validator); err != nil {
 				if err != test.expectedErr {
 					t.Errorf("error mismatch: have %v, want %v", err, test.expectedErr)

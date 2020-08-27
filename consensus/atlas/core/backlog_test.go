@@ -187,7 +187,7 @@ func TestStoreBacklog(t *testing.T) {
 		Msg:  prepreparePayload,
 	}
 	c.storeBacklog(m, p)
-	msg := c.backlogs[p.Address()].PopItem()
+	msg := c.backlogs[p.Signer()].PopItem()
 	if !reflect.DeepEqual(msg, m) {
 		t.Errorf("message mismatch: have %v, want %v", msg, m)
 	}
@@ -204,7 +204,7 @@ func TestStoreBacklog(t *testing.T) {
 		Msg:  subjectPayload,
 	}
 	c.storeBacklog(m, p)
-	msg = c.backlogs[p.Address()].PopItem()
+	msg = c.backlogs[p.Signer()].PopItem()
 	if !reflect.DeepEqual(msg, m) {
 		t.Errorf("message mismatch: have %v, want %v", msg, m)
 	}
@@ -215,7 +215,7 @@ func TestStoreBacklog(t *testing.T) {
 		Msg:  subjectPayload,
 	}
 	c.storeBacklog(m, p)
-	msg = c.backlogs[p.Address()].PopItem()
+	msg = c.backlogs[p.Signer()].PopItem()
 	if !reflect.DeepEqual(msg, m) {
 		t.Errorf("message mismatch: have %v, want %v", msg, m)
 	}
@@ -226,7 +226,7 @@ func TestStoreBacklog(t *testing.T) {
 		Msg:  subjectPayload,
 	}
 	c.storeBacklog(m, p)
-	msg = c.backlogs[p.Address()].PopItem()
+	msg = c.backlogs[p.Signer()].PopItem()
 	if !reflect.DeepEqual(msg, m) {
 		t.Errorf("message mismatch: have %v, want %v", msg, m)
 	}

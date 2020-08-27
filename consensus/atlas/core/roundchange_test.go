@@ -44,9 +44,9 @@ func TestRoundChangeSet(t *testing.T) {
 	// Add message from all validators
 	for i, v := range vset.List() {
 		msg := &message{
-			Code:    msgRoundChange,
-			Msg:     m,
-			Address: v.Address(),
+			Code:   msgRoundChange,
+			Msg:    m,
+			Signer: v.Signer(),
 		}
 		rc.Add(view.Round, msg)
 		if rc.roundChanges[view.Round.Uint64()].Size() != i+1 {
@@ -57,9 +57,9 @@ func TestRoundChangeSet(t *testing.T) {
 	// Add message again from all validators, but the size should be the same
 	for _, v := range vset.List() {
 		msg := &message{
-			Code:    msgRoundChange,
-			Msg:     m,
-			Address: v.Address(),
+			Code:   msgRoundChange,
+			Msg:    m,
+			Signer: v.Signer(),
 		}
 		rc.Add(view.Round, msg)
 		if rc.roundChanges[view.Round.Uint64()].Size() != vset.Size() {

@@ -95,8 +95,8 @@ func TestCheckValidatorSignature(t *testing.T) {
 			t.Errorf("error mismatch: have %v, want nil", err)
 		}
 		validator := vset.GetByIndex(uint64(i))
-		if addr != validator.Address() {
-			t.Errorf("validator address mismatch: have %v, want %v", addr, validator.Address())
+		if addr != validator.Signer() {
+			t.Errorf("validator address mismatch: have %v, want %v", addr, validator.Signer())
 		}
 	}
 
@@ -298,7 +298,7 @@ func newTestValidatorSet(n int) (atlas.ValidatorSet, []*bls.SecretKey) {
 		privateKey, _ := crypto.GenerateBLSKey()
 		accountKey, _ := crypto.GenerateKey()
 		keys[i] = privateKey
-		val, _ := validator.New(crypto.PubkeyToAddress(accountKey.PublicKey), privateKey.GetPublicKey().Serialize())
+		val, _ := validator.New(privateKey.GetPublicKey().Serialize(), crypto.PubkeyToAddress(accountKey.PublicKey))
 		addrs[i] = val
 	}
 	vset := validator.NewSet(addrs, atlas.RoundRobin)
@@ -322,7 +322,5 @@ func (slice Keys) Swap(i, j int) {
 
 func newBackend() (b *backend) {
 	_, b, _ = newBlockChain(4)
-	key, _ := generatePrivateKey()
-	b.privateKey = key
 	return
 }

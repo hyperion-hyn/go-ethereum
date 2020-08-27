@@ -112,7 +112,7 @@ type core struct {
 func (c *core) finalizeMessage(msg *message) ([]byte, error) {
 	var err error
 	// Add sender address
-	msg.Address = c.Address()
+	msg.Signer = c.Address()
 
 	// Sign message
 	data, err := msg.PayloadNoSig()

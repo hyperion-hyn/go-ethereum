@@ -149,7 +149,7 @@ func (c *core) handleMsg(payload []byte) error {
 	}
 
 	// Only accept message if the address is valid
-	_, src := c.valSet.GetBySigner(msg.Address)
+	_, src := c.valSet.GetBySigner(msg.Signer)
 	if src == nil {
 		logger.Error("Invalid address in message", "msg", msg)
 		return atlas.ErrUnauthorizedAddress

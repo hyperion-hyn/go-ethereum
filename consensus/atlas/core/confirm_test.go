@@ -169,9 +169,9 @@ OUTER:
 			if err := r0.handleCommit(&message{
 				Code:          msgCommit,
 				Msg:           m,
-				Address:       validator.Address(),
+				Signer:        validator.Signer(),
 				Signature:     []byte{},
-				CommittedSeal: validator.Address().Bytes(), // small hack
+				CommittedSeal: validator.Signer().Bytes(), // small hack
 			}, validator); err != nil {
 				if err != test.expectedErr {
 					t.Errorf("error mismatch: have %v, want %v", err, test.expectedErr)

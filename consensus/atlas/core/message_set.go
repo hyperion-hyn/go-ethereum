@@ -90,7 +90,7 @@ func (ms *messageSet) Get(addr common.Address) *message {
 
 func (ms *messageSet) verify(msg *message) error {
 	// verify if the message comes from one of the validators
-	if _, v := ms.valSet.GetBySigner(msg.Address); v == nil {
+	if _, v := ms.valSet.GetBySigner(msg.Signer); v == nil {
 		return atlas.ErrUnauthorizedAddress
 	}
 
@@ -100,7 +100,7 @@ func (ms *messageSet) verify(msg *message) error {
 }
 
 func (ms *messageSet) addVerifiedMessage(msg *message) error {
-	ms.messages[msg.Address] = msg
+	ms.messages[msg.Signer] = msg
 	return nil
 }
 
@@ -109,7 +109,7 @@ func (ms *messageSet) String() string {
 	defer ms.messagesMu.Unlock()
 	addresses := make([]string, 0, len(ms.messages))
 	for _, v := range ms.messages {
-		addresses = append(addresses, v.Address.String())
+		addresses = append(addresses, v.Signer.String())
 	}
 	return fmt.Sprintf("[%v]", strings.Join(addresses, ", "))
 }

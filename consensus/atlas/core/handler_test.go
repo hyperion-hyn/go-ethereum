@@ -47,7 +47,7 @@ func TestHandleMsg(t *testing.T) {
 	msg := &message{
 		Code:          msgPreprepare,
 		Msg:           m,
-		Address:       v0.Address(),
+		Signer:        v0.Address(),
 		Signature:     []byte{},
 		CommittedSeal: []byte{},
 	}
@@ -68,7 +68,7 @@ func TestHandleMsg(t *testing.T) {
 	msg = &message{
 		Code:          msgPrepare,
 		Msg:           m,
-		Address:       v0.Address(),
+		Signer:        v0.Address(),
 		Signature:     []byte{},
 		CommittedSeal: []byte{},
 	}
@@ -89,7 +89,7 @@ func TestHandleMsg(t *testing.T) {
 	msg = &message{
 		Code:          msgCommit,
 		Msg:           m,
-		Address:       v0.Address(),
+		Signer:        v0.Address(),
 		Signature:     []byte{},
 		CommittedSeal: []byte{},
 	}
@@ -110,7 +110,7 @@ func TestHandleMsg(t *testing.T) {
 	msg = &message{
 		Code:          uint64(99),
 		Msg:           m,
-		Address:       v0.Address(),
+		Signer:        v0.Address(),
 		Signature:     []byte{},
 		CommittedSeal: []byte{},
 	}

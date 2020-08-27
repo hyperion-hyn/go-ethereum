@@ -207,7 +207,7 @@ func generateValidators(n int) ([]atlas.Validator, []*bls.SecretKey) {
 	for i := 0; i < n; i++ {
 		privateKey, _ := crypto.GenerateKey()
 		secretKey, _ := crypto.GenerateBLSKey()
-		val, _ := validator.New(crypto.PubkeyToAddress(privateKey.PublicKey), secretKey.GetPublicKey().Serialize())
+		val, _ := validator.New(secretKey.GetPublicKey().Serialize(), crypto.PubkeyToAddress(privateKey.PublicKey))
 		keys[i] = secretKey
 		vals[i] = val
 	}
@@ -240,8 +240,8 @@ func NewTestSystemWithBackend(n, f uint64) *testSystem {
 		backend := sys.NewBackend(i)
 		backend.peers = vset
 		backend.address = vset.GetByIndex(i).Coinbase()
-		backend.signer = vset.GetByIndex(i).Address()
-		backend.signerKey = findSecretKeyBySigner(keys, vset.GetByIndex(i).Address())
+		backend.signer = vset.GetByIndex(i).Signer()
+		backend.signerKey = findSecretKeyBySigner(keys, vset.GetByIndex(i).Signer())
 
 		core := New(backend, config).(*core)
 		core.state = StateAcceptRequest
