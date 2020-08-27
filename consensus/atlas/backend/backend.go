@@ -17,14 +17,11 @@
 package backend
 
 import (
-	"crypto/ecdsa"
-
 	"math/big"
 	"sync"
 	"time"
 
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/hyperion-hyn/bls/ffi/go/bls"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
@@ -50,7 +47,7 @@ var (
 )
 
 // New creates an Ethereum backend for Atlas core engine.
-func New(config *atlas.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database, signerKey *bls.SecretKey) consensus.Atlas {
+func New(config *atlas.Config, db ethdb.Database) consensus.Atlas {
 	// Allocate the snapshot caches and create the engine
 	recents, _ := lru.NewARC(inmemorySnapshots)
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
@@ -59,10 +56,6 @@ func New(config *atlas.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database, 
 	backend := &backend{
 		config:         config,
 		atlasEventMux:  new(event.TypeMux),
-		privateKey:     privateKey,
-		address:        crypto.PubkeyToAddress(privateKey.PublicKey),
-		signerKey:      signerKey,
-		signer:         crypto.PubkeyToSigner(signerKey.GetPublicKey()),
 		logger:         log.New(),
 		db:             db,
 		commitCh:       make(chan *types.Block, 1),
@@ -86,13 +79,11 @@ type ValidatorProposal struct {
 type backend struct {
 	config        *atlas.Config
 	atlasEventMux *event.TypeMux
-	privateKey    *ecdsa.PrivateKey
-	address       common.Address
 
-	signerKey *bls.SecretKey
-	signer    common.Address
-	signFn    consensus.SignHashFn // Signer function to authorize hashes with
-	lock      sync.RWMutex         // Protects the signer fields
+	address common.Address       // Signer's account address
+	signer  common.Address       // Signer's id (address format)
+	signFn  consensus.SignHashFn // Sign function to authorize hashes with
+	lock    sync.RWMutex         // Protects the signer fields
 
 	core         kernel.Engine
 	logger       log.Logger
@@ -135,11 +126,6 @@ func (sb *backend) Address() common.Address {
 // Signer implements atlas.Backend.Signer
 func (sb *backend) Signer() common.Address {
 	return sb.signer
-}
-
-// SignerKey implements atlas.Backend.SignerKey
-func (sb *backend) SignerKey() []byte {
-	return sb.signerKey.GetPublicKey().Serialize()
 }
 
 // Validators implements atlas.Backend.Validators

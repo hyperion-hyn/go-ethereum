@@ -165,6 +165,7 @@ type EngineEx interface {
 	// Stop stops the engine
 	Stop() error
 
+	// Authorize injects a signer's id and sign function into the consensus engine to mint new blocks with.
 	Authorize(signer common.Address, signFn SignHashFn)
 }
 

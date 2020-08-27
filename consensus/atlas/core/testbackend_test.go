@@ -59,10 +59,6 @@ func (self *testSystemBackend) Signer() common.Address {
 	return self.signer
 }
 
-func (self *testSystemBackend) SignerKey() []byte {
-	return self.signerKey.Serialize()
-}
-
 type testCommittedMsgs struct {
 	commitProposal atlas.Proposal
 	committedSeals []byte

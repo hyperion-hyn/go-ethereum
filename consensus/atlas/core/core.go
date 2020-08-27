@@ -42,7 +42,6 @@ func New(backend atlas.Backend, config *atlas.Config) Engine {
 	c := &core{
 		config:             config,
 		address:            backend.Address(),
-		signerPubKey:       backend.SignerKey(),
 		state:              StateAcceptRequest,
 		handlerWg:          new(sync.WaitGroup),
 		logger:             log.New("address", backend.Address()),
@@ -68,11 +67,10 @@ func New(backend atlas.Backend, config *atlas.Config) Engine {
 // ----------------------------------------------------------------------------
 
 type core struct {
-	config       *atlas.Config
-	address      common.Address
-	signerPubKey []byte
-	state        State
-	logger       log.Logger
+	config  *atlas.Config
+	address common.Address
+	state   State
+	logger  log.Logger
 
 	backend               atlas.Backend
 	events                *event.TypeMuxSubscription
@@ -115,14 +113,13 @@ func (c *core) finalizeMessage(msg *message) ([]byte, error) {
 	var err error
 	// Add sender address
 	msg.Address = c.Address()
-	msg.SignerPubKey = c.signerPubKey[:]
 
 	// Sign message
 	data, err := msg.PayloadNoSig()
 	if err != nil {
 		return nil, err
 	}
-	msg.Signature, _, _, err = c.backend.Sign(data)
+	msg.Signature, msg.SignerPubKey, _, err = c.backend.Sign(data)
 	if err != nil {
 		return nil, err
 	}
