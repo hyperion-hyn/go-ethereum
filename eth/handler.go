@@ -101,7 +101,7 @@ type ProtocolManager struct {
 	// and processing
 	wg sync.WaitGroup
 
-	engine   consensus.Engine
+	engine consensus.Engine
 }
 
 // NewProtocolManager returns a new Ethereum sub protocol manager. The Ethereum sub protocol manages peers capable
@@ -886,14 +886,14 @@ func (pm *ProtocolManager) NodeInfo() *NodeInfo {
 func (pm *ProtocolManager) getConsensusAlgorithm() string {
 	var consensusAlgo string
 	switch pm.engine.(type) {
-		case consensus.Istanbul:
-			consensusAlgo = "istanbul"
-		case *clique.Clique:
-			consensusAlgo = "clique"
-		case *ethash.Ethash:
-			consensusAlgo = "ethash"
-		default:
-			consensusAlgo = "unknown"
+	case consensus.Istanbul:
+		consensusAlgo = "istanbul"
+	case *clique.Clique:
+		consensusAlgo = "clique"
+	case *ethash.Ethash:
+		consensusAlgo = "ethash"
+	default:
+		consensusAlgo = "unknown"
 	}
 	return consensusAlgo
 }
@@ -901,10 +901,21 @@ func (pm *ProtocolManager) getConsensusAlgorithm() string {
 // Quorum
 func (self *ProtocolManager) FindPeers(targets map[common.Address]bool) map[common.Address]consensus.Peer {
 	m := make(map[common.Address]consensus.Peer)
+
+	want := func(addr common.Address) bool {
+		if targets == nil {
+			return true
+		}
+		if targets[addr] {
+			return true
+		}
+		return false
+	}
+
 	for _, p := range self.peers.Peers() {
 		pubKey := p.Node().Pubkey()
 		addr := crypto.PubkeyToAddress(*pubKey)
-		if targets[addr] {
+		if want(addr) {
 			m[addr] = p
 		}
 	}

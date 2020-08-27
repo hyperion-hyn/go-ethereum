@@ -150,15 +150,8 @@ func (sb *backend) Gossip(valSet atlas.ValidatorSet, payload []byte) error {
 	hash := atlas.RLPHash(payload)
 	sb.knownMessages.Add(hash, true)
 
-	targets := make(map[common.Address]bool)
-	for _, val := range valSet.List() {
-		if val.Address() != sb.Address() {
-			targets[val.Address()] = true
-		}
-	}
-
-	if sb.broadcaster != nil && len(targets) > 0 {
-		ps := sb.broadcaster.FindPeers(targets)
+	if sb.broadcaster != nil {
+		ps := sb.broadcaster.FindPeers(nil)
 		for addr, p := range ps {
 			ms, ok := sb.recentMessages.Get(addr)
 			var m *lru.ARCCache
