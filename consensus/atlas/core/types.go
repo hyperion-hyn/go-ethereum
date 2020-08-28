@@ -17,7 +17,6 @@
 package core
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 
@@ -93,8 +92,8 @@ type message struct {
 	Code          uint64
 	Msg           []byte
 	Signer        common.Address
-	SignerPubKey  []byte
 	Signature     []byte
+	SignerPubKey  []byte
 	CommittedSeal []byte
 }
 
@@ -104,7 +103,7 @@ type message struct {
 
 // EncodeRLP serializes m into the Ethereum RLP format.
 func (m *message) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.Code, m.Msg, m.Signer, m.Signature})
+	return rlp.Encode(w, []interface{}{m.Code, m.Msg, m.Signer, m.Signature, m.SignerPubKey, m.CommittedSeal})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
@@ -114,13 +113,14 @@ func (m *message) DecodeRLP(s *rlp.Stream) error {
 		Msg           []byte
 		Address       common.Address
 		Signature     []byte
+		SignerPubKey  []byte
 		CommittedSeal []byte
 	}
 
 	if err := s.Decode(&msg); err != nil {
 		return err
 	}
-	m.Code, m.Msg, m.Signer, m.Signature, m.CommittedSeal = msg.Code, msg.Msg, msg.Address, msg.Signature, msg.CommittedSeal
+	m.Code, m.Msg, m.Signer, m.Signature, m.SignerPubKey, m.CommittedSeal = msg.Code, msg.Msg, msg.Address, msg.Signature, msg.SignerPubKey, msg.CommittedSeal
 	return nil
 }
 
@@ -128,11 +128,17 @@ func (m *message) DecodeRLP(s *rlp.Stream) error {
 //
 // define the functions that needs to be provided for core.
 
-func (m *message) FromPayload(b []byte, validateFn func(payload []byte, signature []byte, publicKey []byte) (common.Address, error)) error {
+func (m *message) FromPayload(b []byte, preprocessorFn func(*message) error, validateFn func(payload []byte, signature []byte, publicKey []byte) error) error {
 	// Decode message
 	err := rlp.DecodeBytes(b, &m)
 	if err != nil {
 		return err
+	}
+
+	if preprocessorFn != nil {
+		if err = preprocessorFn(m); err != nil {
+			return err
+		}
 	}
 
 	// Validate message (on a message without Signature)
@@ -143,13 +149,9 @@ func (m *message) FromPayload(b []byte, validateFn func(payload []byte, signatur
 			return err
 		}
 
-		signerAddr, err := validateFn(payload, m.Signature, m.SignerPubKey)
+		err := validateFn(payload, m.Signature, m.SignerPubKey)
 		if err != nil {
 			return err
-		}
-
-		if bytes.Compare(signerAddr.Bytes(), m.Signer.Bytes()) != 0 {
-			return errInvalidSigner
 		}
 	}
 	return nil
@@ -165,9 +167,9 @@ func (m *message) PayloadNoSig() ([]byte, error) {
 		Code:          m.Code,
 		Msg:           m.Msg,
 		Signer:        m.Signer,
-		SignerPubKey:  m.SignerPubKey,
+		SignerPubKey:  []byte{},
 		Signature:     []byte{},
-		CommittedSeal: m.CommittedSeal,
+		CommittedSeal: []byte{},
 	})
 }
 
