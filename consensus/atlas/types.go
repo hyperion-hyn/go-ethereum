@@ -26,6 +26,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
@@ -143,7 +144,7 @@ func (b *Subject) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
-func (b *Subject) String() string {
+func (b Subject) String() string {
 	return fmt.Sprintf("{View: %v, Digest: %v}", b.View, b.Digest.String())
 }
 
@@ -175,8 +176,8 @@ func (b *SignedSubject) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
-func (b *SignedSubject) String() string {
-	return fmt.Sprintf("{View: %v, Digest: %v}", b.Subject.View, b.Subject.Digest.String())
+func (b SignedSubject) String() string {
+	return fmt.Sprintf("{View: %v, Digest: %v, Signature: %x, PublicKey: %x}", b.Subject.View, b.Subject.Digest.String(), b.Signature[:10], b.PublicKey[:10])
 }
 
 // SealHash returns the hash of a block prior to it being sealed.
@@ -244,6 +245,8 @@ func SignSubject(subject *Subject, signFn SignHashFn) (*SignedSubject, error) {
 	retval.Signature = signature
 	retval.PublicKey = publicKey
 	retval.Mask = mask
+
+	log.Debug("SignSubject", "hash", fmt.Sprintf("%x", hash.Bytes()[:10]), "sub", fmt.Sprintf("%s", retval))
 
 	return &retval, nil
 }
