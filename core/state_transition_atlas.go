@@ -102,7 +102,7 @@ func (st *StateTransition) StakingTransitionDb() (*ExecutionResult, error) {
 	st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
 
 	return &ExecutionResult{
-		UsedGas:    st.gasUsed(),
+		UsedGas: st.gasUsed(),
 	}, err
 }
 
@@ -200,6 +200,10 @@ func updateValidatorFromPoolByMsg(validator *restaking.Storage_ValidatorWrapper_
 
 	if msg.EPOSStatus == restaking.Active || msg.EPOSStatus == restaking.Inactive {
 		validator.Validator().Status().SetValue(uint8(msg.EPOSStatus))
+	}
+
+	if msg.MaxTotalDelegation != nil && msg.MaxTotalDelegation.Sign() > 0 {
+		validator.Validator().MaxTotalDelegation().SetValue(msg.MaxTotalDelegation)
 	}
 }
 
