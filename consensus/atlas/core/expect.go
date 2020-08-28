@@ -60,7 +60,7 @@ func (c *core) handleExpect(msg *message, src atlas.Validator) error {
 
 	// Ensure we have the same view with the PREPARED message
 	// If it is old message, see if we need to broadcast COMMIT
-	if err := c.checkMessage(msgExpect, expect.View); err != nil {
+	if err := c.checkMessage(msgExpect, expect.Subject.View); err != nil {
 		if err == errOldMessage {
 			// ATLAS(zgx): what if old message is different from preprepare.proposal?
 			// Get validator set for the given proposal
@@ -97,13 +97,13 @@ func (c *core) handleExpect(msg *message, src atlas.Validator) error {
 			return err
 		}
 
-		if expect.Digest != c.current.Preprepare.Proposal.Hash() {
+		if expect.Subject.Digest != c.current.Preprepare.Proposal.Hash() {
 			return errInconsistentSubject
 		}
 
 		// Send ROUND CHANGE if the locked proposal and the received proposal are different
 		if c.IsProposer() && c.current.IsHashLocked() {
-			if expect.Digest == c.current.GetLockedHash() {
+			if expect.Subject.Digest == c.current.GetLockedHash() {
 				// Broadcast COMMIT and enters Expect state directly
 				c.acceptExpect(expect)
 				// ATLAS(zgx): LockHash in handlePrepare, so set state to StatePrepared directly
@@ -139,8 +139,8 @@ func (c *core) verifyExpect(msg *message, src atlas.Validator, validatorSet atla
 		return errFailedDecodePrepare
 	}
 
-	if expect.Digest != c.current.Preprepare.Proposal.Hash() {
-		logger.Warn("Inconsistent subjects between EXPECT and proposal", "expected", c.current.Preprepare.Proposal.Hash(), "got", expect.Digest)
+	if expect.Subject.Digest != c.current.Preprepare.Proposal.Hash() {
+		logger.Warn("Inconsistent subjects between EXPECT and proposal", "expected", c.current.Preprepare.Proposal.Hash(), "got", expect.Subject.Digest)
 		return errInconsistentSubject
 	}
 
@@ -156,7 +156,7 @@ func (c *core) verifyExpect(msg *message, src atlas.Validator, validatorSet atla
 		return err
 	}
 
-	if sign.Verify(&pubKey, expect.Digest.String()) == false {
+	if sign.Verify(&pubKey, expect.Subject.Digest.String()) == false {
 		logger.Error("Failed to verify signature with signer's public key", "msg", msg)
 		return errInvalidSignature
 	}

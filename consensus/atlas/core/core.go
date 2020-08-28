@@ -30,6 +30,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
+	"github.com/ethereum/go-ethereum/crypto"
 	bls_cosi "github.com/ethereum/go-ethereum/crypto/bls"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
@@ -80,7 +81,7 @@ type core struct {
 
 	valSet                atlas.ValidatorSet
 	waitingForRoundChange bool
-	validateFn            func([]byte, []byte, []byte) (common.Address, error)
+	validateFn            func([]byte, []byte, []byte) error
 
 	backlogs   map[common.Address]*prque.Prque
 	backlogsMu *sync.Mutex
@@ -112,14 +113,15 @@ type core struct {
 func (c *core) finalizeMessage(msg *message) ([]byte, error) {
 	var err error
 	// Add sender address
-	msg.Signer = c.Address()
+	msg.Signer = c.backend.Signer()
 
 	// Sign message
 	data, err := msg.PayloadNoSig()
 	if err != nil {
 		return nil, err
 	}
-	msg.Signature, msg.SignerPubKey, _, err = c.backend.Sign(data)
+	hash := crypto.Keccak256Hash(data)
+	msg.Signature, msg.SignerPubKey, _, err = c.backend.Sign(hash.Bytes())
 	if err != nil {
 		return nil, err
 	}
@@ -335,8 +337,8 @@ func (c *core) newRoundChangeTimer() {
 	})
 }
 
-func (c *core) checkValidatorSignature(data []byte, sig []byte, pubKey []byte) (common.Address, error) {
-	return atlas.CheckValidatorSignature(c.valSet, data, sig, pubKey)
+func (c *core) checkValidatorSignature(data []byte, sig []byte, pubKey []byte) error {
+	return atlas.CheckValidatorSignature(data, sig, pubKey)
 }
 
 func (c *core) QuorumSize() int {
@@ -353,7 +355,7 @@ func PrepareCommittedSeal(hash common.Hash) []byte {
 }
 
 func (c *core) SignSubject(subject *atlas.Subject) (*atlas.SignedSubject, error) {
-	signedSubject, err := atlas.SignSubject(c.current.Subject(), func(hash common.Hash) (signature []byte, publicKey []byte, mask []byte, err error) {
+	signedSubject, err := atlas.SignSubject(subject, func(hash common.Hash) (signature []byte, publicKey []byte, mask []byte, err error) {
 		signature, publicKey, mask, err = c.backend.Sign(hash.Bytes())
 		if err != nil {
 			return nil, nil, nil, err
@@ -367,7 +369,7 @@ func (c *core) AssembleSignedSubject() (*atlas.SignedSubject, error) {
 	switch c.state {
 	case StatePrepared:
 		signedSubject := atlas.SignedSubject{
-			Subject:   *c.current.Subject(),
+			Subject:   c.current.Subject(),
 			Signature: c.current.aggregatedPrepareSig.Serialize(),
 			PublicKey: c.current.aggregatedPreparePublicKey.Serialize(),
 			Mask:      c.current.prepareBitmap.Mask(),
@@ -375,7 +377,7 @@ func (c *core) AssembleSignedSubject() (*atlas.SignedSubject, error) {
 		return &signedSubject, nil
 	case StateConfirmed:
 		signedSubject := atlas.SignedSubject{
-			Subject:   *c.current.Subject(),
+			Subject:   c.current.Subject(),
 			Signature: c.current.aggregatedConfirmSig.Serialize(),
 			PublicKey: c.current.aggregatedConfirmPublicKey.Serialize(),
 			Mask:      c.current.confirmBitmap.Mask(),

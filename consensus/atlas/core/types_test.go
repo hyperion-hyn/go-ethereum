@@ -47,7 +47,7 @@ func testPreprepare(t *testing.T) {
 	}
 
 	decodedMsg := new(message)
-	err = decodedMsg.FromPayload(msgPayload, nil)
+	err = decodedMsg.FromPayload(msgPayload, nil, nil)
 	if err != nil {
 		t.Errorf("error mismatch: have %v, want nil", err)
 	}
@@ -96,7 +96,7 @@ func testSubject(t *testing.T) {
 	}
 
 	decodedMsg := new(message)
-	err = decodedMsg.FromPayload(msgPayload, nil)
+	err = decodedMsg.FromPayload(msgPayload, nil, nil)
 	if err != nil {
 		t.Errorf("error mismatch: have %v, want nil", err)
 	}
@@ -141,8 +141,8 @@ func testSubjectWithSignature(t *testing.T) {
 	// 2. Decode test
 	// 2.1 Test normal validate func
 	decodedMsg := new(message)
-	err = decodedMsg.FromPayload(msgPayload, func(data []byte, sig []byte, publicKey []byte) (common.Address, error) {
-		return address, nil
+	err = decodedMsg.FromPayload(msgPayload, nil, func(data []byte, sig []byte, publicKey []byte) error {
+		return nil
 	})
 	if err != nil {
 		t.Errorf("error mismatch: have %v, want nil", err)
@@ -154,7 +154,7 @@ func testSubjectWithSignature(t *testing.T) {
 
 	// 2.2 Test nil validate func
 	decodedMsg = new(message)
-	err = decodedMsg.FromPayload(msgPayload, nil)
+	err = decodedMsg.FromPayload(msgPayload, nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -165,8 +165,8 @@ func testSubjectWithSignature(t *testing.T) {
 
 	// 2.3 Test failed validate func
 	decodedMsg = new(message)
-	err = decodedMsg.FromPayload(msgPayload, func(data []byte, sig []byte, publicKey []byte) (common.Address, error) {
-		return common.Address{}, atlas.ErrUnauthorizedAddress
+	err = decodedMsg.FromPayload(msgPayload, nil, func(data []byte, sig []byte, publicKey []byte) error {
+		return atlas.ErrUnauthorizedAddress
 	})
 	if err != atlas.ErrUnauthorizedAddress {
 		t.Errorf("error mismatch: have %v, want %v", err, atlas.ErrUnauthorizedAddress)

@@ -78,25 +78,21 @@ func TestCheckSignature(t *testing.T) {
 }
 
 func TestCheckValidatorSignature(t *testing.T) {
-	vset, keys := newTestValidatorSet(5)
+	_, keys := newTestValidatorSet(5)
 
 	// 1. Positive test: sign with validator's key should succeed
 	data := []byte("dummy data")
 	hashData := crypto.Keccak256([]byte(data))
-	for i, k := range keys {
+	for _, k := range keys {
 		// Sign
 		sig := k.SignHash(hashData)
 		if sig != nil {
 			t.Errorf("failed to sign hash data: have nil")
 		}
 		// CheckValidatorSignature should succeed
-		addr, err := atlas.CheckValidatorSignature(vset, data, sig.Serialize(), k.GetPublicKey().Serialize())
+		err := atlas.CheckValidatorSignature(data, sig.Serialize(), k.GetPublicKey().Serialize())
 		if err != nil {
 			t.Errorf("error mismatch: have %v, want nil", err)
-		}
-		validator := vset.GetByIndex(uint64(i))
-		if addr != validator.Signer() {
-			t.Errorf("validator address mismatch: have %v, want %v", addr, validator.Signer())
 		}
 	}
 
@@ -112,13 +108,9 @@ func TestCheckValidatorSignature(t *testing.T) {
 	}
 
 	// CheckValidatorSignature should return ErrUnauthorizedAddress
-	addr, err := atlas.CheckValidatorSignature(vset, data, sig.Serialize(), key.GetPublicKey().Serialize())
+	err = atlas.CheckValidatorSignature(data, sig.Serialize(), key.GetPublicKey().Serialize())
 	if err != atlas.ErrUnauthorizedAddress {
 		t.Errorf("error mismatch: have %v, want %v", err, atlas.ErrUnauthorizedAddress)
-	}
-	emptyAddr := common.Address{}
-	if addr != emptyAddr {
-		t.Errorf("address mismatch: have %v, want %v", addr, emptyAddr)
 	}
 }
 

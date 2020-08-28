@@ -178,7 +178,7 @@ OUTER:
 
 			// verify prepare messages
 			decodedMsg := new(message)
-			err := decodedMsg.FromPayload(v.sentMsgs[0], nil)
+			err := decodedMsg.FromPayload(v.sentMsgs[0], nil, nil)
 			if err != nil {
 				t.Errorf("error mismatch: have %v, want nil", err)
 			}

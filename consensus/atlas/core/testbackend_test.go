@@ -19,6 +19,7 @@ package core
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"fmt"
 	"math/big"
 	"time"
 
@@ -100,7 +101,7 @@ func (self *testSystemBackend) Broadcast(valSet atlas.ValidatorSet, message []by
 }
 
 func (self *testSystemBackend) Gossip(valSet atlas.ValidatorSet, message []byte) error {
-	testLogger.Warn("not sign any data")
+	testLogger.Warn("Gossip")
 	return nil
 }
 
@@ -123,13 +124,15 @@ func (self *testSystemBackend) Verify(proposal atlas.Proposal) (time.Duration, e
 }
 
 func (self *testSystemBackend) Sign(data []byte) ([]byte, []byte, []byte, error) {
-	testLogger.Info("returning current backend address so that CheckValidatorSignature returns the same value")
+	testLogger.Info(fmt.Sprintf("Sign data %x", data))
 	sighash := self.signerKey.SignHash(data).Serialize()
 	pubkey := self.signerKey.GetPublicKey().Serialize()
+	// ATLAS(zgx): should set mask here?
 	mask, err := bls2.NewMask(make([]*bls.PublicKey, types.AtlasMaxValidator), nil)
 	if err != nil {
 		return nil, nil, nil, err
 	}
+	testLogger.Info(fmt.Sprintf("signature: %x, publicKey: %x", sighash[:10], pubkey[:10]))
 	return sighash, pubkey, mask.Mask(), nil
 }
 
@@ -137,8 +140,8 @@ func (self *testSystemBackend) CheckSignature([]byte, common.Address, []byte) er
 	return nil
 }
 
-func (self *testSystemBackend) CheckValidatorSignature(data []byte, sig []byte, pubKey []byte) (common.Address, error) {
-	return atlas.CheckValidatorSignature(self.peers, data, sig, pubKey)
+func (self *testSystemBackend) CheckValidatorSignature(data []byte, sig []byte, pubKey []byte) error {
+	return atlas.CheckValidatorSignature(data, sig, pubKey)
 }
 
 func (self *testSystemBackend) Hash(b interface{}) common.Hash {

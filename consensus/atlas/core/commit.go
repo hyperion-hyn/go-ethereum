@@ -77,7 +77,7 @@ func (c *core) handleCommit(msg *message, src atlas.Validator) error {
 		return errFailedDecodeCommit
 	}
 
-	if err := c.checkMessage(msgCommit, commit.View); err != nil {
+	if err := c.checkMessage(msgCommit, commit.Subject.View); err != nil {
 		return err
 	}
 
@@ -120,8 +120,8 @@ func (c *core) acceptCommit(msg *message, src atlas.Validator, validatorSet atla
 		return errFailedDecodePrepare
 	}
 
-	if commit.Digest != c.current.Preprepare.Proposal.Hash() {
-		logger.Warn("Inconsistent subjects between EXPECT and proposal", "expected", c.current.Preprepare.Proposal.Hash(), "got", commit.Digest)
+	if commit.Subject.Digest != c.current.Preprepare.Proposal.Hash() {
+		logger.Warn("Inconsistent subjects between EXPECT and proposal", "expected", c.current.Preprepare.Proposal.Hash(), "got", commit.Subject.Digest)
 		return errInconsistentSubject
 	}
 
@@ -137,7 +137,7 @@ func (c *core) acceptCommit(msg *message, src atlas.Validator, validatorSet atla
 		return err
 	}
 
-	if sign.Verify(&pubKey, commit.Digest.String()) == false {
+	if sign.Verify(&pubKey, commit.Subject.Digest.String()) == false {
 		logger.Error("Failed to verify signature with signer's public key", "msg", msg)
 		return errInvalidSignature
 	}

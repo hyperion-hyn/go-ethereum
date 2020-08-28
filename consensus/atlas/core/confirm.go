@@ -53,7 +53,7 @@ func (c *core) handleConfirm(msg *message, src atlas.Validator) error {
 		return errFailedDecodePrepare
 	}
 
-	if err := c.checkMessage(msgPrepare, confirm.View); err != nil {
+	if err := c.checkMessage(msgPrepare, confirm.Subject.View); err != nil {
 		return err
 	}
 
@@ -77,7 +77,7 @@ func (c *core) handleConfirm(msg *message, src atlas.Validator) error {
 
 	// Change to Expect state if we've received enough CONFIRM messages or it is locked
 	// and we are in earlier state before Expect state.
-	if ((c.current.IsHashLocked() && confirm.Digest == c.current.GetLockedHash()) || c.current.GetConfirmSize() >= c.QuorumSize()) &&
+	if ((c.current.IsHashLocked() && confirm.Subject.Digest == c.current.GetLockedHash()) || c.current.GetConfirmSize() >= c.QuorumSize()) &&
 		c.state.Cmp(StateExpected) < 0 {
 		c.current.LockHash()
 		c.setState(StateExpected)
@@ -107,8 +107,8 @@ func (c *core) acceptConfirm(msg *message, src atlas.Validator) error {
 		return errFailedDecodePrepare
 	}
 
-	if prepare.Digest != c.current.Preprepare.Proposal.Hash() {
-		logger.Warn("Inconsistent subjects between PREPARE and proposal", "expected", c.current.Preprepare.Proposal.Hash(), "got", prepare.Digest)
+	if prepare.Subject.Digest != c.current.Preprepare.Proposal.Hash() {
+		logger.Warn("Inconsistent subjects between PREPARE and proposal", "expected", c.current.Preprepare.Proposal.Hash(), "got", prepare.Subject.Digest)
 		return errInconsistentSubject
 	}
 
@@ -131,7 +131,7 @@ func (c *core) acceptConfirm(msg *message, src atlas.Validator) error {
 		return errInvalidSigner
 	}
 
-	if sign.Verify(pubKey, prepare.Digest.String()) == false {
+	if sign.Verify(pubKey, prepare.Subject.Digest.String()) == false {
 		logger.Error("Failed to verify signature with signer's public key", "msg", msg)
 		return errInvalidSignature
 	}

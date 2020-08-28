@@ -235,7 +235,7 @@ OUTER:
 
 		// verify COMMIT messages
 		decodedMsg := new(message)
-		err := decodedMsg.FromPayload(v0.sentMsgs[0], nil)
+		err := decodedMsg.FromPayload(v0.sentMsgs[0], nil, nil)
 		if err != nil {
 			t.Errorf("error mismatch: have %v, want nil", err)
 		}
