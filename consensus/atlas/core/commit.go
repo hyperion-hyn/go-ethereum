@@ -21,6 +21,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
+	"github.com/ethereum/go-ethereum/crypto"
 	bls_cosi "github.com/ethereum/go-ethereum/crypto/bls"
 )
 
@@ -137,8 +138,9 @@ func (c *core) acceptCommit(msg *message, src atlas.Validator, validatorSet atla
 		return err
 	}
 
-	if sign.Verify(&pubKey, commit.Subject.Digest.String()) == false {
-		logger.Error("Failed to verify signature with signer's public key", "msg", msg)
+	hash := crypto.Keccak256Hash(commit.Subject.Digest.Bytes())
+	if sign.VerifyHash(&pubKey, hash.Bytes()) == false {
+		logger.Error("Failed to verify signature with signer's public key commit", "msg", msg)
 		return errInvalidSignature
 	}
 

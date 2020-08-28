@@ -21,6 +21,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 func (c *core) sendConfirm() {
@@ -102,18 +103,18 @@ func (c *core) acceptConfirm(msg *message, src atlas.Validator) error {
 		return err
 	}
 
-	var prepare *atlas.SignedSubject
-	if err := msg.Decode(&prepare); err != nil {
+	var confirm *atlas.SignedSubject
+	if err := msg.Decode(&confirm); err != nil {
 		return errFailedDecodePrepare
 	}
 
-	if prepare.Subject.Digest != c.current.Preprepare.Proposal.Hash() {
-		logger.Warn("Inconsistent subjects between PREPARE and proposal", "expected", c.current.Preprepare.Proposal.Hash(), "got", prepare.Subject.Digest)
+	if confirm.Subject.Digest != c.current.Preprepare.Proposal.Hash() {
+		logger.Warn("Inconsistent subjects between PREPARE and proposal", "expected", c.current.Preprepare.Proposal.Hash(), "got", confirm.Subject.Digest)
 		return errInconsistentSubject
 	}
 
 	var sign bls.Sign
-	if err := sign.Deserialize(prepare.Signature); err != nil {
+	if err := sign.Deserialize(confirm.Signature); err != nil {
 		logger.Error("Failed to deserialize signature", "msg", msg, "err", err)
 		return err
 	}
@@ -131,8 +132,9 @@ func (c *core) acceptConfirm(msg *message, src atlas.Validator) error {
 		return errInvalidSigner
 	}
 
-	if sign.Verify(pubKey, prepare.Subject.Digest.String()) == false {
-		logger.Error("Failed to verify signature with signer's public key", "msg", msg)
+	hash := crypto.Keccak256Hash(confirm.Subject.Digest.Bytes())
+	if sign.VerifyHash(pubKey, hash.Bytes()) == false {
+		logger.Error("Failed to verify signature with signer's public key confirm", "msg", msg)
 		return errInvalidSignature
 	}
 

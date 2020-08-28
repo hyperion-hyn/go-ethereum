@@ -21,6 +21,7 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"math/big"
+	"os"
 	"time"
 
 	"github.com/hyperion-hyn/bls/ffi/go/bls"
@@ -124,7 +125,7 @@ func (self *testSystemBackend) Verify(proposal atlas.Proposal) (time.Duration, e
 }
 
 func (self *testSystemBackend) Sign(data []byte) ([]byte, []byte, []byte, error) {
-	testLogger.Info(fmt.Sprintf("Sign data %x", data))
+	testLogger.Info(fmt.Sprintf("testSystemBackend.Sign: %x...", data[:10]))
 	sighash := self.signerKey.SignHash(data).Serialize()
 	pubkey := self.signerKey.GetPublicKey().Serialize()
 	// ATLAS(zgx): should set mask here?
@@ -132,7 +133,7 @@ func (self *testSystemBackend) Sign(data []byte) ([]byte, []byte, []byte, error)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	testLogger.Info(fmt.Sprintf("signature: %x, publicKey: %x", sighash[:10], pubkey[:10]))
+	testLogger.Info(fmt.Sprintf("testSystemBackend.Sign: data: %x... signature: %x, publicKey: %x", data[:10], sighash[:10], pubkey[:10]))
 	return sighash, pubkey, mask.Mask(), nil
 }
 
@@ -325,4 +326,8 @@ func (t *testSystem) NewBackend(id uint64) *testSystemBackend {
 
 func getPublicKeyAddress(privateKey *ecdsa.PrivateKey) common.Address {
 	return crypto.PubkeyToAddress(privateKey.PublicKey)
+}
+
+func init() {
+	elog.Root().SetHandler(elog.LvlFilterHandler(elog.Lvl(elog.LvlDebug), elog.StreamHandler(os.Stdout, elog.TerminalFormat(true))))
 }

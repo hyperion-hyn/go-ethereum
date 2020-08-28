@@ -21,6 +21,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 func (c *core) sendPrepare() {
@@ -126,12 +127,13 @@ func (c *core) acceptPrepare(msg *message, src atlas.Validator) error {
 	}
 
 	var pubKey *bls.PublicKey = validator.PublicKey()
-	if validator == nil {
+	if pubKey == nil {
 		return errInvalidSigner
 	}
 
-	if sign.Verify(pubKey, prepare.Subject.Digest.String()) == false {
-		logger.Error("Failed to verify signature with signer's public key", "msg", msg)
+	hash := crypto.Keccak256Hash(prepare.Subject.Digest.Bytes())
+	if sign.VerifyHash(pubKey, hash.Bytes()) == false {
+		logger.Error("Failed to verify signature with signer's public key prepare", "msg", msg, "subject", prepare)
 		return errInvalidSignature
 	}
 

@@ -22,6 +22,7 @@ import (
 	"github.com/hyperion-hyn/bls/ffi/go/bls"
 
 	"github.com/ethereum/go-ethereum/consensus/atlas"
+	"github.com/ethereum/go-ethereum/crypto"
 	bls_cosi "github.com/ethereum/go-ethereum/crypto/bls"
 )
 
@@ -156,8 +157,9 @@ func (c *core) verifyExpect(msg *message, src atlas.Validator, validatorSet atla
 		return err
 	}
 
-	if sign.Verify(&pubKey, expect.Subject.Digest.String()) == false {
-		logger.Error("Failed to verify signature with signer's public key", "msg", msg)
+	hash := crypto.Keccak256Hash(expect.Subject.Digest.Bytes())
+	if sign.VerifyHash(&pubKey, hash.Bytes()) == false {
+		logger.Error("Failed to verify signature with signer's public key expect", "msg", msg)
 		return errInvalidSignature
 	}
 

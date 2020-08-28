@@ -54,7 +54,7 @@ func TestSign(t *testing.T) {
 		t.Errorf("failed to deserialize signature: #{sig}")
 	}
 
-	if sign.Verify(&pubKey, string(hashData)) == false {
+	if sign.VerifyHash(&pubKey, hashData) == false {
 		t.Errorf("failed to verify signature: #{sig}")
 	}
 }

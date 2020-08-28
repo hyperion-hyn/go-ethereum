@@ -17,6 +17,8 @@
 package atlas
 
 import (
+	"fmt"
+
 	"github.com/hyperion-hyn/bls/ffi/go/bls"
 	"golang.org/x/crypto/sha3"
 
@@ -62,7 +64,7 @@ func CheckValidatorSignature(data []byte, sig []byte, pubKey []byte) error {
 
 	// 3. Keccak data
 	hash := crypto.Keccak256Hash([]byte(data))
-	log.Info("Keccak256", "signature", sig[:10], "publicKey", pubKey[:10], "hash", hash)
+	log.Info("CheckValidatorSignature", "signature", fmt.Sprintf("%x", sig[:10]), "publicKey", fmt.Sprintf("%x", pubKey[:10]), "hash", hash.String())
 
 	// 4. verify signature
 	if !sign.VerifyHash(&publicKey, hash.Bytes()) {
