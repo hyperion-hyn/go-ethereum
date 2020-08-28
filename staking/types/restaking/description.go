@@ -2,9 +2,7 @@ package restaking
 
 import "github.com/pkg/errors"
 
-// UpdateDescription returns a new Description object with d1 as the base and the fields that's not empty in d2 updated
-// accordingly. An error is returned if the resulting description fields have invalid length.
-func (d *Description_) UpdateFrom(other Description_) error {
+func (d *Description_) IncrementalUpdateFrom(other Description_) error {
 	if other.Name != "" {
 		d.Name = other.Name
 	}
@@ -54,7 +52,15 @@ func (d *Description_) EnsureLength() error {
 }
 
 // Storage_Description_
-func (s *Storage_Description_) UpdateDescription(newDesc Description_) {
+func (s *Storage_Description_) Save(desc *Description_) {
+	s.Name().SetValue(desc.Name)
+	s.Identity().SetValue(desc.Identity)
+	s.Website().SetValue(desc.Website)
+	s.SecurityContact().SetValue(desc.SecurityContact)
+	s.Details().SetValue(desc.Details)
+}
+
+func (s *Storage_Description_) IncrementalUpdateFrom(newDesc Description_) {
 	if newDesc.Name != "" {
 		s.Name().SetValue(newDesc.Name)
 	}

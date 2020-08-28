@@ -102,7 +102,7 @@ func (s *Storage_Slots_) Remove(index int, keepOrder bool) {
 	})
 
 	//set lastEntity to zero
-	lastEntry.SetNil()
+	lastEntry.Clean()
 
 	//resize slice
 	s.Entrys().Resize(oldEntriesLength - 1)
@@ -124,7 +124,7 @@ func (s *Storage_Slots_) UpdateSlots(slots Slots_) {
 	// remove old
 	length := s.Length()
 	for i := 0; i < length; i++ {
-		s.Get(i).SetNil()
+		s.Get(i).Clean()
 	}
 	//set new
 	newSlotsLength := len(slots.Entrys)
@@ -134,7 +134,7 @@ func (s *Storage_Slots_) UpdateSlots(slots Slots_) {
 	}
 }
 
-func (s *Storage_Slot_) SetNil() {
+func (s *Storage_Slot_) Clean() {
 	s.EffectiveStake().SetValue(common.NewDec(int64(0)))
 	s.EcdsaAddress().SetValue(common.BigToAddress(big.NewInt(0)))
 	s.BLSPublicKey().Key().SetValue([48]uint8{})

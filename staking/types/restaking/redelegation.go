@@ -73,7 +73,7 @@ func (s *Storage_Redelegation_) AddAmount(amount *big.Int) {
 	s.Amount().SetValue(amountTemp)
 }
 
-func (s *Storage_Redelegation_) Save(redelegation Redelegation_) {
+func (s *Storage_Redelegation_) Save(redelegation *Redelegation_) {
 	s.DelegatorAddress().SetValue(redelegation.DelegatorAddress)
 	if redelegation.Amount != nil {
 		s.Amount().SetValue(redelegation.Amount)
@@ -88,7 +88,7 @@ func (s *Storage_Redelegation_) Save(redelegation Redelegation_) {
 		s.Undelegation().Epoch().SetValue(redelegation.Undelegation.Epoch)
 	}
 }
-func (s *Storage_Redelegation_) SetNil() {
+func (s *Storage_Redelegation_) Clean() {
 	s.DelegatorAddress().SetValue(common.BigToAddress(common.Big0))
 	s.Amount().SetValue(common.Big0)
 	s.Reward().SetValue(common.Big0)
@@ -123,7 +123,7 @@ func (s *Storage_RedelegationMap_) AllKeys() []common.Address {
 
 func (s *Storage_RedelegationMap_) Put(key common.Address, redelegation *Redelegation_) {
 	if s.Contain(key) {
-		s.Map().Get(key).Entry().Save(*redelegation)
+		s.Map().Get(key).Entry().Save(redelegation)
 	} else {
 		keysLength := s.Keys().Length()
 		//set keys
@@ -134,7 +134,7 @@ func (s *Storage_RedelegationMap_) Put(key common.Address, redelegation *Redeleg
 		sRedelegation := s.Map().Get(key)
 		//set map entity
 		sRedelegationEntity := sRedelegation.Entry()
-		sRedelegationEntity.Save(*redelegation)
+		sRedelegationEntity.Save(redelegation)
 		//set map index
 		sRedelegation.Index().SetValue(big.NewInt(0).Add(big.NewInt(int64(keysLength)), common.Big1)) //because index start with 1
 	}
@@ -169,17 +169,17 @@ func (s *Storage_RedelegationMap_) Remove(key common.Address) {
 	lastDelegationElem := maps.Get(lastKey)
 	lastDelegationElem.Index().SetValue(keyIndex)
 
-	delegationElem.Entry().SetNil()
+	delegationElem.Entry().Clean()
 	delegationElem.Index().SetValue(common.Big0)
 }
 
-func (s *Storage_RedelegationMap_) Save(relegationMap RedelegationMap_) {
+func (s *Storage_RedelegationMap_) Save(relegationMap *RedelegationMap_) {
 	relegationKeys := relegationMap.Keys
 	s.Keys().Resize(len(relegationKeys))
 	for i := 0; i < len(relegationKeys); i++ {
 		addressTemp := relegationKeys[i]
 		s.Keys().Get(i).SetValue(*addressTemp)
-		s.Map().Get(*addressTemp).Entry().Save(relegationMap.Map[*addressTemp].Entry)
+		s.Map().Get(*addressTemp).Entry().Save(&relegationMap.Map[*addressTemp].Entry)
 		s.Map().Get(*addressTemp).Index().SetValue(relegationMap.Map[*addressTemp].Index)
 	}
 }

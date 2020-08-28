@@ -176,7 +176,7 @@ func updateValidatorFromPoolByMsg(validator *restaking.Storage_ValidatorWrapper_
 		pool.DescriptionIdentitySet().Get(i).SetValue(false)
 		pool.DescriptionIdentitySet().Get(msg.Description.Identity).SetValue(true)
 	}
-	validator.Validator().Description().UpdateDescription(msg.Description)
+	validator.Validator().Description().IncrementalUpdateFrom(msg.Description)
 
 	if msg.CommissionRate != nil {
 		validator.Validator().Commission().CommissionRates().Rate().SetValue(*msg.CommissionRate)

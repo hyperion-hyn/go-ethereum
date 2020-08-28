@@ -67,7 +67,7 @@ func (s *Storage_AddressSet_) AllKeys() []common.Address {
 	return addressSlice
 }
 
-func (s *Storage_AddressSet_) Save(addressSet AddressSet_) {
+func (s *Storage_AddressSet_) Save(addressSet *AddressSet_) {
 	keysLength := len(addressSet.Keys)
 	if keysLength != 0 {
 		s.Keys().Resize(keysLength)
@@ -180,7 +180,7 @@ func (s *Storage_Validator_) Save(validator *Validator_) {
 		s.ValidatorAddress().SetValue(validator.ValidatorAddress)
 	}
 	if len(validator.OperatorAddresses.Keys) != 0 {
-		s.OperatorAddresses().Save(validator.OperatorAddresses)
+		s.OperatorAddresses().Save(&validator.OperatorAddresses)
 	}
 	if len(validator.SlotPubKeys.Keys) != 0 {
 		s.SlotPubKeys().Save(&validator.SlotPubKeys)
@@ -211,21 +211,7 @@ func (s *Storage_Validator_) Save(validator *Validator_) {
 		s.Commission().UpdateHeight().SetValue(validator.Commission.UpdateHeight)
 	}
 
-	if validator.Description.Name != "" {
-		s.Description().Name().SetValue(validator.Description.Name)
-	}
-	if validator.Description.Identity != "" {
-		s.Description().Identity().SetValue(validator.Description.Identity)
-	}
-	if validator.Description.Website != "" {
-		s.Description().Website().SetValue(validator.Description.Website)
-	}
-	if validator.Description.SecurityContact != "" {
-		s.Description().SecurityContact().SetValue(validator.Description.SecurityContact)
-	}
-	if validator.Description.Details != "" {
-		s.Description().Details().SetValue(validator.Description.Details)
-	}
+	s.Description().Save(&validator.Description)
 
 	if validator.CreationHeight != nil {
 		s.CreationHeight().SetValue(validator.CreationHeight)
@@ -235,7 +221,7 @@ func (s *Storage_Validator_) Save(validator *Validator_) {
 // Storage_ValidatorWrapper_
 func (s *Storage_ValidatorWrapper_) Save(validatorWrapper *ValidatorWrapper_) {
 	s.Validator().Save(&validatorWrapper.Validator)
-	s.Redelegations().Save(validatorWrapper.Redelegations)
+	s.Redelegations().Save(&validatorWrapper.Redelegations)
 	if validatorWrapper.Counters.NumBlocksSigned != nil {
 		s.Counters().NumBlocksSigned().SetValue(validatorWrapper.Counters.NumBlocksSigned)
 	}
@@ -407,7 +393,7 @@ func UpdateValidatorFromEditMsg(validator *Validator_, edit *EditValidator) erro
 		return errAddressNotMatch
 	}
 
-	if err := validator.Description.UpdateFrom(edit.Description); err != nil {
+	if err := validator.Description.IncrementalUpdateFrom(edit.Description); err != nil {
 		return err
 	}
 

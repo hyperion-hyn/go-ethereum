@@ -118,7 +118,7 @@ type StateDB struct {
 
 	// ATLAS
 	validatorPool *restaking.Storage_ValidatorPool_
-	once          sync.Once
+	validatorOnce sync.Once
 }
 
 // New creates a new state from a given trie.
