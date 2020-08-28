@@ -45,34 +45,30 @@ func GetSignatureAddress(data []byte, sig []byte) (common.Address, error) {
 	return crypto.PubkeyToAddress(*pubkey), nil
 }
 
-func CheckValidatorSignature(valSet ValidatorSet, data []byte, sig []byte, pubKey []byte) (common.Address, error) {
+func CheckValidatorSignature(data []byte, sig []byte, pubKey []byte) error {
 	// 1. deserialize signature
 	var sign bls.Sign
 	if err := sign.Deserialize(sig); err != nil {
 		log.Debug("Failed to deserialize bls signature", "err", err)
-		return common.Address{}, err
+		return err
 	}
 
 	// 2. deserialize publicKey
 	var publicKey bls.PublicKey
 	if err := publicKey.Deserialize(pubKey); err != nil {
 		log.Error("Failed to deserialize publicKey", "err", err)
-		return common.Address{}, err
+		return err
 	}
 
 	// 3. Keccak data
-	hashData := crypto.Keccak256([]byte(data))
+	hash := crypto.Keccak256Hash([]byte(data))
+	log.Info("Keccak256", "signature", sig[:10], "publicKey", pubKey[:10], "hash", hash)
 
 	// 4. verify signature
-	if !sign.VerifyHash(&publicKey, hashData) {
+	if !sign.VerifyHash(&publicKey, hash.Bytes()) {
 		log.Error("Failed to verify data")
-		return common.Address{}, ErrInvalidSignature
+		return ErrInvalidSignature
 	}
 
-	// 5. Check validator
-	if _, val := valSet.GetByPublicKey(&publicKey); val != nil {
-		return val.Signer(), nil
-	}
-
-	return common.Address{}, ErrUnauthorizedAddress
+	return nil
 }
