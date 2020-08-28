@@ -148,7 +148,7 @@ func (b *Subject) String() string {
 }
 
 type SignedSubject struct {
-	Subject
+	Subject   *Subject
 	Signature []byte
 	PublicKey []byte
 	Mask      []byte
@@ -171,7 +171,7 @@ func (b *SignedSubject) DecodeRLP(s *rlp.Stream) error {
 }
 
 func (b *SignedSubject) String() string {
-	return fmt.Sprintf("{View: %v, Digest: %v}", b.View, b.Digest.String())
+	return fmt.Sprintf("{View: %v, Digest: %v}", b.Subject.View, b.Subject.Digest.String())
 }
 
 // SealHash returns the hash of a block prior to it being sealed.
@@ -223,22 +223,18 @@ func encodeSigHeader(w io.Writer, header *types.Header) {
 type SignHashFn func(hash common.Hash) (signature []byte, publicKey []byte, mask []byte, err error)
 
 func SignSubject(subject *Subject, signFn SignHashFn) (*SignedSubject, error) {
-	hw := sha3.NewLegacyKeccak256()
-
-	// WARNING: should only include Digest here, signature will be aggregated in some situation
-	rlp.Encode(hw, []interface{}{
-		subject.Digest,
-	})
-
 	var hash common.Hash
+	hw := sha3.NewLegacyKeccak256()
+	hw.Write(subject.Digest.Bytes())
 	hw.Sum(hash[:0])
+
 	signature, publicKey, mask, err := signFn(hash)
 	if err != nil {
 		return nil, err
 	}
 
 	retval := SignedSubject{
-		Subject: *subject,
+		Subject: subject,
 	}
 	retval.Signature = signature
 	retval.PublicKey = publicKey
