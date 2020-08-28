@@ -78,7 +78,7 @@ func (c *core) checkMessage(msgCode uint64, view *atlas.View) error {
 func (c *core) storeBacklog(msg *message, src atlas.Validator) {
 	logger := c.logger.New("from", src, "state", c.state)
 
-	if src.Signer() == c.Address() {
+	if src.Signer() == c.Signer() {
 		logger.Warn("Backlog from self")
 		return
 	}
@@ -102,10 +102,10 @@ func (c *core) storeBacklog(msg *message, src atlas.Validator) {
 		}
 		// for msgRoundChange, msgPrepare and msgCommit cases
 	default:
-		var p *atlas.Subject
+		var p *atlas.SignedSubject
 		err := msg.Decode(&p)
 		if err == nil {
-			backlog.Push(msg, toPriority(msg.Code, p.View))
+			backlog.Push(msg, toPriority(msg.Code, p.Subject.View))
 		}
 	}
 	c.backlogs[src.Signer()] = backlog

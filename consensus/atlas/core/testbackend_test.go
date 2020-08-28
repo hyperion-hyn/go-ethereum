@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/hyperion-hyn/bls/ffi/go/bls"
@@ -36,6 +37,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	elog "github.com/ethereum/go-ethereum/log"
+	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )
 
 var testLogger = elog.New()
@@ -258,6 +260,8 @@ func NewTestSystemWithBackend(n, f uint64) *testSystem {
 		core.valSet = vset
 		core.logger = testLogger
 		core.validateFn = backend.CheckValidatorSignature
+		core.backlogs = make(map[common.Address]*prque.Prque)
+		core.backlogsMu = new(sync.Mutex)
 
 		backend.engine = core
 	}

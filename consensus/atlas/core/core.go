@@ -305,8 +305,8 @@ func (c *core) setState(state State) {
 	c.processBacklog()
 }
 
-func (c *core) Address() common.Address {
-	return c.address
+func (c *core) Signer() common.Address {
+	return c.backend.Signer()
 }
 
 func (c *core) stopFuturePreprepareTimer() {

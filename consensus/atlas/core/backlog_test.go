@@ -45,8 +45,8 @@ func TestCheckMessage(t *testing.T) {
 		t.Errorf("error mismatch: have %v, want %v", err, errInvalidMessage)
 	}
 
-	testStates := []State{StateAcceptRequest, StatePreprepared, StatePrepared, StateCommitted}
-	testCode := []uint64{msgPreprepare, msgPrepare, msgCommit, msgRoundChange}
+	testStates := []State{StateAcceptRequest, StatePreprepared, StatePrepared, StateExpected, StateConfirmed, StateCommitted}
+	testCode := []uint64{msgPreprepare, msgPrepare, msgExpect, msgConfirm, msgCommit, msgRoundChange}
 
 	// future sequence
 	v := &atlas.View{
@@ -149,6 +149,32 @@ func TestCheckMessage(t *testing.T) {
 		}
 	}
 
+	// current view, state = StateExpected
+	c.state = StateExpected
+	for i := 0; i < len(testCode); i++ {
+		err = c.checkMessage(testCode[i], v)
+		if testCode[i] == msgRoundChange {
+			if err != nil {
+				t.Errorf("error mismatch: have %v, want nil", err)
+			}
+		} else if err != nil {
+			t.Errorf("error mismatch: have %v, want nil", err)
+		}
+	}
+
+	// current view, state = StateConfirmed
+	c.state = StateConfirmed
+	for i := 0; i < len(testCode); i++ {
+		err = c.checkMessage(testCode[i], v)
+		if testCode[i] == msgRoundChange {
+			if err != nil {
+				t.Errorf("error mismatch: have %v, want nil", err)
+			}
+		} else if err != nil {
+			t.Errorf("error mismatch: have %v, want nil", err)
+		}
+	}
+
 	// current view, state = StateCommitted
 	c.state = StateCommitted
 	for i := 0; i < len(testCode); i++ {
@@ -165,12 +191,20 @@ func TestCheckMessage(t *testing.T) {
 }
 
 func TestStoreBacklog(t *testing.T) {
-	c := &core{
-		logger:     log.New("backend", "test", "id", 0),
-		valSet:     newTestValidatorSet(1),
-		backlogs:   make(map[common.Address]*prque.Prque),
-		backlogsMu: new(sync.Mutex),
-	}
+	N := uint64(4)
+	F := uint64(1)
+	sys := NewTestSystemWithBackend(N, F)
+
+	// for i, backend := range sys.backends {
+	backend := sys.backends[0]
+	c := backend.engine.(*core)
+
+	//		c := &core{
+	//		logger:     log.New("backend", "test", "id", 0),
+	//		valSet:     newTestValidatorSet(1),
+	//		backlogs:   make(map[common.Address]*prque.Prque),
+	//		backlogsMu: new(sync.Mutex),
+	//	}
 	v := &atlas.View{
 		Round:    big.NewInt(10),
 		Sequence: big.NewInt(10),
@@ -187,6 +221,12 @@ func TestStoreBacklog(t *testing.T) {
 		Msg:  prepreparePayload,
 	}
 	c.storeBacklog(m, p)
+	if _, exists := c.backlogs[p.Signer()]; exists {
+		t.Errorf("backlogs[signer] should not be existed right now.")
+	}
+
+	p = c.valSet.GetByIndex(1)
+	c.storeBacklog(m, p)
 	msg := c.backlogs[p.Signer()].PopItem()
 	if !reflect.DeepEqual(msg, m) {
 		t.Errorf("message mismatch: have %v, want %v", msg, m)
@@ -197,10 +237,40 @@ func TestStoreBacklog(t *testing.T) {
 		View:   v,
 		Digest: common.StringToHash("1234567890"),
 	}
-	subjectPayload, _ := Encode(subject)
+	signedSubject, err := atlas.SignSubject(subject, func(hash common.Hash) (signature []byte, publicKey []byte, mask []byte, err error) {
+		signature, publicKey, mask, err = c.backend.Sign(hash.Bytes())
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		return signature, publicKey, mask, nil
+	})
+	if err != nil {
+		t.Errorf("failed to sign subject")
+	}
+	subjectPayload, _ := Encode(signedSubject)
 
 	m = &message{
 		Code: msgPrepare,
+		Msg:  subjectPayload,
+	}
+	c.storeBacklog(m, p)
+	msg = c.backlogs[p.Signer()].PopItem()
+	if !reflect.DeepEqual(msg, m) {
+		t.Errorf("message mismatch: have %v, want %v", msg, m)
+	}
+
+	m = &message{
+		Code: msgExpect,
+		Msg:  subjectPayload,
+	}
+	c.storeBacklog(m, p)
+	msg = c.backlogs[p.Signer()].PopItem()
+	if !reflect.DeepEqual(msg, m) {
+		t.Errorf("message mismatch: have %v, want %v", msg, m)
+	}
+
+	m = &message{
+		Code: msgConfirm,
 		Msg:  subjectPayload,
 	}
 	c.storeBacklog(m, p)
