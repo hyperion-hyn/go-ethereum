@@ -161,7 +161,12 @@ func (b *SignedSubject) EncodeRLP(w io.Writer) error {
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
 func (b *SignedSubject) DecodeRLP(s *rlp.Stream) error {
-	var obj SignedSubject
+	var obj struct {
+		Subject   *Subject
+		Signature []byte
+		PublicKey []byte
+		Mask      []byte
+	}
 
 	if err := s.Decode(&obj); err != nil {
 		return err
