@@ -178,7 +178,7 @@ func (m *message) Decode(val interface{}) error {
 }
 
 func (m *message) String() string {
-	return fmt.Sprintf("{Code: %v, Address: %v}", m.Code, m.Signer.String())
+	return fmt.Sprintf("{Code: %v, Address: %v, Signature: %x, PublicKey: %x}", m.Code, m.Signer.String(), m.Signature[:10], m.SignerPubKey[:10])
 }
 
 // ==============================================
