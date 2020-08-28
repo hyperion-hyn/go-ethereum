@@ -2,6 +2,7 @@ package core
 
 import (
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	"math/big"
 )
@@ -30,6 +31,16 @@ func (bc *BlockChain) ReadValidatorAtEpoch(epoch *big.Int, validatorAddress comm
 		blockNum--
 	}
 	return bc.ReadValidatorAtBlock(big.NewInt(int64(blockNum)), validatorAddress)
+}
+
+func (bc *BlockChain) ReadValidatorAtEpochOrCurrentBlock(epoch *big.Int, validatorAddress common.Address) (*restaking.Storage_ValidatorWrapper_, error) {
+	validatorWrapper, err := bc.ReadValidatorAtEpoch(epoch, validatorAddress)
+	// if cannot read validator at epoch begin ,read validator at current block stateDB
+	if err != nil && err == state.ErrValidatorNotExist {
+		return bc.ReadValidatorAtBlock(bc.CurrentBlock().Number(), validatorAddress)
+	} else {
+		return validatorWrapper, err
+	}
 }
 
 func (bc *BlockChain) ReadCommitteeAtEpoch(epoch *big.Int) (*restaking.Storage_Committee_, error) {

@@ -1,6 +1,14 @@
 package restaking
 
-import "github.com/pkg/errors"
+import (
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/pkg/errors"
+)
+
+var (
+	hundredPercent = common.OneDec()
+	zeroPercent    = common.ZeroDec()
+)
 
 // Copy deep copies the staking.CommissionRates
 func (cr *CommissionRates_) Copy() CommissionRates_ {

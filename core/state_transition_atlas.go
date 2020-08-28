@@ -50,7 +50,7 @@ func (st *StateTransition) StakingTransitionDb() (*ExecutionResult, error) {
 	sender := vm.AccountRef(msg.From())
 
 	// Pay intrinsic gas
-	gas, err := IntrinsicGasForStaking(st.data, msg.Type() == types.StakeCreateVal)
+	gas, err := IntrinsicGasForStaking(st.data, msg.Type() == types.CreateValidator)
 	if err != nil {
 		return nil, err
 	}
@@ -62,14 +62,14 @@ func (st *StateTransition) StakingTransitionDb() (*ExecutionResult, error) {
 	// Increment the nonce for the next transaction
 	defer st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
 	switch msg.Type() {
-	case types.StakeCreateVal:
+	case types.CreateValidator:
 		stkMsg := &restaking.CreateValidator{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return nil, err
 		}
 		st.state.IncrementValidatorNonce()
 		err = st.verifyAndApplyCreateValidatorTx(stkMsg, msg.From())
-	case types.StakeEditVal:
+	case types.EditValidator:
 		stkMsg := &restaking.EditValidator{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return nil, err
@@ -87,12 +87,12 @@ func (st *StateTransition) StakingTransitionDb() (*ExecutionResult, error) {
 			return nil, err
 		}
 		err = st.verifyAndApplyUnredelegateTx(stkMsg, msg.From())
-	case types.CollectRedelRewards:
+	case types.CollectRedelReward:
 		stkMsg := &restaking.CollectReward{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return nil, err
 		}
-		_, err = st.verifyAndApplyCollectRedelRewards(stkMsg, msg.From())
+		_, err = st.verifyAndApplyCollectRedelRewardTx(stkMsg, msg.From())
 		// TODO: Add log for reward ?
 	case types.CreateMap3:
 		stkMsg := &microstaking.CreateMap3Node{}
@@ -186,8 +186,8 @@ func (st *StateTransition) verifyAndApplyUnredelegateTx(msg *restaking.Unredeleg
 	return nil
 }
 
-func (st *StateTransition) verifyAndApplyCollectRedelRewards(msg *restaking.CollectReward, signer common.Address) (*big.Int, error) {
-	if _, err := VerifyCollectRedelRewardsMsg(st.state, msg, signer); err != nil {
+func (st *StateTransition) verifyAndApplyCollectRedelRewardTx(msg *restaking.CollectReward, signer common.Address) (*big.Int, error) {
+	if _, err := VerifyCollectRedelRewardMsg(st.state, msg, signer); err != nil {
 		return network.NoReward, err
 	}
 	validator, _ := st.state.ValidatorByAddress(msg.ValidatorAddress)

@@ -88,11 +88,6 @@ func (s *Storage_AddressSet_) Load() *AddressSet_ {
 	return s.obj
 }
 
-var (
-	hundredPercent = common.OneDec()
-	zeroPercent    = common.ZeroDec()
-)
-
 // ValidatorStatus represents ability to participate in EPoS auction
 // that occurs just once an epoch
 type ValidatorStatus byte

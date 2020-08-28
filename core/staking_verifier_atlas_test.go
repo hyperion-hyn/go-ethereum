@@ -224,6 +224,20 @@ func TestVerifyCreateValidatorMsg(t *testing.T) {
 			},
 			wantErr: errors.New("bls keys and corresponding signatures could not be verified"),
 		},
+		{
+			name: "maxTotalDelegation less currentTotalDelegation",
+			args: args{
+				stateDB:  makeStateDBForStake(t),
+				blockNum: big.NewInt(defaultBlockNumber),
+				msg: func() restaking.CreateValidator {
+					m := defaultMsgCreateValidator()
+					m.MaxTotalDelegation = new(big.Int).Sub(defaultStakingAmount, big.NewInt(1))
+					return m
+				}(),
+				signer: createOperatorAddr,
+			},
+			wantErr: errors.New("total delegation can not be bigger than max_total_delegation"),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -845,7 +859,7 @@ func TestVerifyCollectRedelRewardsMsg(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := VerifyCollectRedelRewardsMsg(tt.args.stateDB, &tt.args.msg, tt.args.signer)
+			_, err := VerifyCollectRedelRewardMsg(tt.args.stateDB, &tt.args.msg, tt.args.signer)
 			if assErr := assertError(err, tt.wantErr); assErr != nil {
 				t.Errorf("Test - %v: %v", tt.name, err)
 			}
@@ -991,6 +1005,10 @@ func (chain *fakeChainContext) GetHeader(common.Hash, uint64) *types.Header {
 func (chain *fakeChainContext) ReadValidatorAtEpoch(epoch *big.Int, validator common.Address) (*restaking.Storage_ValidatorWrapper_, error) {
 	stateDB := chain.stateDBs[epoch.Uint64()]
 	return stateDB.ValidatorByAddress(validatorAddr)
+}
+
+func (chain *fakeChainContext) ReadValidatorAtEpochOrCurrentBlock(epoch *big.Int, validator common.Address) (*restaking.Storage_ValidatorWrapper_, error) {
+	panic("no implement")
 }
 
 func makeIdentityStr(item interface{}) string {
