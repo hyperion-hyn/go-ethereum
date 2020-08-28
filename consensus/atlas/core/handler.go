@@ -141,9 +141,18 @@ func (c *core) sendEvent(ev interface{}) {
 func (c *core) handleMsg(payload []byte) error {
 	logger := c.logger.New()
 
+	preprocessor := func(m *message) error {
+		_, validator := c.valSet.GetBySigner(m.Signer)
+		if validator == nil {
+			return errInvalidSigner
+		}
+		m.SignerPubKey = validator.PublicKey().Serialize()
+		return nil
+	}
+
 	// Decode message and check its signature
 	msg := new(message)
-	if err := msg.FromPayload(payload, c.validateFn); err != nil {
+	if err := msg.FromPayload(payload, preprocessor, c.validateFn); err != nil {
 		logger.Error("Failed to decode message from payload", "err", err)
 		return err
 	}
