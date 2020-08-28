@@ -150,7 +150,7 @@ func VerifyCreateValidatorMsg(stateDB vm.StateDB, blockNum *big.Int, msg *restak
 		return nil, err
 	}
 
-	// TODO(ATLAS): Get staking amonut by role of delegator
+	// TODO(ATLAS): Get staking amount by role of delegator
 	amt := defaultStakingAmount
 	if err = sanityCheckForDelegation(msg.MaxTotalDelegation, common.Big0, amt); err != nil {
 		return nil, err
@@ -215,7 +215,7 @@ func VerifyEditValidatorMsg(stateDB vm.StateDB, chainContext ChainContext, epoch
 	}
 	validator := wrapperSt.Validator().Load()
 
-	// TODO: block num?
+	// TODO(ATLAS): update block num when updating commission rate?
 	if err := restaking.UpdateValidatorFromEditMsg(validator, msg); err != nil {
 		return nil, err
 	}
@@ -308,12 +308,12 @@ func VerifyUnredelegateMsg(stateDB vm.StateDB, epoch *big.Int, msg *restaking.Un
 	}, nil
 }
 
-// VerifyCollectRedelRewardsMsg verifies and collects rewards
+// VerifyCollectRedelRewardMsg verifies and collects rewards
 // from the given delegation slice using the stateDB. It returns all of the
 // edited validatorWrappers and the sum total of the rewards.
 //
 // Note that this function never updates the stateDB, it only reads from stateDB.
-func VerifyCollectRedelRewardsMsg(stateDB vm.StateDB, msg *restaking.CollectReward, signer common.Address) (*verification, error) {
+func VerifyCollectRedelRewardMsg(stateDB vm.StateDB, msg *restaking.CollectReward, signer common.Address) (*verification, error) {
 	if stateDB == nil {
 		return nil, errStateDBIsMissing
 	}
