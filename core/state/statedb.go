@@ -121,7 +121,7 @@ type StateDB struct {
 	validatorPool *restaking.Storage_ValidatorPool_
 	once          sync.Once
 	map3NodePool  *microstaking.Storage_Map3NodePool_
-	once4Map3     sync.Once
+	map3Once      sync.Once
 }
 
 // New creates a new state from a given trie.

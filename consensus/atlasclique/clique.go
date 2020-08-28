@@ -39,6 +39,7 @@ import (
 	"github.com/ethereum/go-ethereum/staking/availability"
 	"github.com/ethereum/go-ethereum/staking/committee"
 	"github.com/ethereum/go-ethereum/staking/network"
+	"github.com/ethereum/go-ethereum/staking/types/microstaking"
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
@@ -784,6 +785,9 @@ func handleMap3AndAtlasStaking(chain consensus.ChainReader, header *types.Header
 
 		// TODO(ATLAS): renew map3 node and unmicrodelegate and unredelegate
 		// TODO(ATLAS): reset renewal config
+		if err := checkAndActivateMap3Nodes(chain, header, stateDB.Map3NodePool()); err != nil {
+			return nil, err
+		}
 
 		// update committee
 		if _, err := updateCommitteeForNextEpoch(chain, header, stateDB); err != nil {
@@ -820,6 +824,25 @@ func handleMap3AndAtlasStaking(chain consensus.ChainReader, header *types.Header
 	}
 	//return payout, nil
 	return network.EmptyPayout, nil
+}
+
+func checkAndActivateMap3Nodes(chain consensus.ChainReader, header *types.Header, nodePool *microstaking.Storage_Map3NodePool_) error {
+	requireTotal, requireSelf, _ := network.LatestMap3StakingRequirement(header.Number, chain.Config())
+	var addrs []common.Address
+	for _, nodeAddr := range nodePool.Nodes().AllKeys() {
+		node, ok := nodePool.Nodes().Get(nodeAddr)
+		if !ok {
+			log.Error("map3 node should exist", "map3 address", nodeAddr.String())
+			continue
+		}
+		if node.CanActivateMap3Node(requireTotal, requireSelf) {
+			if err := node.ActivateMap3Node(header.Epoch); err != nil {
+				return err
+			}
+		}
+	}
+	log.Info("New active map3 nodes", "addresses", addrs)
+	return nil
 }
 
 func setLastEpochInCommittee(comm *restaking.Committee_, stateDB *state.StateDB) error {

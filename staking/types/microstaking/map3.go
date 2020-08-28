@@ -2,6 +2,7 @@ package microstaking
 
 import (
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/log"
 	common2 "github.com/ethereum/go-ethereum/staking/types/common"
 	"github.com/pkg/errors"
 	"math/big"
@@ -15,10 +16,15 @@ const (
 var (
 	errNeedAtLeastOneSlotKey   = errors.New("need at least one slot key")
 	ErrExcessiveBLSKeys        = errors.New("more slot keys provided than allowed")
-	errDuplicateSlotKeys       = errors.New("slot keys can not have duplicates")
+	errDuplicateNodeKeys       = errors.New("map3 node keys can not have duplicates")
 	errAddressNotMatch         = errors.New("validator key not match")
 	errNodeKeyToRemoveNotFound = errors.New("map3 node key to remove not found")
 	errNodeKeyToAddExists      = errors.New("map3 node key to add already exists")
+	errMicrodelegationNotExist = errors.New("microdelegation does not exist")
+)
+
+var (
+	Map3NodeLockDurationInEpoch = common.NewDec(180)
 )
 
 type Map3Status byte
@@ -73,18 +79,80 @@ func (n *Map3Node_) SanityCheck(maxPubKeyAllowed int) error {
 		if _, ok := allKeys[key]; !ok {
 			allKeys[key] = struct{}{}
 		} else {
-			return errDuplicateSlotKeys
+			return errDuplicateNodeKeys
 		}
 	}
 	return nil
 }
 
 func (s *Storage_Map3Node_) Load() *Map3Node_ {
-	panic("no implement")
+	s.Map3Address().Value()
+	s.OperatorAddress().Value()
+	s.NodeKeys().Load()
+	s.Commission().Load()
+	s.Description().Load()
+	s.CreationHeight().Value()
+	s.Age().Value()
+	s.Status().Value()
+	s.ActivationEpoch().Value()
+	s.ReleaseEpoch().Value()
+	return s.obj
+}
+
+func (s *Storage_Map3Node_) Save(node *Map3Node_) {
+	if node.Map3Address != common.BigToAddress(common.Big0) {
+		s.Map3Address().SetValue(node.Map3Address)
+	}
+	if node.OperatorAddress != common.BigToAddress(common.Big0) {
+		s.OperatorAddress().SetValue(node.OperatorAddress)
+	}
+	if len(node.NodeKeys.Keys) != 0 {
+		s.NodeKeys().Save(&node.NodeKeys)
+	}
+	if !node.Commission.Rate.IsNil() {
+		s.Commission().Rate().SetValue(node.Commission.Rate)
+	}
+	if !node.Commission.RateForNextPeriod.IsNil() {
+		s.Commission().RateForNextPeriod().SetValue(node.Commission.RateForNextPeriod)
+	}
+	if node.Commission.UpdateHeight != nil {
+		s.Commission().UpdateHeight().SetValue(node.Commission.UpdateHeight)
+	}
+
+	if node.Description.Name != "" {
+		s.Description().Name().SetValue(node.Description.Name)
+	}
+	if node.Description.Identity != "" {
+		s.Description().Identity().SetValue(node.Description.Identity)
+	}
+	if node.Description.Website != "" {
+		s.Description().Website().SetValue(node.Description.Website)
+	}
+	if node.Description.SecurityContact != "" {
+		s.Description().SecurityContact().SetValue(node.Description.SecurityContact)
+	}
+	if node.Description.Details != "" {
+		s.Description().Details().SetValue(node.Description.Details)
+	}
+
+	if node.CreationHeight != nil {
+		s.CreationHeight().SetValue(node.CreationHeight)
+	}
+	if node.Status != uint8(Nil) {
+		s.Status().SetValue(node.Status)
+	}
+	if node.ActivationEpoch != nil {
+		s.ActivationEpoch().SetValue(node.ActivationEpoch)
+	}
+	if !node.ReleaseEpoch.IsNil() {
+		s.ReleaseEpoch().SetValue(node.ReleaseEpoch)
+	}
 }
 
 // Storage_Map3NodeWrapper_
 func (s *Storage_Map3NodeWrapper_) Save(map3Node *Map3NodeWrapper_) {
+	s.Map3Node().Save(&map3Node.Map3Node)
+	s.Microdelegations().Save(map3Node.Microdelegations)
 	panic("no implement")
 }
 
@@ -150,6 +218,55 @@ func (s *Storage_Map3NodeWrapper_) Unmicrodelegate(delegator common.Address, amo
 		return toReturn, false
 	}
 	return common.Big0, true
+}
+
+func (s *Storage_Map3NodeWrapper_) CanActivateMap3Node(requireTotal, requireSelf *big.Int) bool {
+	if s.Map3Node().Status().Value() != uint8(Pending) {
+		return false
+	}
+
+	total := big.NewInt(0).Add(s.TotalPendingDelegation().Value(), s.TotalDelegation().Value())
+	if total.Cmp(requireTotal) >= 0 {
+		operator := s.Map3Node().OperatorAddress().Value()
+		m, ok := s.Microdelegations().Get(operator)
+		if !ok {
+			log.Error("operator's delegation should exist", "map3", s.Map3Node().Map3Address().Value().String())
+			return false
+		}
+
+		self := big.NewInt(0).Add(m.Amount().Value(), m.PendingDelegation().Amount().Value())
+		if self.Cmp(requireSelf) >= 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Storage_Map3NodeWrapper_) ActivateMap3Node(epoch *big.Int) error {
+	// change pending delegation
+	for _, delegator := range s.Microdelegations().AllKeys() {
+		delegation, ok := s.Microdelegations().Get(delegator)
+		if !ok {
+			return errors.Wrapf(errMicrodelegationNotExist, "delegation should exist",
+				"map3", s.Map3Node().Map3Address().Value().String(),
+				"delegator", delegator.String())
+		}
+		pd := delegation.PendingDelegation().Amount().Value()
+		delegation.AddAmount(pd)
+		delegation.PendingDelegation().SetNil()
+	}
+	s.AddTotalDelegation(s.TotalPendingDelegation().Value())
+	s.TotalPendingDelegation().SetValue(common.Big0)
+
+	// update state
+	status := s.Map3Node().Status().Value()
+	if status == uint8(Pending) {
+		time := common.OneDec().Mul(Map3NodeLockDurationInEpoch)
+		s.Map3Node().ReleaseEpoch().SetValue(time)
+	}
+	s.Map3Node().Status().SetValue(uint8(Active))
+	s.Map3Node().ActivationEpoch().SetValue(epoch)
+	return nil
 }
 
 // Storage_ValidatorWrapperMap_

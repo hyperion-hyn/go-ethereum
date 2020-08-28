@@ -20,12 +20,17 @@ func (c *Commission_) SanityCheck() error {
 			errInvalidCommissionRate, "rate:%s", c.Rate.String(),
 		)
 	}
-
 	if c.RateForNextPeriod.LT(zeroPercent) || c.RateForNextPeriod.GT(hundredPercent) {
 		return errors.Wrapf(
 			errInvalidCommissionRate, "rate for next period:%s", c.RateForNextPeriod.String(),
 		)
 	}
-
 	return nil
+}
+
+func (s *Storage_Commission_) Load() *Commission_ {
+	s.Rate().Value()
+	s.RateForNextPeriod().Value()
+	s.UpdateHeight().Value()
+	return s.obj
 }
