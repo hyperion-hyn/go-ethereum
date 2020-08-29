@@ -279,7 +279,7 @@ func TestHandlePreprepareWithLock(t *testing.T) {
 			}
 			if test.proposal == test.lockProposal {
 				if c.state != StatePrepared {
-					t.Errorf("state mismatch: have %v, want %v", c.state, StatePreprepared)
+					t.Errorf("state mismatch: have %v, want %v", c.state, StatePrepared)
 				}
 				if !reflect.DeepEqual(curView, c.currentView()) {
 					t.Errorf("view mismatch: have %v, want %v", c.currentView(), curView)

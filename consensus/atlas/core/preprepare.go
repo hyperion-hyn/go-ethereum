@@ -107,7 +107,7 @@ func (c *core) handlePreprepare(msg *message, src atlas.Validator) error {
 	if c.state == StateAcceptRequest {
 		// Send ROUND CHANGE if the locked proposal and the received proposal are different
 		// ATLAS(zgx): have checked message come from proposer, Why I am a proposer and have a different hash? duplicated messages?
-		if c.IsProposer() && c.current.IsHashLocked() {
+		if c.current.IsHashLocked() {
 			if preprepare.Proposal.Hash() == c.current.GetLockedHash() {
 				// Broadcast COMMIT and enters Expect state directly
 				if err := c.acceptPreprepare(&preprepare); err != nil {
