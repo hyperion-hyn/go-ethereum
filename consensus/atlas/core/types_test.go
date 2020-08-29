@@ -21,6 +21,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
 )
@@ -74,15 +76,16 @@ func testPreprepare(t *testing.T) {
 }
 
 func testSubject(t *testing.T) {
-	s := &atlas.Subject{
+	s := atlas.Subject{
 		View: &atlas.View{
 			Round:    big.NewInt(1),
 			Sequence: big.NewInt(2),
 		},
-		Digest: common.StringToHash("1234567890"),
+		Digest:  common.StringToHash("1234567890"),
+		Payload: []byte{}, // initialize to make Equal work
 	}
 
-	subjectPayload, _ := Encode(s)
+	subjectPayload, _ := Encode(&s)
 
 	m := &message{
 		Code:   msgPreprepare,
@@ -107,7 +110,21 @@ func testSubject(t *testing.T) {
 		t.Errorf("error mismatch: have %v, want nil", err)
 	}
 
+	// if s.Payload is null and decodedSub.Payload is [], they are not equal.
+	//
+	// https://github.com/golang/go/issues/27379
+	// math/big: nat does not play well with reflect.DeepEqual #27379
 	if !reflect.DeepEqual(s, decodedSub) {
+		t.Errorf("subject mismatch: have %v, want %v", decodedSub, s)
+	}
+
+	EquateBigInt := func() cmp.Option {
+		return cmp.Comparer(func(x, y *big.Int) bool {
+			return x.Cmp(x) == 0
+		})
+	}
+
+	if !cmp.Equal(s.Payload, decodedSub.Payload, EquateBigInt()) {
 		t.Errorf("subject mismatch: have %v, want %v", decodedSub, s)
 	}
 }
