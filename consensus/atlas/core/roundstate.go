@@ -99,7 +99,8 @@ func (s *roundState) Subject() *atlas.Subject {
 			Round:    new(big.Int).Set(s.round),
 			Sequence: new(big.Int).Set(s.sequence),
 		},
-		Digest: s.Preprepare.Proposal.Hash(),
+		Digest:  s.Preprepare.Proposal.Hash(),
+		Payload: []byte{},
 	}
 }
 

@@ -191,13 +191,18 @@ OUTER:
 				t.Errorf("message code mismatch: have %v, want %v", decodedMsg.Code, expectedCode)
 			}
 
+			signedSubject, err := c.SignSubject(c.current.Subject())
+			if err != nil {
+				t.Errorf("failed to sign subject: %v", err)
+			}
+
 			var subject atlas.Subject
 			err = decodedMsg.Decode(&subject)
 			if err != nil {
 				t.Errorf("error mismatch: have %v, want nil", err)
 			}
-			if !test.existingBlock && !reflect.DeepEqual(subject, c.current.Subject()) {
-				t.Errorf("subject mismatch: have %v, want %v", subject, c.current.Subject())
+			if !test.existingBlock && !reflect.DeepEqual(&subject, signedSubject) {
+				t.Errorf("subject mismatch: have %v, want %v", subject, signedSubject)
 			}
 
 		}
