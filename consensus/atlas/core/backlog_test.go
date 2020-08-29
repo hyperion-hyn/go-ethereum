@@ -19,15 +19,11 @@ package core
 import (
 	"math/big"
 	"reflect"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
-	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )
 
 func TestCheckMessage(t *testing.T) {
@@ -218,7 +214,7 @@ func TestStoreBacklog(t *testing.T) {
 		t.Errorf("backlogs[signer] should not be existed right now.")
 	}
 
-	p = c.valSet.GetByIndex(1)
+	p = c.valSet.GetByIndex(1) // WARNING: use index(1) different backend(0) to void Backlog from self.
 	c.storeBacklog(m, p)
 	msg := c.backlogs[p.Signer()].PopItem()
 	if !reflect.DeepEqual(msg, m) {
@@ -230,13 +226,7 @@ func TestStoreBacklog(t *testing.T) {
 		View:   v,
 		Digest: common.StringToHash("1234567890"),
 	}
-	signedSubject, err := atlas.SignSubject(subject, func(hash common.Hash) (signature []byte, publicKey []byte, mask []byte, err error) {
-		signature, publicKey, mask, err = c.backend.Sign(hash.Bytes())
-		if err != nil {
-			return nil, nil, nil, err
-		}
-		return signature, publicKey, mask, nil
-	})
+	signedSubject, err := c.SignSubject(subject)
 	if err != nil {
 		t.Errorf("failed to sign subject")
 	}
@@ -315,13 +305,7 @@ func TestProcessFutureBacklog(t *testing.T) {
 		View:   v,
 		Digest: common.StringToHash("1234567890"),
 	}
-	signedSubject, err := atlas.SignSubject(subject, func(hash common.Hash) (signature []byte, publicKey []byte, mask []byte, err error) {
-		signature, publicKey, mask, err = c.backend.Sign(hash.Bytes())
-		if err != nil {
-			return nil, nil, nil, err
-		}
-		return signature, publicKey, mask, nil
-	})
+	signedSubject, err := c.SignSubject(subject)
 	if err != nil {
 		t.Errorf("failed to sign subject")
 	}
@@ -373,6 +357,14 @@ func TestProcessBacklog(t *testing.T) {
 			Msg:  subjectPayload,
 		},
 		&message{
+			Code: msgExpect,
+			Msg:  subjectPayload,
+		},
+		&message{
+			Code: msgConfirm,
+			Msg:  subjectPayload,
+		},
+		&message{
 			Code: msgCommit,
 			Msg:  subjectPayload,
 		},
@@ -387,27 +379,17 @@ func TestProcessBacklog(t *testing.T) {
 }
 
 func testProcessBacklog(t *testing.T, msg *message) {
-	vset := newTestValidatorSet(1)
-	backend := &testSystemBackend{
-		events: new(event.TypeMux),
-		peers:  vset,
-	}
-	c := &core{
-		logger:     log.New("backend", "test", "id", 0),
-		backlogs:   make(map[common.Address]*prque.Prque),
-		backlogsMu: new(sync.Mutex),
-		valSet:     vset,
-		backend:    backend,
-		state:      State(msg.Code),
-		current: newRoundState(&atlas.View{
-			Sequence: big.NewInt(1),
-			Round:    big.NewInt(0),
-		}, newTestValidatorSet(4), common.Hash{}, nil, nil, nil),
-	}
+	N := uint64(4)
+	F := uint64(1)
+	sys := NewTestSystemWithBackend(N, F)
+
+	backend := sys.backends[0]
+	c := backend.engine.(*core)
 	c.subscribeEvents()
 	defer c.unsubscribeEvents()
 
-	c.storeBacklog(msg, vset.GetByIndex(0))
+	p := c.valSet.GetByIndex(1) // WARNING: use index(1) different backend(0) to void Backlog from self.
+	c.storeBacklog(msg, p)
 	c.processBacklog()
 
 	const timeoutDura = 2 * time.Second

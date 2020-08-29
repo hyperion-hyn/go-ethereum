@@ -24,6 +24,7 @@ import (
 var (
 	// msgPriority is defined for calculating processing priority to speedup consensus
 	// msgPreprepare > msgCommit > msgPrepare
+	// ATLAS(zgx): should ajust message priority
 	msgPriority = map[uint64]int{
 		msgPreprepare: 1,
 		msgCommit:     2,
