@@ -47,10 +47,10 @@ func (c *core) handleConfirm(msg *message, src atlas.Validator) error {
 	logger := c.logger.New("from", src, "state", c.state)
 
 	// Decode PREPARE message
-	var confirm *atlas.Subject
+	var confirm atlas.Subject
 	err := msg.Decode(&confirm)
 	if err != nil {
-		return errFailedDecodePrepare
+		return errFailedDecodeConfirm
 	}
 
 	if err := c.checkMessage(msgPrepare, confirm.View); err != nil {
@@ -59,7 +59,7 @@ func (c *core) handleConfirm(msg *message, src atlas.Validator) error {
 
 	// If it is locked, it can only process on the locked block.
 	// Passing verifyPrepare and checkMessage implies it is processing on the locked block since it was verified in the Preprepared state.
-	if err := c.verifyConfirm(confirm, src); err != nil {
+	if err := c.verifyConfirm(&confirm, src); err != nil {
 		return err
 	}
 
@@ -68,7 +68,9 @@ func (c *core) handleConfirm(msg *message, src atlas.Validator) error {
 		return errNotFromCommittee
 	}
 
-	c.acceptConfirm(msg, src)
+	if err := c.acceptConfirm(msg, src); err != nil {
+		return err
+	}
 
 	if !c.IsProposer() {
 		logger.Error("message come from no-proposer", "msg", msg)
@@ -102,7 +104,7 @@ func (c *core) acceptConfirm(msg *message, src atlas.Validator) error {
 		return err
 	}
 
-	var confirm *atlas.Subject
+	var confirm atlas.Subject
 	if err := msg.Decode(&confirm); err != nil {
 		return errFailedDecodePrepare
 	}
@@ -112,8 +114,8 @@ func (c *core) acceptConfirm(msg *message, src atlas.Validator) error {
 		return errInconsistentSubject
 	}
 
-	var signPayload *atlas.SignPayload
-	if err := rlp.DecodeBytes(confirm.Payload, signPayload); err != nil {
+	var signPayload atlas.SignPayload
+	if err := rlp.DecodeBytes(confirm.Payload, &signPayload); err != nil {
 		return errFailedDecodePrepare
 	}
 

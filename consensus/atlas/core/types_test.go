@@ -52,7 +52,7 @@ func testPreprepare(t *testing.T) {
 		t.Errorf("error mismatch: have %v, want nil", err)
 	}
 
-	var decodedPP *atlas.Preprepare
+	var decodedPP atlas.Preprepare
 	err = decodedMsg.Decode(&decodedPP)
 	if err != nil {
 		t.Errorf("error mismatch: have %v, want nil", err)
@@ -101,7 +101,7 @@ func testSubject(t *testing.T) {
 		t.Errorf("error mismatch: have %v, want nil", err)
 	}
 
-	var decodedSub *atlas.Subject
+	var decodedSub atlas.Subject
 	err = decodedMsg.Decode(&decodedSub)
 	if err != nil {
 		t.Errorf("error mismatch: have %v, want nil", err)

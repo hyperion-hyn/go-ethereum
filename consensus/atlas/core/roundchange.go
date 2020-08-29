@@ -69,7 +69,7 @@ func (c *core) handleRoundChange(msg *message, src atlas.Validator) error {
 	logger := c.logger.New("state", c.state, "from", src.Signer().Hex())
 
 	// Decode ROUND CHANGE message
-	var rc *atlas.Subject
+	var rc atlas.Subject
 	if err := msg.Decode(&rc); err != nil {
 		logger.Error("Failed to decode ROUND CHANGE", "err", err)
 		return errInvalidMessage

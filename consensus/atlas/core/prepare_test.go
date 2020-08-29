@@ -243,7 +243,7 @@ OUTER:
 		if decodedMsg.Code != msgCommit {
 			t.Errorf("message code mismatch: have %v, want %v", decodedMsg.Code, msgCommit)
 		}
-		var m *atlas.Subject
+		var m atlas.Subject
 		err = decodedMsg.Decode(&m)
 		if err != nil {
 			t.Errorf("error mismatch: have %v, want nil", err)

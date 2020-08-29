@@ -86,7 +86,7 @@ func (self *testSystemBackend) EventMux() *event.TypeMux {
 }
 
 func (self *testSystemBackend) Send(message []byte, target common.Address) error {
-	testLogger.Info("enqueuing a message...", "address", self.Address())
+	testLogger.Info("enqueuing a message...", "address", self.Signer())
 	self.sentMsgs = append(self.sentMsgs, message)
 	self.sys.queuedMessage <- atlas.MessageEvent{
 		Payload: message,
@@ -95,7 +95,7 @@ func (self *testSystemBackend) Send(message []byte, target common.Address) error
 }
 
 func (self *testSystemBackend) Broadcast(valSet atlas.ValidatorSet, message []byte) error {
-	testLogger.Info("enqueuing a message...", "address", self.Address())
+	testLogger.Info("enqueuing a message...", "address", self.Signer())
 	self.sentMsgs = append(self.sentMsgs, message)
 	self.sys.queuedMessage <- atlas.MessageEvent{
 		Payload: message,
@@ -110,7 +110,7 @@ func (self *testSystemBackend) Gossip(valSet atlas.ValidatorSet, message []byte)
 
 func (self *testSystemBackend) Commit(proposal atlas.Proposal, signature []byte, publicKey []byte, bitmap []byte) error {
 	// func (self *testSystemBackend) Commit(proposal atlas.Proposal, seals [][]byte) error {
-	testLogger.Info("commit message", "address", self.Address())
+	testLogger.Info("commit message", "address", self.Signer())
 	self.committedMsgs = append(self.committedMsgs, testCommittedMsgs{
 		commitProposal: proposal,
 		// TODO(zgx): how to commit a message?

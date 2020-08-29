@@ -155,12 +155,12 @@ OUTER:
 			c := v.engine.(*core)
 
 			m, _ := Encode(preprepare)
-			_, val := r0.valSet.GetBySigner(v0.Address())
+			_, val := r0.valSet.GetBySigner(v0.Signer())
 			// run each backends and verify handlePreprepare function.
 			if err := c.handlePreprepare(&message{
 				Code:   msgPreprepare,
 				Msg:    m,
-				Signer: v0.Address(),
+				Signer: v0.Signer(),
 			}, val); err != nil {
 				if err != test.expectedErr {
 					t.Errorf("error mismatch: have %v, want %v", err, test.expectedErr)
@@ -191,7 +191,7 @@ OUTER:
 				t.Errorf("message code mismatch: have %v, want %v", decodedMsg.Code, expectedCode)
 			}
 
-			var subject *atlas.Subject
+			var subject atlas.Subject
 			err = decodedMsg.Decode(&subject)
 			if err != nil {
 				t.Errorf("error mismatch: have %v, want nil", err)
@@ -264,11 +264,11 @@ func TestHandlePreprepareWithLock(t *testing.T) {
 			c.current.SetPreprepare(lockPreprepare)
 			c.current.LockHash()
 			m, _ := Encode(preprepare)
-			_, val := r0.valSet.GetBySigner(v0.Address())
+			_, val := r0.valSet.GetBySigner(v0.Signer())
 			if err := c.handlePreprepare(&message{
 				Code:   msgPreprepare,
 				Msg:    m,
-				Signer: v0.Address(),
+				Signer: v0.Signer(),
 			}, val); err != nil {
 				t.Errorf("error mismatch: have %v, want nil", err)
 			}

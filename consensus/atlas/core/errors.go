@@ -44,6 +44,10 @@ var (
 	errFailedDecodePreprepare = errors.New("failed to decode PRE-PREPARE")
 	// errFailedDecodePrepare is returned when the PREPARE message is malformed.
 	errFailedDecodePrepare = errors.New("failed to decode PREPARE")
+	// errFailedDecodeExpect is returned when the EXPECT message is malformed.
+	errFailedDecodeExpect = errors.New("failed to decode EXPECT")
+	// errFailedDecodeConfirm is returned when the CONFIRM message is malformed.
+	errFailedDecodeConfirm = errors.New("failed to decode CONFIRM")
 	// errFailedDecodePreprepare is returned when the PRE-PREPARE message is malformed.
 	errFailedDecodePrepared = errors.New("failed to decode PREPARED")
 	// errFailedDecodeCommit is returned when the COMMIT message is malformed.

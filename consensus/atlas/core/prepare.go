@@ -47,7 +47,7 @@ func (c *core) handlePrepare(msg *message, src atlas.Validator) error {
 	logger := c.logger.New("from", src, "state", c.state)
 
 	// Decode PREPARE message
-	var prepare *atlas.Subject
+	var prepare atlas.Subject
 	err := msg.Decode(&prepare)
 	if err != nil {
 		return errFailedDecodePrepare
@@ -59,7 +59,7 @@ func (c *core) handlePrepare(msg *message, src atlas.Validator) error {
 
 	// If it is locked, it can only process on the locked block.
 	// Passing verifyPrepare and checkMessage implies it is processing on the locked block since it was verified in the Preprepared state.
-	if err := c.verifyPrepare(prepare, src); err != nil {
+	if err := c.verifyPrepare(&prepare, src); err != nil {
 		return err
 	}
 
@@ -68,7 +68,9 @@ func (c *core) handlePrepare(msg *message, src atlas.Validator) error {
 		return errNotFromCommittee
 	}
 
-	c.acceptPrepare(msg, src)
+	if err := c.acceptPrepare(msg, src); err != nil {
+		return err
+	}
 
 	if !c.IsProposer() {
 		logger.Error("message come from no-proposer", "msg", msg)
@@ -101,7 +103,7 @@ func (c *core) acceptPrepare(msg *message, src atlas.Validator) error {
 		return err
 	}
 
-	var prepare *atlas.Subject
+	var prepare atlas.Subject
 	if err := msg.Decode(&prepare); err != nil {
 		return errFailedDecodePrepare
 	}

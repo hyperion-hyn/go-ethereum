@@ -68,7 +68,7 @@ func (c *core) broadcastCommit(sub *atlas.Subject) {
 
 func (c *core) handleCommit(msg *message, src atlas.Validator) error {
 	// Decode COMMIT message
-	var commit *atlas.Subject
+	var commit atlas.Subject
 	err := msg.Decode(&commit)
 	if err != nil {
 		return errFailedDecodeCommit
@@ -78,11 +78,13 @@ func (c *core) handleCommit(msg *message, src atlas.Validator) error {
 		return err
 	}
 
-	if err := c.verifyCommit(commit, src); err != nil {
+	if err := c.verifyCommit(&commit, src); err != nil {
 		return err
 	}
 
-	c.acceptCommit(msg, src, c.valSet)
+	if err := c.acceptCommit(msg, src, c.valSet); err != nil {
+		return err
+	}
 
 	// Commit the proposal once we have enough COMMIT messages and we are not in the Confirm state.
 	//
@@ -112,7 +114,7 @@ func (c *core) acceptCommit(msg *message, src atlas.Validator, validatorSet atla
 		return err
 	}
 
-	var commit *atlas.Subject
+	var commit atlas.Subject
 	if err := msg.Decode(&commit); err != nil {
 		return errFailedDecodePrepare
 	}
@@ -122,7 +124,7 @@ func (c *core) acceptCommit(msg *message, src atlas.Validator, validatorSet atla
 		return errInconsistentSubject
 	}
 
-	if err := c.verifySignPayload(commit, validatorSet); err != nil {
+	if err := c.verifySignPayload(&commit, validatorSet); err != nil {
 		return err
 	}
 

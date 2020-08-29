@@ -17,8 +17,9 @@
 package core
 
 import (
-	"github.com/ethereum/go-ethereum/consensus/atlas"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
+
+	"github.com/ethereum/go-ethereum/consensus/atlas"
 )
 
 var (
@@ -96,14 +97,14 @@ func (c *core) storeBacklog(msg *message, src atlas.Validator) {
 	}
 	switch msg.Code {
 	case msgPreprepare:
-		var p *atlas.Preprepare
+		var p atlas.Preprepare
 		err := msg.Decode(&p)
 		if err == nil {
 			backlog.Push(msg, toPriority(msg.Code, p.View))
 		}
 		// for msgRoundChange, msgPrepare and msgCommit cases
 	default:
-		var p *atlas.Subject
+		var p atlas.Subject
 		err := msg.Decode(&p)
 		if err == nil {
 			backlog.Push(msg, toPriority(msg.Code, p.View))
@@ -138,14 +139,14 @@ func (c *core) processBacklog() {
 			var view *atlas.View
 			switch msg.Code {
 			case msgPreprepare:
-				var m *atlas.Preprepare
+				var m atlas.Preprepare
 				err := msg.Decode(&m)
 				if err == nil {
 					view = m.View
 				}
 				// for msgRoundChange, msgPrepare, msgExpect and msgCommit cases
 			default:
-				var sub *atlas.Subject
+				var sub atlas.Subject
 				err := msg.Decode(&sub)
 				if err == nil {
 					view = sub.View

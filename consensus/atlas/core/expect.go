@@ -49,10 +49,10 @@ func (c *core) handleExpect(msg *message, src atlas.Validator) error {
 	logger := c.logger.New("from", src, "state", c.state)
 
 	// Decode EXPECT
-	var expect *atlas.Subject
+	var expect atlas.Subject
 	err := msg.Decode(&expect)
 	if err != nil {
-		return errFailedDecodePrepared
+		return errFailedDecodeExpect
 	}
 
 	// Ensure we have the same view with the PREPARED message
@@ -102,7 +102,9 @@ func (c *core) handleExpect(msg *message, src atlas.Validator) error {
 		if c.IsProposer() && c.current.IsHashLocked() {
 			if expect.Digest == c.current.GetLockedHash() {
 				// Broadcast COMMIT and enters Expect state directly
-				c.acceptExpect(expect)
+				if err := c.acceptExpect(&expect); err != nil {
+					return err
+				}
 				// ATLAS(zgx): LockHash in handlePrepare, so set state to StatePrepared directly
 				c.setState(StateExpected)
 				c.sendConfirm()
@@ -114,7 +116,9 @@ func (c *core) handleExpect(msg *message, src atlas.Validator) error {
 			// Either
 			//   1. the locked proposal and the received proposal match
 			//   2. we have no locked proposal
-			c.acceptExpect(expect)
+			if err := c.acceptExpect(&expect); err != nil {
+				return err
+			}
 			c.setState(StateExpected)
 			c.sendConfirm()
 		}
@@ -123,15 +127,17 @@ func (c *core) handleExpect(msg *message, src atlas.Validator) error {
 	return nil
 }
 
-func (c *core) acceptExpect(prepare *atlas.Subject) {
+func (c *core) acceptExpect(prepare *atlas.Subject) error {
+	// ATLAS(zgx): please refer to acceptPrepare
 	c.consensusTimestamp = time.Now()
 	c.current.SetExpect(prepare)
+	return nil
 }
 
 func (c *core) verifyExpect(msg *message, src atlas.Validator, validatorSet atlas.ValidatorSet) error {
 	logger := c.logger.New("from", src, "state", c.state)
 
-	var expect *atlas.Subject
+	var expect atlas.Subject
 	if err := msg.Decode(&expect); err != nil {
 		return errFailedDecodePrepare
 	}
@@ -141,7 +147,7 @@ func (c *core) verifyExpect(msg *message, src atlas.Validator, validatorSet atla
 		return errInconsistentSubject
 	}
 
-	if err := c.verifySignPayload(expect, c.valSet); err != nil {
+	if err := c.verifySignPayload(&expect, c.valSet); err != nil {
 		return err
 	}
 

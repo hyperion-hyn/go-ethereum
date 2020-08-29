@@ -50,7 +50,7 @@ func (c *core) handlePreprepare(msg *message, src atlas.Validator) error {
 	logger := c.logger.New("from", src, "state", c.state)
 
 	// Decode PRE-PREPARE
-	var preprepare *atlas.Preprepare
+	var preprepare atlas.Preprepare
 	err := msg.Decode(&preprepare)
 	if err != nil {
 		return errFailedDecodePreprepare
@@ -110,7 +110,9 @@ func (c *core) handlePreprepare(msg *message, src atlas.Validator) error {
 		if c.IsProposer() && c.current.IsHashLocked() {
 			if preprepare.Proposal.Hash() == c.current.GetLockedHash() {
 				// Broadcast COMMIT and enters Expect state directly
-				c.acceptPreprepare(preprepare)
+				if err := c.acceptPreprepare(&preprepare); err != nil {
+					return err
+				}
 				// ATLAS(zgx): LockHash is invoked in handlePrepare, so set state to StatePrepared directly
 				c.setState(StatePrepared)
 				c.sendExpect()
@@ -122,7 +124,9 @@ func (c *core) handlePreprepare(msg *message, src atlas.Validator) error {
 			// Either
 			//   1. the locked proposal and the received proposal match
 			//   2. we have no locked proposal
-			c.acceptPreprepare(preprepare)
+			if err := c.acceptPreprepare(&preprepare); err != nil {
+				return err
+			}
 			c.setState(StatePreprepared)
 			c.sendPrepare()
 		}
@@ -131,7 +135,9 @@ func (c *core) handlePreprepare(msg *message, src atlas.Validator) error {
 	return nil
 }
 
-func (c *core) acceptPreprepare(preprepare *atlas.Preprepare) {
+func (c *core) acceptPreprepare(preprepare *atlas.Preprepare) error {
+	// ATLAS(zgx): please refer to accpetPrepare
 	c.consensusTimestamp = time.Now()
 	c.current.SetPreprepare(preprepare)
+	return nil
 }
