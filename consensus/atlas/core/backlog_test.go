@@ -198,13 +198,6 @@ func TestStoreBacklog(t *testing.T) {
 	// for i, backend := range sys.backends {
 	backend := sys.backends[0]
 	c := backend.engine.(*core)
-
-	//		c := &core{
-	//		logger:     log.New("backend", "test", "id", 0),
-	//		valSet:     newTestValidatorSet(1),
-	//		backlogs:   make(map[common.Address]*prque.Prque),
-	//		backlogsMu: new(sync.Mutex),
-	//	}
 	v := &atlas.View{
 		Round:    big.NewInt(10),
 		Sequence: big.NewInt(10),
@@ -303,21 +296,12 @@ func TestStoreBacklog(t *testing.T) {
 }
 
 func TestProcessFutureBacklog(t *testing.T) {
-	backend := &testSystemBackend{
-		events: new(event.TypeMux),
-	}
-	c := &core{
-		logger:     log.New("backend", "test", "id", 0),
-		valSet:     newTestValidatorSet(1),
-		backlogs:   make(map[common.Address]*prque.Prque),
-		backlogsMu: new(sync.Mutex),
-		backend:    backend,
-		current: newRoundState(&atlas.View{
-			Sequence: big.NewInt(1),
-			Round:    big.NewInt(0),
-		}, newTestValidatorSet(4), common.Hash{}, nil, nil, nil),
-		state: StateAcceptRequest,
-	}
+	N := uint64(4)
+	F := uint64(1)
+	sys := NewTestSystemWithBackend(N, F)
+
+	backend := sys.backends[0]
+	c := backend.engine.(*core)
 	c.subscribeEvents()
 	defer c.unsubscribeEvents()
 
@@ -325,13 +309,23 @@ func TestProcessFutureBacklog(t *testing.T) {
 		Round:    big.NewInt(10),
 		Sequence: big.NewInt(10),
 	}
-	p := c.valSet.GetByIndex(0)
+	p := c.valSet.GetByIndex(1) // WARNING: use index(1) different backend(0) to void Backlog from self.
 	// push a future msg
 	subject := &atlas.Subject{
 		View:   v,
 		Digest: common.StringToHash("1234567890"),
 	}
-	subjectPayload, _ := Encode(subject)
+	signedSubject, err := atlas.SignSubject(subject, func(hash common.Hash) (signature []byte, publicKey []byte, mask []byte, err error) {
+		signature, publicKey, mask, err = c.backend.Sign(hash.Bytes())
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		return signature, publicKey, mask, nil
+	})
+	if err != nil {
+		t.Errorf("failed to sign subject")
+	}
+	subjectPayload, _ := Encode(signedSubject)
 	m := &message{
 		Code: msgCommit,
 		Msg:  subjectPayload,

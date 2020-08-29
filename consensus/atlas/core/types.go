@@ -21,6 +21,7 @@ import (
 	"io"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
@@ -103,7 +104,7 @@ type message struct {
 
 // EncodeRLP serializes m into the Ethereum RLP format.
 func (m *message) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.Code, m.Msg, m.Signer, m.Signature, m.SignerPubKey, m.CommittedSeal})
+	return rlp.Encode(w, []interface{}{m.Code, m.Msg, m.Signer, m.Signature, m.CommittedSeal})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
@@ -120,7 +121,7 @@ func (m *message) DecodeRLP(s *rlp.Stream) error {
 	if err := s.Decode(&msg); err != nil {
 		return err
 	}
-	m.Code, m.Msg, m.Signer, m.Signature, m.SignerPubKey, m.CommittedSeal = msg.Code, msg.Msg, msg.Address, msg.Signature, msg.SignerPubKey, msg.CommittedSeal
+	m.Code, m.Msg, m.Signer, m.Signature, m.CommittedSeal = msg.Code, msg.Msg, msg.Address, msg.Signature, msg.CommittedSeal
 	return nil
 }
 
@@ -178,7 +179,9 @@ func (m *message) Decode(val interface{}) error {
 }
 
 func (m *message) String() string {
-	return fmt.Sprintf("{Code: %v, Address: %v, Signature: %x, PublicKey: %x}", m.Code, m.Signer.String(), m.Signature[:10], m.SignerPubKey[:10])
+	return fmt.Sprintf("{Code: %v, Address: %v, Signature: %x, PublicKey: %x}", m.Code, m.Signer.String(),
+		m.Signature[:math.Min(10, len(m.Signature))],
+		m.SignerPubKey[:math.Min(10, len(m.Signature))])
 }
 
 // ==============================================
