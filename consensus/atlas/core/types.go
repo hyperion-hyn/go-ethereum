@@ -117,16 +117,15 @@ func (m *message) DecodeRLP(s *rlp.Stream) error {
 	var msg struct {
 		Code          uint64
 		Msg           []byte
-		Address       common.Address
+		Signer        common.Address
 		Signature     []byte
-		SignerPubKey  []byte
 		CommittedSeal []byte
 	}
 
 	if err := s.Decode(&msg); err != nil {
 		return err
 	}
-	m.Code, m.Msg, m.Signer, m.Signature, m.CommittedSeal = msg.Code, msg.Msg, msg.Address, msg.Signature, msg.CommittedSeal
+	m.Code, m.Msg, m.Signer, m.Signature, m.CommittedSeal = msg.Code, msg.Msg, msg.Signer, msg.Signature, msg.CommittedSeal
 	return nil
 }
 
@@ -184,7 +183,7 @@ func (m *message) Decode(val interface{}) error {
 }
 
 func (m *message) String() string {
-	return fmt.Sprintf("{Code: %v, Address: %v, Signature: %x, PublicKey: %x}", m.Code, m.Signer.String(),
+	return fmt.Sprintf("{Code: %v, Signer: %v, Signature: %x, PublicKey: %x}", m.Code, m.Signer.String(),
 		m.Signature[:math.Min(10, len(m.Signature))],
 		m.SignerPubKey[:math.Min(10, len(m.Signature))])
 }
