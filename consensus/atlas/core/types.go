@@ -52,15 +52,20 @@ const (
 )
 
 func (s State) String() string {
-	if s == StateAcceptRequest {
+	switch s {
+	case StateAcceptRequest:
 		return "Accept request"
-	} else if s == StatePreprepared {
+	case StatePreprepared:
 		return "Preprepared"
-	} else if s == StatePrepared {
-		return "Expect"
-	} else if s == StateCommitted {
-		return "Confirm"
-	} else {
+	case StatePrepared:
+		return "Prepared"
+	case StateExpected:
+		return "Expected"
+	case StateConfirmed:
+		return "Confirmed"
+	case StateCommitted:
+		return "Committed"
+	default:
 		return "Unknown"
 	}
 }

@@ -245,7 +245,7 @@ func SignSubject(subject *Subject, signFn SignHashFn) (*Subject, error) {
 		Mask:      mask,
 	}
 
-	payload, err := rlp.EncodeToBytes(val)
+	payload, err := rlp.EncodeToBytes(&val)
 	if err != nil {
 		return nil, err
 	}

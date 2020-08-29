@@ -228,7 +228,7 @@ func TestStoreBacklog(t *testing.T) {
 	}
 	signedSubject, err := c.SignSubject(subject)
 	if err != nil {
-		t.Errorf("failed to sign subject")
+		t.Errorf("failed to sign subject: %v", err)
 	}
 	subjectPayload, _ := Encode(signedSubject)
 
@@ -387,6 +387,8 @@ func testProcessBacklog(t *testing.T, msg *message) {
 	c := backend.engine.(*core)
 	c.subscribeEvents()
 	defer c.unsubscribeEvents()
+
+	c.state = State(msg.Code)
 
 	p := c.valSet.GetByIndex(1) // WARNING: use index(1) different backend(0) to void Backlog from self.
 	c.storeBacklog(msg, p)
