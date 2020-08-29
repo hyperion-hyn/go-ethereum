@@ -19,11 +19,7 @@ package core
 import (
 	"time"
 
-	"github.com/hyperion-hyn/bls/ffi/go/bls"
-
 	"github.com/ethereum/go-ethereum/consensus/atlas"
-	"github.com/ethereum/go-ethereum/crypto"
-	bls_cosi "github.com/ethereum/go-ethereum/crypto/bls"
 )
 
 func (c *core) sendExpect() {
@@ -53,7 +49,7 @@ func (c *core) handleExpect(msg *message, src atlas.Validator) error {
 	logger := c.logger.New("from", src, "state", c.state)
 
 	// Decode EXPECT
-	var expect *atlas.SignedSubject
+	var expect *atlas.Subject
 	err := msg.Decode(&expect)
 	if err != nil {
 		return errFailedDecodePrepared
@@ -61,7 +57,7 @@ func (c *core) handleExpect(msg *message, src atlas.Validator) error {
 
 	// Ensure we have the same view with the PREPARED message
 	// If it is old message, see if we need to broadcast COMMIT
-	if err := c.checkMessage(msgExpect, expect.Subject.View); err != nil {
+	if err := c.checkMessage(msgExpect, expect.View); err != nil {
 		if err == errOldMessage {
 			// ATLAS(zgx): what if old message is different from preprepare.proposal?
 			// Get validator set for the given proposal
@@ -98,13 +94,13 @@ func (c *core) handleExpect(msg *message, src atlas.Validator) error {
 			return err
 		}
 
-		if expect.Subject.Digest != c.current.Preprepare.Proposal.Hash() {
+		if expect.Digest != c.current.Preprepare.Proposal.Hash() {
 			return errInconsistentSubject
 		}
 
 		// Send ROUND CHANGE if the locked proposal and the received proposal are different
 		if c.IsProposer() && c.current.IsHashLocked() {
-			if expect.Subject.Digest == c.current.GetLockedHash() {
+			if expect.Digest == c.current.GetLockedHash() {
 				// Broadcast COMMIT and enters Expect state directly
 				c.acceptExpect(expect)
 				// ATLAS(zgx): LockHash in handlePrepare, so set state to StatePrepared directly
@@ -127,7 +123,7 @@ func (c *core) handleExpect(msg *message, src atlas.Validator) error {
 	return nil
 }
 
-func (c *core) acceptExpect(prepare *atlas.SignedSubject) {
+func (c *core) acceptExpect(prepare *atlas.Subject) {
 	c.consensusTimestamp = time.Now()
 	c.current.SetExpect(prepare)
 }
@@ -135,42 +131,18 @@ func (c *core) acceptExpect(prepare *atlas.SignedSubject) {
 func (c *core) verifyExpect(msg *message, src atlas.Validator, validatorSet atlas.ValidatorSet) error {
 	logger := c.logger.New("from", src, "state", c.state)
 
-	var expect *atlas.SignedSubject
+	var expect *atlas.Subject
 	if err := msg.Decode(&expect); err != nil {
 		return errFailedDecodePrepare
 	}
 
-	if expect.Subject.Digest != c.current.Preprepare.Proposal.Hash() {
-		logger.Warn("Inconsistent subjects between EXPECT and proposal", "expected", c.current.Preprepare.Proposal.Hash(), "got", expect.Subject.Digest)
+	if expect.Digest != c.current.Preprepare.Proposal.Hash() {
+		logger.Warn("Inconsistent subjects between EXPECT and proposal", "expected", c.current.Preprepare.Proposal.Hash(), "got", expect.Digest)
 		return errInconsistentSubject
 	}
 
-	var sign bls.Sign
-	if err := sign.Deserialize(expect.Signature); err != nil {
-		logger.Error("Failed to deserialize signature", "msg", msg, "err", err)
+	if err := c.verifySignPayload(expect, c.valSet); err != nil {
 		return err
-	}
-
-	var pubKey bls.PublicKey
-	if err := pubKey.Deserialize(expect.PublicKey); err != nil {
-		logger.Error("Failed to deserialize signer's public key", "msg", msg, "err", err)
-		return err
-	}
-
-	hash := crypto.Keccak256Hash(expect.Subject.Digest.Bytes())
-	if sign.VerifyHash(&pubKey, hash.Bytes()) == false {
-		logger.Error("Failed to verify signature with signer's public key expect", "msg", msg)
-		return errInvalidSignature
-	}
-
-	bitmap, _ := bls_cosi.NewMask(validatorSet.GetPublicKeys(), nil)
-	if err := bitmap.SetMask(expect.Mask); err != nil {
-		logger.Error("Failed to SetMask", "view", c.currentView(), "err", err)
-		return err
-	}
-
-	if bitmap.CountEnabled() < c.QuorumSize() {
-		return errNotSatisfyQuorum
 	}
 
 	return nil

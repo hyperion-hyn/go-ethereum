@@ -103,10 +103,10 @@ func (c *core) storeBacklog(msg *message, src atlas.Validator) {
 		}
 		// for msgRoundChange, msgPrepare and msgCommit cases
 	default:
-		var p *atlas.SignedSubject
+		var p *atlas.Subject
 		err := msg.Decode(&p)
 		if err == nil {
-			backlog.Push(msg, toPriority(msg.Code, p.Subject.View))
+			backlog.Push(msg, toPriority(msg.Code, p.View))
 		}
 	}
 	c.backlogs[src.Signer()] = backlog

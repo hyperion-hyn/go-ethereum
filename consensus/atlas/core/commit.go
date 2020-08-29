@@ -17,12 +17,8 @@
 package core
 
 import (
-	"github.com/hyperion-hyn/bls/ffi/go/bls"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
-	"github.com/ethereum/go-ethereum/crypto"
-	bls_cosi "github.com/ethereum/go-ethereum/crypto/bls"
 )
 
 func (c *core) sendCommit() {
@@ -72,13 +68,13 @@ func (c *core) broadcastCommit(sub *atlas.Subject) {
 
 func (c *core) handleCommit(msg *message, src atlas.Validator) error {
 	// Decode COMMIT message
-	var commit *atlas.SignedSubject
+	var commit *atlas.Subject
 	err := msg.Decode(&commit)
 	if err != nil {
 		return errFailedDecodeCommit
 	}
 
-	if err := c.checkMessage(msgCommit, commit.Subject.View); err != nil {
+	if err := c.checkMessage(msgCommit, commit.View); err != nil {
 		return err
 	}
 
@@ -103,7 +99,7 @@ func (c *core) handleCommit(msg *message, src atlas.Validator) error {
 }
 
 // verifyCommit verifies if the received COMMIT message is equivalent to our subject
-func (c *core) verifyCommit(commit *atlas.SignedSubject, src atlas.Validator) error {
+func (c *core) verifyCommit(commit *atlas.Subject, src atlas.Validator) error {
 	return nil
 }
 
@@ -116,42 +112,18 @@ func (c *core) acceptCommit(msg *message, src atlas.Validator, validatorSet atla
 		return err
 	}
 
-	var commit *atlas.SignedSubject
+	var commit *atlas.Subject
 	if err := msg.Decode(&commit); err != nil {
 		return errFailedDecodePrepare
 	}
 
-	if commit.Subject.Digest != c.current.Preprepare.Proposal.Hash() {
-		logger.Warn("Inconsistent subjects between EXPECT and proposal", "expected", c.current.Preprepare.Proposal.Hash(), "got", commit.Subject.Digest)
+	if commit.Digest != c.current.Preprepare.Proposal.Hash() {
+		logger.Warn("Inconsistent subjects between EXPECT and proposal", "expected", c.current.Preprepare.Proposal.Hash(), "got", commit.Digest)
 		return errInconsistentSubject
 	}
 
-	var sign bls.Sign
-	if err := sign.Deserialize(commit.Signature); err != nil {
-		logger.Error("Failed to deserialize signature", "msg", msg, "err", err)
+	if err := c.verifySignPayload(commit, validatorSet); err != nil {
 		return err
-	}
-
-	var pubKey bls.PublicKey
-	if err := pubKey.Deserialize(commit.PublicKey); err != nil {
-		logger.Error("Failed to deserialize signer's public key", "msg", msg, "err", err)
-		return err
-	}
-
-	hash := crypto.Keccak256Hash(commit.Subject.Digest.Bytes())
-	if sign.VerifyHash(&pubKey, hash.Bytes()) == false {
-		logger.Error("Failed to verify signature with signer's public key commit", "msg", msg)
-		return errInvalidSignature
-	}
-
-	bitmap, _ := bls_cosi.NewMask(validatorSet.GetPublicKeys(), nil)
-	if err := bitmap.SetMask(commit.Mask); err != nil {
-		logger.Error("Failed to SetMask", "view", c.currentView(), "err", err)
-		return err
-	}
-
-	if bitmap.CountEnabled() < c.QuorumSize() {
-		return errNotSatisfyQuorum
 	}
 
 	return nil

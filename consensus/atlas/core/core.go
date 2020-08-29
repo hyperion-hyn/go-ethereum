@@ -35,6 +35,7 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 // New creates an Atlas consensus core
@@ -354,7 +355,7 @@ func PrepareCommittedSeal(hash common.Hash) []byte {
 	return buf.Bytes()
 }
 
-func (c *core) SignSubject(subject *atlas.Subject) (*atlas.SignedSubject, error) {
+func (c *core) SignSubject(subject *atlas.Subject) (*atlas.Subject, error) {
 	signedSubject, err := atlas.SignSubject(subject, func(hash common.Hash) (signature []byte, publicKey []byte, mask []byte, err error) {
 		signature, publicKey, mask, err = c.backend.Sign(hash.Bytes())
 		if err != nil {
@@ -365,25 +366,84 @@ func (c *core) SignSubject(subject *atlas.Subject) (*atlas.SignedSubject, error)
 	return signedSubject, err
 }
 
-func (c *core) AssembleSignedSubject() (*atlas.SignedSubject, error) {
+func (c *core) AssembleSignedSubject() (*atlas.Subject, error) {
 	switch c.state {
-	case StatePrepared:
-		signedSubject := atlas.SignedSubject{
-			Subject:   c.current.Subject(),
-			Signature: c.current.aggregatedPrepareSig.Serialize(),
-			PublicKey: c.current.aggregatedPreparePublicKey.Serialize(),
-			Mask:      c.current.prepareBitmap.Mask(),
+	case StatePrepared, StateConfirmed:
+		var val *atlas.SignPayload
+		switch c.state {
+		case StatePrepared:
+			val = &atlas.SignPayload{
+				Signature: c.current.aggregatedPrepareSig.Serialize(),
+				PublicKey: c.current.aggregatedPreparePublicKey.Serialize(),
+				Mask:      c.current.prepareBitmap.Mask(),
+			}
+		case StateConfirmed:
+			val = &atlas.SignPayload{
+				Signature: c.current.aggregatedConfirmSig.Serialize(),
+				PublicKey: c.current.aggregatedConfirmPublicKey.Serialize(),
+				Mask:      c.current.confirmBitmap.Mask(),
+			}
 		}
-		return &signedSubject, nil
-	case StateConfirmed:
-		signedSubject := atlas.SignedSubject{
-			Subject:   c.current.Subject(),
-			Signature: c.current.aggregatedConfirmSig.Serialize(),
-			PublicKey: c.current.aggregatedConfirmPublicKey.Serialize(),
-			Mask:      c.current.confirmBitmap.Mask(),
+		payload, err := rlp.EncodeToBytes(val)
+		if err != nil {
+			return nil, err
 		}
-		return &signedSubject, nil
+		retval := c.current.Subject()
+		retval.Payload = payload
+		return retval, nil
 	default:
 		return nil, errors.New(fmt.Sprintf("invalid state: %v", c.current))
 	}
+}
+
+func (c *core) verifySignPayload(subject *atlas.Subject, validatorSet atlas.ValidatorSet) error {
+	logger := c.logger.New("state", c.state)
+
+	var signPayload *atlas.SignPayload
+	if err := rlp.DecodeBytes(subject.Payload, signPayload); err != nil {
+		return errFailedDecodeCommit
+	}
+	var sign bls.Sign
+	if err := sign.Deserialize(signPayload.Signature); err != nil {
+		logger.Error("Failed to deserialize signature", "signature", signPayload.Signature, "err", err)
+		return err
+	}
+
+	var pubKey bls.PublicKey
+	if err := pubKey.Deserialize(signPayload.PublicKey); err != nil {
+		logger.Error("Failed to deserialize signer's public key", "publicKey", signPayload.PublicKey, "err", err)
+		return err
+	}
+
+	hash := crypto.Keccak256Hash(subject.Digest.Bytes())
+	if sign.VerifyHash(&pubKey, hash.Bytes()) == false {
+		logger.Error("Failed to verify signature with signer's public key commit", "signature", signPayload.Signature[:10], "publicKey", signPayload.PublicKey[:10])
+		return errInvalidSignature
+	}
+
+	if len(signPayload.Mask) != 0 {
+		bitmap, _ := bls_cosi.NewMask(validatorSet.GetPublicKeys(), nil)
+		if err := bitmap.SetMask(signPayload.Mask); err != nil {
+			logger.Error("Failed to SetMask", "err", err)
+			return err
+		}
+
+		if bitmap.CountEnabled() < c.QuorumSize() {
+			return errNotSatisfyQuorum
+		}
+	}
+	return nil
+}
+
+func (c *core) getValidatorPublicKey(signer common.Address, valSet atlas.ValidatorSet) (*bls.PublicKey, error) {
+	_, validator := valSet.GetBySigner(signer)
+	if validator == nil {
+		return nil, errInvalidSigner
+	}
+
+	var pubKey *bls.PublicKey = validator.PublicKey()
+	if pubKey == nil {
+		return nil, errInvalidSigner
+	}
+	return pubKey, nil
 }

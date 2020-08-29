@@ -19,9 +19,8 @@ package core
 import (
 	"github.com/hyperion-hyn/bls/ffi/go/bls"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
-	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 func (c *core) sendConfirm() {
@@ -48,13 +47,13 @@ func (c *core) handleConfirm(msg *message, src atlas.Validator) error {
 	logger := c.logger.New("from", src, "state", c.state)
 
 	// Decode PREPARE message
-	var confirm *atlas.SignedSubject
+	var confirm *atlas.Subject
 	err := msg.Decode(&confirm)
 	if err != nil {
 		return errFailedDecodePrepare
 	}
 
-	if err := c.checkMessage(msgPrepare, confirm.Subject.View); err != nil {
+	if err := c.checkMessage(msgPrepare, confirm.View); err != nil {
 		return err
 	}
 
@@ -78,7 +77,7 @@ func (c *core) handleConfirm(msg *message, src atlas.Validator) error {
 
 	// Change to Expect state if we've received enough CONFIRM messages or it is locked
 	// and we are in earlier state before Expect state.
-	if ((c.current.IsHashLocked() && confirm.Subject.Digest == c.current.GetLockedHash()) || c.current.GetConfirmSize() >= c.QuorumSize()) &&
+	if ((c.current.IsHashLocked() && confirm.Digest == c.current.GetLockedHash()) || c.current.GetConfirmSize() >= c.QuorumSize()) &&
 		c.state.Cmp(StateExpected) < 0 {
 		c.current.LockHash()
 		c.setState(StateExpected)
@@ -89,7 +88,7 @@ func (c *core) handleConfirm(msg *message, src atlas.Validator) error {
 }
 
 // verifyPrepare verifies if the received CONFIRM message is equivalent to our subject
-func (c *core) verifyConfirm(prepare *atlas.SignedSubject, src atlas.Validator) error {
+func (c *core) verifyConfirm(prepare *atlas.Subject, src atlas.Validator) error {
 	return nil
 }
 
@@ -103,48 +102,42 @@ func (c *core) acceptConfirm(msg *message, src atlas.Validator) error {
 		return err
 	}
 
-	var confirm *atlas.SignedSubject
+	var confirm *atlas.Subject
 	if err := msg.Decode(&confirm); err != nil {
 		return errFailedDecodePrepare
 	}
 
-	if confirm.Subject.Digest != c.current.Preprepare.Proposal.Hash() {
-		logger.Warn("Inconsistent subjects between PREPARE and proposal", "expected", c.current.Preprepare.Proposal.Hash(), "got", confirm.Subject.Digest)
+	if confirm.Digest != c.current.Preprepare.Proposal.Hash() {
+		logger.Warn("Inconsistent subjects between PREPARE and proposal", "expected", c.current.Preprepare.Proposal.Hash(), "got", confirm.Digest)
 		return errInconsistentSubject
 	}
 
+	var signPayload *atlas.SignPayload
+	if err := rlp.DecodeBytes(confirm.Payload, signPayload); err != nil {
+		return errFailedDecodePrepare
+	}
+
 	var sign bls.Sign
-	if err := sign.Deserialize(confirm.Signature); err != nil {
-		logger.Error("Failed to deserialize signature", "msg", msg, "err", err)
+	if err := sign.Deserialize(signPayload.Signature); err != nil {
+		logger.Error("Failed to deserialize signature", "signature", signPayload.Signature, "err", err)
 		return err
 	}
 
-	var signer common.Address
-	signer = src.Signer()
-
-	_, validator := c.valSet.GetBySigner(signer)
-	if validator == nil {
-		return errInvalidSigner
+	pubKey, err := c.getValidatorPublicKey(src.Signer(), c.valSet)
+	if err != nil {
+		return err
 	}
 
-	var pubKey *bls.PublicKey = validator.PublicKey()
-	if validator == nil {
-		return errInvalidSigner
-	}
-
-	hash := crypto.Keccak256Hash(confirm.Subject.Digest.Bytes())
-	if sign.VerifyHash(pubKey, hash.Bytes()) == false {
-		logger.Error("Failed to verify signature with signer's public key confirm", "msg", msg)
-		return errInvalidSignature
+	err = c.checkValidatorSignature(confirm.Digest.Bytes(), signPayload.Signature, pubKey.Serialize())
+	if err != nil {
+		logger.Error("Failed to verify signature with signer's public key prepare", "signature", signPayload.Signature[:10], "publicKey", pubKey.Serialize()[:10])
+		return err
 	}
 
 	if err := c.current.confirmBitmap.SetKey(pubKey, true); err != nil {
 		c.current.aggregatedConfirmSig.Add(&sign)
+		c.current.aggregatedConfirmPublicKey.Add(pubKey)
 	}
-
-	c.current.aggregatedConfirmPublicKey.Add(pubKey)
-
-	c.current.confirmBitmap.Mask()
 
 	return nil
 }

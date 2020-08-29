@@ -19,9 +19,8 @@ package core
 import (
 	"github.com/hyperion-hyn/bls/ffi/go/bls"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
-	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 func (c *core) sendPrepare() {
@@ -48,13 +47,13 @@ func (c *core) handlePrepare(msg *message, src atlas.Validator) error {
 	logger := c.logger.New("from", src, "state", c.state)
 
 	// Decode PREPARE message
-	var prepare *atlas.SignedSubject
+	var prepare *atlas.Subject
 	err := msg.Decode(&prepare)
 	if err != nil {
 		return errFailedDecodePrepare
 	}
 
-	if err := c.checkMessage(msgPrepare, prepare.Subject.View); err != nil {
+	if err := c.checkMessage(msgPrepare, prepare.View); err != nil {
 		return err
 	}
 
@@ -78,7 +77,7 @@ func (c *core) handlePrepare(msg *message, src atlas.Validator) error {
 
 	// Change to Expect state if we've received enough PREPARE messages or it is locked
 	// and we are in earlier state before Expect state.
-	if ((c.current.IsHashLocked() && prepare.Subject.Digest == c.current.GetLockedHash()) || c.current.GetPrepareSize() >= c.QuorumSize()) &&
+	if ((c.current.IsHashLocked() && prepare.Digest == c.current.GetLockedHash()) || c.current.GetPrepareSize() >= c.QuorumSize()) &&
 		c.state.Cmp(StatePrepared) < 0 {
 		c.current.LockHash()
 		c.setState(StatePrepared)
@@ -89,7 +88,7 @@ func (c *core) handlePrepare(msg *message, src atlas.Validator) error {
 }
 
 // verifyPrepare verifies if the received PREPARE message is equivalent to our subject
-func (c *core) verifyPrepare(prepare *atlas.SignedSubject, src atlas.Validator) error {
+func (c *core) verifyPrepare(prepare *atlas.Subject, src atlas.Validator) error {
 	return nil
 }
 
@@ -102,43 +101,41 @@ func (c *core) acceptPrepare(msg *message, src atlas.Validator) error {
 		return err
 	}
 
-	var prepare *atlas.SignedSubject
+	var prepare *atlas.Subject
 	if err := msg.Decode(&prepare); err != nil {
 		return errFailedDecodePrepare
 	}
 
-	if prepare.Subject.Digest != c.current.Preprepare.Proposal.Hash() {
-		logger.Warn("Inconsistent subjects between PREPARE and proposal", "expected", c.current.Preprepare.Proposal.Hash(), "got", prepare.Subject.Digest)
+	if prepare.Digest != c.current.Preprepare.Proposal.Hash() {
+		logger.Warn("Inconsistent subjects between PREPARE and proposal", "expected", c.current.Preprepare.Proposal.Hash(), "got", prepare.Digest)
 		return errInconsistentSubject
 	}
 
+	var signPayload *atlas.SignPayload
+	if err := rlp.DecodeBytes(prepare.Payload, signPayload); err != nil {
+		return errFailedDecodePrepare
+	}
+
 	var sign bls.Sign
-	if err := sign.Deserialize(prepare.Signature); err != nil {
-		logger.Error("Failed to deserialize signature", "msg", msg, "err", err)
+	if err := sign.Deserialize(signPayload.Signature); err != nil {
+		logger.Error("Failed to deserialize signature", "signature", signPayload.Signature, "err", err)
 		return err
 	}
 
-	var signer common.Address
-	signer = src.Signer()
-
-	_, validator := c.valSet.GetBySigner(signer)
-	if validator == nil {
-		return errInvalidSigner
+	pubKey, err := c.getValidatorPublicKey(src.Signer(), c.valSet)
+	if err != nil {
+		return err
 	}
 
-	var pubKey *bls.PublicKey = validator.PublicKey()
-	if pubKey == nil {
-		return errInvalidSigner
-	}
-
-	hash := crypto.Keccak256Hash(prepare.Subject.Digest.Bytes())
-	if sign.VerifyHash(pubKey, hash.Bytes()) == false {
-		logger.Error("Failed to verify signature with signer's public key prepare", "msg", msg, "subject", prepare)
-		return errInvalidSignature
+	err = c.checkValidatorSignature(prepare.Digest.Bytes(), signPayload.Signature, pubKey.Serialize())
+	if err != nil {
+		logger.Error("Failed to verify signature with signer's public key prepare", "signature", signPayload.Signature[:10], "publicKey", pubKey.Serialize()[:10])
+		return err
 	}
 
 	if err := c.current.prepareBitmap.SetKey(pubKey, true); err != nil {
 		c.current.aggregatedPrepareSig.Add(&sign)
+		c.current.aggregatedPreparePublicKey.Add(pubKey)
 	}
 
 	return nil

@@ -121,26 +121,28 @@ func (b *Preprepare) DecodeRLP(s *rlp.Stream) error {
 }
 
 type Subject struct {
-	View   *View
-	Digest common.Hash
+	View    *View
+	Digest  common.Hash
+	Payload []byte
 }
 
 // EncodeRLP serializes b into the Ethereum RLP format.
 func (b *Subject) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{b.View, b.Digest})
+	return rlp.Encode(w, []interface{}{b.View, b.Digest, b.Payload})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
 func (b *Subject) DecodeRLP(s *rlp.Stream) error {
 	var subject struct {
-		View   *View
-		Digest common.Hash
+		View    *View
+		Digest  common.Hash
+		Payload []byte
 	}
 
 	if err := s.Decode(&subject); err != nil {
 		return err
 	}
-	b.View, b.Digest = subject.View, subject.Digest
+	b.View, b.Digest, b.Payload = subject.View, subject.Digest, subject.Payload
 	return nil
 }
 
@@ -148,22 +150,20 @@ func (b Subject) String() string {
 	return fmt.Sprintf("{View: %v, Digest: %v}", b.View, b.Digest.String())
 }
 
-type SignedSubject struct {
-	Subject   *Subject
+type SignPayload struct {
 	Signature []byte
 	PublicKey []byte
 	Mask      []byte
 }
 
 // EncodeRLP serializes b into the Ethereum RLP format.
-func (b *SignedSubject) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{b.Subject, b.Signature, b.PublicKey, b.Mask})
+func (b *SignPayload) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{b.Signature, b.PublicKey, b.Mask})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
-func (b *SignedSubject) DecodeRLP(s *rlp.Stream) error {
+func (b *SignPayload) DecodeRLP(s *rlp.Stream) error {
 	var obj struct {
-		Subject   *Subject
 		Signature []byte
 		PublicKey []byte
 		Mask      []byte
@@ -172,12 +172,12 @@ func (b *SignedSubject) DecodeRLP(s *rlp.Stream) error {
 	if err := s.Decode(&obj); err != nil {
 		return err
 	}
-	b.Subject, b.Signature, b.PublicKey, b.Mask = obj.Subject, obj.Signature, obj.PublicKey, obj.Mask
+	b.Signature, b.PublicKey, b.Mask = obj.Signature, obj.PublicKey, obj.Mask
 	return nil
 }
 
-func (b SignedSubject) String() string {
-	return fmt.Sprintf("{View: %v, Digest: %v, Signature: %x, PublicKey: %x}", b.Subject.View, b.Subject.Digest.String(), b.Signature[:10], b.PublicKey[:10])
+func (b SignPayload) String() string {
+	return fmt.Sprintf("{ Signature: %x, PublicKey: %x}", b.Signature[:10], b.PublicKey[:10])
 }
 
 // SealHash returns the hash of a block prior to it being sealed.
@@ -228,7 +228,7 @@ func encodeSigHeader(w io.Writer, header *types.Header) {
 
 type SignHashFn func(hash common.Hash) (signature []byte, publicKey []byte, mask []byte, err error)
 
-func SignSubject(subject *Subject, signFn SignHashFn) (*SignedSubject, error) {
+func SignSubject(subject *Subject, signFn SignHashFn) (*Subject, error) {
 	var hash common.Hash
 	hw := sha3.NewLegacyKeccak256()
 	hw.Write(subject.Digest.Bytes())
@@ -239,14 +239,20 @@ func SignSubject(subject *Subject, signFn SignHashFn) (*SignedSubject, error) {
 		return nil, err
 	}
 
-	retval := SignedSubject{
-		Subject: subject,
+	val := SignPayload{
+		Signature: signature,
+		PublicKey: publicKey,
+		Mask:      mask,
 	}
-	retval.Signature = signature
-	retval.PublicKey = publicKey
-	retval.Mask = mask
 
-	log.Debug("SignSubject", "hash", fmt.Sprintf("%x", hash.Bytes()[:10]), "sub", fmt.Sprintf("%s", retval))
+	payload, err := rlp.EncodeToBytes(val)
+	if err != nil {
+		return nil, err
+	}
 
-	return &retval, nil
+	subject.Payload = payload
+
+	log.Debug("SignSubject", "hash", fmt.Sprintf("%x", hash.Bytes()[:10]), "sub", fmt.Sprintf("%s", val))
+
+	return subject, nil
 }
