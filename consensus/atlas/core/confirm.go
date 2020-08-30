@@ -106,7 +106,7 @@ func (c *core) acceptConfirm(msg *message, src atlas.Validator) error {
 
 	var confirm atlas.Subject
 	if err := msg.Decode(&confirm); err != nil {
-		return errFailedDecodePrepare
+		return errFailedDecodeConfirm
 	}
 
 	if confirm.Digest != c.current.Preprepare.Proposal.Hash() {
@@ -116,7 +116,7 @@ func (c *core) acceptConfirm(msg *message, src atlas.Validator) error {
 
 	var signPayload atlas.SignPayload
 	if err := rlp.DecodeBytes(confirm.Payload, &signPayload); err != nil {
-		return errFailedDecodePrepare
+		return errFailedDecodeConfirm
 	}
 
 	var sign bls.Sign

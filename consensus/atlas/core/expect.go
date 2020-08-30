@@ -139,7 +139,7 @@ func (c *core) verifyExpect(msg *message, src atlas.Validator, validatorSet atla
 
 	var expect atlas.Subject
 	if err := msg.Decode(&expect); err != nil {
-		return errFailedDecodePrepare
+		return errFailedDecodeExpect
 	}
 
 	if expect.Digest != c.current.Preprepare.Proposal.Hash() {

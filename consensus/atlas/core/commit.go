@@ -116,7 +116,7 @@ func (c *core) acceptCommit(msg *message, src atlas.Validator, validatorSet atla
 
 	var commit atlas.Subject
 	if err := msg.Decode(&commit); err != nil {
-		return errFailedDecodePrepare
+		return errFailedDecodeConfirm
 	}
 
 	if commit.Digest != c.current.Preprepare.Proposal.Hash() {
