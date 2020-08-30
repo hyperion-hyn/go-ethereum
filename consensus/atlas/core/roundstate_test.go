@@ -21,11 +21,18 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/hyperion-hyn/bls/ffi/go/bls"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
+	bls_cosi "github.com/ethereum/go-ethereum/crypto/bls"
 )
 
 func newTestRoundState(view *atlas.View, validatorSet atlas.ValidatorSet) *roundState {
+	pubKeys := validatorSet.GetPublicKeys()
+	prepareBitmap, _ := bls_cosi.NewMask(pubKeys, nil)
+	confirmBitmap, _ := bls_cosi.NewMask(pubKeys, nil)
+
 	return &roundState{
 		round:      view.Round,
 		sequence:   view.Sequence,
@@ -36,6 +43,12 @@ func newTestRoundState(view *atlas.View, validatorSet atlas.ValidatorSet) *round
 		hasBadProposal: func(hash common.Hash) bool {
 			return false
 		},
+		aggregatedPrepareSig:       &bls.Sign{},
+		aggregatedPreparePublicKey: &bls.PublicKey{},
+		prepareBitmap:              prepareBitmap,
+		aggregatedConfirmSig:       &bls.Sign{},
+		aggregatedConfirmPublicKey: &bls.PublicKey{},
+		confirmBitmap:              confirmBitmap,
 	}
 }
 

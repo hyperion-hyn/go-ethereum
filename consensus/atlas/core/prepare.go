@@ -68,6 +68,7 @@ func (c *core) handlePrepare(msg *message, src atlas.Validator) error {
 		return errNotFromCommittee
 	}
 
+	// ATLAS(zgx): after send out expect, should stop accept prepare.
 	if err := c.acceptPrepare(msg, src); err != nil {
 		return err
 	}

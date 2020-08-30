@@ -37,17 +37,21 @@ func newRoundState(view *atlas.View, validatorSet atlas.ValidatorSet, lockedHash
 	confirmBitmap, _ := bls_cosi.NewMask(pubKeys, nil)
 
 	return &roundState{
-		round:          view.Round,
-		sequence:       view.Sequence,
-		Preprepare:     preprepare,
-		Prepares:       newMessageSet(validatorSet),
-		Commits:        newMessageSet(validatorSet),
-		lockedHash:     lockedHash,
-		mu:             new(sync.RWMutex),
-		pendingRequest: pendingRequest,
-		hasBadProposal: hasBadProposal,
-		prepareBitmap:  prepareBitmap,
-		confirmBitmap:  confirmBitmap,
+		round:                      view.Round,
+		sequence:                   view.Sequence,
+		Preprepare:                 preprepare,
+		Prepares:                   newMessageSet(validatorSet),
+		Commits:                    newMessageSet(validatorSet),
+		lockedHash:                 lockedHash,
+		mu:                         new(sync.RWMutex),
+		pendingRequest:             pendingRequest,
+		hasBadProposal:             hasBadProposal,
+		aggregatedPrepareSig:       &bls.Sign{},
+		aggregatedPreparePublicKey: &bls.PublicKey{},
+		prepareBitmap:              prepareBitmap,
+		aggregatedConfirmSig:       &bls.Sign{},
+		aggregatedConfirmPublicKey: &bls.PublicKey{},
+		confirmBitmap:              confirmBitmap,
 	}
 }
 

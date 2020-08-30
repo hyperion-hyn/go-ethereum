@@ -189,9 +189,14 @@ OUTER:
 		v0 := test.system.backends[0]
 		r0 := v0.engine.(*core)
 
-		for i, v := range test.system.backends {
-			validator := r0.valSet.GetByIndex(uint64(i))
-			m, _ := Encode(v.engine.(*core).current.Subject())
+		for _, v := range test.system.backends {
+			c := v.engine.(*core)
+			_, validator := r0.valSet.GetBySigner(c.Signer())
+			signedSubject, err := c.SignSubject(c.current.Subject())
+			if err != nil {
+				t.Errorf("failed to sign subject: %v", err)
+			}
+			m, _ := Encode(signedSubject)
 			if err := r0.handlePrepare(&message{
 				Code:   msgPrepare,
 				Msg:    m,
@@ -240,16 +245,22 @@ OUTER:
 			t.Errorf("error mismatch: have %v, want nil", err)
 		}
 
-		if decodedMsg.Code != msgCommit {
-			t.Errorf("message code mismatch: have %v, want %v", decodedMsg.Code, msgCommit)
+		if decodedMsg.Code != msgExpect {
+			t.Errorf("message code mismatch: have %v, want %v", decodedMsg.Code, msgExpect)
 		}
+
+		sub, err := r0.AssembleSignedSubject()
+
 		var m atlas.Subject
 		err = decodedMsg.Decode(&m)
 		if err != nil {
 			t.Errorf("error mismatch: have %v, want nil", err)
 		}
-		if !reflect.DeepEqual(m, expectedSubject) {
+		if !(reflect.DeepEqual(m.View, expectedSubject.View) && reflect.DeepEqual(m.Digest, expectedSubject.Digest)) {
 			t.Errorf("subject mismatch: have %v, want %v", m, expectedSubject)
+		}
+		if !reflect.DeepEqual(m, sub) {
+			t.Errorf("subject mismatch: have %v, want %v", m, sub)
 		}
 		if !r0.current.IsHashLocked() {
 			t.Errorf("block should be locked")
