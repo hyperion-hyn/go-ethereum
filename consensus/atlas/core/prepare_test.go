@@ -367,10 +367,9 @@ func TestVerifyPrepare(t *testing.T) {
 			t.Errorf("failed to sign subject: %v", err)
 		}
 
-		if err := c.verifyPrepare(signedSubject, peer); err != nil {
-			if err != test.expected {
-				t.Errorf("result %d: error mismatch: have %v, want %v", i, err, test.expected)
-			}
+		err = c.verifyPrepare(signedSubject, peer)
+		if err != test.expected {
+			t.Errorf("result %d: error mismatch: have %v, want %v", i, err, test.expected)
 		}
 	}
 }
