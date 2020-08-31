@@ -102,6 +102,7 @@ func (c *core) verifyPrepare(prepare *atlas.Subject, src atlas.Validator) error 
 		return errInconsistentSubject
 	}
 
+	// ATLAS(zgx): should verifySignPayload here?
 	return nil
 }
 

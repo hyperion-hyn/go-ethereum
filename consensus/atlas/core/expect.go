@@ -65,7 +65,7 @@ func (c *core) handleExpect(msg *message, src atlas.Validator) error {
 			previousProposer := c.backend.GetProposer(c.current.Preprepare.Proposal.Number().Uint64() - 1)
 			valSet.CalcProposer(previousProposer, c.current.Preprepare.View.Round.Uint64())
 
-			if err := c.verifyExpect(msg, src, valSet); err != nil {
+			if err := c.verifyExpect(&expect, src); err != nil {
 				return err
 			}
 
@@ -89,7 +89,7 @@ func (c *core) handleExpect(msg *message, src atlas.Validator) error {
 
 	// Here is about to accept the PREPARED
 	if c.state == StatePreprepared || c.state == StatePrepared {
-		if err := c.verifyExpect(msg, src, c.valSet); err != nil {
+		if err := c.verifyExpect(&expect, src); err != nil {
 			c.sendNextRoundChange()
 			return err
 		}
@@ -134,20 +134,16 @@ func (c *core) acceptExpect(prepare *atlas.Subject) error {
 	return nil
 }
 
-func (c *core) verifyExpect(msg *message, src atlas.Validator, validatorSet atlas.ValidatorSet) error {
+func (c *core) verifyExpect(expect *atlas.Subject, src atlas.Validator) error {
 	logger := c.logger.New("from", src, "state", c.state)
 
-	var expect atlas.Subject
-	if err := msg.Decode(&expect); err != nil {
-		return errFailedDecodeExpect
-	}
-
-	if expect.Digest != c.current.Preprepare.Proposal.Hash() {
-		logger.Warn("Inconsistent subjects between EXPECT and proposal", "expected", c.current.Preprepare.Proposal.Hash(), "got", expect.Digest)
+	sub := c.current.Subject()
+	if !atlas.IsConsistentSubject(sub, expect) {
+		logger.Warn("Inconsistent subjects between commit and proposal", "expected", sub, "got", expect)
 		return errInconsistentSubject
 	}
 
-	if err := c.verifySignPayload(&expect, c.valSet); err != nil {
+	if err := c.verifySignPayload(expect, c.valSet); err != nil {
 		return err
 	}
 
