@@ -24,14 +24,14 @@ func (pool *TxPool) validateStakingTx(tx *types.Transaction) error {
 	}
 
 	switch msg.Type() {
-	case types.StakeCreateVal:
+	case types.CreateValidator:
 		stkMsg := &restaking.CreateValidator{}
 		if err := rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return err
 		}
 		_, err := VerifyCreateValidatorMsg(pool.currentState, pendingBlockNumber, stkMsg, msg.From())
 		return err
-	case types.StakeEditVal:
+	case types.EditValidator:
 		stkMsg := &restaking.EditValidator{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return err
@@ -52,12 +52,12 @@ func (pool *TxPool) validateStakingTx(tx *types.Transaction) error {
 		}
 		_, err := VerifyUnredelegateMsg(pool.currentState, pendingEpoch, stkMsg, msg.From())
 		return err
-	case types.CollectRedelRewards:
+	case types.CollectRedelReward:
 		stkMsg := &restaking.CollectReward{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return err
 		}
-		_, err := VerifyCollectRedelRewardsMsg(pool.currentState, stkMsg, msg.From())
+		_, err := VerifyCollectRedelRewardMsg(pool.currentState, stkMsg, msg.From())
 		return err
 	}
 	return nil

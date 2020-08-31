@@ -17,7 +17,7 @@ var (
 
 func (s *StateDB) ValidatorPool() *restaking.Storage_ValidatorPool_ {
 	// singleton
-	s.once.Do(func() {
+	s.validatorOnce.Do(func() {
 		var g restaking.Global_t
 		globalSt := restaking.New(&g, s, validatorStorageAddress, common.Big0)
 		s.validatorPool = globalSt.ValidatorPool()

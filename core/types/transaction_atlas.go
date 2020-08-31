@@ -13,11 +13,11 @@ const (
 	Normal TransactionType = iota
 
 	// validator
-	StakeCreateVal
-	StakeEditVal
+	CreateValidator
+	EditValidator
 	Redelegate
 	Unredelegate
-	CollectRedelRewards
+	CollectRedelReward
 )
 
 func NewStakingTransaction(nonce uint64, gasLimit uint64, gasPrice *big.Int, data []byte, txType TransactionType) *Transaction {
@@ -30,16 +30,16 @@ func (txType TransactionType) String() string {
 	// TODO(ATLAS)
 	if txType == Normal {
 		return "Normal"
-	} else if txType == StakeCreateVal {
-		return "StakeCreateValidator"
-	} else if txType == StakeEditVal {
-		return "StakeEditValidator"
+	} else if txType == CreateValidator {
+		return "CreateValidator"
+	} else if txType == EditValidator {
+		return "EditValidator"
 	} else if txType == Redelegate {
 		return "DelegateValidator"
 	} else if txType == Unredelegate {
 		return "UndelegateValidator"
-	} else if txType == CollectRedelRewards {
-		return "CollectRedelegationRewards"
+	} else if txType == CollectRedelReward {
+		return "CollectRedelegationReward"
 	}
 	return "Normal"
 }
