@@ -12,7 +12,6 @@ var (
 	emptyBLSPubKey = BLSPublicKey_{}
 )
 
-
 func NewEmptyBLSKeys() BLSPublicKeys_ {
 	return BLSPublicKeys_{Keys: make([]*BLSPublicKey_, 0)}
 }
@@ -22,7 +21,6 @@ func NewBLSKeysWithBLSKey(key BLSPublicKey_) BLSPublicKeys_ {
 	keys.Keys = append(keys.Keys, &key)
 	return keys
 }
-
 
 // Big ..
 func (pk BLSPublicKey_) Big() *big.Int {
@@ -81,11 +79,15 @@ func (s *Storage_BLSPublicKeys_) Set(index int, key *BLSPublicKey_) {
 func (s *Storage_BLSPublicKeys_) Remove(index int, keepOrder bool) {
 	//remove current
 	length := s.Length()
-	lastOneStorage := s.Keys().Get(length - 1)
+
+	//replace lastOne to index if length !=1
+	if length > 1 {
+		lastOneStorage := s.Keys().Get(length - 1)
+		s.Keys().Get(index).Key().SetValue(lastOneStorage.Key().Value())
+	}
 	//remove lastOne
 	s.Keys().Get(length - 1).Key().SetValue([48]uint8{})
-	//replace lastOne to index
-	s.Keys().Get(index).Key().SetValue(lastOneStorage.Key().Value())
+
 	//resize length
 	s.Keys().Resize(length - 1)
 }

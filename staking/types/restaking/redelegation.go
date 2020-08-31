@@ -43,8 +43,8 @@ func (r *RedelegationMap_) Remove(delegator Address) {
 	if valueEntry, ok := r.Map[delegator]; ok {
 		index := valueEntry.Index.Uint64()
 		if int(index) != len(r.Keys) { // the last one
-			lastDelegator := r.Keys[len(r.Keys) - 1]
-			r.Keys[index - 1] = lastDelegator
+			lastDelegator := r.Keys[len(r.Keys)-1]
+			r.Keys[index-1] = lastDelegator
 			r.Map[*lastDelegator].Index = big.NewInt(int64(index))
 		}
 		r.Keys = r.Keys[:len(r.Keys)-1]
@@ -58,7 +58,6 @@ func (r *RedelegationMap_) Get(delegator Address) (Redelegation_, bool) {
 	}
 	return Redelegation_{}, false
 }
-
 
 // Storage_Redelegation_
 func (s *Storage_Redelegation_) AddReward(reward *big.Int) {
@@ -105,11 +104,9 @@ func (s *Storage_Redelegation_) Load() *Redelegation_ {
 	return s.obj
 }
 
-
 func (s *Storage_Redelegation_) CanReleaseAt(epoch *big.Int) bool {
 	return s.Undelegation().Amount().Value().Cmp(common.Big0) > 0 && s.Undelegation().Epoch().Value().Cmp(epoch) >= 0
 }
-
 
 // Storage_RedelegationMap_
 func (s *Storage_RedelegationMap_) AllKeys() []common.Address {
@@ -159,15 +156,19 @@ func (s *Storage_RedelegationMap_) Remove(key common.Address) {
 	keysLength := keysStorage.Length()
 	lastKey := keysStorage.Get(keysLength - 1).Value()
 	keyIndex := s.Map().Get(key).Index().Value()
-	keysStorage.Get(int(keyIndex.Uint64() - 1)).SetValue(keysStorage.Get(keysLength - 1).Value())
+	if keysLength > 1 {
+		keysStorage.Get(int(keyIndex.Uint64() - 1)).SetValue(keysStorage.Get(keysLength - 1).Value())
+	}
 	keysStorage.Get(keysLength - 1).SetValue(common.BigToAddress(common.Big0))
 	s.Keys().Resize(keysLength - 1)
 
 	//remove map entry
 	maps := s.Map()
 	delegationElem := maps.Get(key)
-	lastDelegationElem := maps.Get(lastKey)
-	lastDelegationElem.Index().SetValue(keyIndex)
+	if keysLength > 1 {
+		lastDelegationElem := maps.Get(lastKey)
+		lastDelegationElem.Index().SetValue(keyIndex)
+	}
 
 	delegationElem.Entry().SetNil()
 	delegationElem.Index().SetValue(common.Big0)

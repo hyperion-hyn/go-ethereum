@@ -65,7 +65,6 @@ func (c *Committee_) StakedValidators() *StakedSlots {
 	}
 }
 
-
 // Storage_Slots_
 func (s *Storage_Slots_) Length() int {
 	return s.Entrys().Length()
@@ -93,13 +92,15 @@ func (s *Storage_Slots_) Remove(index int, keepOrder bool) {
 
 	//set lastEntity to index
 	lastEntry := s.Entrys().Get(oldEntriesLength - 1)
-	s.Entrys().Get(index).Save(&Slot_{
-		EcdsaAddress: lastEntry.EcdsaAddress().Value(),
-		BLSPublicKey: BLSPublicKey_{
-			Key: lastEntry.BLSPublicKey().Key().Value(),
-		},
-		EffectiveStake: lastEntry.EffectiveStake().Value(),
-	})
+	if oldEntriesLength > 1 {
+		s.Entrys().Get(index).Save(&Slot_{
+			EcdsaAddress: lastEntry.EcdsaAddress().Value(),
+			BLSPublicKey: BLSPublicKey_{
+				Key: lastEntry.BLSPublicKey().Key().Value(),
+			},
+			EffectiveStake: lastEntry.EffectiveStake().Value(),
+		})
+	}
 
 	//set lastEntity to zero
 	lastEntry.SetNil()
