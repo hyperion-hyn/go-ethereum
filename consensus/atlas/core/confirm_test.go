@@ -18,6 +18,7 @@ package core
 
 import (
 	"math/big"
+	"reflect"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -60,7 +61,7 @@ func TestHandleConfirm(t *testing.T) {
 
 					if i == 0 {
 						// replica 0 is the proposer
-						c.state = StatePrepared
+						c.state = StateExpected
 					}
 				}
 				return sys
@@ -81,7 +82,7 @@ func TestHandleConfirm(t *testing.T) {
 							expectedSubject.View,
 							c.valSet,
 						)
-						c.state = StatePreprepared
+						c.state = StateExpected
 					} else {
 						c.current = newTestRoundState(
 							&atlas.View{
@@ -110,7 +111,7 @@ func TestHandleConfirm(t *testing.T) {
 							expectedSubject.View,
 							c.valSet,
 						)
-						c.state = StatePreprepared
+						c.state = StateExpected
 					} else {
 						c.current = newTestRoundState(
 							&atlas.View{
@@ -144,9 +145,9 @@ func TestHandleConfirm(t *testing.T) {
 					// only replica0 stays at StatePreprepared
 					// other replicas are at StatePrepared
 					if i != 0 {
-						c.state = StatePrepared
+						c.state = StateExpected
 					} else {
-						c.state = StatePreprepared
+						c.state = StatePrepared
 					}
 				}
 				return sys
@@ -163,11 +164,16 @@ OUTER:
 		v0 := test.system.backends[0]
 		r0 := v0.engine.(*core)
 
-		for i, v := range test.system.backends {
-			validator := r0.valSet.GetByIndex(uint64(i))
-			m, _ := Encode(v.engine.(*core).current.Subject())
+		for _, v := range test.system.backends {
+			c := v.engine.(*core)
+			_, validator := r0.valSet.GetBySigner(c.Signer())
+			signedSubject, err := c.SignSubject(c.current.Subject())
+			if err != nil {
+				t.Errorf("failed to sign subject: %v", err)
+			}
+			m, _ := Encode(signedSubject)
 			if err := r0.handleCommit(&message{
-				Code:          msgCommit,
+				Code:          msgConfirm,
 				Msg:           m,
 				Signer:        validator.Signer(),
 				Signature:     []byte{},
@@ -184,13 +190,13 @@ OUTER:
 		}
 
 		// prepared is normal case
-		if r0.state != StateCommitted {
-			// There are not enough commit messages in core
-			if r0.state != StatePrepared {
-				t.Errorf("state mismatch: have %v, want %v", r0.state, StatePrepared)
+		if r0.state != StateConfirmed {
+			// There are not enough confirm messages in core
+			if r0.state != StateExpected {
+				t.Errorf("state mismatch: have %v, want %v", r0.state, StateExpected)
 			}
 			if r0.current.Commits.Size() >= r0.QuorumSize() {
-				t.Errorf("the size of commit messages should be less than %v", r0.QuorumSize())
+				t.Errorf("the size of confirm messages should be less than %v", r0.QuorumSize())
 			}
 			if r0.current.IsHashLocked() {
 				t.Errorf("block should not be locked")
@@ -200,7 +206,32 @@ OUTER:
 
 		// core should have 2F+1 before Ceil2Nby3Block or Ceil(2N/3) prepare messages
 		if r0.current.Commits.Size() < r0.QuorumSize() {
-			t.Errorf("the size of commit messages should be larger than 2F+1 or Ceil(2N/3): size %v", r0.QuorumSize())
+			t.Errorf("the size of confirm messages should be larger than 2F+1 or Ceil(2N/3): size %v", r0.QuorumSize())
+		}
+
+		// verify COMMIT messages
+		decodedMsg := new(message)
+		err := decodedMsg.FromPayload(v0.sentMsgs[0], nil, nil)
+		if err != nil {
+			t.Errorf("error mismatch: have %v, want nil", err)
+		}
+
+		if decodedMsg.Code != msgExpect {
+			t.Errorf("message code mismatch: have %v, want %v", decodedMsg.Code, msgExpect)
+		}
+
+		sub, err := r0.AssembleSignedSubject()
+
+		var m atlas.Subject
+		err = decodedMsg.Decode(&m)
+		if err != nil {
+			t.Errorf("error mismatch: have %v, want nil", err)
+		}
+		if !(reflect.DeepEqual(m.View, expectedSubject.View) && reflect.DeepEqual(m.Digest, expectedSubject.Digest)) {
+			t.Errorf("subject mismatch: have %v, want %v", m, expectedSubject)
+		}
+		if !reflect.DeepEqual(&m, sub) {
+			t.Errorf("subject mismatch: have %v, want %v", m, sub)
 		}
 
 		// check signatures large than F
@@ -227,13 +258,13 @@ func TestVerifyConfirm(t *testing.T) {
 
 	testCases := []struct {
 		expected   error
-		commit     *atlas.Subject
+		confirm    *atlas.Subject
 		roundState *roundState
 	}{
 		{
 			// normal case
 			expected: nil,
-			commit: &atlas.Subject{
+			confirm: &atlas.Subject{
 				View:   &atlas.View{Round: big.NewInt(0), Sequence: big.NewInt(0)},
 				Digest: newTestProposal().Hash(),
 			},
@@ -245,7 +276,7 @@ func TestVerifyConfirm(t *testing.T) {
 		{
 			// old message
 			expected: errInconsistentSubject,
-			commit: &atlas.Subject{
+			confirm: &atlas.Subject{
 				View:   &atlas.View{Round: big.NewInt(0), Sequence: big.NewInt(0)},
 				Digest: newTestProposal().Hash(),
 			},
@@ -257,7 +288,7 @@ func TestVerifyConfirm(t *testing.T) {
 		{
 			// different digest
 			expected: errInconsistentSubject,
-			commit: &atlas.Subject{
+			confirm: &atlas.Subject{
 				View:   &atlas.View{Round: big.NewInt(0), Sequence: big.NewInt(0)},
 				Digest: common.StringToHash("1234567890"),
 			},
@@ -269,7 +300,7 @@ func TestVerifyConfirm(t *testing.T) {
 		{
 			// malicious package(lack of sequence)
 			expected: errInconsistentSubject,
-			commit: &atlas.Subject{
+			confirm: &atlas.Subject{
 				View:   &atlas.View{Round: big.NewInt(0), Sequence: nil},
 				Digest: newTestProposal().Hash(),
 			},
@@ -281,7 +312,7 @@ func TestVerifyConfirm(t *testing.T) {
 		{
 			// wrong prepare message with same sequence but different round
 			expected: errInconsistentSubject,
-			commit: &atlas.Subject{
+			confirm: &atlas.Subject{
 				View:   &atlas.View{Round: big.NewInt(1), Sequence: big.NewInt(0)},
 				Digest: newTestProposal().Hash(),
 			},
@@ -293,7 +324,7 @@ func TestVerifyConfirm(t *testing.T) {
 		{
 			// wrong prepare message with same round but different sequence
 			expected: errInconsistentSubject,
-			commit: &atlas.Subject{
+			confirm: &atlas.Subject{
 				View:   &atlas.View{Round: big.NewInt(0), Sequence: big.NewInt(1)},
 				Digest: newTestProposal().Hash(),
 			},
@@ -307,15 +338,14 @@ func TestVerifyConfirm(t *testing.T) {
 		c := sys.backends[0].engine.(*core)
 		c.current = test.roundState
 
-		signedSubject, err := c.SignSubject(test.commit)
+		signedSubject, err := c.SignSubject(test.confirm)
 		if err != nil {
 			t.Errorf("failed to sign subject: %v", err)
 		}
 
-		if err := c.verifyCommit(signedSubject, peer); err != nil {
-			if err != test.expected {
-				t.Errorf("result %d: error mismatch: have %v, want %v", i, err, test.expected)
-			}
+		err = c.verifyConfirm(signedSubject, peer)
+		if err != test.expected {
+			t.Errorf("result %d: error mismatch: have %v, want %v", i, err, test.expected)
 		}
 	}
 }

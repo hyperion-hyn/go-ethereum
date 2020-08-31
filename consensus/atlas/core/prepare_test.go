@@ -238,7 +238,7 @@ OUTER:
 			t.Errorf("the Send() should be called once: times %v", len(test.system.backends[0].sentMsgs))
 		}
 
-		// verify COMMIT messages
+		// verify EXPECT messages
 		decodedMsg := new(message)
 		err := decodedMsg.FromPayload(v0.sentMsgs[0], nil, nil)
 		if err != nil {

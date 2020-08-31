@@ -90,19 +90,22 @@ func (c *core) handleConfirm(msg *message, src atlas.Validator) error {
 }
 
 // verifyPrepare verifies if the received CONFIRM message is equivalent to our subject
-func (c *core) verifyConfirm(prepare *atlas.Subject, src atlas.Validator) error {
+func (c *core) verifyConfirm(confirm *atlas.Subject, src atlas.Validator) error {
+	logger := c.logger.New("from", src, "state", c.state)
+
+	sub := c.current.Subject()
+	if !atlas.IsConsistentSubject(confirm, sub) {
+		logger.Warn("Inconsistent subjects between CONFIRM and proposal", "expected", sub, "got", confirm)
+		return errInconsistentSubject
+	}
+
+	// ATLAS(zgx): should verifySignPayload here?
 	return nil
 }
 
 func (c *core) acceptConfirm(msg *message, src atlas.Validator) error {
 	// TODO(zgx): should reset if error occure
 	logger := c.logger.New("from", src, "state", c.state)
-
-	// Add the PREPARE message to current round state
-	if err := c.current.Prepares.Add(msg); err != nil {
-		logger.Error("Failed to add PREPARE message to round state", "msg", msg, "err", err)
-		return err
-	}
 
 	var confirm atlas.Subject
 	if err := msg.Decode(&confirm); err != nil {
@@ -132,11 +135,22 @@ func (c *core) acceptConfirm(msg *message, src atlas.Validator) error {
 
 	err = c.checkValidatorSignature(confirm.Digest.Bytes(), signPayload.Signature, pubKey.Serialize())
 	if err != nil {
-		logger.Error("Failed to verify signature with signer's public key prepare", "signature", signPayload.Signature[:10], "publicKey", pubKey.Serialize()[:10])
+		logger.Error("Failed to verify signature with signer's public key confirm", "signature", signPayload.Signature[:10], "publicKey", pubKey.Serialize()[:10])
 		return err
 	}
 
-	if err := c.current.confirmBitmap.SetKey(pubKey, true); err != nil {
+	enabled, err := c.current.confirmBitmap.KeyEnabled(pubKey)
+	if err != nil {
+		return err
+	} else if enabled == true {
+		return errDuplicateMessage
+	}
+
+	if c.state != StateConfirmed {
+		return nil
+	}
+
+	if err := c.current.confirmBitmap.SetKey(pubKey, true); err == nil {
 		c.current.aggregatedConfirmSig.Add(&sign)
 		c.current.aggregatedConfirmPublicKey.Add(pubKey)
 	}

@@ -17,8 +17,6 @@
 package core
 
 import (
-	"reflect"
-
 	"github.com/hyperion-hyn/bls/ffi/go/bls"
 
 	"github.com/ethereum/go-ethereum/consensus/atlas"
@@ -97,7 +95,7 @@ func (c *core) verifyPrepare(prepare *atlas.Subject, src atlas.Validator) error 
 	logger := c.logger.New("from", src, "state", c.state)
 
 	sub := c.current.Subject()
-	if !reflect.DeepEqual(prepare.View, sub.View) || !reflect.DeepEqual(prepare.Digest, sub.Digest) {
+	if !atlas.IsConsistentSubject(prepare, sub) {
 		logger.Warn("Inconsistent subjects between PREPARE and proposal", "expected", sub, "got", prepare)
 		return errInconsistentSubject
 	}
