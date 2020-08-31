@@ -87,9 +87,9 @@ func (m *Mask) Len() int {
 // cosigners 0-7, bits 0-7 of byte 1 correspond to cosigners 8-15, etc.
 func (m *Mask) SetMask(mask []byte) error {
 	if m.Len() != len(mask) {
-		return errors.New(fmt.Sprint("mismatching bitmap lengths",
-			"expectedBitmapLength", m.Len(),
-			"providedBitmapLength", len(mask)))
+		return errors.New(fmt.Sprint("mismatching bitmap lengths: ",
+			"expectedBitmapLength ", m.Len(), ", ",
+			"providedBitmapLength ", len(mask)))
 	}
 	for i := range m.Publics {
 		byt := i >> 3

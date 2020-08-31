@@ -518,7 +518,7 @@ func (s *Ethereum) StartMining(threads int) error {
 				sign := secrectKey.SignHash(hash.Bytes())
 
 				// ATLAS(zgx): only one signer, so set mask to byte 1 here.
-				return sign.Serialize(), secrectKey.GetPublicKey().Serialize(), []byte{1}, nil
+				return sign.Serialize(), secrectKey.GetPublicKey().Serialize(), nil, nil
 			}
 
 			atlas.Authorize(signer, signFn)
