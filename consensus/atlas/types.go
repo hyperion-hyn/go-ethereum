@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"reflect"
 
 	"golang.org/x/crypto/sha3"
 
@@ -255,4 +256,8 @@ func SignSubject(subject *Subject, signFn SignHashFn) (*Subject, error) {
 	log.Debug("SignSubject", "hash", fmt.Sprintf("%x", hash.Bytes()[:10]), "sub", fmt.Sprintf("%s", val))
 
 	return subject, nil
+}
+
+func IsConsistentSubject(a *Subject, b *Subject) bool {
+	return reflect.DeepEqual(a.View, b.View) && reflect.DeepEqual(a.Digest, b.Digest)
 }
