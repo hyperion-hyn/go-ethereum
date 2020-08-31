@@ -50,6 +50,8 @@ var (
 	errFailedDecodeConfirm = errors.New("failed to decode CONFIRM")
 	// errFailedDecodeCommit is returned when the COMMIT message is malformed.
 	errFailedDecodeCommit = errors.New("failed to decode COMMIT")
+	// errFailedDecodeSignPayload is returned when the subject.Payload is malformed.
+	errFailedDecodeSignPayload = errors.New("failed to decode subject.SignPayload")
 	// errFailedDecodeMessageSet is returned when the message set is malformed.
 	errFailedDecodeMessageSet = errors.New("failed to decode message set")
 	// errFailedSignData is returned when failed to sign data.
@@ -60,4 +62,8 @@ var (
 	errNotSatisfyQuorum = errors.New("message not signed by enough validators")
 	// errInvalidState is returned when state is invalid
 	errInvalidState = errors.New("invalid state")
+	// errDuplicateMessage is returned when signature have been aggregated
+	errDuplicateMessage = errors.New("duplicate message")
+	// errInproperState is returned when handle message in inproper state
+	errInproperState = errors.New("inproper state")
 )

@@ -259,7 +259,7 @@ OUTER:
 		if !(reflect.DeepEqual(m.View, expectedSubject.View) && reflect.DeepEqual(m.Digest, expectedSubject.Digest)) {
 			t.Errorf("subject mismatch: have %v, want %v", m, expectedSubject)
 		}
-		if !reflect.DeepEqual(m, sub) {
+		if !reflect.DeepEqual(&m, sub) {
 			t.Errorf("subject mismatch: have %v, want %v", m, sub)
 		}
 		if !r0.current.IsHashLocked() {

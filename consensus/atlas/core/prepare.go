@@ -50,7 +50,7 @@ func (c *core) handlePrepare(msg *message, src atlas.Validator) error {
 	var prepare atlas.Subject
 	err := msg.Decode(&prepare)
 	if err != nil {
-		return errFailedDecodePrepare
+		return err
 	}
 
 	if err := c.checkMessage(msgPrepare, prepare.View); err != nil {
@@ -98,15 +98,9 @@ func (c *core) verifyPrepare(prepare *atlas.Subject, src atlas.Validator) error 
 func (c *core) acceptPrepare(msg *message, src atlas.Validator) error {
 	logger := c.logger.New("from", src, "state", c.state)
 
-	// Add the PREPARE message to current round state
-	if err := c.current.Prepares.Add(msg); err != nil {
-		logger.Error("Failed to add PREPARE message to round state", "msg", msg, "err", err)
-		return err
-	}
-
 	var prepare atlas.Subject
 	if err := msg.Decode(&prepare); err != nil {
-		return errFailedDecodePrepare
+		return err
 	}
 
 	if prepare.Digest != c.current.Preprepare.Proposal.Hash() {
@@ -115,8 +109,8 @@ func (c *core) acceptPrepare(msg *message, src atlas.Validator) error {
 	}
 
 	var signPayload *atlas.SignPayload
-	if err := rlp.DecodeBytes(prepare.Payload, signPayload); err != nil {
-		return errFailedDecodePrepare
+	if err := rlp.DecodeBytes(prepare.Payload, &signPayload); err != nil {
+		return err
 	}
 
 	var sign bls.Sign
@@ -136,9 +130,26 @@ func (c *core) acceptPrepare(msg *message, src atlas.Validator) error {
 		return err
 	}
 
-	if err := c.current.prepareBitmap.SetKey(pubKey, true); err != nil {
+	enabled, err := c.current.prepareBitmap.KeyEnabled(pubKey)
+	if err != nil {
+		return err
+	} else if enabled == true {
+		return errDuplicateMessage
+	}
+
+	if c.state != StatePreprepared {
+		return nil
+	}
+
+	if err := c.current.prepareBitmap.SetKey(pubKey, true); err == nil {
 		c.current.aggregatedPrepareSig.Add(&sign)
 		c.current.aggregatedPreparePublicKey.Add(pubKey)
+	}
+
+	// Add the PREPARE message to current round state
+	if err := c.current.Prepares.Add(msg); err != nil {
+		logger.Error("Failed to add PREPARE message to round state", "msg", msg, "err", err)
+		return err
 	}
 
 	return nil
