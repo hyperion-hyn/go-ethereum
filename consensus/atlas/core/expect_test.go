@@ -61,6 +61,8 @@ func TestHandleExpect(t *testing.T) {
 					if i == 0 {
 						// replica 0 is the proposer
 						c.state = StatePrepared
+					} else {
+						c.state = StatePreprepared
 					}
 				}
 				return sys
@@ -94,7 +96,7 @@ func TestHandleExpect(t *testing.T) {
 				}
 				return sys
 			}(),
-			errFutureMessage,
+			errOldMessage,
 		},
 		{
 			// subject not match
@@ -123,7 +125,7 @@ func TestHandleExpect(t *testing.T) {
 				}
 				return sys
 			}(),
-			errOldMessage,
+			errFutureMessage,
 		},
 		{
 			// jump state
@@ -171,7 +173,9 @@ OUTER:
 				t.Errorf("failed to sing subject")
 			}
 			m, _ := Encode(signedSubject)
-			if err := c.handlePrepare(&message{
+			s := r0.state
+			r0.state = StatePreprepared
+			if err := r0.acceptPrepare(&message{
 				Code:          msgPrepare,
 				Msg:           m,
 				Signer:        validator.Signer(),
@@ -180,12 +184,18 @@ OUTER:
 			}, validator); err != nil {
 				t.Errorf("failed to handlePrepare message: %v", err)
 			}
+			r0.state = s
 		}
 
 		for _, v := range test.system.backends {
 			validator := r0.valSet.GetProposer()
 			c := v.engine.(*core)
+
+			s := r0.state
+			r0.state = StatePrepared
 			signedSubject, err := r0.AssembleSignedSubject()
+			r0.state = s
+
 			m, _ := Encode(signedSubject)
 			if err != nil {
 				t.Errorf("failed to assemble subject: %v", err)
@@ -210,8 +220,8 @@ OUTER:
 		// prepared is normal case
 		if r0.state != StateCommitted {
 			// There are not enough commit messages in core
-			if r0.state != StatePrepared {
-				t.Errorf("state mismatch: have %v, want %v", r0.state, StatePrepared)
+			if r0.state != StateExpected {
+				t.Errorf("state mismatch: have %v, want %v", r0.state, StateExpected)
 			}
 			if r0.current.Commits.Size() >= r0.QuorumSize() {
 				t.Errorf("the size of commit messages should be less than %v", r0.QuorumSize())

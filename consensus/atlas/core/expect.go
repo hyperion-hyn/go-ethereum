@@ -19,6 +19,7 @@ package core
 import (
 	"time"
 
+	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
 )
 
@@ -55,6 +56,12 @@ func (c *core) handleExpect(msg *message, src atlas.Validator) error {
 		return errFailedDecodeExpect
 	}
 
+	// Check if the message comes from current proposer
+	if !c.valSet.IsProposer(src.Signer()) {
+		logger.Warn("Ignore expect messages from non-proposer")
+		return errNotFromProposer
+	}
+
 	// Ensure we have the same view with the PREPARED message
 	// If it is old message, see if we need to broadcast COMMIT
 	if err := c.checkMessage(msgExpect, expect.View); err != nil {
@@ -64,10 +71,6 @@ func (c *core) handleExpect(msg *message, src atlas.Validator) error {
 			valSet := c.backend.ParentValidators(c.current.Preprepare.Proposal).Copy()
 			previousProposer := c.backend.GetProposer(c.current.Preprepare.Proposal.Number().Uint64() - 1)
 			valSet.CalcProposer(previousProposer, c.current.Preprepare.View.Round.Uint64())
-
-			if err := c.verifyExpect(&expect, src); err != nil {
-				return err
-			}
 
 			// Broadcast COMMIT if it is an existing block
 			// 1. The proposer needs to be a proposer matches the given (Sequence + Round)
@@ -81,25 +84,30 @@ func (c *core) handleExpect(msg *message, src atlas.Validator) error {
 		return err
 	}
 
-	// Check if the message comes from current proposer
-	if !c.valSet.IsProposer(src.Signer()) {
-		logger.Warn("Ignore expect messages from non-proposer")
-		return errNotFromProposer
+	// Verify the proposal we received
+	if duration, err := c.backend.Verify(c.current.Preprepare.Proposal); err != nil {
+		// if it's a future block, we will handle it again after the duration
+		if err == consensus.ErrFutureBlock {
+			logger.Info("Proposed block will be handled in the future", "err", err, "duration", duration)
+			c.stopFuturePreprepareTimer()
+			// ATLAS(zgx): futurePreprepareTimer hold one timer, how to process multiple future block?
+			c.futurePreprepareTimer = time.AfterFunc(duration, func() {
+				c.sendEvent(backlogEvent{
+					src: src,
+					msg: msg,
+				})
+			})
+		} else {
+			logger.Warn("Failed to verify proposal", "err", err, "duration", duration)
+			c.sendNextRoundChange()
+		}
+		return err
 	}
 
 	// Here is about to accept the PREPARED
 	if c.state == StatePreprepared || c.state == StatePrepared {
-		if err := c.verifyExpect(&expect, src); err != nil {
-			c.sendNextRoundChange()
-			return err
-		}
-
-		if expect.Digest != c.current.Preprepare.Proposal.Hash() {
-			return errInconsistentSubject
-		}
-
 		// Send ROUND CHANGE if the locked proposal and the received proposal are different
-		if c.IsProposer() && c.current.IsHashLocked() {
+		if c.current.IsHashLocked() {
 			if expect.Digest == c.current.GetLockedHash() {
 				// Broadcast COMMIT and enters Expect state directly
 				if err := c.acceptExpect(&expect); err != nil {
@@ -139,7 +147,7 @@ func (c *core) verifyExpect(expect *atlas.Subject, src atlas.Validator) error {
 
 	sub := c.current.Subject()
 	if !atlas.IsConsistentSubject(sub, expect) {
-		logger.Warn("Inconsistent subjects between commit and proposal", "expected", sub, "got", expect)
+		logger.Warn("Inconsistent subjects between expect and proposal", "expected", sub, "got", expect)
 		return errInconsistentSubject
 	}
 
