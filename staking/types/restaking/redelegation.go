@@ -72,38 +72,6 @@ func (s *Storage_Redelegation_) AddAmount(amount *big.Int) {
 	s.Amount().SetValue(amountTemp)
 }
 
-func (s *Storage_Redelegation_) Save(redelegation *Redelegation_) {
-	s.DelegatorAddress().SetValue(redelegation.DelegatorAddress)
-	if redelegation.Amount != nil {
-		s.Amount().SetValue(redelegation.Amount)
-	}
-	if redelegation.Reward != nil {
-		s.Reward().SetValue(redelegation.Reward)
-	}
-	if redelegation.Undelegation.Amount != nil {
-		s.Undelegation().Amount().SetValue(redelegation.Undelegation.Amount)
-	}
-	if redelegation.Undelegation.Epoch != nil {
-		s.Undelegation().Epoch().SetValue(redelegation.Undelegation.Epoch)
-	}
-}
-func (s *Storage_Redelegation_) Clean() {
-	s.DelegatorAddress().SetValue(common.BigToAddress(common.Big0))
-	s.Amount().SetValue(common.Big0)
-	s.Reward().SetValue(common.Big0)
-	s.Undelegation().Amount().SetValue(common.Big0)
-	s.Undelegation().Epoch().SetValue(common.Big0)
-}
-
-func (s *Storage_Redelegation_) Load() *Redelegation_ {
-	s.DelegatorAddress().Value()
-	s.Amount().Value()
-	s.Reward().Value()
-	s.Undelegation().Amount().Value()
-	s.Undelegation().Epoch().Value()
-	return s.obj
-}
-
 func (s *Storage_Redelegation_) CanReleaseAt(epoch *big.Int) bool {
 	return s.Undelegation().Amount().Value().Cmp(common.Big0) > 0 && s.Undelegation().Epoch().Value().Cmp(epoch) >= 0
 }
@@ -170,27 +138,23 @@ func (s *Storage_RedelegationMap_) Remove(key common.Address) {
 		lastDelegationElem.Index().SetValue(keyIndex)
 	}
 
-	delegationElem.Entry().Clean()
+	delegationElem.Entry().Clear()
 	delegationElem.Index().SetValue(common.Big0)
 }
 
-func (s *Storage_RedelegationMap_) Save(relegationMap *RedelegationMap_) {
-	relegationKeys := relegationMap.Keys
-	s.Keys().Resize(len(relegationKeys))
-	for i := 0; i < len(relegationKeys); i++ {
-		addressTemp := relegationKeys[i]
-		s.Keys().Get(i).SetValue(*addressTemp)
-		s.Map().Get(*addressTemp).Entry().Save(&relegationMap.Map[*addressTemp].Entry)
-		s.Map().Get(*addressTemp).Index().SetValue(relegationMap.Map[*addressTemp].Index)
-	}
-}
-
-func (s *Storage_RedelegationMap_) Load() *RedelegationMap_ {
+func (s *Storage_RedelegationMap_) LoadFully() (*RedelegationMap_, error) {
+	s.Keys().load()
 	length := s.Keys().Length()
 	for i := 0; i < length; i++ {
 		k := s.Keys().Get(i).Value()
-		s.Map().Get(k).Index().Value()
-		s.Map().Get(k).Entry().Load()
+		s.Map().Get(k).load()
 	}
-	return s.obj
+
+	// copy
+	src := s.obj
+	des := RedelegationMap_{}
+	if err := deepCopy(src, &des); err != nil {
+		return nil, err
+	}
+	return &des, nil
 }

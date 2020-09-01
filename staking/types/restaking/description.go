@@ -51,15 +51,6 @@ func (d *Description_) EnsureLength() error {
 	return nil
 }
 
-// Storage_Description_
-func (s *Storage_Description_) Save(desc *Description_) {
-	s.Name().SetValue(desc.Name)
-	s.Identity().SetValue(desc.Identity)
-	s.Website().SetValue(desc.Website)
-	s.SecurityContact().SetValue(desc.SecurityContact)
-	s.Details().SetValue(desc.Details)
-}
-
 func (s *Storage_Description_) IncrementalUpdateFrom(newDesc Description_) {
 	if newDesc.Name != "" {
 		s.Name().SetValue(newDesc.Name)
@@ -76,13 +67,4 @@ func (s *Storage_Description_) IncrementalUpdateFrom(newDesc Description_) {
 	if newDesc.Details != "" {
 		s.Details().SetValue(newDesc.Details)
 	}
-}
-
-func (s *Storage_Description_) Load() *Description_ {
-	s.Name().Value()
-	s.Identity().Value()
-	s.Website().Value()
-	s.SecurityContact().Value()
-	s.Details().Value()
-	return s.obj
 }

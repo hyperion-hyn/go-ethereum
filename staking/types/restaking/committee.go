@@ -6,7 +6,6 @@ import (
 	"github.com/harmony-one/bls/ffi/go/bls"
 	"golang.org/x/crypto/sha3"
 	"golang.org/x/sync/singleflight"
-	"math/big"
 	"time"
 )
 
@@ -70,14 +69,6 @@ func (s *Storage_Slots_) Length() int {
 	return s.Entrys().Length()
 }
 
-func (s *Storage_Slots_) Load() []*Slot_ {
-	slotsLength := s.Length()
-	for i := 0; i < slotsLength; i++ {
-		s.Get(i).Load()
-	}
-	return s.obj.Entrys
-}
-
 func (s *Storage_Slots_) Get(index int) *Storage_Slot_ {
 	return s.Entrys().Get(index)
 }
@@ -103,7 +94,7 @@ func (s *Storage_Slots_) Remove(index int, keepOrder bool) {
 	}
 
 	//set lastEntity to zero
-	lastEntry.Clean()
+	lastEntry.Clear()
 
 	//resize slice
 	s.Entrys().Resize(oldEntriesLength - 1)
@@ -121,47 +112,6 @@ func (s *Storage_Slots_) Pop() *Storage_Slot_ {
 	return storageSlot
 }
 
-func (s *Storage_Slots_) UpdateSlots(slots Slots_) {
-	// remove old
-	length := s.Length()
-	for i := 0; i < length; i++ {
-		s.Get(i).Clean()
-	}
-	//set new
-	newSlotsLength := len(slots.Entrys)
-	s.Entrys().Resize(newSlotsLength)
-	for i := 0; i < newSlotsLength; i++ {
-		s.Get(i).Save(slots.Entrys[i])
-	}
-}
-
-func (s *Storage_Slot_) Clean() {
-	s.EffectiveStake().SetValue(common.NewDec(int64(0)))
-	s.EcdsaAddress().SetValue(common.BigToAddress(big.NewInt(0)))
-	s.BLSPublicKey().Key().SetValue([48]uint8{})
-}
-
-func (s *Storage_Slot_) Save(key *Slot_) {
-	s.BLSPublicKey().Key().SetValue(key.BLSPublicKey.Key)
-	s.EcdsaAddress().SetValue(key.EcdsaAddress)
-	if !key.EffectiveStake.IsNil() {
-		s.EffectiveStake().SetValue(key.EffectiveStake)
-	}
-}
-
-func (s *Storage_Slot_) Load() *Slot_ {
-	s.BLSPublicKey().Key().Value()
-	s.EcdsaAddress().Value()
-	s.EffectiveStake().Value()
-	return s.obj
-}
-
-// Storage_Committee_
-func (s *Storage_Committee_) Load() *Committee_ {
-	s.Epoch().Value()
-	s.Slots().Load()
-	return s.obj
-}
 
 var (
 	blsKeyCache singleflight.Group

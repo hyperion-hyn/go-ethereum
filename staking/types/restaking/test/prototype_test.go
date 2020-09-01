@@ -74,7 +74,7 @@ func TestValidatorWrapperBuilder(t *testing.T) {
 			SetNumBlocksSigned(test.numBlocksSigned).
 			Build()
 
-		exp := CopyValidatorWrapper(vWrapperPrototype)
+		exp := GetDefaultValidatorWrapper()
 		exp.Validator.ValidatorAddress = test.validatorAddr
 		exp.Validator.OperatorAddresses = restaking.NewAddressSetWithAddress(test.operatorAddr)
 		exp.Validator.SlotPubKeys.Keys = append(exp.Validator.SlotPubKeys.Keys, &test.key)
@@ -89,7 +89,6 @@ func TestValidatorWrapperBuilder(t *testing.T) {
 		exp.Counters.NumBlocksSigned = test.numBlocksSigned
 		exp.TotalDelegation = common.Big1
 		exp.TotalDelegationByOperator = common.Big1
-		exp = CopyValidatorWrapper(exp)
 
 		if err := assertValidatorWrapperDeepCopy(v, exp); err != nil {
 			t.Errorf("Test %v: %v", i, err)

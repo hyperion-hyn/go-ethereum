@@ -46,7 +46,10 @@ func (s *PublicRestakingAPI) GetValidatorInformation(
 	if err != nil {
 		return nil, err
 	}
-	validatorWrapper := storageValidatorWarpper.Load()
+	validatorWrapper, err := storageValidatorWarpper.LoadFully()
+	if err != nil {
+		return nil, err
+	}
 
 	validator_ := validatorWrapper.Validator
 

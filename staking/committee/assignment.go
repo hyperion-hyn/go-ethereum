@@ -105,7 +105,10 @@ func prepareOrders(stakedReader DataProvider, lastEpoch *big.Int) (map[common.Ad
 
 		validatorStake := validator.TotalDelegation().Value()
 		totalStaked.Add(totalStaked, validatorStake)
-		keys := validator.Validator().SlotPubKeys().Load()
+		keys, err := validator.Validator().SlotPubKeys().Load()
+		if err != nil {
+			return nil, err
+		}
 
 		essentials[validator.Validator().ValidatorAddress().Value()] = &effective.SlotOrder{
 			Stake:       validatorStake,
@@ -218,7 +221,7 @@ func (def stakingEnabled) ReadFromDB(epoch *big.Int, reader DataProvider) (*rest
 	if err != nil {
 		return nil, err
 	}
-	return committee.Load(), err
+	return committee.Load()
 }
 
 // Compute is single entry point for computing a new committee for next epoch

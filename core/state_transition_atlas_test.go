@@ -100,9 +100,10 @@ func TestSaveNewValidatorToPool(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.ctx.makeStateAndValidator(t)
 			saveNewValidatorToPool(tt.ctx.newValidator, tt.ctx.validatorPool)
-			got, _ := tt.ctx.stateDB.ValidatorByAddress(tt.ctx.validatorAddr)
-			exp := staketest.CopyValidatorWrapper(*tt.ctx.newValidator)
-			if err := staketest.CheckValidatorWrapperEqual(*got.Load(), exp); err != nil {
+			v, _ := tt.ctx.stateDB.ValidatorByAddress(tt.ctx.validatorAddr)
+			got, _ := v.LoadFully()
+			exp, _ := tt.ctx.newValidator.Copy()
+			if err := staketest.CheckValidatorWrapperEqual(*got, *exp); err != nil {
 				t.Errorf("Test - %v: %v", tt.name, err)
 			}
 			if err := assertIdentityAndSlotKeySet(tt.ctx.validatorPool, tt.identitySet, tt.slotKeySet); err != nil {
@@ -208,16 +209,17 @@ func TestUpdateValidatorFromPoolByMsg(t *testing.T) {
 			validatorPool := stateDB.ValidatorPool()
 			validatorSt, _ := stateDB.ValidatorByAddress(tt.msg.ValidatorAddress)
 
-			exp := staketest.CopyValidator(*validatorSt.Validator().Load())
-			_ = restaking.UpdateValidatorFromEditMsg(&exp, &tt.msg)
+			exp, _ := validatorSt.Validator().LoadFully()
+			_ = restaking.UpdateValidatorFromEditMsg(exp, &tt.msg)
 			if tt.blockNum != nil {
 				exp.Commission.UpdateHeight = tt.blockNum
 			}
 
 			updateValidatorFromPoolByMsg(validatorSt, validatorPool, &tt.msg, tt.blockNum)
-			got, _ := stateDB.ValidatorByAddress(tt.msg.ValidatorAddress)
+			v, _ := stateDB.ValidatorByAddress(tt.msg.ValidatorAddress)
+			got, _ := v.Validator().LoadFully()
 
-			if err := staketest.CheckValidatorEqual(*got.Validator().Load(), exp); err != nil {
+			if err := staketest.CheckValidatorEqual(*got, *exp); err != nil {
 				t.Errorf("Test - %v: %v", tt.name, err)
 			}
 			if err := assertIdentityAndSlotKeySet(validatorPool, tt.identitySet, tt.slotKeySet); err != nil {

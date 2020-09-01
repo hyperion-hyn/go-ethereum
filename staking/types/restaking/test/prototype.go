@@ -71,12 +71,14 @@ var (
 
 // GetDefaultValidator return the default staking.Validator for testing
 func GetDefaultValidator() restaking.Validator_ {
-	return CopyValidator(validatorPrototype)
+	v, _ := validatorPrototype.Copy()
+	return *v
 }
 
 // GetDefaultValidatorWrapper return the default staking.ValidatorWrapper for testing
 func GetDefaultValidatorWrapper() restaking.ValidatorWrapper_ {
-	return CopyValidatorWrapper(vWrapperPrototype)
+	v, _ := vWrapperPrototype.Copy()
+	return *v
 }
 
 type ValidatorWrapperBuilder struct {
@@ -121,7 +123,8 @@ func (b *ValidatorWrapperBuilder) SetStatus(status uint8) *ValidatorWrapperBuild
 }
 
 func (b *ValidatorWrapperBuilder) SetCommission(commission restaking.Commission_) *ValidatorWrapperBuilder {
-	b.wrapper.Validator.Commission = CopyCommission(commission)
+	c, _ := commission.Copy()
+	b.wrapper.Validator.Commission = *c
 	return b
 }
 
@@ -136,7 +139,8 @@ func (b *ValidatorWrapperBuilder) SetCreationHeight(creationHeight *big.Int) *Va
 }
 
 func (b *ValidatorWrapperBuilder) AddRedelegation(redelegation restaking.Redelegation_) *ValidatorWrapperBuilder {
-	b.wrapper.Redelegations.Put(redelegation.DelegatorAddress, CopyRedelegation(redelegation))
+	r, _ := redelegation.Copy()
+	b.wrapper.Redelegations.Put(redelegation.DelegatorAddress, *r)
 	b.wrapper.TotalDelegation.Add(b.wrapper.TotalDelegation, redelegation.Amount)
 	if b.wrapper.Validator.OperatorAddresses.Contain(redelegation.DelegatorAddress) {
 		b.wrapper.TotalDelegationByOperator.Add(b.wrapper.TotalDelegationByOperator, redelegation.Amount)
@@ -164,5 +168,5 @@ func (b *ValidatorWrapperBuilder) Build() restaking.ValidatorWrapper_ {
 }
 
 func NewValidatorWrapperBuilder() *ValidatorWrapperBuilder {
-	return &ValidatorWrapperBuilder{wrapper: CopyValidatorWrapper(vWrapperPrototype)}
+	return &ValidatorWrapperBuilder{wrapper: GetDefaultValidatorWrapper()}
 }
