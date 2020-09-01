@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
 	"github.com/ethereum/go-ethereum/consensus/atlas/validator"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -160,7 +161,7 @@ func (s *Snapshot) uncast(address common.Address, authorize bool) bool {
 
 // apply creates a new authorization snapshot by applying the given headers to
 // the original one.
-func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
+func (s *Snapshot) apply(config *atlas.Config, chain consensus.ChainReader, headers []*types.Header) (*Snapshot, error) {
 	// Allow passing in no headers for cleaner code
 	if len(headers) == 0 {
 		return s, nil
@@ -177,83 +178,24 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 	// Iterate through the headers and create a new snapshot
 	snap := s.copy()
 
-	// for _, header := range headers {
-	// 	// Remove any votes on checkpoint blocks
-	// 	number := header.Number.Uint64()
-	// 	if number%s.Epoch == 0 {
-	// 		snap.Votes = nil
-	// 		snap.Tally = make(map[common.Address]Tally)
-	// 	}
-	// 	// Resolve the authorization key and check against validators
-	// 	// ATLAS(zgx): validator come from signature and public key instead of recovery from signature.
-	// 	validator, err := ecrecover(s, header)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// 	if _, v := snap.ValSet.GetBySigner(validator); v == nil {
-	// 		return nil, errUnauthorized
-	// 	}
-	//
-	// 	// Header authorized, discard any previous votes from the validator
-	// 	for i, vote := range snap.Votes {
-	// 		// maybe a leading node can't sign a block;
-	// 		if vote.Validator == validator && vote.Address == header.Coinbase {
-	// 			// Uncast the vote from the cached tally
-	// 			snap.uncast(vote.Address, vote.Authorize)
-	//
-	// 			// Uncast the vote from the chronological list
-	// 			snap.Votes = append(snap.Votes[:i], snap.Votes[i+1:]...)
-	// 			break // only one vote allowed
-	// 		}
-	// 	}
-	// 	// Tally up the new vote from the validator
-	// 	var authorize bool
-	// 	switch {
-	// 	case bytes.Compare(header.Nonce[:], nonceAuthVote) == 0:
-	// 		authorize = true
-	// 	case bytes.Compare(header.Nonce[:], nonceDropVote) == 0:
-	// 		authorize = false
-	// 	default:
-	// 		return nil, errInvalidVote
-	// 	}
-	// 	if snap.cast(header.Coinbase, authorize) {
-	// 		snap.Votes = append(snap.Votes, &Vote{
-	// 			Validator: validator,
-	// 			Block:     number,
-	// 			Address:   header.Coinbase,
-	// 			Authorize: authorize,
-	// 		})
-	// 	}
-	// 	// If the vote passed, update the list of validators
-	// 	if tally := snap.Tally[header.Coinbase]; tally.Votes > snap.ValSet.Size()/2 {
-	// 		if tally.Authorize {
-	// 			snap.ValSet.AddValidator(header.Coinbase)
-	// 		} else {
-	// 			snap.ValSet.RemoveValidator(header.Coinbase)
-	//
-	// 			// Discard any previous votes the deauthorized validator cast
-	// 			for i := 0; i < len(snap.Votes); i++ {
-	// 				if snap.Votes[i].Validator == header.Coinbase {
-	// 					// Uncast the vote from the cached tally
-	// 					snap.uncast(snap.Votes[i].Address, snap.Votes[i].Authorize)
-	//
-	// 					// Uncast the vote from the chronological list
-	// 					snap.Votes = append(snap.Votes[:i], snap.Votes[i+1:]...)
-	//
-	// 					i--
-	// 				}
-	// 			}
-	// 		}
-	// 		// Discard any previous votes around the just changed account
-	// 		for i := 0; i < len(snap.Votes); i++ {
-	// 			if snap.Votes[i].Address == header.Coinbase {
-	// 				snap.Votes = append(snap.Votes[:i], snap.Votes[i+1:]...)
-	// 				i--
-	// 			}
-	// 		}
-	// 		delete(snap.Tally, header.Coinbase)
-	// 	}
-	// }
+	for _, header := range headers[len(headers)-1:] {
+		// Remove any votes on checkpoint blocks
+		number := header.Number.Uint64()
+		if number%s.Epoch == 0 {
+			snap.Votes = nil
+			snap.Tally = make(map[common.Address]Tally)
+		}
+
+		stateDB, err := chain.StateAt(header.Root)
+		if err != nil {
+			return nil, err
+		}
+		validators, err := getValidators(stateDB, MaxValidatorCount)
+		if err != nil {
+			return nil, err
+		}
+		snap.ValSet = validator.NewSet(validators, config.ProposerPolicy)
+	}
 	snap.Number += uint64(len(headers))
 	snap.Hash = headers[len(headers)-1].Hash()
 

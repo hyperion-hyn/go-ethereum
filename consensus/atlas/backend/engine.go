@@ -622,12 +622,12 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		}
 
 		// If we're at block zero, make a snapshot
-		if number%checkpointInterval == 0 {
+		if number == 0 {
 			genesis := chain.GetHeaderByNumber(0)
 			if err := sb.VerifyHeader(chain, genesis, false); err != nil {
 				return nil, err
 			}
-			stateDB, err := chain.StateAt(chain.GetBlock(hash, number).Root())
+			stateDB, err := chain.StateAt(genesis.Root)
 			if err != nil {
 				return nil, err
 			}
@@ -665,7 +665,7 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 	for i := 0; i < len(headers)/2; i++ {
 		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
 	}
-	snap, err := snap.apply(headers)
+	snap, err := snap.apply(sb.config, chain, headers)
 	if err != nil {
 		return nil, err
 	}
@@ -701,7 +701,7 @@ func ecrecover(snap *Snapshot, header *types.Header) (common.Address, *bls.Publi
 
 	validator := snap.ValSet.GetByIndex(uint64(atlasExtra.Proposer))
 	if validator == nil {
-		return common.Address{}, nil, errValidatorNotExist
+		return common.Address{}, nil, errUnauthorized
 	}
 
 	addr := validator.Coinbase()
