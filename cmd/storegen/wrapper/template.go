@@ -288,7 +288,9 @@ func (s *Storage_{{.Name}}) SetValue(value {{.Type}}) {
 	*s.obj = value
 {{else if eq .Name "Decimal"}}
 	hash := value.BigInt()
-	s.db.SetState(s.addr, common.BigToHash(s.slot), common.BigToHash(hash))
+	if hash != nil {
+		s.db.SetState(s.addr, common.BigToHash(s.slot), common.BigToHash(hash))
+	}
 	*s.obj = value
 {{else if match .Name "Bytes([1-9]|[12][0-9]|3[0-2])" }}
 	val := value
