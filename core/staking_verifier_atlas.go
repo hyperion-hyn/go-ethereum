@@ -213,7 +213,10 @@ func VerifyEditValidatorMsg(stateDB vm.StateDB, chainContext ChainContext, epoch
 	if !wrapperSt.IsOperator(msg.OperatorAddress) {
 		return nil, errInvalidValidatorOperator
 	}
-	validator := wrapperSt.Validator().Load()
+	validator, err := wrapperSt.Validator().LoadFully()
+	if err != nil {
+		return nil, err
+	}
 
 	// TODO(ATLAS): update block num when updating commission rate?
 	if err := restaking.UpdateValidatorFromEditMsg(validator, msg); err != nil {

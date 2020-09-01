@@ -87,7 +87,7 @@ func TestUpdateDescription(t *testing.T) {
 		},
 	}
 	for i, test := range tests {
-		err := test.raw.UpdateFrom(test.update)
+		err := test.raw.IncrementalUpdateFrom(test.update)
 		if assErr := assertError(err, test.expErr); assErr != nil {
 			t.Errorf("Test %v: %v", i, assErr)
 		}

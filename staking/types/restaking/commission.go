@@ -10,15 +10,6 @@ var (
 	zeroPercent    = common.ZeroDec()
 )
 
-// Copy deep copies the staking.CommissionRates
-func (cr *CommissionRates_) Copy() CommissionRates_ {
-	return CommissionRates_{
-		Rate:          cr.Rate.Copy(),
-		MaxRate:       cr.MaxRate.Copy(),
-		MaxChangeRate: cr.MaxChangeRate.Copy(),
-	}
-}
-
 func (c *Commission_) SanityCheck() error {
 	if c.CommissionRates.Rate.LT(zeroPercent) || c.CommissionRates.Rate.GT(hundredPercent) {
 		return errors.Wrapf(
@@ -55,13 +46,4 @@ func (c *Commission_) SanityCheck() error {
 		)
 	}
 	return nil
-}
-
-
-func (s *Storage_Commission_) Load() *Commission_ {
-	s.CommissionRates().Rate().Value()
-	s.CommissionRates().MaxChangeRate().Value()
-	s.CommissionRates().MaxRate().Value()
-	s.UpdateHeight().Value()
-	return s.obj
 }

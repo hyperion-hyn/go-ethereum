@@ -67,25 +67,22 @@ func (s *Storage_AddressSet_) AllKeys() []common.Address {
 	return addressSlice
 }
 
-func (s *Storage_AddressSet_) Save(addressSet AddressSet_) {
-	keysLength := len(addressSet.Keys)
-	if keysLength != 0 {
-		s.Keys().Resize(keysLength)
-		for i := 0; i < keysLength; i++ {
-			keyTemp := addressSet.Keys[i]
-			s.Keys().Get(i).SetValue(*keyTemp)
-			s.Set().Get(*keyTemp).SetValue(*addressSet.Set[*keyTemp])
-		}
-	}
-}
 
-func (s *Storage_AddressSet_) Load() *AddressSet_ {
+func (s *Storage_AddressSet_) LoadFully() (*AddressSet_, error) {
+	s.Keys().load()
 	length := s.Keys().Length()
 	for i := 0; i < length; i++ {
 		k := s.Keys().Get(i).Value()
 		s.Set().Get(k).Value()
 	}
-	return s.obj
+
+	// copy
+	src := s.obj
+	des := AddressSet_{}
+	if err := deepCopy(src, &des); err != nil {
+		return nil, err
+	}
+	return &des, nil
 }
 
 // ValidatorStatus represents ability to participate in EPoS auction
@@ -162,95 +159,26 @@ func (v *Validator_) SanityCheck(maxSlotKeyAllowed int) error {
 }
 
 // Storage_Validator_
-func (s *Storage_Validator_) Load() *Validator_ {
+func (s *Storage_Validator_) LoadFully() (*Validator_, error) {
 	s.ValidatorAddress().Value()
-	s.OperatorAddresses().Load()
-	s.SlotPubKeys().Load() // need check
+	if _, err := s.OperatorAddresses().LoadFully(); err != nil {
+		return nil, err
+	}
+	s.SlotPubKeys().load() // need check
 	s.LastEpochInCommittee().Value()
 	s.MaxTotalDelegation().Value()
 	s.Status().Value()
-	s.Commission().Load()
-	s.Description().Load()
+	s.Commission().load()
+	s.Description().load()
 	s.CreationHeight().Value()
-	return s.obj
-}
 
-func (s *Storage_Validator_) Save(validator *Validator_) {
-	if validator.ValidatorAddress != common.BigToAddress(common.Big0) {
-		s.ValidatorAddress().SetValue(validator.ValidatorAddress)
+	// copy
+	src := s.obj
+	des := Validator_{}
+	if err := deepCopy(src, &des); err != nil {
+		return nil, err
 	}
-	if len(validator.OperatorAddresses.Keys) != 0 {
-		s.OperatorAddresses().Save(validator.OperatorAddresses)
-	}
-	if len(validator.SlotPubKeys.Keys) != 0 {
-		s.SlotPubKeys().Save(&validator.SlotPubKeys)
-	}
-
-	if validator.LastEpochInCommittee != nil {
-		s.LastEpochInCommittee().SetValue(validator.LastEpochInCommittee)
-	}
-
-	if validator.MaxTotalDelegation != nil {
-		s.MaxTotalDelegation().SetValue(validator.MaxTotalDelegation)
-	}
-
-	if validator.Status != uint8(Nil) {
-		s.Status().SetValue(validator.Status)
-	}
-
-	if !validator.Commission.CommissionRates.Rate.IsNil() {
-		s.Commission().CommissionRates().Rate().SetValue(validator.Commission.CommissionRates.Rate)
-	}
-	if !validator.Commission.CommissionRates.MaxChangeRate.IsNil() {
-		s.Commission().CommissionRates().MaxChangeRate().SetValue(validator.Commission.CommissionRates.MaxChangeRate)
-	}
-	if !validator.Commission.CommissionRates.MaxRate.IsNil() {
-		s.Commission().CommissionRates().MaxRate().SetValue(validator.Commission.CommissionRates.MaxRate)
-	}
-	if validator.Commission.UpdateHeight != nil {
-		s.Commission().UpdateHeight().SetValue(validator.Commission.UpdateHeight)
-	}
-
-	if validator.Description.Name != "" {
-		s.Description().Name().SetValue(validator.Description.Name)
-	}
-	if validator.Description.Identity != "" {
-		s.Description().Identity().SetValue(validator.Description.Identity)
-	}
-	if validator.Description.Website != "" {
-		s.Description().Website().SetValue(validator.Description.Website)
-	}
-	if validator.Description.SecurityContact != "" {
-		s.Description().SecurityContact().SetValue(validator.Description.SecurityContact)
-	}
-	if validator.Description.Details != "" {
-		s.Description().Details().SetValue(validator.Description.Details)
-	}
-
-	if validator.CreationHeight != nil {
-		s.CreationHeight().SetValue(validator.CreationHeight)
-	}
-}
-
-// Storage_ValidatorWrapper_
-func (s *Storage_ValidatorWrapper_) Save(validatorWrapper *ValidatorWrapper_) {
-	s.Validator().Save(&validatorWrapper.Validator)
-	s.Redelegations().Save(validatorWrapper.Redelegations)
-	if validatorWrapper.Counters.NumBlocksSigned != nil {
-		s.Counters().NumBlocksSigned().SetValue(validatorWrapper.Counters.NumBlocksSigned)
-	}
-	if validatorWrapper.Counters.NumBlocksToSign != nil {
-		s.Counters().NumBlocksToSign().SetValue(validatorWrapper.Counters.NumBlocksToSign)
-	}
-	if validatorWrapper.BlockReward != nil {
-		s.BlockReward().SetValue(validatorWrapper.BlockReward)
-	}
-	if validatorWrapper.TotalDelegation != nil {
-		s.TotalDelegation().SetValue(validatorWrapper.TotalDelegation)
-	}
-	if validatorWrapper.TotalDelegationByOperator != nil {
-		s.TotalDelegationByOperator().SetValue(validatorWrapper.TotalDelegationByOperator)
-	}
+	return &des, nil
 }
 
 func (s *Storage_ValidatorWrapper_) AddBlockReward(reward *big.Int) {
@@ -316,15 +244,25 @@ func (s *Storage_ValidatorWrapper_) Undelegate(delegator common.Address, epoch *
 	}
 }
 
-func (s *Storage_ValidatorWrapper_) Load() *ValidatorWrapper_ {
-	s.Validator().Load()
-	s.Redelegations().Load()
-	s.Counters().NumBlocksSigned().Value()
-	s.Counters().NumBlocksToSign().Value()
+func (s *Storage_ValidatorWrapper_) LoadFully() (*ValidatorWrapper_, error) {
+	if _, err := s.Validator().LoadFully(); err != nil {
+		return nil, err
+	}
+	if _, err := s.Redelegations().LoadFully(); err != nil {
+		return nil, err
+	}
+	s.Counters().load()
 	s.BlockReward().Value()
 	s.TotalDelegation().Value()
 	s.TotalDelegationByOperator().Value()
-	return s.obj
+
+	// copy
+	src := s.obj
+	des := ValidatorWrapper_{}
+	if err := deepCopy(src, &des); err != nil {
+		return nil, err
+	}
+	return &des, nil
 }
 
 // Storage_ValidatorWrapperMap_
@@ -367,12 +305,8 @@ func (s *Storage_ValidatorWrapperMap_) Get(key common.Address) (*Storage_Validat
 
 // Storage_ValidatorPool_
 func (s *Storage_ValidatorPool_) UpdateCommittee(committee *Committee_) {
-	if committee.Epoch != nil {
-		s.Committee().Epoch().SetValue(committee.Epoch)
-	}
-	if committee.Slots.Entrys != nil {
-		s.Committee().Slots().UpdateSlots(committee.Slots)
-	}
+	s.Committee().Clear()
+	s.Committee().Save(committee)
 }
 
 // CreateValidatorFromNewMsg creates validator from NewValidator message
@@ -407,7 +341,7 @@ func UpdateValidatorFromEditMsg(validator *Validator_, edit *EditValidator) erro
 		return errAddressNotMatch
 	}
 
-	if err := validator.Description.UpdateFrom(edit.Description); err != nil {
+	if err := validator.Description.IncrementalUpdateFrom(edit.Description); err != nil {
 		return err
 	}
 

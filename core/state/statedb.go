@@ -20,7 +20,6 @@ package state
 import (
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/staking/types/microstaking"
 	"math/big"
 	"sort"
 	"sync"
@@ -33,6 +32,7 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/ethereum/go-ethereum/staking/types/microstaking"
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	"github.com/ethereum/go-ethereum/trie"
 )
@@ -119,7 +119,7 @@ type StateDB struct {
 
 	// ATLAS
 	validatorPool *restaking.Storage_ValidatorPool_
-	once          sync.Once
+	validatorOnce sync.Once
 	map3NodePool  *microstaking.Storage_Map3NodePool_
 	map3Once      sync.Once
 }

@@ -1038,7 +1038,10 @@ func lookupCommitteeAtEpoch(epoch *big.Int, bc consensus.ChainReader) (*restakin
 			if err != nil {
 				return nil, err
 			}
-			comm := committeeSt.Load()
+			comm, err := committeeSt.Load()
+			if err != nil {
+				return nil, err
+			}
 
 			// For new calc, remove old data from 2 epochs ago
 			deleteEpoch := big.NewInt(0).Sub(epoch, big.NewInt(2))

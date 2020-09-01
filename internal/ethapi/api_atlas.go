@@ -46,7 +46,10 @@ func (s *PublicRestakingAPI) GetValidatorInformation(
 	if err != nil {
 		return nil, err
 	}
-	validatorWrapper := storageValidatorWarpper.Load()
+	validatorWrapper, err := storageValidatorWarpper.LoadFully()
+	if err != nil {
+		return nil, err
+	}
 
 	validator_ := validatorWrapper.Validator
 
@@ -57,7 +60,7 @@ func (s *PublicRestakingAPI) GetValidatorInformation(
 				return validator_.OperatorAddresses.Keys
 			}(),
 			SlotPubKeys: func() []restaking.SlotPubKeyRPC {
-				pubKeys := make([]restaking.SlotPubKeyRPC, len(validator_.SlotPubKeys.Keys))
+				pubKeys := make([]restaking.SlotPubKeyRPC, 0)
 				for _, bLSPublicKey := range validator_.SlotPubKeys.Keys {
 					pubKeys = append(pubKeys, bLSPublicKey.Key)
 				}
@@ -71,7 +74,7 @@ func (s *PublicRestakingAPI) GetValidatorInformation(
 			CreationHeight:       validator_.CreationHeight,
 		},
 		Redelegations: func() []restaking.Redelegation_ {
-			redelegations := make([]restaking.Redelegation_, len(validatorWrapper.Redelegations.Keys))
+			redelegations := make([]restaking.Redelegation_, 0)
 			for _, key := range validatorWrapper.Redelegations.Keys {
 				redegation, ok := validatorWrapper.Redelegations.Get(*key)
 				if ok {
