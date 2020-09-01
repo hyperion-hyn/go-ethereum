@@ -96,10 +96,6 @@ func ExtractAtlasExtraField(extra []byte) (*AtlasExtra, error) {
 		return nil, ErrInvalidAtlasHeaderExtra
 	}
 
-	if len(extra) < AtlasExtraSeal {
-		return nil, ErrInvalidIstanbulHeaderExtra
-	}
-
 	var atlasExtra *AtlasExtra
 	err := rlp.DecodeBytes(extra[AtlasExtraVanity:], &atlasExtra)
 	if err != nil {

@@ -26,7 +26,7 @@ func SetupValidatorsInGenesisAt(account *core.GenesisAccount, validators []*Sign
 
 	signers := make([]*Signer, len(validators))
 	for i := 0; i < len(validators); i++ {
-		validators[i] = validators[i]
+		signers[i] = validators[i]
 	}
 
 	// Sort the signers

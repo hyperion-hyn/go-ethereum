@@ -23,11 +23,16 @@ import (
 	"io"
 	"math"
 
-	"github.com/ethereum/go-ethereum/core"
-	bls_cosi "github.com/ethereum/go-ethereum/crypto/bls"
-	"github.com/hyperion-hyn/bls/ffi/go/bls"
 	"math/big"
 	"time"
+
+	"github.com/hyperion-hyn/bls/ffi/go/bls"
+
+	"github.com/ethereum/go-ethereum/core"
+	bls_cosi "github.com/ethereum/go-ethereum/crypto/bls"
+
+	lru "github.com/hashicorp/golang-lru"
+	"golang.org/x/crypto/sha3"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -40,8 +45,6 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
-	lru "github.com/hashicorp/golang-lru"
-	"golang.org/x/crypto/sha3"
 )
 
 const (
@@ -221,6 +224,22 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 	// The genesis block is the always valid dead-end
 	number := header.Number.Uint64()
 	if number == 0 {
+		extra, err := types.ExtractAtlasExtra(header)
+		if err != nil {
+			return err
+		}
+		// The length of Confirm seals should be larger than 0
+		if len(extra.AggSignature) == 0 || len(extra.AggBitmap) == 0 {
+			return errEmptyCommittedSeals
+		}
+
+		if len(extra.AggSignature) != types.AtlasExtraSignature || len(extra.AggBitmap) != types.AtlasExtraMask {
+			return errInvalidAggregatedSignature
+		}
+		hashdata := SealHash(header)
+		if err := atlas.CheckValidatorSignature(hashdata.Bytes(), extra.AggSignature[:], extra.AggPublicKey[:]); err != nil {
+			return err
+		}
 		return nil
 	}
 	// Ensure that the block's timestamp isn't too close to it's parent
@@ -784,9 +803,16 @@ func WriteCommittedSealsAsExtra(extra []byte, signature []byte, publicKey []byte
 	}
 
 	extraData := make([]byte, len(extra))
-	atlasExtra, err := types.ExtractAtlasExtraField(extraData)
-	if err != nil {
-		return nil, err
+	copy(extraData, extra)
+
+	var atlasExtra *types.AtlasExtra
+	if len(extraData) == types.AtlasExtraVanity {
+		atlasExtra = &types.AtlasExtra{}
+	} else {
+		atlasExtra, err = types.ExtractAtlasExtraField(extraData)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	copy(atlasExtra.AggSignature[:], signature)
@@ -826,7 +852,7 @@ func WriteCommittedSealInGenesis(genesis *core.Genesis, extra []byte, signatures
 		return err
 	}
 
-	copy(genesis.ExtraData[:], data[:])
+	genesis.ExtraData = data
 	return nil
 }
 
@@ -871,7 +897,7 @@ func AtlasRLP(header *types.Header) []byte {
 }
 
 func encodeSigHeader(w io.Writer, header *types.Header) {
-	extra := make([]byte, len(header.Extra))
+	extra := make([]byte, types.AtlasExtraVanity)
 	copy(extra[:types.AtlasExtraVanity], header.Extra[:types.AtlasExtraVanity])
 	err := rlp.Encode(w, []interface{}{
 		header.ParentHash,

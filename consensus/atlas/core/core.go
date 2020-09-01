@@ -339,7 +339,8 @@ func (c *core) newRoundChangeTimer() {
 }
 
 func (c *core) checkValidatorSignature(data []byte, sig []byte, pubKey []byte) error {
-	return atlas.CheckValidatorSignature(data, sig, pubKey)
+	hash := crypto.Keccak256Hash([]byte(data))
+	return atlas.CheckValidatorSignature(hash.Bytes(), sig, pubKey)
 }
 
 func (c *core) QuorumSize() int {

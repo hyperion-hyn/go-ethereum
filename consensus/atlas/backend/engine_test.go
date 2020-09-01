@@ -135,6 +135,8 @@ func appendValidators(genesis *core.Genesis, signers []*bls.SecretKey, addrs []c
 		return err
 	}
 
+	genesis.Alloc[common.HexToAddress(CONSORTIUM_BOARD)] = *account
+
 	block := genesis.ToBlock(nil)
 	hashdata := SealHash(block.Header())
 
@@ -566,7 +568,7 @@ func TestWriteSeal(t *testing.T) {
 	expectedIstExtra := &types.AtlasExtra{
 		AggSignature: [96]byte{},
 		AggPublicKey: [48]byte{},
-		AggBitmap:    [32]byte{},
+		AggBitmap:    [16]byte{},
 		Proposer:     0,
 	}
 

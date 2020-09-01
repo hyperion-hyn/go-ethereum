@@ -138,7 +138,8 @@ func (self *testSystemBackend) CheckSignature([]byte, common.Address, []byte) er
 }
 
 func (self *testSystemBackend) CheckValidatorSignature(data []byte, sig []byte, pubKey []byte) error {
-	return atlas.CheckValidatorSignature(data, sig, pubKey)
+	hash := crypto.Keccak256Hash([]byte(data))
+	return atlas.CheckValidatorSignature(hash.Bytes(), sig, pubKey)
 }
 
 func (self *testSystemBackend) Hash(b interface{}) common.Hash {
