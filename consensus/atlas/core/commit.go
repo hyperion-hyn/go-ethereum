@@ -19,6 +19,7 @@ package core
 import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
+	bls_cosi "github.com/ethereum/go-ethereum/crypto/bls"
 )
 
 func (c *core) sendCommit() {
@@ -82,7 +83,7 @@ func (c *core) handleCommit(msg *message, src atlas.Validator) error {
 		return err
 	}
 
-	if err := c.acceptCommit(msg, src, c.valSet); err != nil {
+	if err := c.acceptCommit(msg, src); err != nil {
 		return err
 	}
 
@@ -113,14 +114,8 @@ func (c *core) verifyCommit(commit *atlas.Subject, src atlas.Validator) error {
 	return nil
 }
 
-func (c *core) acceptCommit(msg *message, src atlas.Validator, validatorSet atlas.ValidatorSet) error {
+func (c *core) acceptCommit(msg *message, src atlas.Validator) error {
 	logger := c.logger.New("from", src, "state", c.state)
-
-	// Add the COMMIT message to current round state
-	if err := c.current.Confirms.Add(msg); err != nil {
-		logger.Error("Failed to record commit message", "msg", msg, "err", err)
-		return err
-	}
 
 	var commit atlas.Subject
 	if err := msg.Decode(&commit); err != nil {
@@ -132,8 +127,19 @@ func (c *core) acceptCommit(msg *message, src atlas.Validator, validatorSet atla
 		return errInconsistentSubject
 	}
 
-	if err := c.verifySignPayload(&commit, validatorSet); err != nil {
+	signPayload, err := c.verifySignPayload(&commit, c.valSet)
+	if err != nil {
 		return err
+	}
+
+	bitmap, _ := bls_cosi.NewMask(c.valSet.GetPublicKeys(), nil)
+	if err := bitmap.SetMask(signPayload.Mask); err != nil {
+		logger.Error("Failed to SetMask", "err", err)
+		return err
+	}
+
+	if bitmap.CountEnabled() < c.QuorumSize() {
+		return errNotSatisfyQuorum
 	}
 
 	return nil

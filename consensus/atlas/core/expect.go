@@ -21,6 +21,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
+	bls_cosi "github.com/ethereum/go-ethereum/crypto/bls"
 )
 
 func (c *core) sendExpect() {
@@ -151,8 +152,19 @@ func (c *core) verifyExpect(expect *atlas.Subject, src atlas.Validator) error {
 		return errInconsistentSubject
 	}
 
-	if err := c.verifySignPayload(expect, c.valSet); err != nil {
+	signPayload, err := c.verifySignPayload(expect, c.valSet)
+	if err != nil {
 		return err
+	}
+
+	bitmap, _ := bls_cosi.NewMask(c.valSet.GetPublicKeys(), nil)
+	if err := bitmap.SetMask(signPayload.Mask); err != nil {
+		logger.Error("Failed to SetMask", "err", err)
+		return err
+	}
+
+	if bitmap.CountEnabled() < c.QuorumSize() {
+		return errNotSatisfyQuorum
 	}
 
 	return nil

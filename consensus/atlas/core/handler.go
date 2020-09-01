@@ -96,14 +96,10 @@ func (c *core) handleEvents() {
 					c.storeRequestMsg(r)
 				}
 			case atlas.MessageEvent:
-				// ATLAS(zgx): if not in commit then gossip messages
-				if !c.IsProposer() {
-					c.backend.Gossip(c.valSet, ev.Payload)
-					continue
-				}
-
 				if err := c.handleMsg(ev.Payload); err == nil {
 					c.backend.Gossip(c.valSet, ev.Payload)
+				} else {
+					c.logger.Error("process MessageEvent", "err", err)
 				}
 			case backlogEvent:
 				// No need to check signature for internal messages

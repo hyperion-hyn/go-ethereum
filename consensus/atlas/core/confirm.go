@@ -69,17 +69,17 @@ func (c *core) handleConfirm(msg *message, src atlas.Validator) error {
 	}
 
 	if err := c.acceptConfirm(msg, src); err != nil {
+		logger.Error("acceptConfirm", "err", err)
 		return err
 	}
 
 	if !c.IsProposer() {
-		logger.Error("message come from no-proposer", "msg", msg)
 		return nil
 	}
 
-	// Change to Expect state if we've received enough CONFIRM messages or it is locked
+	// Change to Confirm state if we've received enough Expect messages or it is locked
 	// and we are in earlier state before Expect state.
-	if ((c.current.IsHashLocked() && confirm.Digest == c.current.GetLockedHash()) || c.current.GetConfirmSize() >= c.QuorumSize()) &&
+	if (c.current.GetConfirmSize() >= c.QuorumSize()) &&
 		c.state.Cmp(StateConfirmed) < 0 {
 		// ATLAS(zgx): wanting for more time to collect signatures for rewarding
 		c.current.LockHash()
