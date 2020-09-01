@@ -146,7 +146,7 @@ func (c *core) acceptPrepare(msg *message, src atlas.Validator) error {
 		return errDuplicateMessage
 	}
 
-	if c.state != StatePreprepared {
+	if c.state == StatePrepared {
 		return nil
 	}
 
