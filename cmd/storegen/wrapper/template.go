@@ -53,6 +53,8 @@ const tmplSourceGo = `
 package {{.Package}}
 
 import (
+	"bytes"
+	"encoding/json"
 	"math/big"
 	"strings"
 
@@ -579,5 +581,197 @@ func (s *Storage_{{ $typeName }}) {{$field.Name}}() (*Storage_{{$field.Type}}) {
 	{{end}}
 {{end}}
 
+
+// -------------------------------- enhance blew -------------------------------------
+
+{{range $basics}}
+func (s *Storage_{{.Name}}) Clear() {
+// {{ printf "%#v" . }}
+{{- if eq .Name "String"}}
+	rv := s.Value()
+	s.SetValue(string(bytes.Repeat([]byte{0x00}, len(rv))))
+	s.SetValue("")
+{{else if eq .Name "Bytes" }}
+	rv := s.Value()
+	s.SetValue(bytes.Repeat([]byte{0x00}, len(rv)))
+	s.SetValue([]byte{})	
+{{else if eq .Name "BigInt"}}
+	s.SetValue(big.NewInt(0))
+{{else if eq .Name "Uint8" "Uint16" "Uint32" "Uint64"}}
+	s.SetValue(0)
+{{else if eq .Name "Int8" "Int16" "Int32" "Int64"}}
+	s.SetValue(0)
+{{else if eq .Name "Bool"}}
+	s.SetValue(false)
+{{else if eq .Name "Address"}}
+	s.SetValue(common.Address{})
+{{else if eq .Name "Decimal"}}
+	s.SetValue(common.NewDecFromBigIntWithPrec(big.NewInt(0), common.Precision))
+{{else if match .Name "Bytes([1-9]|[12][0-9]|3[0-2])" }}
+	rv := bytes.Repeat([]byte{0x00}, s.numberOfBytes)
+	s.SetValue(rv)
+{{else}}
+	UNSUPPORTED {{.Name}} {{.Type}}
+{{end -}}
+}
+{{end}}
+
+{{range $structs}}
+{{$typeName := .Name}}
+func (s *Storage_{{ $typeName }}) Save(obj *{{ $typeName }}) {
+	{{- range $field := .Fields}}
+		{{- if isBasicType $field }}
+	s.{{$field.Name}}().SetValue(obj.{{$field.Name}})
+		{{- else if isDefineType $field }}
+	s.{{$field.Name}}().Save(obj.{{$field.Name}})
+		{{- else}}
+	s.{{$field.Name}}().Save(&obj.{{$field.Name}})
+		{{- end}}
+	{{- end}}
+}
+
+func (s *Storage_{{ $typeName }}) Clear() {
+	{{- range $field := .Fields}}
+	s.{{$field.Name}}().Clear()
+	{{- end}}
+}
+
+func (s *Storage_{{ $typeName }}) Load() *{{ $typeName }} {
+	{{- range $field := .Fields}}
+		{{- if isBasicType $field }}
+	s.{{$field.Name}}().Value()
+		{{- else}}
+	s.{{$field.Name}}().Load()
+		{{- end}}
+	{{- end}}
+	return s.obj
+}
+
+func (s *Storage_{{ $typeName }}) LoadAndCopy() (*{{ $typeName }}, error) {
+	src := s.Load()
+	des := {{ $typeName }}{}
+	if err := deepCopy(src, &des); err != nil {
+		return nil, err
+	}
+	return &des, nil
+}
+{{end}}
+
+
+{{range $defines}}
+{{$typeName := .Name}}
+func (s *Storage_{{ $typeName }}) Save(obj {{ $typeName }}) {
+	{{- if isarray . }}
+		{{- $elem := index .Fields 0}}
+		{{- if isFixedSizeByteArray (GetReflectType .SolKind) }}
+	s.SetValue(obj)
+		{{- else}}
+	for i := 0; i < len(obj); i++ {
+			{{- if isBasicType $elem}}
+		s.Get(i).SetValue(obj[i])
+			{{- else}}
+		s.Get(i).Save(obj[i])		
+			{{- end}}
+	}	
+		{{- end}} {{/* fixed-size byte array */}}
+	{{- else if isslice .}}
+		{{- $elem := index .Fields 0}}
+	for i := 0; i < len(obj); i++ {
+		{{- if isBasicType $elem}}
+			{{- if eq $elem.Type "BigInt"}}
+		s.Get(i).SetValue(obj[i])
+			{{- else}}
+		s.Get(i).SetValue(*obj[i])
+			{{- end}}
+		{{- else}}
+		s.Get(i).Save(obj[i])
+		{{- end}}
+	}
+	s.Resize(len(obj))
+	{{- else if ismap .}}
+		{{- $elemValue := index .Fields 1}}
+	for k, v := range obj {
+		{{- if isBasicType $elemValue}}
+			{{- if eq $elemValue.Type "BigInt"}}
+		s.Get(k).SetValue(v)
+			{{- else}}
+		s.Get(k).SetValue(*v)
+			{{- end}}
+		{{- else}}
+		s.Get(k).Save(v)
+		{{- end}}
+	}
+	{{- else}}
+		UNSUPPORTED {{.Name}} {{.Type}}
+	{{- end}}
+}
+
+func (s *Storage_{{ $typeName }}) Clear() {
+	{{- if isarray . }}
+		{{- if isFixedSizeByteArray (GetReflectType .SolKind) }}
+	s.SetValue({{ $typeName }}{})
+		{{- else}}
+	for i := 0; i < s.Length(); i++ {
+		s.Get(i).Clear()
+	}	
+		{{- end}} {{/* fixed-size byte array */}}
+
+	{{- else if isslice .}}
+	for i := 0; i < s.Length(); i++ {
+		s.Get(i).Clear()
+	}
+	s.Resize(0)
+	{{- else if ismap .}}
+	panic("not support to clear map")
+	{{- else}}
+		UNSUPPORTED {{.Name}} {{.Type}}
+	{{- end}}
+}
+
+func (s *Storage_{{ $typeName }}) Load() {{ $typeName }} {
+	{{- if isarray . }}
+		{{- $elem := index .Fields 0}}
+		{{- if isFixedSizeByteArray (GetReflectType .SolKind) }}
+	s.Value()
+		{{- else}}
+	for i := 0; i < s.Length(); i++ {
+			{{- if isBasicType $elem}}
+		s.Get(i).Value()
+			{{- else}}
+		s.Get(i).Load()		
+			{{- end}}
+	}
+		{{- end}} {{/* fixed-size byte array */}}
+	return *s.obj
+	{{- else if isslice .}}
+		{{- $elem := index .Fields 0}}
+	for i := 0; i < s.Length(); i++ {
+		{{- if isBasicType $elem}}
+		s.Get(i).Value()
+		{{- else}}
+		s.Get(i).Load()
+		{{- end}}
+	}
+	return *s.obj
+	{{- else if ismap .}}
+	panic("not support to clear map")
+	{{- else}}
+		UNSUPPORTED {{.Name}} {{.Type}}
+	{{- end}}
+}
+
+{{end}}
+
+
+func deepCopy(src, des interface{}) error {
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(src); err != nil {
+		return err
+	}
+	if err := json.NewDecoder(bytes.NewBuffer(buf.Bytes())).Decode(des); err != nil {
+		return err
+	}
+	return nil
+}
 
 `
