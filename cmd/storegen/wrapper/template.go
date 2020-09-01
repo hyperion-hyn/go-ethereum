@@ -621,9 +621,21 @@ func (s *Storage_{{.Name}}) Clear() {
 func (s *Storage_{{ $typeName }}) Save(obj *{{ $typeName }}) {
 	{{- range $field := .Fields}}
 		{{- if isBasicType $field }}
+			{{- if eq .Type "BigInt" }}
+	if obj.{{$field.Name}} != nil {
+		s.{{$field.Name}}().SetValue(obj.{{$field.Name}})
+	}
+			{{- else}}
 	s.{{$field.Name}}().SetValue(obj.{{$field.Name}})
+			{{- end}}
 		{{- else if isDefineType $field }}
+			{{- if isarray $field }}
 	s.{{$field.Name}}().Save(obj.{{$field.Name}})
+			{{- else}}
+	if obj.{{$field.Name}} != nil {
+		s.{{$field.Name}}().Save(obj.{{$field.Name}})
+	}
+			{{- end}}
 		{{- else}}
 	s.{{$field.Name}}().Save(&obj.{{$field.Name}})
 		{{- end}}
@@ -636,21 +648,29 @@ func (s *Storage_{{ $typeName }}) Clear() {
 	{{- end}}
 }
 
-func (s *Storage_{{ $typeName }}) Load() *{{ $typeName }} {
+func (s *Storage_{{ $typeName }}) load() *{{ $typeName }} {
 	{{- range $field := .Fields}}
 		{{- if isBasicType $field }}
 	s.{{$field.Name}}().Value()
 		{{- else}}
-	s.{{$field.Name}}().Load()
+	s.{{$field.Name}}().load()
 		{{- end}}
 	{{- end}}
 	return s.obj
 }
 
-func (s *Storage_{{ $typeName }}) LoadAndCopy() (*{{ $typeName }}, error) {
-	src := s.Load()
+func (s *Storage_{{ $typeName }}) Load() (*{{ $typeName }}, error) {
+	src := s.load()
 	des := {{ $typeName }}{}
 	if err := deepCopy(src, &des); err != nil {
+		return nil, err
+	}
+	return &des, nil
+}
+
+func (s *{{ $typeName }}) Copy() (*{{ $typeName }}, error) {
+	des := {{ $typeName }}{}
+	if err := deepCopy(s, &des); err != nil {
 		return nil, err
 	}
 	return &des, nil
@@ -728,7 +748,7 @@ func (s *Storage_{{ $typeName }}) Clear() {
 	{{- end}}
 }
 
-func (s *Storage_{{ $typeName }}) Load() {{ $typeName }} {
+func (s *Storage_{{ $typeName }}) load() {{ $typeName }} {
 	{{- if isarray . }}
 		{{- $elem := index .Fields 0}}
 		{{- if isFixedSizeByteArray (GetReflectType .SolKind) }}
@@ -738,7 +758,7 @@ func (s *Storage_{{ $typeName }}) Load() {{ $typeName }} {
 			{{- if isBasicType $elem}}
 		s.Get(i).Value()
 			{{- else}}
-		s.Get(i).Load()		
+		s.Get(i).load()		
 			{{- end}}
 	}
 		{{- end}} {{/* fixed-size byte array */}}
@@ -749,7 +769,7 @@ func (s *Storage_{{ $typeName }}) Load() {{ $typeName }} {
 		{{- if isBasicType $elem}}
 		s.Get(i).Value()
 		{{- else}}
-		s.Get(i).Load()
+		s.Get(i).load()
 		{{- end}}
 	}
 	return *s.obj
