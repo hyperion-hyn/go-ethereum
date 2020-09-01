@@ -61,7 +61,7 @@ func TestHandleConfirm(t *testing.T) {
 
 					if i == 0 {
 						// replica 0 is the proposer
-						c.state = StateExpected
+						c.state = StatePrepared
 					}
 				}
 				return sys
@@ -82,7 +82,7 @@ func TestHandleConfirm(t *testing.T) {
 							expectedSubject.View,
 							c.valSet,
 						)
-						c.state = StateExpected
+						c.state = StatePreprepared
 					} else {
 						c.current = newTestRoundState(
 							&atlas.View{
@@ -111,7 +111,7 @@ func TestHandleConfirm(t *testing.T) {
 							expectedSubject.View,
 							c.valSet,
 						)
-						c.state = StateExpected
+						c.state = StatePreprepared
 					} else {
 						c.current = newTestRoundState(
 							&atlas.View{
@@ -147,7 +147,7 @@ func TestHandleConfirm(t *testing.T) {
 					if i != 0 {
 						c.state = StateExpected
 					} else {
-						c.state = StatePrepared
+						c.state = StatePreprepared
 					}
 				}
 				return sys
@@ -172,7 +172,7 @@ OUTER:
 				t.Errorf("failed to sign subject: %v", err)
 			}
 			m, _ := Encode(signedSubject)
-			if err := r0.handleCommit(&message{
+			if err := r0.handleConfirm(&message{
 				Code:          msgConfirm,
 				Msg:           m,
 				Signer:        validator.Signer(),
@@ -192,10 +192,10 @@ OUTER:
 		// prepared is normal case
 		if r0.state != StateConfirmed {
 			// There are not enough confirm messages in core
-			if r0.state != StateExpected {
-				t.Errorf("state mismatch: have %v, want %v", r0.state, StateExpected)
+			if r0.state != StatePrepared {
+				t.Errorf("state mismatch: have %v, want %v", r0.state, StatePrepared)
 			}
-			if r0.current.Commits.Size() >= r0.QuorumSize() {
+			if r0.current.Confirms.Size() >= r0.QuorumSize() {
 				t.Errorf("the size of confirm messages should be less than %v", r0.QuorumSize())
 			}
 			if r0.current.IsHashLocked() {
@@ -205,7 +205,7 @@ OUTER:
 		}
 
 		// core should have 2F+1 before Ceil2Nby3Block or Ceil(2N/3) prepare messages
-		if r0.current.Commits.Size() < r0.QuorumSize() {
+		if r0.current.Confirms.Size() < r0.QuorumSize() {
 			t.Errorf("the size of confirm messages should be larger than 2F+1 or Ceil(2N/3): size %v", r0.QuorumSize())
 		}
 
@@ -216,8 +216,8 @@ OUTER:
 			t.Errorf("error mismatch: have %v, want nil", err)
 		}
 
-		if decodedMsg.Code != msgExpect {
-			t.Errorf("message code mismatch: have %v, want %v", decodedMsg.Code, msgExpect)
+		if decodedMsg.Code != msgCommit {
+			t.Errorf("message code mismatch: have %v, want %v", decodedMsg.Code, msgCommit)
 		}
 
 		sub, err := r0.AssembleSignedSubject()

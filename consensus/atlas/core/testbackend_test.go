@@ -27,17 +27,16 @@ import (
 
 	"github.com/hyperion-hyn/bls/ffi/go/bls"
 
+	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
 	"github.com/ethereum/go-ethereum/consensus/atlas/validator"
 	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	bls2 "github.com/ethereum/go-ethereum/crypto/bls"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	elog "github.com/ethereum/go-ethereum/log"
-	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )
 
 var testLogger = elog.New()
@@ -130,13 +129,8 @@ func (self *testSystemBackend) Sign(data []byte) ([]byte, []byte, []byte, error)
 	testLogger.Info(fmt.Sprintf("testSystemBackend.Sign: %x...", data[:10]))
 	sighash := self.signerKey.SignHash(data).Serialize()
 	pubkey := self.signerKey.GetPublicKey().Serialize()
-	// ATLAS(zgx): should set mask here?
-	mask, err := bls2.NewMask(make([]*bls.PublicKey, types.AtlasMaxValidator), nil)
-	if err != nil {
-		return nil, nil, nil, err
-	}
 	testLogger.Info(fmt.Sprintf("testSystemBackend.Sign: data: %x... signature: %x, publicKey: %x", data[:10], sighash[:10], pubkey[:10]))
-	return sighash, pubkey, mask.Mask(), nil
+	return sighash, pubkey, nil, nil
 }
 
 func (self *testSystemBackend) CheckSignature([]byte, common.Address, []byte) error {
@@ -262,7 +256,7 @@ func NewTestSystemWithBackend(n, f uint64) *testSystem {
 		core.validateFn = backend.CheckValidatorSignature
 		core.backlogs = make(map[common.Address]*prque.Prque)
 		core.backlogsMu = new(sync.Mutex)
-
+		core.roundChangeSet = newRoundChangeSet(core.valSet)
 		backend.engine = core
 	}
 
@@ -291,7 +285,7 @@ func (t *testSystem) listen() {
 func (t *testSystem) Run(core bool) func() {
 	for _, b := range t.backends {
 		if core {
-			b.engine.Start() // start Istanbul core
+			b.engine.Start() // start Atlas core
 		}
 	}
 

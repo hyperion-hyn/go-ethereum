@@ -41,7 +41,7 @@ func newRoundState(view *atlas.View, validatorSet atlas.ValidatorSet, lockedHash
 		sequence:                   view.Sequence,
 		Preprepare:                 preprepare,
 		Prepares:                   newMessageSet(validatorSet),
-		Commits:                    newMessageSet(validatorSet),
+		Confirms:                   newMessageSet(validatorSet),
 		lockedHash:                 lockedHash,
 		mu:                         new(sync.RWMutex),
 		pendingRequest:             pendingRequest,
@@ -62,7 +62,7 @@ type roundState struct {
 	Preprepare     *atlas.Preprepare
 	Prepares       *messageSet
 	Expect         *atlas.Subject
-	Commits        *messageSet
+	Confirms       *messageSet
 	Confirm        *atlas.Subject
 	lockedHash     common.Hash
 	pendingRequest *atlas.Request
@@ -227,7 +227,7 @@ func (s *roundState) DecodeRLP(stream *rlp.Stream) error {
 	s.sequence = ss.Sequence
 	s.Preprepare = ss.Preprepare
 	s.Prepares = ss.Prepares
-	s.Commits = ss.Commits
+	s.Confirms = ss.Commits
 	s.lockedHash = ss.lockedHash
 	s.pendingRequest = ss.pendingRequest
 
@@ -258,7 +258,7 @@ func (s *roundState) EncodeRLP(w io.Writer) error {
 		s.sequence,
 		s.Preprepare,
 		s.Prepares,
-		s.Commits,
+		s.Confirms,
 		s.lockedHash,
 		s.pendingRequest,
 		s.aggregatedPrepareSig,

@@ -189,7 +189,7 @@ OUTER:
 			if r0.state != StatePrepared {
 				t.Errorf("state mismatch: have %v, want %v", r0.state, StatePrepared)
 			}
-			if r0.current.Commits.Size() >= r0.QuorumSize() {
+			if r0.current.Confirms.Size() >= r0.QuorumSize() {
 				t.Errorf("the size of commit messages should be less than %v", r0.QuorumSize())
 			}
 			if r0.current.IsHashLocked() {
@@ -199,7 +199,7 @@ OUTER:
 		}
 
 		// core should have 2F+1 before Ceil2Nby3Block or Ceil(2N/3) prepare messages
-		if r0.current.Commits.Size() < r0.QuorumSize() {
+		if r0.current.Confirms.Size() < r0.QuorumSize() {
 			t.Errorf("the size of commit messages should be larger than 2F+1 or Ceil(2N/3): size %v", r0.QuorumSize())
 		}
 

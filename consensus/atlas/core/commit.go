@@ -38,7 +38,7 @@ func (c *core) sendCommit() {
 		}
 
 		c.broadcast(&message{
-			Code: msgConfirm,
+			Code: msgCommit,
 			Msg:  encodedSubject,
 		})
 	}
@@ -90,7 +90,7 @@ func (c *core) handleCommit(msg *message, src atlas.Validator) error {
 	//
 	// If we already have a proposal, we may have chance to speed up the consensus process
 	// by committing the proposal without PREPARE messages.
-	if c.current.Commits.Size() >= c.QuorumSize() && c.state.Cmp(StateCommitted) < 0 {
+	if c.current.Confirms.Size() >= c.QuorumSize() && c.state.Cmp(StateCommitted) < 0 {
 		// Still need to call LockHash here since state can skip Expect state and jump directly to the Confirm state.
 		c.current.LockHash()
 		c.commit()
@@ -102,6 +102,14 @@ func (c *core) handleCommit(msg *message, src atlas.Validator) error {
 
 // verifyCommit verifies if the received COMMIT message is equivalent to our subject
 func (c *core) verifyCommit(commit *atlas.Subject, src atlas.Validator) error {
+	logger := c.logger.New("from", src, "state", c.state)
+
+	sub := c.current.Subject()
+	if !atlas.IsConsistentSubject(commit, sub) {
+		logger.Warn("Inconsistent subjects between commit and proposal", "expected", sub, "got", commit)
+		return errInconsistentSubject
+	}
+
 	return nil
 }
 
@@ -109,7 +117,7 @@ func (c *core) acceptCommit(msg *message, src atlas.Validator, validatorSet atla
 	logger := c.logger.New("from", src, "state", c.state)
 
 	// Add the COMMIT message to current round state
-	if err := c.current.Commits.Add(msg); err != nil {
+	if err := c.current.Confirms.Add(msg); err != nil {
 		logger.Error("Failed to record commit message", "msg", msg, "err", err)
 		return err
 	}

@@ -38,7 +38,7 @@ func (c *core) sendConfirm() {
 	}
 
 	c.broadcast(&message{
-		Code: msgPrepare,
+		Code: msgConfirm,
 		Msg:  encodedSubject,
 	})
 }
@@ -53,7 +53,7 @@ func (c *core) handleConfirm(msg *message, src atlas.Validator) error {
 		return errFailedDecodeConfirm
 	}
 
-	if err := c.checkMessage(msgPrepare, confirm.View); err != nil {
+	if err := c.checkMessage(msgConfirm, confirm.View); err != nil {
 		return err
 	}
 
@@ -80,9 +80,9 @@ func (c *core) handleConfirm(msg *message, src atlas.Validator) error {
 	// Change to Expect state if we've received enough CONFIRM messages or it is locked
 	// and we are in earlier state before Expect state.
 	if ((c.current.IsHashLocked() && confirm.Digest == c.current.GetLockedHash()) || c.current.GetConfirmSize() >= c.QuorumSize()) &&
-		c.state.Cmp(StateExpected) < 0 {
+		c.state.Cmp(StateConfirmed) < 0 {
 		c.current.LockHash()
-		c.setState(StateExpected)
+		c.setState(StateConfirmed)
 		c.sendCommit()
 	}
 
@@ -146,13 +146,19 @@ func (c *core) acceptConfirm(msg *message, src atlas.Validator) error {
 		return errDuplicateMessage
 	}
 
-	if c.state != StateConfirmed {
+	if c.state == StateConfirmed {
 		return nil
 	}
 
 	if err := c.current.confirmBitmap.SetKey(pubKey, true); err == nil {
 		c.current.aggregatedConfirmSig.Add(&sign)
 		c.current.aggregatedConfirmPublicKey.Add(pubKey)
+	}
+
+	// Add the PREPARE message to current round state
+	if err := c.current.Confirms.Add(msg); err != nil {
+		logger.Error("Failed to add PREPARE message to round state", "msg", msg, "err", err)
+		return err
 	}
 
 	return nil
