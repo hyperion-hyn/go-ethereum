@@ -60,7 +60,9 @@ func TestHandleCommit(t *testing.T) {
 
 					if i == 0 {
 						// replica 0 is the proposer
-						c.state = StatePrepared
+						c.state = StateConfirmed
+					} else {
+						c.state = StateExpected
 					}
 				}
 				return sys
@@ -81,8 +83,9 @@ func TestHandleCommit(t *testing.T) {
 							expectedSubject.View,
 							c.valSet,
 						)
-						c.state = StatePreprepared
+						c.state = StateConfirmed
 					} else {
+						c.state = StateExpected
 						c.current = newTestRoundState(
 							&atlas.View{
 								Round:    big.NewInt(2),
@@ -94,7 +97,7 @@ func TestHandleCommit(t *testing.T) {
 				}
 				return sys
 			}(),
-			errFutureMessage,
+			errOldMessage,
 		},
 		{
 			// subject not match
@@ -110,8 +113,9 @@ func TestHandleCommit(t *testing.T) {
 							expectedSubject.View,
 							c.valSet,
 						)
-						c.state = StatePreprepared
+						c.state = StateConfirmed
 					} else {
+						c.state = StateExpected
 						c.current = newTestRoundState(
 							&atlas.View{
 								Round:    big.NewInt(0),
@@ -123,7 +127,7 @@ func TestHandleCommit(t *testing.T) {
 				}
 				return sys
 			}(),
-			errOldMessage,
+			errFutureMessage,
 		},
 		{
 			// jump state
@@ -144,9 +148,9 @@ func TestHandleCommit(t *testing.T) {
 					// only replica0 stays at StatePreprepared
 					// other replicas are at StatePrepared
 					if i != 0 {
-						c.state = StatePrepared
-					} else {
 						c.state = StatePreprepared
+					} else {
+						c.state = StateConfirmed
 					}
 				}
 				return sys
@@ -163,10 +167,43 @@ OUTER:
 		v0 := test.system.backends[0]
 		r0 := v0.engine.(*core)
 
-		for i, v := range test.system.backends {
-			validator := r0.valSet.GetByIndex(uint64(i))
-			m, _ := Encode(v.engine.(*core).current.Subject())
-			if err := r0.handleCommit(&message{
+		for _, v := range test.system.backends {
+			c := v.engine.(*core)
+			_, validator := r0.valSet.GetBySigner(c.Signer())
+			signedSubject, err := c.SignSubject(c.current.Subject())
+			if err != nil {
+				t.Errorf("failed to sing subject")
+			}
+			m, _ := Encode(signedSubject)
+			s := r0.state
+			r0.state = StateExpected
+			if err := r0.acceptConfirm(&message{
+				Code:          msgConfirm,
+				Msg:           m,
+				Signer:        validator.Signer(),
+				Signature:     []byte{},
+				CommittedSeal: validator.Signer().Bytes(), // small hack
+			}, validator); err != nil {
+				t.Errorf("failed to acceptConfirm message: %v", err)
+			}
+			r0.state = s
+		}
+
+		for _, v := range test.system.backends {
+			validator := r0.valSet.GetProposer()
+			c := v.engine.(*core)
+
+			s := r0.state
+			r0.state = StateConfirmed
+			signedSubject, err := r0.AssembleSignedSubject()
+			if err != nil {
+				t.Errorf("failed to assemble subject: %v", err)
+			}
+			r0.state = s
+
+			m, _ := Encode(signedSubject)
+
+			if err := c.handleCommit(&message{
 				Code:          msgCommit,
 				Msg:           m,
 				Signer:        validator.Signer(),
@@ -176,7 +213,7 @@ OUTER:
 				if err != test.expectedErr {
 					t.Errorf("error mismatch: have %v, want %v", err, test.expectedErr)
 				}
-				if r0.current.IsHashLocked() {
+				if c.current.IsHashLocked() {
 					t.Errorf("block should not be locked")
 				}
 				continue OUTER
@@ -186,8 +223,8 @@ OUTER:
 		// prepared is normal case
 		if r0.state != StateCommitted {
 			// There are not enough commit messages in core
-			if r0.state != StatePrepared {
-				t.Errorf("state mismatch: have %v, want %v", r0.state, StatePrepared)
+			if r0.state != StateConfirmed {
+				t.Errorf("state mismatch: have %v, want %v", r0.state, StateConfirmed)
 			}
 			if r0.current.Confirms.Size() >= r0.QuorumSize() {
 				t.Errorf("the size of commit messages should be less than %v", r0.QuorumSize())
@@ -312,10 +349,9 @@ func TestVerifyCommit(t *testing.T) {
 			t.Errorf("failed to sign subject: %v", err)
 		}
 
-		if err := c.verifyCommit(signedSubject, peer); err != nil {
-			if err != test.expected {
-				t.Errorf("result %d: error mismatch: have %v, want %v", i, err, test.expected)
-			}
+		err = c.verifyCommit(signedSubject, peer)
+		if err != test.expected {
+			t.Errorf("result %d: error mismatch: have %v, want %v", i, err, test.expected)
 		}
 	}
 }

@@ -81,6 +81,7 @@ func (c *core) handleConfirm(msg *message, src atlas.Validator) error {
 	// and we are in earlier state before Expect state.
 	if ((c.current.IsHashLocked() && confirm.Digest == c.current.GetLockedHash()) || c.current.GetConfirmSize() >= c.QuorumSize()) &&
 		c.state.Cmp(StateConfirmed) < 0 {
+		// ATLAS(zgx): wanting for more time to collect signatures for rewarding
 		c.current.LockHash()
 		c.setState(StateConfirmed)
 		c.sendCommit()
@@ -146,6 +147,7 @@ func (c *core) acceptConfirm(msg *message, src atlas.Validator) error {
 		return errDuplicateMessage
 	}
 
+	// ATLAS(zgx): should wait more time to collect signature for rewarding
 	if c.state == StateConfirmed {
 		return nil
 	}

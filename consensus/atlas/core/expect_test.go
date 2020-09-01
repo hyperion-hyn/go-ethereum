@@ -194,12 +194,13 @@ OUTER:
 			s := r0.state
 			r0.state = StatePrepared
 			signedSubject, err := r0.AssembleSignedSubject()
-			r0.state = s
-
-			m, _ := Encode(signedSubject)
 			if err != nil {
 				t.Errorf("failed to assemble subject: %v", err)
 			}
+			r0.state = s
+
+			m, _ := Encode(signedSubject)
+
 			if err := c.handleExpect(&message{
 				Code:          msgExpect,
 				Msg:           m,
