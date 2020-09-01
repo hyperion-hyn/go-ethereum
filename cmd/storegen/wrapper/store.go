@@ -67,6 +67,15 @@ func Store(types []string, layouts []string, pkg string, lang bind.Lang) (string
 	}
 	buffer := new(bytes.Buffer)
 
+	// enhance
+	isBasicTypeWrapper := func (val interface{}) bool {
+		return isBasicOrDefineType(val, basics)
+	}
+	isDefineTypeWrapper := func (val interface{}) bool {
+		return isBasicOrDefineType(val, defines)
+	}
+	// enhance - end
+
 	funcs := map[string]interface{}{
 		"bindtype":             bindType[lang],
 		"capitalise":           capitalise,
@@ -79,6 +88,10 @@ func Store(types []string, layouts []string, pkg string, lang bind.Lang) (string
 		"isFixedSizeByteArray": isFixedSizeByteArray,
 		"match":                match,
 		"GetReflectType":       GetReflectType,
+
+		// enhance
+		"isBasicType":          isBasicTypeWrapper,
+		"isDefineType":         isDefineTypeWrapper,
 	}
 	tmpl := template.Must(template.New("").Funcs(funcs).Parse(tmplSource[lang]))
 	if err := tmpl.Execute(buffer, data); err != nil {
@@ -179,4 +192,25 @@ func isFixedSizeByteArray(val interface{}) bool {
 func match(value string, pattern string) bool {
 	re := regexp.MustCompile(pattern)
 	return re.MatchString(value)
+}
+
+
+// enhance
+func isBasicOrDefineType(val interface{}, basicOrDefineTypes map[string]*tmplStruct) bool {
+	switch v := val.(type) {
+	case tmplField:
+		_, ok := basicOrDefineTypes[v.Type]
+		return ok
+	case *tmplField:
+		_, ok := basicOrDefineTypes[v.Type]
+		return ok
+	case tmplStruct:
+		_, ok := basicOrDefineTypes[v.Type]
+		return ok
+	case *tmplStruct:
+		_, ok := basicOrDefineTypes[v.Type]
+		return ok
+	default:
+		return false
+	}
 }
