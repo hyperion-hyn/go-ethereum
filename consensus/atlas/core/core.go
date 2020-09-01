@@ -396,43 +396,16 @@ func (c *core) AssembleSignedSubject() (*atlas.Subject, error) {
 	}
 }
 
-func (c *core) verifySignPayload(subject *atlas.Subject, validatorSet atlas.ValidatorSet) error {
-	logger := c.logger.New("state", c.state)
+func (c *core) verifySignPayload(subject *atlas.Subject, validatorSet atlas.ValidatorSet) (*atlas.SignPayload, error) {
+	var signPayload atlas.SignPayload
+	if err := rlp.DecodeBytes(subject.Payload, &signPayload); err != nil {
+		return nil, errFailedDecodeSignPayload
 
-	var signPayload *atlas.SignPayload
-	if err := rlp.DecodeBytes(subject.Payload, signPayload); err != nil {
-		return errFailedDecodeCommit
-	}
-	var sign bls.Sign
-	if err := sign.Deserialize(signPayload.Signature); err != nil {
-		logger.Error("Failed to deserialize signature", "signature", signPayload.Signature, "err", err)
-		return err
+	} else if err = c.checkValidatorSignature(subject.Digest.Bytes(), signPayload.Signature, signPayload.PublicKey); err != nil {
+		return nil, err
 	}
 
-	var pubKey bls.PublicKey
-	if err := pubKey.Deserialize(signPayload.PublicKey); err != nil {
-		logger.Error("Failed to deserialize signer's public key", "publicKey", signPayload.PublicKey, "err", err)
-		return err
-	}
-
-	hash := crypto.Keccak256Hash(subject.Digest.Bytes())
-	if sign.VerifyHash(&pubKey, hash.Bytes()) == false {
-		logger.Error("Failed to verify signature with signer's public key commit", "signature", signPayload.Signature[:10], "publicKey", signPayload.PublicKey[:10])
-		return errInvalidSignature
-	}
-
-	if len(signPayload.Mask) != 0 {
-		bitmap, _ := bls_cosi.NewMask(validatorSet.GetPublicKeys(), nil)
-		if err := bitmap.SetMask(signPayload.Mask); err != nil {
-			logger.Error("Failed to SetMask", "err", err)
-			return err
-		}
-
-		if bitmap.CountEnabled() < c.QuorumSize() {
-			return errNotSatisfyQuorum
-		}
-	}
-	return nil
+	return &signPayload, nil
 }
 
 func (c *core) getValidatorPublicKey(signer common.Address, valSet atlas.ValidatorSet) (*bls.PublicKey, error) {
