@@ -177,9 +177,8 @@ func (s *Storage_Map3NodeWrapper_) ActivateMap3Node(epoch *big.Int) error {
 	for _, delegator := range s.Microdelegations().AllKeys() {
 		delegation, ok := s.Microdelegations().Get(delegator)
 		if !ok {
-			return errors.Wrapf(errMicrodelegationNotExist, "delegation should exist",
-				"map3", s.Map3Node().Map3Address().Value().String(),
-				"delegator", delegator.String())
+			return errors.Wrapf(errMicrodelegationNotExist, "delegation should exist, map3: %v, delegator: %v",
+				s.Map3Node().Map3Address().Value().String(), delegator.String())
 		}
 		pd := delegation.PendingDelegation().Amount().Value()
 		delegation.AddAmount(pd)
