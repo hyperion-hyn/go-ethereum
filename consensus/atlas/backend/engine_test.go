@@ -71,9 +71,11 @@ func newBlockChain(n int) (*core.BlockChain, *backend, []*bls.SecretKey) {
 	for _, key := range signerKeys {
 		addr := crypto.PubkeyToSigner(key.GetPublicKey())
 		if addr.String() == proposerAddr.String() {
-			b.signFn = func(accounts.Account, common.Hash) (signature []byte, publicKey []byte, mask []byte, err error) {
-				// ATLAX(zgx): implement signFn
-				return nil, nil, nil, nil
+			b.signFn = func(account accounts.Account, hash common.Hash) (signature []byte, publicKey []byte, mask []byte, err error) {
+				secrectKey := key
+				sign := secrectKey.SignHash(hash.Bytes())
+
+				return sign.Serialize(), secrectKey.GetPublicKey().Serialize(), nil, nil
 			}
 			b.signer = addr
 		}

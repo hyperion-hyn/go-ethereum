@@ -179,6 +179,6 @@ func buildArbitraryP2PNewBlockMessage(t *testing.T, invalidMsg bool) (*types.Blo
 	if err != nil {
 		t.Fatalf("can't read payload due to %s", err)
 	}
-	arbitraryP2PMessage := p2p.Msg{Code: 0x07, Size: uint32(size), Payload: bytes.NewReader(payload)}
+	arbitraryP2PMessage := p2p.Msg{Code: NewBlockMsg, Size: uint32(size), Payload: bytes.NewReader(payload)}
 	return arbitraryBlock, arbitraryP2PMessage
 }
