@@ -27,10 +27,3 @@ func (c *Commission_) SanityCheck() error {
 	}
 	return nil
 }
-
-func (s *Storage_Commission_) Load() *Commission_ {
-	s.Rate().Value()
-	s.RateForNextPeriod().Value()
-	s.UpdateHeight().Value()
-	return s.obj
-}

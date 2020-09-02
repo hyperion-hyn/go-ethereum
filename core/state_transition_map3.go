@@ -56,7 +56,7 @@ func (st *StateTransition) verifyAndApplyMicrodelegateTx(msg *microstaking.Micro
 	// TODO(ATLAS): only allow in pending status
 	isNewDelegator := node.AddMicrodelegation(msg.DelegatorAddress, msg.Amount, true, epoch)
 	if isNewDelegator {
-		st.state.Map3NodePool().UpdateDelegationIndex(msg.DelegatorAddress, microstaking.DelegationIndex_{
+		st.state.Map3NodePool().UpdateDelegationIndex(msg.DelegatorAddress, &microstaking.DelegationIndex_{
 			Map3Address: msg.Map3NodeAddress,
 			IsOperator:  node.IsOperator(msg.DelegatorAddress),
 		})
@@ -100,7 +100,7 @@ func saveNewMap3NodeToPool(wrapper *microstaking.Map3NodeWrapper_, map3NodePool 
 		map3NodePool.DescriptionIdentitySet().Get(identity).SetValue(true)
 	}
 	map3Address, operator := wrapper.Map3Node.Map3Address, wrapper.Map3Node.OperatorAddress
-	map3NodePool.UpdateDelegationIndex(operator, microstaking.DelegationIndex_{
+	map3NodePool.UpdateDelegationIndex(operator, &microstaking.DelegationIndex_{
 		Map3Address: map3Address,
 		IsOperator:  true,
 	})
@@ -118,8 +118,8 @@ func updateMap3NodeFromPoolByMsg(map3Node *microstaking.Storage_Map3NodeWrapper_
 
 	if msg.NodeKeyToRemove != nil {
 		for i := 0; i < map3Node.Map3Node().NodeKeys().Length(); i++ {
-			if *msg.NodeKeyToRemove == *map3Node.Map3Node().NodeKeys().Get(i) {
-				map3Node.Map3Node().NodeKeys().Remove(i, false)
+			if map3Node.Map3Node().NodeKeys().Get(i).Equal(msg.NodeKeyToRemove) {
+				map3Node.Map3Node().NodeKeys().Remove(i)
 				pool.NodeKeySet().Get(msg.NodeKeyToRemove.Hex()).SetValue(false)
 				break
 			}

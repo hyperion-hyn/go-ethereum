@@ -85,77 +85,7 @@ func (n *Map3Node_) SanityCheck(maxPubKeyAllowed int) error {
 	return nil
 }
 
-func (s *Storage_Map3Node_) Load() *Map3Node_ {
-	s.Map3Address().Value()
-	s.OperatorAddress().Value()
-	s.NodeKeys().Load()
-	s.Commission().Load()
-	s.Description().Load()
-	s.CreationHeight().Value()
-	s.Age().Value()
-	s.Status().Value()
-	s.ActivationEpoch().Value()
-	s.ReleaseEpoch().Value()
-	return s.obj
-}
-
-func (s *Storage_Map3Node_) Save(node *Map3Node_) {
-	if node.Map3Address != common.BigToAddress(common.Big0) {
-		s.Map3Address().SetValue(node.Map3Address)
-	}
-	if node.OperatorAddress != common.BigToAddress(common.Big0) {
-		s.OperatorAddress().SetValue(node.OperatorAddress)
-	}
-	if len(node.NodeKeys.Keys) != 0 {
-		s.NodeKeys().Save(&node.NodeKeys)
-	}
-	if !node.Commission.Rate.IsNil() {
-		s.Commission().Rate().SetValue(node.Commission.Rate)
-	}
-	if !node.Commission.RateForNextPeriod.IsNil() {
-		s.Commission().RateForNextPeriod().SetValue(node.Commission.RateForNextPeriod)
-	}
-	if node.Commission.UpdateHeight != nil {
-		s.Commission().UpdateHeight().SetValue(node.Commission.UpdateHeight)
-	}
-
-	if node.Description.Name != "" {
-		s.Description().Name().SetValue(node.Description.Name)
-	}
-	if node.Description.Identity != "" {
-		s.Description().Identity().SetValue(node.Description.Identity)
-	}
-	if node.Description.Website != "" {
-		s.Description().Website().SetValue(node.Description.Website)
-	}
-	if node.Description.SecurityContact != "" {
-		s.Description().SecurityContact().SetValue(node.Description.SecurityContact)
-	}
-	if node.Description.Details != "" {
-		s.Description().Details().SetValue(node.Description.Details)
-	}
-
-	if node.CreationHeight != nil {
-		s.CreationHeight().SetValue(node.CreationHeight)
-	}
-	if node.Status != uint8(Nil) {
-		s.Status().SetValue(node.Status)
-	}
-	if node.ActivationEpoch != nil {
-		s.ActivationEpoch().SetValue(node.ActivationEpoch)
-	}
-	if !node.ReleaseEpoch.IsNil() {
-		s.ReleaseEpoch().SetValue(node.ReleaseEpoch)
-	}
-}
-
 // Storage_Map3NodeWrapper_
-func (s *Storage_Map3NodeWrapper_) Save(map3Node *Map3NodeWrapper_) {
-	s.Map3Node().Save(&map3Node.Map3Node)
-	s.Microdelegations().Save(map3Node.Microdelegations)
-	panic("no implement")
-}
-
 func (s *Storage_Map3NodeWrapper_) AddTotalDelegation(amount *big.Int) {
 	totalDelegation := s.TotalDelegation().Value()
 	totalDelegation = totalDelegation.Add(totalDelegation, amount)
@@ -253,7 +183,7 @@ func (s *Storage_Map3NodeWrapper_) ActivateMap3Node(epoch *big.Int) error {
 		}
 		pd := delegation.PendingDelegation().Amount().Value()
 		delegation.AddAmount(pd)
-		delegation.PendingDelegation().SetNil()
+		delegation.PendingDelegation().Clear()
 	}
 	s.AddTotalDelegation(s.TotalPendingDelegation().Value())
 	s.TotalPendingDelegation().SetValue(common.Big0)
@@ -267,6 +197,25 @@ func (s *Storage_Map3NodeWrapper_) ActivateMap3Node(epoch *big.Int) error {
 	s.Map3Node().Status().SetValue(uint8(Active))
 	s.Map3Node().ActivationEpoch().SetValue(epoch)
 	return nil
+}
+
+func (s *Storage_Map3NodeWrapper_) LoadFully() (*Map3NodeWrapper_, error) {
+	s.Map3Node().load()
+	if _, err := s.Microdelegations().LoadFully(); err != nil {
+		return nil, err
+	}
+	s.RedelegationReference().load()
+	s.AccumulatedReward().Value()
+	s.TotalDelegation().Value()
+	s.TotalPendingDelegation().Value()
+
+	// copy
+	src := s.obj
+	des := Map3NodeWrapper_{}
+	if err := deepCopy(src, &des); err != nil {
+		return nil, err
+	}
+	return &des, nil
 }
 
 // Storage_ValidatorWrapperMap_
@@ -307,7 +256,7 @@ func (s *Storage_Map3NodeWrapperMap_) Get(key common.Address) (*Storage_Map3Node
 	return nil, false
 }
 
-func (s *Storage_Map3NodePool_) UpdateDelegationIndex(delegator common.Address, index DelegationIndex_) {
+func (s *Storage_Map3NodePool_) UpdateDelegationIndex(delegator common.Address, index *DelegationIndex_) {
 	indexMap := s.DelegationIndexMapByDelegator().Get(delegator)
 	indexMap.Put(delegator, index)
 }

@@ -125,7 +125,11 @@ func VerifyEditMap3NodeMsg(stateDB vm.StateDB, epoch, blockNum *big.Int, msg *mi
 		return errInvalidMap3NodeOperator
 	}
 
-	node := wrapper.Map3Node().Load()
+	node, err := wrapper.Map3Node().Load()
+	if err != nil {
+		return err
+	}
+
 	if err := microstaking.UpdateMap3NodeFromEditMsg(node, msg); err != nil {
 		return err
 	}
