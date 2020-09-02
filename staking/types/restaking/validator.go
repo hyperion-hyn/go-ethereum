@@ -10,11 +10,6 @@ import (
 const (
 	MaxPubKeyAllowed         = 1
 	DoNotEnforceMaxBLS       = -1
-	MaxNameLength            = 140
-	MaxIdentityLength        = 140
-	MaxWebsiteLength         = 140
-	MaxSecurityContactLength = 140
-	MaxDetailsLength         = 280
 )
 
 var (
@@ -59,12 +54,12 @@ func (a *AddressSet_) Put(address common.Address) {
 
 // Storage_AddressSet_
 func (s *Storage_AddressSet_) AllKeys() []common.Address {
-	addressSlice := make([]common.Address, 0)
-	addressLength := s.Keys().Length()
-	for i := 0; i < addressLength; i++ {
-		addressSlice = append(addressSlice, s.Keys().Get(i).Value())
+	result := make([]common.Address, 0)
+	length := s.Keys().Length()
+	for i := 0; i < length; i++ {
+		result = append(result, s.Keys().Get(i).Value())
 	}
-	return addressSlice
+	return result
 }
 
 
@@ -212,10 +207,7 @@ func (s *Storage_ValidatorWrapper_) SubTotalDelegationByOperator(amount *big.Int
 }
 
 func (s *Storage_ValidatorWrapper_) IsOperator(delegator common.Address) bool {
-	if s.Validator().OperatorAddresses().Set().Get(delegator).Value() {
-		return true
-	}
-	return false
+	return s.Validator().OperatorAddresses().Set().Get(delegator).Value()
 }
 
 func (s *Storage_ValidatorWrapper_) AddRedelegation(delegator common.Address, amount *big.Int) {
@@ -236,7 +228,7 @@ func (s *Storage_ValidatorWrapper_) Undelegate(delegator common.Address, epoch *
 		amount := redelegation.Amount().Value()
 		redelegation.Undelegation().Amount().SetValue(amount)
 		redelegation.Undelegation().Epoch().SetValue(epoch)
-		redelegation.Amount().SetValue(common.Big0)
+		redelegation.Amount().Clear()
 		s.SubTotalDelegation(amount)
 		if s.IsOperator(delegator) {
 			s.SubTotalDelegationByOperator(amount)
@@ -277,18 +269,16 @@ func (s *Storage_ValidatorWrapperMap_) AllKeys() []common.Address {
 
 func (s *Storage_ValidatorWrapperMap_) Put(key common.Address, validator *ValidatorWrapper_) {
 	if s.Contain(key) {
+		s.Map().Get(key).Entry().Clear() // TODO(ATLAS): not supported
 		s.Map().Get(key).Entry().Save(validator)
 	} else {
-		keysLength := s.Keys().Length()
+		length := s.Keys().Length()
 		//set keys
-		s.Keys().Get(keysLength).SetValue(key)
+		s.Keys().Get(length).SetValue(key)
 		//set map
-		sValidatorWrapper := s.Map().Get(key)
-		//set map entity
-		sValidatorWrapperEntity := sValidatorWrapper.Entry()
-		sValidatorWrapperEntity.Save(validator)
-		//set map index
-		sValidatorWrapper.Index().SetValue(big.NewInt(0).Add(big.NewInt(int64(keysLength)), common.Big1)) //because index start with 1
+		entry := s.Map().Get(key)
+		entry.Index().SetValue(big.NewInt(int64(length + 1))) // because index start with 1
+		entry.Entry().Save(validator)
 	}
 }
 

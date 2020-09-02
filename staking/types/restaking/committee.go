@@ -70,46 +70,36 @@ func (s *Storage_Slots_) Length() int {
 }
 
 func (s *Storage_Slots_) Get(index int) *Storage_Slot_ {
+	if index < 0 || index >= s.Length() {
+		panic("out of range")
+	}
 	return s.Entrys().Get(index)
 }
 
 func (s *Storage_Slots_) Set(index int, key *Slot_) {
+	s.Entrys().Get(index).Clear()
 	s.Entrys().Get(index).Save(key)
 }
 
-func (s *Storage_Slots_) Remove(index int, keepOrder bool) {
+func (s *Storage_Slots_) Remove(index int) {
 	// remove from index
-	oldEntriesLength := s.Entrys().Length()
-
-	//set lastEntity to index
-	lastEntry := s.Entrys().Get(oldEntriesLength - 1)
-	if oldEntriesLength > 1 {
-		s.Entrys().Get(index).Save(&Slot_{
-			EcdsaAddress: lastEntry.EcdsaAddress().Value(),
-			BLSPublicKey: BLSPublicKey_{
-				Key: lastEntry.BLSPublicKey().Key().Value(),
-			},
-			EffectiveStake: lastEntry.EffectiveStake().Value(),
-		})
+	length := s.Length()
+	if index < 0 || index >= length {
+		panic("out of range")
 	}
 
-	//set lastEntity to zero
-	lastEntry.Clear()
-
-	//resize slice
-	s.Entrys().Resize(oldEntriesLength - 1)
+	//set lastEntity to index
+	if length > 1 {
+		lastOne := s.Entrys().Get(length - 1).load()
+		s.Set(index, lastOne)
+	}
+	s.Entrys().Get(length - 1).Clear() //remove lastOne
+	s.Entrys().Resize(length - 1)	//resize length
 }
 
 func (s *Storage_Slots_) Push(slot *Slot_) {
-	entityLength := s.Entrys().Length()
-	s.Entrys().Get(entityLength).Save(slot)
-}
-
-func (s *Storage_Slots_) Pop() *Storage_Slot_ {
-	entityLength := s.Entrys().Length()
-	storageSlot := s.Entrys().Get(entityLength - 1)
-	s.Remove(entityLength-1, false)
-	return storageSlot
+	length := s.Length()
+	s.Set(length, slot)
 }
 
 
@@ -117,9 +107,7 @@ var (
 	blsKeyCache singleflight.Group
 )
 
-func lookupBLSPublicKeys(
-	c *Committee_,
-) ([]*bls.PublicKey, error) {
+func lookupBLSPublicKeys(c *Committee_) ([]*bls.PublicKey, error) {
 	key := c.Hash().Hex()
 	results, err, _ := blsKeyCache.Do(
 		key, func() (interface{}, error) {

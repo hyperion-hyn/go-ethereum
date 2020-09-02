@@ -54,50 +54,45 @@ func (pk *BLSPublicKey_) FromLibBLSPublicKey(key *bls.PublicKey) error {
 	return nil
 }
 
+// Storage_BLSPublicKey_
+func (s *Storage_BLSPublicKey_) Equal(key_ *BLSPublicKey_) bool {
+	return s.Key().Value() == key_.Key
+}
+
 // Storage_BLSPublicKeys_
 func (s *Storage_BLSPublicKeys_) Length() int {
 	return s.Keys().Length()
 }
 
-func (s *Storage_BLSPublicKeys_) Get(index int) *BLSPublicKey_ {
-	s.Keys().Get(index).Key().Value()
-	return s.Keys().Get(index).obj
+func (s *Storage_BLSPublicKeys_) Get(index int) *Storage_BLSPublicKey_ {
+	if index < 0 || index >= s.Length() {
+		panic("out of range")
+	}
+	return s.Keys().Get(index)
 }
 
 func (s *Storage_BLSPublicKeys_) Set(index int, key *BLSPublicKey_) {
-	s.Keys().Get(index).Key().SetValue(key.Key)
+	s.Keys().Get(index).Clear()
+	s.Keys().Get(index).Save(key)
 }
 
-func (s *Storage_BLSPublicKeys_) Remove(index int, keepOrder bool) {
+func (s *Storage_BLSPublicKeys_) Remove(index int) {
 	//remove current
 	length := s.Length()
+	if index < 0 || index >= length {
+		panic("out of range")
+	}
 
 	//replace lastOne to index if length !=1
 	if length > 1 {
-		lastOneStorage := s.Keys().Get(length - 1)
-		s.Keys().Get(index).Key().SetValue(lastOneStorage.Key().Value())
+		lastOne := s.Keys().Get(length - 1).load()
+		s.Set(index, lastOne)
 	}
-	//remove lastOne
-	s.Keys().Get(length - 1).Key().SetValue([48]uint8{})
-
-	//resize length
-	s.Keys().Resize(length - 1)
+	s.Keys().Get(length - 1).Clear() //remove lastOne
+	s.Keys().Resize(length - 1)	//resize length
 }
 
 func (s *Storage_BLSPublicKeys_) Push(key *BLSPublicKey_) {
 	length := s.Length()
-
-	//over length will auto resize , not resize again
-	s.Keys().Get(length).Key().SetValue(key.Key)
-}
-
-func (s *Storage_BLSPublicKeys_) Pop() *BLSPublicKey_ {
-	length := s.Length()
-
-	blsPublicKeyTemp :=
-		BLSPublicKey_{Key: s.Keys().Get(length - 1).Key().Value()}
-
-	s.Keys().Get(length - 1).Key().SetValue([48]uint8{})
-	s.Keys().Resize(length - 1)
-	return &blsPublicKeyTemp
+	s.Set(length, key)
 }

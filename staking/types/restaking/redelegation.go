@@ -78,32 +78,28 @@ func (s *Storage_Redelegation_) CanReleaseAt(epoch *big.Int) bool {
 
 // Storage_RedelegationMap_
 func (s *Storage_RedelegationMap_) AllKeys() []common.Address {
-	addressSlice := make([]common.Address, 0)
-	addressLength := s.Keys().Length()
-	for i := 0; i < addressLength; i++ {
-		addressSlice = append(addressSlice, s.Keys().Get(i).Value())
+	result := make([]common.Address, 0)
+	length := s.Keys().Length()
+	for i := 0; i < length; i++ {
+		result = append(result, s.Keys().Get(i).Value())
 	}
-	return addressSlice
+	return result
 }
 
 func (s *Storage_RedelegationMap_) Put(key common.Address, redelegation *Redelegation_) {
 	if s.Contain(key) {
+		s.Map().Get(key).Entry().Clear()
 		s.Map().Get(key).Entry().Save(redelegation)
 	} else {
-		keysLength := s.Keys().Length()
+		length := s.Keys().Length()
 		//set keys
-		s.Keys().Get(keysLength).SetValue(key)
+		s.Keys().Get(length).SetValue(key)
 
-		s.Get(key)
 		//set map
-		sRedelegation := s.Map().Get(key)
-		//set map entity
-		sRedelegationEntity := sRedelegation.Entry()
-		sRedelegationEntity.Save(redelegation)
-		//set map index
-		sRedelegation.Index().SetValue(big.NewInt(0).Add(big.NewInt(int64(keysLength)), common.Big1)) //because index start with 1
+		entry := s.Map().Get(key)
+		entry.Index().SetValue(big.NewInt(int64(length + 1))) // because index start with 1
+		entry.Entry().Save(redelegation)
 	}
-
 }
 
 func (s *Storage_RedelegationMap_) Contain(key common.Address) bool {
@@ -119,27 +115,25 @@ func (s *Storage_RedelegationMap_) Get(key common.Address) (*Storage_Redelegatio
 }
 
 func (s *Storage_RedelegationMap_) Remove(key common.Address) {
-	//remove keys
-	keysStorage := s.Keys()
-	keysLength := keysStorage.Length()
-	lastKey := keysStorage.Get(keysLength - 1).Value()
-	keyIndex := s.Map().Get(key).Index().Value()
-	if keysLength > 1 {
-		keysStorage.Get(int(keyIndex.Uint64() - 1)).SetValue(keysStorage.Get(keysLength - 1).Value())
-	}
-	keysStorage.Get(keysLength - 1).SetValue(common.BigToAddress(common.Big0))
-	s.Keys().Resize(keysLength - 1)
-
-	//remove map entry
-	maps := s.Map()
-	delegationElem := maps.Get(key)
-	if keysLength > 1 {
-		lastDelegationElem := maps.Get(lastKey)
-		lastDelegationElem.Index().SetValue(keyIndex)
+	if !s.Contain(key) {
+		return
 	}
 
-	delegationElem.Entry().Clear()
-	delegationElem.Index().SetValue(common.Big0)
+	entry := s.Map().Get(key)
+	index := int(entry.Index().Value().Int64()) // index + 1
+
+	// Move the last key to the index where the key to delete is
+	length := s.Keys().Length()
+	lastKey := s.Keys().Get(length - 1).Value()
+	s.Keys().Get(index - 1).SetValue(lastKey)
+
+	// Update the index for the moved key
+	s.Map().Get(lastKey).Index().SetValue(big.NewInt(int64(index)))
+
+	// Delete the slot where the moved key was stored
+	s.Keys().Get(length - 1).Clear()
+	s.Keys().Resize(length - 1)
+	entry.Clear()
 }
 
 func (s *Storage_RedelegationMap_) LoadFully() (*RedelegationMap_, error) {
