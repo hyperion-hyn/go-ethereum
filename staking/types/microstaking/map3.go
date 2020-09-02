@@ -276,7 +276,8 @@ func CreateMap3NodeFromNewMsg(msg *CreateMap3Node, map3Addr common.Address, bloc
 		OperatorAddress: msg.OperatorAddress,
 		NodeKeys:        NewBLSKeysWithBLSKey(msg.NodePubKey),
 		Commission: Commission_{
-			Rate: msg.Commission,
+			Rate:              msg.Commission,
+			RateForNextPeriod: msg.Commission,
 		},
 		Description:    msg.Description,
 		CreationHeight: blockNum,
