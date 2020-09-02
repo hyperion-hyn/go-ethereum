@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	errMap3NodeNotExist    = errors.New("map3 node does not exist")
+	errMap3NodeNotExist = errors.New("map3 node does not exist")
 
 	map3StorageAddress = common.BigToAddress(common.Big2) // TODO(ATLAS): what address?
 )
@@ -28,4 +28,8 @@ func (s *StateDB) Map3NodeByAddress(map3Address common.Address) (*microstaking.S
 		return nil, errMap3NodeNotExist
 	}
 	return node, nil
+}
+
+func (s *StateDB) IncrementMap3NodeNonce() {
+	s.SetNonce(map3StorageAddress, s.GetNonce(map3StorageAddress)+1)
 }
