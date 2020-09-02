@@ -185,8 +185,8 @@ func updateValidatorFromPoolByMsg(validator *restaking.Storage_ValidatorWrapper_
 
 	if msg.SlotKeyToRemove != nil {
 		for i := 0; i < validator.Validator().SlotPubKeys().Length(); i++ {
-			if *msg.SlotKeyToRemove == *validator.Validator().SlotPubKeys().Get(i) {
-				validator.Validator().SlotPubKeys().Remove(i, false)
+			if validator.Validator().SlotPubKeys().Get(i).Equal(msg.SlotKeyToRemove) {
+				validator.Validator().SlotPubKeys().Remove(i)
 				pool.SlotKeySet().Get(msg.SlotKeyToRemove.Hex()).SetValue(false)
 				break
 			}

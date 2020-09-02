@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/bls"
+	common2 "github.com/ethereum/go-ethereum/staking/types/common"
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	staketest "github.com/ethereum/go-ethereum/staking/types/restaking/test"
 	"github.com/pkg/errors"
@@ -23,7 +24,7 @@ const (
 	defNumPubPerAddr      = 1
 
 	validatorIndex  = 0
-	validator2Index = 1
+	validatorIndex2  = 7
 	delegatorIndex  = 6
 )
 
@@ -33,8 +34,9 @@ var (
 	createOperatorAddr  = makeTestAddr("operator")
 	createValidatorAddr = crypto.CreateAddress(createOperatorAddr, defaultNonce)
 	validatorAddr       = makeTestAddr(fmt.Sprint("val", validatorIndex))
+	validatorAddr2       = makeTestAddr(fmt.Sprint("val", validatorIndex2))
 	operatorAddr        = makeTestAddr(fmt.Sprint("op", validatorIndex))
-	validatorAddr2      = makeTestAddr(validator2Index)
+	operatorAddr2        = makeTestAddr(fmt.Sprint("op", validatorIndex2))
 	delegatorAddr       = makeTestAddr(delegatorIndex)
 )
 
@@ -551,7 +553,7 @@ func defaultMsgEditValidator() restaking.EditValidator {
 	var (
 		pub0Copy  restaking.BLSPublicKey_
 		pub12Copy restaking.BLSPublicKey_
-		sig12Copy restaking.BLSSignature
+		sig12Copy common2.BLSSignature
 	)
 	copy(pub0Copy.Key[:], blsKeys[0].pub.Key[:])
 	copy(pub12Copy.Key[:], blsKeys[12].pub.Key[:])
@@ -657,7 +659,7 @@ func TestVerifyUnredelegateMsg(t *testing.T) {
 				stateDB: makeDefaultStateForUndelegate(t),
 				epoch:   big.NewInt(defaultEpoch),
 				msg:     defaultMsgUndelegate(),
-				signer:  operatorAddr,
+				signer:  operatorAddr2,
 			},
 			wantErr: nil,
 		},
@@ -667,7 +669,7 @@ func TestVerifyUnredelegateMsg(t *testing.T) {
 				stateDB: nil,
 				epoch:   big.NewInt(defaultEpoch),
 				msg:     defaultMsgUndelegate(),
-				signer:  operatorAddr,
+				signer:  operatorAddr2,
 			},
 			wantErr: errStateDBIsMissing,
 		},
@@ -677,7 +679,7 @@ func TestVerifyUnredelegateMsg(t *testing.T) {
 				stateDB: makeDefaultStateForUndelegate(t),
 				epoch:   nil,
 				msg:     defaultMsgUndelegate(),
-				signer:  operatorAddr,
+				signer:  operatorAddr2,
 			},
 			wantErr: errEpochMissing,
 		},
@@ -701,7 +703,7 @@ func TestVerifyUnredelegateMsg(t *testing.T) {
 					msg.ValidatorAddress = makeTestAddr("addr not in chain")
 					return msg
 				}(),
-				signer: operatorAddr,
+				signer: operatorAddr2,
 			},
 			wantErr: errValidatorNotExist,
 		},
@@ -745,7 +747,7 @@ func TestVerifyUnredelegateMsg(t *testing.T) {
 }
 
 func makeDefaultSnapVWrapperForUndelegate() restaking.ValidatorWrapper_ {
-	w := makeVWrapperByIndex(validatorIndex)
+	w := makeVWrapperByIndex(validatorIndex2)
 	newRedelegation := restaking.Redelegation_{
 		DelegatorAddress: delegatorAddr,
 		Amount:           common.Big0,
@@ -771,8 +773,8 @@ func makeDefaultStateForUndelegate(t *testing.T) *state.StateDB {
 // undelegate from delegator which has already go one entry for undelegation
 func defaultMsgUndelegate() restaking.Unredelegate {
 	return restaking.Unredelegate{
-		DelegatorAddress: operatorAddr,
-		ValidatorAddress: validatorAddr,
+		DelegatorAddress: operatorAddr2,
+		ValidatorAddress: validatorAddr2,
 	}
 }
 
@@ -1008,7 +1010,8 @@ func (chain *fakeChainContext) ReadValidatorAtEpoch(epoch *big.Int, validator co
 }
 
 func (chain *fakeChainContext) ReadValidatorAtEpochOrCurrentBlock(epoch *big.Int, validator common.Address) (*restaking.Storage_ValidatorWrapper_, error) {
-	panic("no implement")
+	stateDB := chain.stateDBs[epoch.Uint64()]
+	return stateDB.ValidatorByAddress(validatorAddr)
 }
 
 func makeIdentityStr(item interface{}) string {
@@ -1030,19 +1033,19 @@ func makeKeyPairs(size int) []blsPubSigPair {
 
 type blsPubSigPair struct {
 	pub restaking.BLSPublicKey_
-	sig restaking.BLSSignature
+	sig common2.BLSSignature
 }
 
 func makeBLSKeyPair() blsPubSigPair {
 	blsPriv := bls.RandPrivateKey()
 	blsPub := blsPriv.GetPublicKey()
-	msgHash := crypto.Keccak256([]byte(restaking.BLSVerificationStr))
+	msgHash := crypto.Keccak256([]byte(common2.BLSVerificationStr))
 	sig := blsPriv.SignHash(msgHash)
 
 	var pub restaking.BLSPublicKey_
 	copy(pub.Key[:], blsPub.Serialize())
 
-	var signature restaking.BLSSignature
+	var signature common2.BLSSignature
 	copy(signature[:], sig.Serialize())
 
 	return blsPubSigPair{pub, signature}

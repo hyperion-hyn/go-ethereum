@@ -2,6 +2,14 @@ package restaking
 
 import "github.com/pkg/errors"
 
+var (
+	MaxNameLength            = 140
+	MaxIdentityLength        = 140
+	MaxWebsiteLength         = 140
+	MaxSecurityContactLength = 140
+	MaxDetailsLength         = 280
+)
+
 func (d *Description_) IncrementalUpdateFrom(other Description_) error {
 	if other.Name != "" {
 		d.Name = other.Name
@@ -51,20 +59,20 @@ func (d *Description_) EnsureLength() error {
 	return nil
 }
 
-func (s *Storage_Description_) IncrementalUpdateFrom(newDesc Description_) {
-	if newDesc.Name != "" {
-		s.Name().SetValue(newDesc.Name)
+func (s *Storage_Description_) IncrementalUpdateFrom(other Description_) {
+	if other.Name != "" {
+		s.Name().SetValue(other.Name)
 	}
-	if newDesc.Identity != "" {
-		s.Identity().SetValue(newDesc.Identity)
+	if other.Identity != "" {
+		s.Identity().SetValue(other.Identity)
 	}
-	if newDesc.Website != "" {
-		s.Website().SetValue(newDesc.Website)
+	if other.Website != "" {
+		s.Website().SetValue(other.Website)
 	}
-	if newDesc.SecurityContact != "" {
-		s.SecurityContact().SetValue(newDesc.SecurityContact)
+	if other.SecurityContact != "" {
+		s.SecurityContact().SetValue(other.SecurityContact)
 	}
-	if newDesc.Details != "" {
-		s.Details().SetValue(newDesc.Details)
+	if other.Details != "" {
+		s.Details().SetValue(other.Details)
 	}
 }

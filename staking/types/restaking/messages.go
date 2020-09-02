@@ -46,3 +46,5 @@ type CollectReward struct {
 	DelegatorAddress common.Address `json:"delegator-address"`
 	ValidatorAddress common.Address `json:"validator-address"`
 }
+
+// TODO(ATLAS): copy
