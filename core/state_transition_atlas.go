@@ -179,8 +179,11 @@ func updateValidatorFromPoolByMsg(validator *restaking.Storage_ValidatorWrapper_
 	validator.Validator().Description().IncrementalUpdateFrom(msg.Description)
 
 	if msg.CommissionRate != nil {
-		validator.Validator().Commission().CommissionRates().Rate().SetValue(*msg.CommissionRate)
-		validator.Validator().Commission().UpdateHeight().SetValue(blockNum)
+		curRate := validator.Validator().Commission().CommissionRates().Rate().Value()
+		if !curRate.Equal(*msg.CommissionRate) {
+			validator.Validator().Commission().CommissionRates().Rate().SetValue(*msg.CommissionRate)
+			validator.Validator().Commission().UpdateHeight().SetValue(blockNum)
+		}
 	}
 
 	if msg.SlotKeyToRemove != nil {

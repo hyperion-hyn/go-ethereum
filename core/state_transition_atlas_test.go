@@ -186,6 +186,23 @@ func TestUpdateValidatorFromPoolByMsg(t *testing.T) {
 			},
 		},
 		{
+			name: "UpdateHeight not update when same rate",
+			msg: func() restaking.EditValidator {
+				ev := defaultMsgEditValidator()
+				rate := common.NewDecWithPrec(5, 1)
+				ev.CommissionRate = &rate
+				return ev
+			}(),
+			identitySet: map[string]bool{
+				editDesc.Identity:  true,
+				makeIdentityStr(0): false,
+			},
+			slotKeySet: map[string]bool{
+				blsKeys[12].pub.Hex(): true,
+				blsKeys[0].pub.Hex():  false,
+			},
+		},
+		{
 			name: "add new key, not remove old key",
 			msg: func() restaking.EditValidator {
 				ev := defaultMsgEditValidator()

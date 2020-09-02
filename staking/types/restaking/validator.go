@@ -8,13 +8,11 @@ import (
 )
 
 const (
-	MaxPubKeyAllowed         = 1
-	DoNotEnforceMaxBLS       = -1
+	MaxPubKeyAllowed   = 1
+	DoNotEnforceMaxBLS = -1
 )
 
 var (
-	errCommissionRateTooLarge  = errors.New("commission rate and change rate can not be larger than max commission rate")
-	errInvalidCommissionRate   = errors.New("commission rate, change rate and max rate should be a value ranging from 0.0 to 1.0")
 	errNeedAtLeastOneSlotKey   = errors.New("need at least one slot key")
 	ErrExcessiveBLSKeys        = errors.New("more slot keys provided than allowed")
 	errDuplicateSlotKeys       = errors.New("slot keys can not have duplicates")
@@ -61,7 +59,6 @@ func (s *Storage_AddressSet_) AllKeys() []common.Address {
 	}
 	return result
 }
-
 
 func (s *Storage_AddressSet_) LoadFully() (*AddressSet_, error) {
 	s.Keys().load()
@@ -301,12 +298,6 @@ func (s *Storage_ValidatorPool_) UpdateCommittee(committee *Committee_) {
 
 // CreateValidatorFromNewMsg creates validator from NewValidator message
 func CreateValidatorFromNewMsg(msg *CreateValidator, valAddr common.Address, blockNum *big.Int) (*Validator_, error) {
-	if err := msg.Description.EnsureLength(); err != nil {
-		return nil, err
-	}
-	// TODO(ATLAS): default max?
-	commission := Commission_{msg.CommissionRates, blockNum}
-
 	if err := common2.VerifyBLSKey(&msg.SlotPubKey, &msg.SlotKeySig); err != nil {
 		return nil, err
 	}
@@ -316,9 +307,9 @@ func CreateValidatorFromNewMsg(msg *CreateValidator, valAddr common.Address, blo
 		OperatorAddresses:    NewAddressSetWithAddress(msg.OperatorAddress),
 		SlotPubKeys:          NewBLSKeysWithBLSKey(msg.SlotPubKey),
 		LastEpochInCommittee: new(big.Int),
-		MaxTotalDelegation:   msg.MaxTotalDelegation, // TODO(ATLAS): default max?
+		MaxTotalDelegation:   msg.MaxTotalDelegation,
 		Status:               uint8(Active),
-		Commission:           commission,
+		Commission:           Commission_{msg.CommissionRates, blockNum},
 		Description:          msg.Description,
 		CreationHeight:       blockNum,
 	}

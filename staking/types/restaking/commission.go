@@ -10,7 +10,16 @@ var (
 	zeroPercent    = common.ZeroDec()
 )
 
+var (
+	errCommissionRateTooLarge = errors.New("commission rate and change rate can not be larger than max commission rate")
+	errInvalidCommissionRate  = errors.New("commission rate, change rate and max rate should be a value ranging from 0.0 to 1.0")
+)
+
 func (c *Commission_) SanityCheck() error {
+	if c.CommissionRates.Rate.IsNil() || c.CommissionRates.MaxChangeRate.IsNil() || c.CommissionRates.MaxRate.IsNil() {
+		return errors.Wrap(errInvalidCommissionRate, "rate can not be nil")
+	}
+
 	if c.CommissionRates.Rate.LT(zeroPercent) || c.CommissionRates.Rate.GT(hundredPercent) {
 		return errors.Wrapf(
 			errInvalidCommissionRate, "rate:%s", c.CommissionRates.Rate.String(),
