@@ -88,7 +88,7 @@ func TestCheckValidatorSignature(t *testing.T) {
 	for _, k := range keys {
 		// Sign
 		sig := k.SignHash(hashData)
-		if sig != nil {
+		if sig == nil {
 			t.Errorf("failed to sign hash data: have nil")
 		}
 		// CheckValidatorSignature should succeed
@@ -110,9 +110,9 @@ func TestCheckValidatorSignature(t *testing.T) {
 	}
 
 	// CheckValidatorSignature should return ErrUnauthorizedAddress
-	err = atlas.CheckValidatorSignature(hashData, sig.Serialize(), key.GetPublicKey().Serialize())
-	if err != atlas.ErrUnauthorizedAddress {
-		t.Errorf("error mismatch: have %v, want %v", err, atlas.ErrUnauthorizedAddress)
+	err = atlas.CheckValidatorSignature(hashData, sig.Serialize(), getInvalidPublicKey())
+	if err != atlas.ErrInvalidSignature {
+		t.Errorf("error mismatch: have %v, want %v", err, atlas.ErrInvalidSignature)
 	}
 }
 
