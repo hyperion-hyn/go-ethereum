@@ -17,6 +17,7 @@
 package backend
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"math/rand"
 	"sort"
@@ -60,17 +61,18 @@ func TestSign(t *testing.T) {
 }
 
 func TestCheckSignature(t *testing.T) {
-	key, _ := generatePrivateKey()
+	key, _ := generateSecretKey()
 	data := []byte("Here is a string....")
 	hashData := crypto.Keccak256([]byte(data))
-	sig, _ := crypto.Sign(hashData, key)
+	sign := key.SignHash(hashData)
+	sig := sign.Serialize()
 	b := newBackend()
-	a := getAddress()
+	a := key.GetPublicKey().Serialize()
 	err := b.CheckSignature(data, a, sig)
 	if err != nil {
 		t.Errorf("error mismatch: have %v, want nil", err)
 	}
-	a = getInvalidAddress()
+	a = getInvalidPublicKey()
 	err = b.CheckSignature(data, a, sig)
 	if err != errInvalidSignature {
 		t.Errorf("error mismatch: have %v, want %v", err, errInvalidSignature)
@@ -280,6 +282,14 @@ func getInvalidAddress() common.Address {
 func generatePrivateKey() (*ecdsa.PrivateKey, error) {
 	key := "bb047e5940b6d83354d9432db7c449ac8fca2248008aaa7271369880f9f11cc1"
 	return crypto.HexToECDSA(key)
+}
+
+func getInvalidPublicKey() []byte {
+	return bytes.Repeat([]byte{0x00}, types.AtlasExtraPublicKey)
+}
+
+func generateSecretKey() (*bls.SecretKey, error) {
+	return crypto.GenerateBLSKey()
 }
 
 func newTestValidatorSet(n int) (atlas.ValidatorSet, []*bls.SecretKey) {

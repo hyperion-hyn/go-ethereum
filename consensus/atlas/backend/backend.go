@@ -22,6 +22,7 @@ import (
 	"time"
 
 	lru "github.com/hashicorp/golang-lru"
+	"github.com/hyperion-hyn/bls/ffi/go/bls"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
@@ -269,14 +270,20 @@ func (sb *backend) Sign(data []byte) (signature []byte, publicKey []byte, mask [
 }
 
 // CheckSignature implements atlas.Backend.CheckSignature
-func (sb *backend) CheckSignature(data []byte, address common.Address, sig []byte) error {
-	signer, err := atlas.GetSignatureAddress(data, sig)
-	if err != nil {
-		log.Error("Failed to get signer address", "err", err)
+func (sb *backend) CheckSignature(data []byte, pubKey []byte, sig []byte) error {
+	var publicKey bls.PublicKey
+	if err := publicKey.Deserialize(pubKey); err != nil {
 		return err
 	}
-	// Compare derived addresses
-	if signer != address {
+
+	var sign bls.Sign
+	if err := sign.Deserialize(sig); err != nil {
+		return err
+	}
+
+	hashData := crypto.Keccak256([]byte(data))
+
+	if ok := sign.VerifyHash(&publicKey, hashData); !ok {
 		return errInvalidSignature
 	}
 	return nil
