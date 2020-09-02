@@ -18,6 +18,7 @@ package backend
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -91,6 +92,7 @@ func loadSnapshot(epoch uint64, db ethdb.Database, hash common.Hash) (*Snapshot,
 // store inserts the snapshot into the database.
 func (s *Snapshot) store(db ethdb.Database) error {
 	blob, err := json.Marshal(s)
+	println("aa", string(blob))
 	if err != nil {
 		return err
 	}
@@ -228,20 +230,28 @@ type snapshotJSON struct {
 	Tally  map[common.Address]Tally `json:"tally"`
 
 	// for validator set
-	Validators []atlas.Validator    `json:"validators"`
+	Validators []validatorJSON      `json:"validators"`
 	Policy     atlas.ProposerPolicy `json:"policy"`
 }
 
 func (s *Snapshot) toJSONStruct() *snapshotJSON {
-	return &snapshotJSON{
-		Epoch:      s.Epoch,
-		Number:     s.Number,
-		Hash:       s.Hash,
-		Votes:      s.Votes,
-		Tally:      s.Tally,
-		Validators: s.validators(),
-		Policy:     s.ValSet.Policy(),
+	retval := &snapshotJSON{
+		Epoch:  s.Epoch,
+		Number: s.Number,
+		Hash:   s.Hash,
+		Votes:  s.Votes,
+		Tally:  s.Tally,
+		Policy: s.ValSet.Policy(),
 	}
+	vals := s.validators()
+	retval.Validators = make([]validatorJSON, 0, len(vals))
+	for _, val := range vals {
+		retval.Validators = append(retval.Validators, validatorJSON{
+			Coinbase: val.Coinbase(),
+			PubKey:   val.PublicKey().SerializeToHexStr(),
+		})
+	}
+	return retval
 }
 
 // Unmarshal from a json byte array
@@ -256,7 +266,17 @@ func (s *Snapshot) UnmarshalJSON(b []byte) error {
 	s.Hash = j.Hash
 	s.Votes = j.Votes
 	s.Tally = j.Tally
-	s.ValSet = validator.NewSet(j.Validators, j.Policy)
+	vals := make([]atlas.Validator, 0, len(j.Validators))
+	for _, item := range j.Validators {
+		if b, err := hex.DecodeString(item.PubKey); err != nil {
+			return err
+		} else if val, err := validator.New(b, item.Coinbase); err != nil {
+			return err
+		} else {
+			vals = append(vals, val)
+		}
+	}
+	s.ValSet = validator.NewSet(vals, j.Policy)
 	return nil
 }
 
@@ -264,4 +284,9 @@ func (s *Snapshot) UnmarshalJSON(b []byte) error {
 func (s *Snapshot) MarshalJSON() ([]byte, error) {
 	j := s.toJSONStruct()
 	return json.Marshal(j)
+}
+
+type validatorJSON struct {
+	Coinbase common.Address `json:"coinbase"`
+	PubKey   string         `json:"pub_key"`
 }
