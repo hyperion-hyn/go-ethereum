@@ -31,7 +31,7 @@ var (
 )
 
 var (
-	participantVerifier RestakingParticipantVerifier = TokenHolderVerifier{}
+	participantVerifier RestakingParticipantVerifier = tokenHolderVerifier{}
 )
 
 type RestakingParticipantVerifier interface {
@@ -42,10 +42,10 @@ type RestakingParticipantVerifier interface {
 	VerifyForCollectingReward(stateDB vm.StateDB, msg *restaking.CollectReward, signer common.Address) (participant, error)
 }
 
-type TokenHolderVerifier struct {
+type tokenHolderVerifier struct {
 }
 
-func (s TokenHolderVerifier) VerifyForCreatingValidator(stateDB vm.StateDB, msg *restaking.CreateValidator, signer common.Address) (participant, error) {
+func (s tokenHolderVerifier) VerifyForCreatingValidator(stateDB vm.StateDB, msg *restaking.CreateValidator, signer common.Address) (participant, error) {
 	if msg.OperatorAddress != signer {
 		return nil, errInvalidSigner
 	}
@@ -54,17 +54,17 @@ func (s TokenHolderVerifier) VerifyForCreatingValidator(stateDB vm.StateDB, msg 
 		return nil, errInsufficientBalanceForStake
 	}
 
-	return &tokenHolder{stateDB: stateDB, holderAddress: signer}, nil
+	return &tokenHolder{stateDB: stateDB, holderAddress: signer, amount: defaultStakingAmount}, nil
 }
 
-func (s TokenHolderVerifier) VerifyForEditingValidator(stateDB vm.StateDB, msg *restaking.EditValidator, signer common.Address) (participant, error) {
+func (s tokenHolderVerifier) VerifyForEditingValidator(stateDB vm.StateDB, msg *restaking.EditValidator, signer common.Address) (participant, error) {
 	if signer != msg.OperatorAddress {
 		return nil, errInvalidSigner
 	}
 	return &tokenHolder{stateDB: stateDB, holderAddress: signer}, nil
 }
 
-func (s TokenHolderVerifier) VerifyForRedelegating(stateDB vm.StateDB, msg *restaking.Redelegate, signer common.Address) (participant, error) {
+func (s tokenHolderVerifier) VerifyForRedelegating(stateDB vm.StateDB, msg *restaking.Redelegate, signer common.Address) (participant, error) {
 	if msg.DelegatorAddress != signer {
 		return nil, errInvalidSigner
 	}
@@ -72,17 +72,17 @@ func (s TokenHolderVerifier) VerifyForRedelegating(stateDB vm.StateDB, msg *rest
 	if !CanTransfer(stateDB, signer, defaultStakingAmount) {
 		return nil, errInsufficientBalanceForStake
 	}
-	return &tokenHolder{stateDB: stateDB, holderAddress: signer}, nil
+	return &tokenHolder{stateDB: stateDB, holderAddress: signer, amount: defaultStakingAmount}, nil
 }
 
-func (s TokenHolderVerifier) VerifyForUnredelegating(stateDB vm.StateDB, msg *restaking.Unredelegate, signer common.Address) (participant, error) {
+func (s tokenHolderVerifier) VerifyForUnredelegating(stateDB vm.StateDB, msg *restaking.Unredelegate, signer common.Address) (participant, error) {
 	if msg.DelegatorAddress != signer {
 		return nil, errInvalidSigner
 	}
 	return &tokenHolder{stateDB: stateDB, holderAddress: signer}, nil
 }
 
-func (s TokenHolderVerifier) VerifyForCollectingReward(stateDB vm.StateDB, msg *restaking.CollectReward, signer common.Address) (participant, error) {
+func (s tokenHolderVerifier) VerifyForCollectingReward(stateDB vm.StateDB, msg *restaking.CollectReward, signer common.Address) (participant, error) {
 	if msg.DelegatorAddress != signer {
 		return nil, errInvalidSigner
 	}
@@ -150,26 +150,24 @@ func VerifyCreateValidatorMsg(stateDB vm.StateDB, blockNum *big.Int, msg *restak
 		return nil, err
 	}
 
-	// TODO(ATLAS): Get staking amount by role of delegator
-	amt := defaultStakingAmount
-	if err = sanityCheckForDelegation(msg.MaxTotalDelegation, common.Big0, amt); err != nil {
+	if err = sanityCheckForDelegation(msg.MaxTotalDelegation, common.Big0, p.restakingAmount()); err != nil {
 		return nil, err
 	}
 
 	wrapper := restaking.ValidatorWrapper_{
 		Validator:                 *v,
 		Redelegations:             restaking.NewRedelegationMap(),
-		TotalDelegation:           big.NewInt(0).Set(amt),
-		TotalDelegationByOperator: big.NewInt(0).Set(amt),
+		TotalDelegation:           big.NewInt(0).Set(p.restakingAmount()),
+		TotalDelegationByOperator: big.NewInt(0).Set(p.restakingAmount()),
 		BlockReward:               big.NewInt(0),
 	}
 	wrapper.Counters.NumBlocksSigned = big.NewInt(0)
 	wrapper.Counters.NumBlocksToSign = big.NewInt(0)
-	wrapper.Redelegations.Put(msg.OperatorAddress, restaking.NewRedelegation(msg.OperatorAddress, amt))
+	wrapper.Redelegations.Put(msg.OperatorAddress, restaking.NewRedelegation(msg.OperatorAddress, p.restakingAmount()))
 
 	return &verification{
 		NewValidator:    &wrapper,
-		NewRedelegation: amt,
+		NewRedelegation: p.restakingAmount(),
 		Participant:     p,
 	}, nil
 }
@@ -266,12 +264,10 @@ func VerifyRedelegateMsg(stateDB vm.StateDB, msg *restaking.Redelegate, signer c
 		return nil, err
 	}
 
-	// TODO(ATLAS): Get staking amonut by role of delegator
 	// TODO(ATLAS): max total delegation && min delegation
-	amt := defaultStakingAmount
 
 	return &verification{
-		NewRedelegation: amt,
+		NewRedelegation: p.restakingAmount(),
 		Participant:     p,
 	}, nil
 }

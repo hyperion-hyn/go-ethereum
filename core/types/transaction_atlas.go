@@ -42,9 +42,9 @@ func (txType TransactionType) String() string {
 	} else if txType == EditValidator {
 		return "EditValidator"
 	} else if txType == Redelegate {
-		return "DelegateValidator"
+		return "Redelegate"
 	} else if txType == Unredelegate {
-		return "UndelegateValidator"
+		return "Unredelegate"
 	} else if txType == CollectRedelReward {
 		return "CollectRedelegationReward"
 	} else if txType == CreateMap3 {
