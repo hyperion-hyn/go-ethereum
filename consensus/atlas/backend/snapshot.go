@@ -92,7 +92,6 @@ func loadSnapshot(epoch uint64, db ethdb.Database, hash common.Hash) (*Snapshot,
 // store inserts the snapshot into the database.
 func (s *Snapshot) store(db ethdb.Database) error {
 	blob, err := json.Marshal(s)
-	println("aa", string(blob))
 	if err != nil {
 		return err
 	}
