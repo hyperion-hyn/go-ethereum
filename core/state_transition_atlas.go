@@ -112,7 +112,7 @@ func (st *StateTransition) verifyAndApplyCreateValidatorTx(msg *restaking.Create
 		return err
 	}
 	saveNewValidatorToPool(verified.NewValidator, st.state.ValidatorPool())
-	return verified.Participant.PostCreateValidator(msg.OperatorAddress, verified.NewRedelegation)
+	return verified.Participant.postCreateValidator(msg.OperatorAddress, verified.NewRedelegation)
 }
 
 func (st *StateTransition) verifyAndApplyEditValidatorTx(msg *restaking.EditValidator, signer common.Address) error {
@@ -132,7 +132,7 @@ func (st *StateTransition) verifyAndApplyRedelegateTx(msg *restaking.Redelegate,
 	}
 	wrapper, _ := st.state.ValidatorByAddress(msg.ValidatorAddress)
 	wrapper.AddRedelegation(msg.DelegatorAddress, verified.NewRedelegation)
-	return verified.Participant.PostRedelegate(msg.ValidatorAddress, verified.NewRedelegation)
+	return verified.Participant.postRedelegate(msg.ValidatorAddress, verified.NewRedelegation)
 }
 
 func (st *StateTransition) verifyAndApplyUnredelegateTx(msg *restaking.Unredelegate, signer common.Address) error {
@@ -242,21 +242,27 @@ func (r *RewardToBalance) HandleReward(validator, delegator common.Address, rewa
 }
 
 type participant interface {
-	PostCreateValidator(validator common.Address, amount *big.Int) error
-	PostRedelegate(validator common.Address, amount *big.Int) error
+	restakingAmount() *big.Int
+	postCreateValidator(validator common.Address, amount *big.Int) error
+	postRedelegate(validator common.Address, amount *big.Int) error
 }
 
 type tokenHolder struct {
 	stateDB       vm.StateDB
 	holderAddress common.Address
+	amount        *big.Int
 }
 
-func (t tokenHolder) PostCreateValidator(validator common.Address, amount *big.Int) error {
+func (t tokenHolder) restakingAmount() *big.Int {
+	return t.amount
+}
+
+func (t tokenHolder) postCreateValidator(validator common.Address, amount *big.Int) error {
 	t.stateDB.SubBalance(t.holderAddress, amount)
 	return nil
 }
 
-func (t tokenHolder) PostRedelegate(validator common.Address, amount *big.Int) error {
+func (t tokenHolder) postRedelegate(validator common.Address, amount *big.Int) error {
 	t.stateDB.SubBalance(t.holderAddress, amount)
 	return nil
 }
