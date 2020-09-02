@@ -28,6 +28,7 @@ var (
 	twelveK = new(big.Int).Mul(big.NewInt(12000), big.NewInt(1e18))
 	twentyK = new(big.Int).Mul(big.NewInt(20000), big.NewInt(1e18))
 
+	nilRate      = common.Dec{}
 	negativeRate = common.NewDec(-1)
 	zeroRate     = common.ZeroDec()
 	halfRate     = common.NewDecWithPrec(5, 1)
@@ -79,6 +80,10 @@ func TestValidator_SanityCheck(t *testing.T) {
 		{
 			func(v *Validator_) { v.MaxTotalDelegation = nil },
 			errNilMaxTotalDelegation,
+		},
+		{
+			func(v *Validator_) { v.Commission.CommissionRates.Rate = nilRate },
+			errInvalidCommissionRate,
 		},
 		{
 			func(v *Validator_) { v.Commission.CommissionRates.Rate = negativeRate },
@@ -214,10 +219,6 @@ func TestCreateValidatorFromNewMsg(t *testing.T) {
 		{
 			editCreateValidator: func(cv *CreateValidator) {},
 			expErr:              nil,
-		},
-		{
-			editCreateValidator: func(cv *CreateValidator) { cv.Description = invalidDescription },
-			expErr:              errors.New("exceed maximum name length"),
 		},
 		{
 			editCreateValidator: func(cv *CreateValidator) { cv.SlotKeySig = blsPubSigPairs[2].sig },
