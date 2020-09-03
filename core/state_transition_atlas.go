@@ -99,7 +99,7 @@ func (st *StateTransition) StakingTransitionDb() (*ExecutionResult, error) {
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return nil, err
 		}
-		st.state.IncrementValidatorNonce()
+		st.state.IncrementMap3NodeNonce()
 		err = st.verifyAndApplyCreateMap3NodeTx(stkMsg, msg.From())
 	case types.EditMap3:
 		stkMsg := &microstaking.EditMap3Node{}

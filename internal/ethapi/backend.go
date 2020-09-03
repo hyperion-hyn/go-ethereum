@@ -141,5 +141,11 @@ func GetAPIs(apiBackend Backend) []rpc.API {
 			Service:   NewPublicRestakingAPI(apiBackend),
 			Public:    true,
 		},
+		{ // ATLAS :add microstake api
+			Namespace: "eth",
+			Version:   "1.0",
+			Service:   NewPublicMicroStakingAPI(apiBackend),
+			Public:    true,
+		},
 	}
 }
