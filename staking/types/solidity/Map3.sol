@@ -82,7 +82,7 @@ struct MicrodelegationMap_ {
     mapping (address => MicrodelegationMapEntry_) Map;
 }
 
-struct RedelegationReference_ {
+struct RestakingReference_ {
     address ValidatorAddress;
 }
 
@@ -90,7 +90,7 @@ struct RedelegationReference_ {
 struct Map3NodeWrapper_ {
     Map3Node_ Map3Node;
     MicrodelegationMap_ Microdelegations;
-    RedelegationReference_ RedelegationReference;
+    RestakingReference_ RestakingReference;
     uint256 AccumulatedReward; // All the rewarded accumulated so far
     uint256 TotalDelegation;
     uint256 TotalPendingDelegation;

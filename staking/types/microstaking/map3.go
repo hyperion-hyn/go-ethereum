@@ -131,6 +131,11 @@ func (s *Storage_Map3NodeWrapper_) IsOperator(delegator common.Address) bool {
 	return s.Map3Node().OperatorAddress().Value() == delegator
 }
 
+func (s *Storage_Map3NodeWrapper_) IsAlreadyRestaking() bool {
+	addr0 := common.Address{}
+	return s.RestakingReference().ValidatorAddress().Value() != addr0
+}
+
 func (s *Storage_Map3NodeWrapper_) Unmicrodelegate(delegator common.Address, amount *big.Int) (toReturn *big.Int, completed bool) {
 	if md, ok := s.Microdelegations().Get(delegator); ok {
 		if pd := md.PendingDelegation().Amount().Value(); pd.Cmp(amount) < 0 {
@@ -203,7 +208,7 @@ func (s *Storage_Map3NodeWrapper_) LoadFully() (*Map3NodeWrapper_, error) {
 	if _, err := s.Microdelegations().LoadFully(); err != nil {
 		return nil, err
 	}
-	s.RedelegationReference().load()
+	s.RestakingReference().load()
 	s.AccumulatedReward().Value()
 	s.TotalDelegation().Value()
 	s.TotalPendingDelegation().Value()
@@ -266,11 +271,7 @@ func (s *Storage_Map3NodePool_) RemoveDelegationIndex(delegator, map3Addr common
 }
 
 // CreateValidatorFromNewMsg creates validator from NewValidator message
-func CreateMap3NodeFromNewMsg(msg *CreateMap3Node, map3Addr common.Address, blockNum *big.Int) (*Map3Node_, error) {
-	if err := msg.Description.EnsureLength(); err != nil {
-		return nil, err
-	}
-
+func CreateMap3NodeFromNewMsg(msg *CreateMap3Node, map3Addr common.Address, blockNum *big.Int) *Map3Node_ {
 	v := Map3Node_{
 		Map3Address:     map3Addr,
 		OperatorAddress: msg.OperatorAddress,
@@ -282,7 +283,7 @@ func CreateMap3NodeFromNewMsg(msg *CreateMap3Node, map3Addr common.Address, bloc
 		CreationHeight: blockNum,
 		Status:         uint8(Pending),
 	}
-	return &v, nil
+	return &v
 }
 
 // UpdateValidatorFromEditMsg updates validator from EditValidator message

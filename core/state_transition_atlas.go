@@ -191,7 +191,7 @@ func (st *StateTransition) verifyAndApplyCollectRedelRewardTx(msg *restaking.Col
 		return network.NoReward, err
 	}
 	validator, _ := st.state.ValidatorByAddress(msg.ValidatorAddress)
-	handler := RewardToBalance{StateDB: st.state} // TODO(ATLAS): map3 reward distributor ?
+	handler := RewardToBalance{StateDB: st. state} // TODO(ATLAS): map3 reward distributor ?
 	return payoutRedelegationReward(validator, msg.DelegatorAddress, &handler, st.evm.EpochNumber)
 }
 

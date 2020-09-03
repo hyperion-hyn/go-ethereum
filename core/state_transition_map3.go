@@ -40,8 +40,8 @@ func (st *StateTransition) verifyAndApplyTerminateMap3NodeTx(msg *microstaking.T
 	}
 	// update node state
 	node.Map3Node().Status().SetValue(uint8(microstaking.Terminated))
-	node.Map3Node().ActivationEpoch().SetValue(common.Big0)
-	node.Map3Node().ReleaseEpoch().SetValue(common.ZeroDec())
+	node.Map3Node().ActivationEpoch().Clear()
+	node.Map3Node().ReleaseEpoch().Clear()
 	return nil
 }
 
@@ -146,7 +146,7 @@ func payoutMicrodelegationRewards(stateDB vm.StateDB, map3NodePool *microstaking
 			r := micro.Reward().Value()
 			if r.Cmp(common.Big0) > 0 {
 				totalRewards = totalRewards.Add(totalRewards, r)
-				micro.Reward().SetValue(common.Big0)
+				micro.Reward().Clear()
 			}
 		} else {
 			return network.NoReward, errMicrodelegationNotExist
