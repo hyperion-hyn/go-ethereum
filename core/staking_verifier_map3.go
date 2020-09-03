@@ -6,6 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/staking/network"
 	"github.com/ethereum/go-ethereum/staking/types/microstaking"
+	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	"github.com/pkg/errors"
 	"math/big"
 )
@@ -19,7 +20,113 @@ var (
 	errInsufficientBalanceToUnmicrodelegate = errors.New("insufficient balance to unmicrodelegate")
 	errMicrodelegationStillLocked           = errors.New("microdelegation still locked")
 	errTerminateMap3NodeNotAllowed          = errors.New("not allow to terminate map3 node")
+
+	errInvalidMap3NodeStatusToRestake = errors.New("invalid map3 node to restake")
+	errMap3NodeAlreadyRestaking       = errors.New("map3 node already restaked.")
+	errInvalidValidatorAddress        = errors.New("validator address not equal to the address of the validator map3 already restaked to")
 )
+
+type map3VerifierForRestaking struct {
+}
+
+func (m map3VerifierForRestaking) VerifyForCreatingValidator(stateDB vm.StateDB, msg *restaking.CreateValidator, signer common.Address) (participant, error) {
+	node, err := stateDB.Map3NodeByAddress(msg.OperatorAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	if !node.IsOperator(signer) {
+		return nil, errInvalidSigner
+	}
+
+	if node.Map3Node().Status().Value() != uint8(microstaking.Active) {
+		return nil, errInvalidMap3NodeStatusToRestake
+	}
+
+	if node.IsAlreadyRestaking() {
+		return nil, errMap3NodeAlreadyRestaking
+	}
+	return map3NodeAsParticipant{node: node}, nil
+}
+
+func (m map3VerifierForRestaking) VerifyForEditingValidator(stateDB vm.StateDB, msg *restaking.EditValidator, signer common.Address) (participant, error) {
+	node, err := stateDB.Map3NodeByAddress(msg.OperatorAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	if !node.IsOperator(signer) {
+		return nil, errInvalidSigner
+	}
+
+	if node.Map3Node().Status().Value() != uint8(microstaking.Active) {
+		return nil, errInvalidMap3NodeStatusToRestake
+	}
+
+	if node.RestakingReference().ValidatorAddress().Value() != msg.ValidatorAddress {
+		return nil, errInvalidValidatorAddress
+	}
+	return &map3NodeAsParticipant{node: node}, nil
+}
+
+func (m map3VerifierForRestaking) VerifyForRedelegating(stateDB vm.StateDB, msg *restaking.Redelegate, signer common.Address) (participant, error) {
+	node, err := stateDB.Map3NodeByAddress(msg.DelegatorAddress)
+	if err != nil {
+		return nil, err
+	}
+	if !node.IsOperator(signer) {
+		return nil, errInvalidSigner
+	}
+
+	if node.Map3Node().Status().Value() != uint8(microstaking.Active) {
+		return nil, errInvalidMap3NodeStatusToRestake
+	}
+
+	if node.IsAlreadyRestaking() {
+		return nil, errMap3NodeAlreadyRestaking
+	}
+	return map3NodeAsParticipant{node: node}, nil
+}
+
+func (m map3VerifierForRestaking) VerifyForUnredelegating(stateDB vm.StateDB, msg *restaking.Unredelegate, signer common.Address) (participant, error) {
+	node, err := stateDB.Map3NodeByAddress(msg.DelegatorAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	if !node.IsOperator(signer) {
+		return nil, errInvalidSigner
+	}
+
+	if node.Map3Node().Status().Value() != uint8(microstaking.Active) {
+		return nil, errInvalidMap3NodeStatusToRestake
+	}
+
+	if node.RestakingReference().ValidatorAddress().Value() != msg.ValidatorAddress {
+		return nil, errInvalidValidatorAddress
+	}
+	return &map3NodeAsParticipant{node: node}, nil
+}
+
+func (m map3VerifierForRestaking) VerifyForCollectingReward(stateDB vm.StateDB, msg *restaking.CollectReward, signer common.Address) (participant, error) {
+	node, err := stateDB.Map3NodeByAddress(msg.DelegatorAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	if !node.IsOperator(signer) {
+		return nil, errInvalidSigner
+	}
+
+	if node.Map3Node().Status().Value() != uint8(microstaking.Active) {
+		return nil, errInvalidMap3NodeStatusToRestake
+	}
+
+	if node.RestakingReference().ValidatorAddress().Value() != msg.ValidatorAddress {
+		return nil, errInvalidValidatorAddress
+	}
+	return &map3NodeAsParticipant{node: node}, nil
+}
 
 func checkMap3DuplicatedFields(state vm.StateDB, identity string, keys microstaking.BLSPublicKeys_) error {
 	map3NodePool := state.Map3NodePool()
@@ -69,10 +176,7 @@ func VerifyCreateMap3NodeMsg(stateDB vm.StateDB, chainContext ChainContext, epoc
 	}
 
 	map3Address := crypto.CreateAddress(signer, stateDB.GetNonce(signer))
-	node, err := microstaking.CreateMap3NodeFromNewMsg(msg, map3Address, blockNum)
-	if err != nil {
-		return nil, err
-	}
+	node := microstaking.CreateMap3NodeFromNewMsg(msg, map3Address, blockNum)
 	if err := node.SanityCheck(microstaking.MaxPubKeyAllowed); err != nil {
 		return nil, err
 	}
@@ -305,5 +409,23 @@ func VerifyCollectMicrodelRewardsMsg(stateDB vm.StateDB, msg *microstaking.Colle
 	if totalReward.Int64() == 0 {
 		return errNoRewardsToCollect
 	}
+	return nil
+}
+
+type map3NodeAsParticipant struct {
+	node *microstaking.Storage_Map3NodeWrapper_
+}
+
+func (p map3NodeAsParticipant) restakingAmount() *big.Int {
+	return p.node.TotalDelegation().Value()
+}
+
+func (p map3NodeAsParticipant) postCreateValidator(validator common.Address, amount *big.Int) error {
+	p.node.RestakingReference().ValidatorAddress().SetValue(validator)
+	return nil
+}
+
+func (p map3NodeAsParticipant) postRedelegate(validator common.Address, amount *big.Int) error {
+	p.node.RestakingReference().ValidatorAddress().SetValue(validator)
 	return nil
 }

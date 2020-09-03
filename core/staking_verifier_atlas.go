@@ -31,7 +31,7 @@ var (
 )
 
 var (
-	participantVerifier RestakingParticipantVerifier = tokenHolderVerifier{}
+	participantVerifier RestakingParticipantVerifier = map3VerifierForRestaking{}
 )
 
 type RestakingParticipantVerifier interface {

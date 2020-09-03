@@ -15,6 +15,10 @@ var (
 )
 
 func (c *Commission_) SanityCheck() error {
+	if c.Rate.IsNil() || c.RateForNextPeriod.IsNil() {
+		return errors.Wrap(errInvalidCommissionRate, "rate can not be nil")
+	}
+
 	if c.Rate.LT(zeroPercent) || c.Rate.GT(hundredPercent) {
 		return errors.Wrapf(
 			errInvalidCommissionRate, "rate:%s", c.Rate.String(),
