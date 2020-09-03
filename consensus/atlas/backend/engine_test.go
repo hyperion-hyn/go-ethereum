@@ -564,9 +564,9 @@ func TestPrepareExtra(t *testing.T) {
 
 func TestWriteSeal(t *testing.T) {
 	vanity := bytes.Repeat([]byte{0x00}, types.AtlasExtraVanity)
-	istRawData := bytes.Repeat([]byte{0x00}, types.AtlasExtraSeal)
-	expectedSeal := bytes.Repeat([]byte{0x00}, 0)
-	expectedPublicKey := make([]byte, 0)
+	istRawData := hexutil.MustDecode("0xf8a7b860000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000b00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000009000000000000000000000000000000000820000")
+	expectedSeal := bytes.Repeat([]byte{0x00}, types.AtlasExtraSignature)
+	expectedPublicKey := bytes.Repeat([]byte{0x00}, types.AtlasExtraPublicKey)
 	expectedIstExtra := &types.AtlasExtra{
 		AggSignature: [96]byte{},
 		AggPublicKey: [48]byte{},
@@ -581,7 +581,7 @@ func TestWriteSeal(t *testing.T) {
 	}
 
 	// normal case
-	err := writeSeal(h, expectedSeal, expectedPublicKey)
+	err = writeSeal(h, expectedSeal, expectedPublicKey)
 	if err != expectedErr {
 		t.Errorf("error mismatch: have %v, want %v", err, expectedErr)
 	}

@@ -747,6 +747,9 @@ func writeSeal(h *types.Header, seal []byte, pubkey []byte) error {
 		return err
 	}
 
+	copy(atlasExtra.AggSignature[:], seal)
+	copy(atlasExtra.AggPublicKey[:], pubkey)
+
 	payload, err := rlp.EncodeToBytes(&atlasExtra)
 	if err != nil {
 		return err
@@ -771,9 +774,12 @@ func WriteCommittedSeals(h *types.Header, signature []byte, publicKey []byte, bi
 	fmt.Printf("publicKey: %v\n", publicKey)
 	fmt.Printf("bitmap: %v\n", bitmap)
 
-	if len(h.Extra) < types.AtlasExtraSeal {
-		h.Extra = append(h.Extra[:], bytes.Repeat([]byte{0x00}, types.AtlasExtraSeal-len(h.Extra))...)
+	switch len(h.Extra) {
+	case types.AtlasExtraVanity, types.AtlasExtraVanity + types.AtlasExtraSeal:
+		return errInvalidExtraDataFormat
 	}
+
+	h.Extra = append(h.Extra[:], bytes.Repeat([]byte{0x00}, types.AtlasExtraSeal-len(h.Extra))...)
 
 	atlasExtra, err := types.ExtractAtlasExtra(h)
 	if err != nil {
