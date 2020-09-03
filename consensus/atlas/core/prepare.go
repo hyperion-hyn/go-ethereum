@@ -50,7 +50,7 @@ func (c *core) handlePrepare(msg *message, src atlas.Validator) error {
 	var prepare atlas.Subject
 	err := msg.Decode(&prepare)
 	if err != nil {
-		return err
+		return errFailedDecodePrepare
 	}
 
 	if err := c.checkMessage(msgPrepare, prepare.View); err != nil {
