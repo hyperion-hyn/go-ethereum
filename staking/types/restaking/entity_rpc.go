@@ -6,7 +6,7 @@ type SlotPubKeyRPC = [48]Uint8
 
 type ValidatorRPC struct {
 	ValidatorAddress     Address         `json:"ValidatorAddress" `
-	OperatorAddresses    []*Address      `json:"OperatorAddresses" `
+	OperatorAddresses    []Address       `json:"OperatorAddresses" `
 	SlotPubKeys          []SlotPubKeyRPC `json:"SlotPubKeys" `
 	LastEpochInCommittee BigInt          `json:"LastEpochInCommittee" `
 	MaxTotalDelegation   BigInt          `json:"MaxTotalDelegation"`

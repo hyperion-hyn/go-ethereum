@@ -56,8 +56,12 @@ func (s *PublicRestakingAPI) GetValidatorInformation(
 	validatorWrpperRpc := &restaking.ValidatorWrapperRPC{
 		Validator: restaking.ValidatorRPC{
 			ValidatorAddress: validator_.ValidatorAddress,
-			OperatorAddresses: func() []*common.Address {
-				return validator_.OperatorAddresses.Keys
+			OperatorAddresses: func() []common.Address {
+				addreesses := make([]common.Address, 0)
+				for _, keyTemp := range validator_.OperatorAddresses.Keys {
+					addreesses = append(addreesses, *keyTemp)
+				}
+				return addreesses
 			}(),
 			SlotPubKeys: func() []restaking.SlotPubKeyRPC {
 				pubKeys := make([]restaking.SlotPubKeyRPC, 0)
