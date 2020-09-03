@@ -24,79 +24,84 @@ func (pool *TxPool) validateStakingTx(tx *types.Transaction) error {
 		return err
 	}
 
+	verifier, err := NewStakingVerifier(chainContext)
+	if err != nil {
+		return err
+	}
+
 	switch msg.Type() {
 	case types.CreateValidator:
 		stkMsg := &restaking.CreateValidator{}
 		if err := rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return err
 		}
-		_, err := VerifyCreateValidatorMsg(pool.currentState, pendingBlockNumber, stkMsg, msg.From())
+		_, err := verifier.VerifyCreateValidatorMsg(pool.currentState, pendingBlockNumber, stkMsg, msg.From())
 		return err
 	case types.EditValidator:
 		stkMsg := &restaking.EditValidator{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return err
 		}
-		_, err := VerifyEditValidatorMsg(pool.currentState, chainContext, pendingEpoch, pendingBlockNumber, stkMsg, msg.From())
+		_, err := verifier.VerifyEditValidatorMsg(pool.currentState, chainContext, pendingEpoch, pendingBlockNumber, stkMsg, msg.From())
 		return err
 	case types.Redelegate:
 		stkMsg := &restaking.Redelegate{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return err
 		}
-		_, err := VerifyRedelegateMsg(pool.currentState, stkMsg, msg.From())
+		_, err := verifier.VerifyRedelegateMsg(pool.currentState, stkMsg, msg.From())
 		return err
 	case types.Unredelegate:
 		stkMsg := &restaking.Unredelegate{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return err
 		}
-		_, err := VerifyUnredelegateMsg(pool.currentState, pendingEpoch, stkMsg, msg.From())
+		_, err := verifier.VerifyUnredelegateMsg(pool.currentState, pendingEpoch, stkMsg, msg.From())
 		return err
 	case types.CollectRedelReward:
 		stkMsg := &restaking.CollectReward{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return err
 		}
-		_, err := VerifyCollectRedelRewardMsg(pool.currentState, stkMsg, msg.From())
+		_, err := verifier.VerifyCollectRedelRewardMsg(pool.currentState, stkMsg, msg.From())
 		return err
 	case types.CreateMap3:
 		stkMsg := &microstaking.CreateMap3Node{}
 		if err := rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return err
 		}
-		_, err := VerifyCreateMap3NodeMsg(pool.currentState, chainContext, pendingEpoch, pendingBlockNumber, stkMsg, msg.From())
+		_, err := verifier.VerifyCreateMap3NodeMsg(pool.currentState, chainContext, pendingEpoch, pendingBlockNumber, stkMsg, msg.From())
 		return err
 	case types.EditMap3:
 		stkMsg := &microstaking.EditMap3Node{}
 		if err := rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return err
 		}
-		return VerifyEditMap3NodeMsg(pool.currentState, pendingEpoch, pendingBlockNumber, stkMsg, msg.From())
+		return verifier.VerifyEditMap3NodeMsg(pool.currentState, pendingEpoch, pendingBlockNumber, stkMsg, msg.From())
 	case types.TerminateMap3:
 		stkMsg := &microstaking.TerminateMap3Node{}
 		if err := rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return err
 		}
-		return VerifyTerminateMap3NodeMsg(pool.currentState, pendingEpoch, stkMsg, msg.From())
+		return verifier.VerifyTerminateMap3NodeMsg(pool.currentState, pendingEpoch, stkMsg, msg.From())
 	case types.Microdelegate:
 		stkMsg := &microstaking.Microdelegate{}
 		if err := rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return err
 		}
-		return VerifyMicrodelegateMsg(pool.currentState, chainContext, pendingBlockNumber, stkMsg, msg.From())
+		return verifier.VerifyMicrodelegateMsg(pool.currentState, chainContext, pendingBlockNumber, stkMsg, msg.From())
 	case types.Unmicrodelegate:
 		stkMsg := &microstaking.Unmicrodelegate{}
 		if err := rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return err
 		}
-		return VerifyUnmicrodelegateMsg(pool.currentState, chainContext, pendingBlockNumber, pendingEpoch, stkMsg, msg.From())
+		return verifier.VerifyUnmicrodelegateMsg(pool.currentState, chainContext, pendingBlockNumber, pendingEpoch, stkMsg, msg.From())
 	case types.CollectMap3Rewards:
 		stkMsg := &microstaking.CollectRewards{}
 		if err := rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return err
 		}
-		return VerifyCollectMicrodelRewardsMsg(pool.currentState, stkMsg, msg.From())
+		return verifier.VerifyCollectMicrodelRewardsMsg(pool.currentState, stkMsg, msg.From())
 	}
 
 	return nil

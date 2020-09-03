@@ -75,6 +75,7 @@ type StateDB interface {
 	// Map3
 	Map3NodePool() *microstaking.Storage_Map3NodePool_
 	Map3NodeByAddress(map3Address common.Address) (*microstaking.Storage_Map3NodeWrapper_, error)
+	AddMicrodelegationReward(snapshot *microstaking.Storage_Map3NodeWrapper_, reward *big.Int, shareLookup map[common.Address]common.Dec) error
 	IncrementMap3NodeNonce()
 }
 

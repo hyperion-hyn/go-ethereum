@@ -6,6 +6,7 @@ type AtlasConfig struct {
 	Period                uint64 `json:"period"` // Number of seconds between blocks to enforce
 	BlocksPerEpoch        uint64 `json:"epoch"`  // Epoch length to reset votes and checkpoint
 	BlocksPerHalfingCycle uint64 `json:"halfing_cycle"`
+	RestakingEnable       bool   `json:"restaking_enable"`
 }
 
 func (c *AtlasConfig) IsLastBlock(blockNum uint64) bool {

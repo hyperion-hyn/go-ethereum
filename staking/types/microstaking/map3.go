@@ -136,6 +136,12 @@ func (s *Storage_Map3NodeWrapper_) IsAlreadyRestaking() bool {
 	return s.RestakingReference().ValidatorAddress().Value() != addr0
 }
 
+func (s *Storage_Map3NodeWrapper_) AddAccumulatedReward(reward *big.Int) {
+	accumulatedReward := s.AccumulatedReward().Value()
+	accumulatedReward = accumulatedReward.Add(accumulatedReward, reward)
+	s.AccumulatedReward().SetValue(accumulatedReward)
+}
+
 func (s *Storage_Map3NodeWrapper_) Unmicrodelegate(delegator common.Address, amount *big.Int) (toReturn *big.Int, completed bool) {
 	if md, ok := s.Microdelegations().Get(delegator); ok {
 		if pd := md.PendingDelegation().Amount().Value(); pd.Cmp(amount) < 0 {

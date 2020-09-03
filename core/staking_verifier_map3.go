@@ -147,7 +147,7 @@ func checkMap3DuplicatedFields(state vm.StateDB, identity string, keys microstak
 	return nil
 }
 
-func VerifyCreateMap3NodeMsg(stateDB vm.StateDB, chainContext ChainContext, epoch, blockNum *big.Int,
+func (verifier StakingVerifier) VerifyCreateMap3NodeMsg(stateDB vm.StateDB, chainContext ChainContext, epoch, blockNum *big.Int,
 	msg *microstaking.CreateMap3Node, signer common.Address) (*microstaking.Map3NodeWrapper_, error) {
 	if stateDB == nil {
 		return nil, errStateDBIsMissing
@@ -200,7 +200,7 @@ func VerifyCreateMap3NodeMsg(stateDB vm.StateDB, chainContext ChainContext, epoc
 	return &wrapper, nil
 }
 
-func VerifyEditMap3NodeMsg(stateDB vm.StateDB, epoch, blockNum *big.Int, msg *microstaking.EditMap3Node, signer common.Address) error {
+func (verifier StakingVerifier) VerifyEditMap3NodeMsg(stateDB vm.StateDB, epoch, blockNum *big.Int, msg *microstaking.EditMap3Node, signer common.Address) error {
 	if stateDB == nil {
 		return errStateDBIsMissing
 	}
@@ -243,7 +243,7 @@ func VerifyEditMap3NodeMsg(stateDB vm.StateDB, epoch, blockNum *big.Int, msg *mi
 	return nil
 }
 
-func VerifyTerminateMap3NodeMsg(stateDB vm.StateDB, epoch *big.Int, msg *microstaking.TerminateMap3Node,
+func (verifier StakingVerifier) VerifyTerminateMap3NodeMsg(stateDB vm.StateDB, epoch *big.Int, msg *microstaking.TerminateMap3Node,
 	signer common.Address) error {
 	if stateDB == nil {
 		return errStateDBIsMissing
@@ -277,7 +277,7 @@ func VerifyTerminateMap3NodeMsg(stateDB vm.StateDB, epoch *big.Int, msg *microst
 	return nil
 }
 
-func VerifyMicrodelegateMsg(stateDB vm.StateDB, chainContext ChainContext, blockNum *big.Int, msg *microstaking.Microdelegate,
+func (verifier StakingVerifier) VerifyMicrodelegateMsg(stateDB vm.StateDB, chainContext ChainContext, blockNum *big.Int, msg *microstaking.Microdelegate,
 	signer common.Address) error {
 	if stateDB == nil {
 		return errStateDBIsMissing
@@ -319,7 +319,7 @@ func VerifyMicrodelegateMsg(stateDB vm.StateDB, chainContext ChainContext, block
 	return nil
 }
 
-func VerifyUnmicrodelegateMsg(stateDB vm.StateDB, chainContext ChainContext, blockNum *big.Int, epoch *big.Int,
+func (verifier StakingVerifier) VerifyUnmicrodelegateMsg(stateDB vm.StateDB, chainContext ChainContext, blockNum *big.Int, epoch *big.Int,
 	msg *microstaking.Unmicrodelegate, signer common.Address) error {
 	if stateDB == nil {
 		return errStateDBIsMissing
@@ -377,7 +377,7 @@ func VerifyUnmicrodelegateMsg(stateDB vm.StateDB, chainContext ChainContext, blo
 	return nil
 }
 
-func VerifyCollectMicrodelRewardsMsg(stateDB vm.StateDB, msg *microstaking.CollectRewards, signer common.Address) error {
+func (verifier StakingVerifier) VerifyCollectMicrodelRewardsMsg(stateDB vm.StateDB, msg *microstaking.CollectRewards, signer common.Address) error {
 	if stateDB == nil {
 		return errStateDBIsMissing
 	}
@@ -409,23 +409,5 @@ func VerifyCollectMicrodelRewardsMsg(stateDB vm.StateDB, msg *microstaking.Colle
 	if totalReward.Int64() == 0 {
 		return errNoRewardsToCollect
 	}
-	return nil
-}
-
-type map3NodeAsParticipant struct {
-	node *microstaking.Storage_Map3NodeWrapper_
-}
-
-func (p map3NodeAsParticipant) restakingAmount() *big.Int {
-	return p.node.TotalDelegation().Value()
-}
-
-func (p map3NodeAsParticipant) postCreateValidator(validator common.Address, amount *big.Int) error {
-	p.node.RestakingReference().ValidatorAddress().SetValue(validator)
-	return nil
-}
-
-func (p map3NodeAsParticipant) postRedelegate(validator common.Address, amount *big.Int) error {
-	p.node.RestakingReference().ValidatorAddress().SetValue(validator)
 	return nil
 }

@@ -30,10 +30,6 @@ var (
 	errInsufficientBalanceToUndelegate = errors.New("insufficient balance to undelegate")
 )
 
-var (
-	participantVerifier RestakingParticipantVerifier = map3VerifierForRestaking{}
-)
-
 type RestakingParticipantVerifier interface {
 	VerifyForCreatingValidator(stateDB vm.StateDB, msg *restaking.CreateValidator, signer common.Address) (participant, error)
 	VerifyForEditingValidator(stateDB vm.StateDB, msg *restaking.EditValidator, signer common.Address) (participant, error)
@@ -116,14 +112,28 @@ func checkValidatorDuplicatedFields(state vm.StateDB, identity string, keys rest
 	return nil
 }
 
-// TODO: add unit tests to check staking msg verification
+type StakingVerifier struct {
+	participantVerifier RestakingParticipantVerifier
+}
+
+func NewStakingVerifier(ctx ChainContext) (StakingVerifier, error) {
+	if ctx == nil || ctx.Config().Atlas == nil {
+		return StakingVerifier{}, errors.New("not support to stake")
+	}
+	config := ctx.Config().Atlas
+	if config.RestakingEnable {
+		return StakingVerifier{participantVerifier: map3VerifierForRestaking{}}, nil
+	} else {
+		return StakingVerifier{participantVerifier: tokenHolderVerifier{}}, nil
+	}
+}
 
 // VerifyCreateValidatorMsg verifies the create validator message using
 // the stateDB, epoch, & blocknumber and returns the validatorWrapper created
 // in the process.
 //
 // Note that this function never updates the stateDB, it only reads from stateDB.
-func VerifyCreateValidatorMsg(stateDB vm.StateDB, blockNum *big.Int, msg *restaking.CreateValidator,
+func (verifier StakingVerifier) VerifyCreateValidatorMsg(stateDB vm.StateDB, blockNum *big.Int, msg *restaking.CreateValidator,
 	signer common.Address) (*verification, error) {
 	if stateDB == nil {
 		return nil, errStateDBIsMissing
@@ -132,7 +142,7 @@ func VerifyCreateValidatorMsg(stateDB vm.StateDB, blockNum *big.Int, msg *restak
 		return nil, errBlockNumMissing
 	}
 
-	p, err := participantVerifier.VerifyForCreatingValidator(stateDB, msg, signer)
+	p, err := verifier.participantVerifier.VerifyForCreatingValidator(stateDB, msg, signer)
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +186,7 @@ func VerifyCreateValidatorMsg(stateDB vm.StateDB, blockNum *big.Int, msg *restak
 // the stateDB, chainContext and returns the edited validatorWrapper.
 //
 // Note that this function never updates the stateDB, it only reads from stateDB.
-func VerifyEditValidatorMsg(stateDB vm.StateDB, chainContext ChainContext, epoch, blockNum *big.Int,
+func (verifier StakingVerifier) VerifyEditValidatorMsg(stateDB vm.StateDB, chainContext ChainContext, epoch, blockNum *big.Int,
 	msg *restaking.EditValidator, signer common.Address) (*verification, error) {
 	if stateDB == nil {
 		return nil, errStateDBIsMissing
@@ -199,7 +209,7 @@ func VerifyEditValidatorMsg(stateDB vm.StateDB, chainContext ChainContext, epoch
 		return nil, err
 	}
 
-	p, err := participantVerifier.VerifyForEditingValidator(stateDB, msg, signer)
+	p, err := verifier.participantVerifier.VerifyForEditingValidator(stateDB, msg, signer)
 	if err != nil {
 		return nil, err
 	}
@@ -250,12 +260,12 @@ func VerifyEditValidatorMsg(stateDB vm.StateDB, chainContext ChainContext, epoch
 // validatorWrapper with the delegation applied to it.
 //
 // Note that this function never updates the stateDB, it only reads from stateDB.
-func VerifyRedelegateMsg(stateDB vm.StateDB, msg *restaking.Redelegate, signer common.Address) (*verification, error) {
+func (verifier StakingVerifier) VerifyRedelegateMsg(stateDB vm.StateDB, msg *restaking.Redelegate, signer common.Address) (*verification, error) {
 	if stateDB == nil {
 		return nil, errStateDBIsMissing
 	}
 
-	p, err := participantVerifier.VerifyForRedelegating(stateDB, msg, signer)
+	p, err := verifier.participantVerifier.VerifyForRedelegating(stateDB, msg, signer)
 	if err != nil {
 		return nil, err
 	}
@@ -277,7 +287,7 @@ func VerifyRedelegateMsg(stateDB vm.StateDB, msg *restaking.Redelegate, signer c
 // with the undelegation applied to it.
 //
 // Note that this function never updates the stateDB, it only reads from stateDB.
-func VerifyUnredelegateMsg(stateDB vm.StateDB, epoch *big.Int, msg *restaking.Unredelegate, signer common.Address) (*verification, error) {
+func (verifier StakingVerifier) VerifyUnredelegateMsg(stateDB vm.StateDB, epoch *big.Int, msg *restaking.Unredelegate, signer common.Address) (*verification, error) {
 	if stateDB == nil {
 		return nil, errStateDBIsMissing
 	}
@@ -285,7 +295,7 @@ func VerifyUnredelegateMsg(stateDB vm.StateDB, epoch *big.Int, msg *restaking.Un
 		return nil, errEpochMissing
 	}
 
-	p, err := participantVerifier.VerifyForUnredelegating(stateDB, msg, signer)
+	p, err := verifier.participantVerifier.VerifyForUnredelegating(stateDB, msg, signer)
 	if err != nil {
 		return nil, err
 	}
@@ -312,12 +322,12 @@ func VerifyUnredelegateMsg(stateDB vm.StateDB, epoch *big.Int, msg *restaking.Un
 // edited validatorWrappers and the sum total of the rewards.
 //
 // Note that this function never updates the stateDB, it only reads from stateDB.
-func VerifyCollectRedelRewardMsg(stateDB vm.StateDB, msg *restaking.CollectReward, signer common.Address) (*verification, error) {
+func (verifier StakingVerifier) VerifyCollectRedelRewardMsg(stateDB vm.StateDB, msg *restaking.CollectReward, signer common.Address) (*verification, error) {
 	if stateDB == nil {
 		return nil, errStateDBIsMissing
 	}
 
-	p, err := participantVerifier.VerifyForCollectingReward(stateDB, msg, signer)
+	p, err := verifier.participantVerifier.VerifyForCollectingReward(stateDB, msg, signer)
 	if err != nil {
 		return nil, err
 	}

@@ -61,6 +61,11 @@ func (st *StateTransition) StakingTransitionDb() (*ExecutionResult, error) {
 
 	// Increment the nonce for the next transaction
 	defer st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
+
+	verifier, err := NewStakingVerifier(st.bc)
+	if err != nil {
+		return nil, err
+	}
 	switch msg.Type() {
 	case types.CreateValidator:
 		stkMsg := &restaking.CreateValidator{}
@@ -68,31 +73,31 @@ func (st *StateTransition) StakingTransitionDb() (*ExecutionResult, error) {
 			return nil, err
 		}
 		st.state.IncrementValidatorNonce()
-		err = st.verifyAndApplyCreateValidatorTx(stkMsg, msg.From())
+		err = st.verifyAndApplyCreateValidatorTx(verifier, stkMsg, msg.From())
 	case types.EditValidator:
 		stkMsg := &restaking.EditValidator{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return nil, err
 		}
-		err = st.verifyAndApplyEditValidatorTx(stkMsg, msg.From())
+		err = st.verifyAndApplyEditValidatorTx(verifier, stkMsg, msg.From())
 	case types.Redelegate:
 		stkMsg := &restaking.Redelegate{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return nil, err
 		}
-		err = st.verifyAndApplyRedelegateTx(stkMsg, msg.From())
+		err = st.verifyAndApplyRedelegateTx(verifier, stkMsg, msg.From())
 	case types.Unredelegate:
 		stkMsg := &restaking.Unredelegate{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return nil, err
 		}
-		err = st.verifyAndApplyUnredelegateTx(stkMsg, msg.From())
+		err = st.verifyAndApplyUnredelegateTx(verifier, stkMsg, msg.From())
 	case types.CollectRedelReward:
 		stkMsg := &restaking.CollectReward{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return nil, err
 		}
-		_, err = st.verifyAndApplyCollectRedelRewardTx(stkMsg, msg.From())
+		_, err = st.verifyAndApplyCollectRedelRewardTx(verifier, stkMsg, msg.From())
 		// TODO: Add log for reward ?
 	case types.CreateMap3:
 		stkMsg := &microstaking.CreateMap3Node{}
@@ -100,37 +105,37 @@ func (st *StateTransition) StakingTransitionDb() (*ExecutionResult, error) {
 			return nil, err
 		}
 		st.state.IncrementMap3NodeNonce()
-		err = st.verifyAndApplyCreateMap3NodeTx(stkMsg, msg.From())
+		err = st.verifyAndApplyCreateMap3NodeTx(verifier, stkMsg, msg.From())
 	case types.EditMap3:
 		stkMsg := &microstaking.EditMap3Node{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return nil, err
 		}
-		err = st.verifyAndApplyEditMap3NodeTx(stkMsg, msg.From())
+		err = st.verifyAndApplyEditMap3NodeTx(verifier, stkMsg, msg.From())
 	case types.TerminateMap3:
 		stkMsg := &microstaking.TerminateMap3Node{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return nil, err
 		}
-		err = st.verifyAndApplyTerminateMap3NodeTx(stkMsg, msg.From())
+		err = st.verifyAndApplyTerminateMap3NodeTx(verifier, stkMsg, msg.From())
 	case types.Microdelegate:
 		stkMsg := &microstaking.Microdelegate{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return nil, err
 		}
-		err = st.verifyAndApplyMicrodelegateTx(stkMsg, msg.From())
+		err = st.verifyAndApplyMicrodelegateTx(verifier, stkMsg, msg.From())
 	case types.Unmicrodelegate:
 		stkMsg := &microstaking.Unmicrodelegate{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return nil, err
 		}
-		err = st.verifyAndApplyUnmicrodelegateTx(stkMsg, msg.From())
+		err = st.verifyAndApplyUnmicrodelegateTx(verifier, stkMsg, msg.From())
 	case types.CollectMap3Rewards:
 		stkMsg := &microstaking.CollectRewards{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return nil, err
 		}
-		_, err = st.verifyAndApplyCollectMicrodelRewardsTx(stkMsg, msg.From())
+		_, err = st.verifyAndApplyCollectMicrodelRewardsTx(verifier, stkMsg, msg.From())
 		// TODO: Add log for reward ?
 	default:
 		return nil, ErrInvalidStakingKind
@@ -145,8 +150,8 @@ func (st *StateTransition) StakingTransitionDb() (*ExecutionResult, error) {
 	}, err
 }
 
-func (st *StateTransition) verifyAndApplyCreateValidatorTx(msg *restaking.CreateValidator, signer common.Address) error {
-	verified, err := VerifyCreateValidatorMsg(st.state, st.evm.BlockNumber, msg, signer)
+func (st *StateTransition) verifyAndApplyCreateValidatorTx(verifier StakingVerifier, msg *restaking.CreateValidator, signer common.Address) error {
+	verified, err := verifier.VerifyCreateValidatorMsg(st.state, st.evm.BlockNumber, msg, signer)
 	if err != nil {
 		return err
 	}
@@ -154,8 +159,8 @@ func (st *StateTransition) verifyAndApplyCreateValidatorTx(msg *restaking.Create
 	return verified.Participant.postCreateValidator(msg.OperatorAddress, verified.NewRedelegation)
 }
 
-func (st *StateTransition) verifyAndApplyEditValidatorTx(msg *restaking.EditValidator, signer common.Address) error {
-	if _, err := VerifyEditValidatorMsg(st.state, st.bc, st.evm.EpochNumber, st.evm.BlockNumber, msg, signer); err != nil {
+func (st *StateTransition) verifyAndApplyEditValidatorTx(verifier StakingVerifier, msg *restaking.EditValidator, signer common.Address) error {
+	if _, err := verifier.VerifyEditValidatorMsg(st.state, st.bc, st.evm.EpochNumber, st.evm.BlockNumber, msg, signer); err != nil {
 		return err
 	}
 	validatorPool := st.state.ValidatorPool()
@@ -164,8 +169,8 @@ func (st *StateTransition) verifyAndApplyEditValidatorTx(msg *restaking.EditVali
 	return nil
 }
 
-func (st *StateTransition) verifyAndApplyRedelegateTx(msg *restaking.Redelegate, signer common.Address) error {
-	verified, err := VerifyRedelegateMsg(st.state, msg, signer)
+func (st *StateTransition) verifyAndApplyRedelegateTx(verifier StakingVerifier, msg *restaking.Redelegate, signer common.Address) error {
+	verified, err := verifier.VerifyRedelegateMsg(st.state, msg, signer)
 	if err != nil {
 		return err
 	}
@@ -174,8 +179,8 @@ func (st *StateTransition) verifyAndApplyRedelegateTx(msg *restaking.Redelegate,
 	return verified.Participant.postRedelegate(msg.ValidatorAddress, verified.NewRedelegation)
 }
 
-func (st *StateTransition) verifyAndApplyUnredelegateTx(msg *restaking.Unredelegate, signer common.Address) error {
-	if _, err := VerifyUnredelegateMsg(st.state, st.evm.EpochNumber, msg, signer); err != nil {
+func (st *StateTransition) verifyAndApplyUnredelegateTx(verifier StakingVerifier, msg *restaking.Unredelegate, signer common.Address) error {
+	if _, err := verifier.VerifyUnredelegateMsg(st.state, st.evm.EpochNumber, msg, signer); err != nil {
 		return err
 	}
 
@@ -186,13 +191,13 @@ func (st *StateTransition) verifyAndApplyUnredelegateTx(msg *restaking.Unredeleg
 	return nil
 }
 
-func (st *StateTransition) verifyAndApplyCollectRedelRewardTx(msg *restaking.CollectReward, signer common.Address) (*big.Int, error) {
-	if _, err := VerifyCollectRedelRewardMsg(st.state, msg, signer); err != nil {
+func (st *StateTransition) verifyAndApplyCollectRedelRewardTx(verifier StakingVerifier, msg *restaking.CollectReward, signer common.Address) (*big.Int, error) {
+	verified, err := verifier.VerifyCollectRedelRewardMsg(st.state, msg, signer)
+	if err != nil {
 		return network.NoReward, err
 	}
 	validator, _ := st.state.ValidatorByAddress(msg.ValidatorAddress)
-	handler := RewardToBalance{StateDB: st. state} // TODO(ATLAS): map3 reward distributor ?
-	return payoutRedelegationReward(validator, msg.DelegatorAddress, &handler, st.evm.EpochNumber)
+	return payoutRedelegationReward(validator, msg.DelegatorAddress, verified.Participant.rewardHandler(), st.evm.EpochNumber)
 }
 
 func saveNewValidatorToPool(wrapper *restaking.ValidatorWrapper_, validatorPool *restaking.Storage_ValidatorPool_) {
@@ -256,34 +261,33 @@ func payoutRedelegationReward(s *restaking.Storage_ValidatorWrapper_, delegator 
 		return nil, errMicrodelegationNotExist
 	}
 
-	r := redelegation.Reward().Value()
-	if r.Cmp(common.Big0) == 0 {
-		return nil, errNoRewardsToCollect
-	}
-	redelegation.Reward().SetValue(common.Big0)
-	if err := handler.HandleReward(s.Validator().ValidatorAddress().Value(), delegator, r, epoch); err != nil {
+	r, err := handler.HandleReward(redelegation, epoch)
+	if err != nil {
 		return common.Big0, err
 	}
 	return r, nil
 }
 
 type RestakingRewardHandler interface {
-	HandleReward(validator, delegator common.Address, reward, epoch *big.Int) error
+	HandleReward(redelegation *restaking.Storage_Redelegation_, epoch *big.Int) (*big.Int, error)
 }
 
 type RewardToBalance struct {
 	StateDB vm.StateDB
 }
 
-func (r *RewardToBalance) HandleReward(validator, delegator common.Address, reward, epoch *big.Int) error {
-	r.StateDB.AddBalance(delegator, reward)
-	return nil
+func (handler RewardToBalance) HandleReward(redelegation *restaking.Storage_Redelegation_, epoch *big.Int) (*big.Int, error) {
+	r := redelegation.Reward().Value()
+	handler.StateDB.AddBalance(redelegation.DelegatorAddress().Value(), r)
+	redelegation.Reward().Clear()
+	return r, nil
 }
 
 type participant interface {
 	restakingAmount() *big.Int
 	postCreateValidator(validator common.Address, amount *big.Int) error
 	postRedelegate(validator common.Address, amount *big.Int) error
+	rewardHandler() RestakingRewardHandler
 }
 
 type tokenHolder struct {
@@ -304,6 +308,10 @@ func (t tokenHolder) postCreateValidator(validator common.Address, amount *big.I
 func (t tokenHolder) postRedelegate(validator common.Address, amount *big.Int) error {
 	t.stateDB.SubBalance(t.holderAddress, amount)
 	return nil
+}
+
+func (t tokenHolder) rewardHandler() RestakingRewardHandler {
+	return &RewardToBalance{StateDB: t.stateDB}
 }
 
 // IntrinsicGas computes the 'intrinsic gas' for a message with the given data.

@@ -3,14 +3,16 @@ package core
 import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/staking/network"
 	"github.com/ethereum/go-ethereum/staking/types/microstaking"
+	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	"math/big"
 )
 
-func (st *StateTransition) verifyAndApplyCreateMap3NodeTx(msg *microstaking.CreateMap3Node, signer common.Address) error {
+func (st *StateTransition) verifyAndApplyCreateMap3NodeTx(verifier StakingVerifier, msg *microstaking.CreateMap3Node, signer common.Address) error {
 	epoch, blockNum := st.evm.EpochNumber, st.evm.BlockNumber
-	newNode, err := VerifyCreateMap3NodeMsg(st.state, st.bc, epoch, blockNum, msg, signer)
+	newNode, err := verifier.VerifyCreateMap3NodeMsg(st.state, st.bc, epoch, blockNum, msg, signer)
 	if err != nil {
 		return err
 	}
@@ -19,8 +21,8 @@ func (st *StateTransition) verifyAndApplyCreateMap3NodeTx(msg *microstaking.Crea
 	return nil
 }
 
-func (st *StateTransition) verifyAndApplyEditMap3NodeTx(msg *microstaking.EditMap3Node, signer common.Address) error {
-	if err := VerifyEditMap3NodeMsg(st.state, st.evm.EpochNumber, st.evm.BlockNumber, msg, signer); err != nil {
+func (st *StateTransition) verifyAndApplyEditMap3NodeTx(verifier StakingVerifier, msg *microstaking.EditMap3Node, signer common.Address) error {
+	if err := verifier.VerifyEditMap3NodeMsg(st.state, st.evm.EpochNumber, st.evm.BlockNumber, msg, signer); err != nil {
 		return err
 	}
 	nodePool := st.state.Map3NodePool()
@@ -29,8 +31,8 @@ func (st *StateTransition) verifyAndApplyEditMap3NodeTx(msg *microstaking.EditMa
 	return nil
 }
 
-func (st *StateTransition) verifyAndApplyTerminateMap3NodeTx(msg *microstaking.TerminateMap3Node, signer common.Address) error {
-	if err := VerifyTerminateMap3NodeMsg(st.state, st.evm.EpochNumber, msg, signer); err != nil {
+func (st *StateTransition) verifyAndApplyTerminateMap3NodeTx(verifier StakingVerifier, msg *microstaking.TerminateMap3Node, signer common.Address) error {
+	if err := verifier.VerifyTerminateMap3NodeMsg(st.state, st.evm.EpochNumber, msg, signer); err != nil {
 		return err
 	}
 	node, _ := st.state.Map3NodeByAddress(msg.Map3NodeAddress)
@@ -45,9 +47,9 @@ func (st *StateTransition) verifyAndApplyTerminateMap3NodeTx(msg *microstaking.T
 	return nil
 }
 
-func (st *StateTransition) verifyAndApplyMicrodelegateTx(msg *microstaking.Microdelegate, signer common.Address) error {
+func (st *StateTransition) verifyAndApplyMicrodelegateTx(verifier StakingVerifier, msg *microstaking.Microdelegate, signer common.Address) error {
 	blockNum, epoch := st.evm.BlockNumber, st.evm.EpochNumber
-	if err := VerifyMicrodelegateMsg(st.state, st.bc, blockNum, msg, signer); err != nil {
+	if err := verifier.VerifyMicrodelegateMsg(st.state, st.bc, blockNum, msg, signer); err != nil {
 		return err
 	}
 	st.state.SubBalance(msg.DelegatorAddress, msg.Amount)
@@ -64,9 +66,9 @@ func (st *StateTransition) verifyAndApplyMicrodelegateTx(msg *microstaking.Micro
 	return nil
 }
 
-func (st *StateTransition) verifyAndApplyUnmicrodelegateTx(msg *microstaking.Unmicrodelegate, signer common.Address) error {
+func (st *StateTransition) verifyAndApplyUnmicrodelegateTx(verifier StakingVerifier, msg *microstaking.Unmicrodelegate, signer common.Address) error {
 	blockNum, epoch := st.evm.BlockNumber, st.evm.EpochNumber
-	if err := VerifyUnmicrodelegateMsg(st.state, st.bc, blockNum, epoch, msg, signer); err != nil {
+	if err := verifier.VerifyUnmicrodelegateMsg(st.state, st.bc, blockNum, epoch, msg, signer); err != nil {
 		return err
 	}
 	node, _ := st.state.Map3NodeByAddress(msg.Map3NodeAddress)
@@ -78,9 +80,8 @@ func (st *StateTransition) verifyAndApplyUnmicrodelegateTx(msg *microstaking.Unm
 	return nil
 }
 
-func (st *StateTransition) verifyAndApplyCollectMicrodelRewardsTx(msg *microstaking.CollectRewards,
-	signer common.Address) (*big.Int, error) {
-	if err := VerifyCollectMicrodelRewardsMsg(st.state, msg, signer); err != nil {
+func (st *StateTransition) verifyAndApplyCollectMicrodelRewardsTx(verifier StakingVerifier, msg *microstaking.CollectRewards, signer common.Address) (*big.Int, error) {
+	if err := verifier.VerifyCollectMicrodelRewardsMsg(st.state, msg, signer); err != nil {
 		return network.NoReward, err
 	}
 	map3NodePool := st.state.Map3NodePool()
@@ -182,4 +183,78 @@ func ReleaseMicrodelegationFromMap3Node(stateDB vm.StateDB, node *microstaking.S
 	node.SubTotalDelegation(totalToReduce)
 	node.SubTotalPendingDelegation(totalPendingToReduce)
 	return nil
+}
+
+func LookupMicrodelegationShares(node *microstaking.Storage_Map3NodeWrapper_) (map[common.Address]common.Dec, error) {
+	shares := map[common.Address]common.Dec{}
+	totalDelegationDec := common.NewDecFromBigInt(node.TotalDelegation().Value())
+	if totalDelegationDec.IsZero() {
+		log.Info("zero total delegation during AddReward delegation payout",
+			"validator-snapshot", node.Map3Node().Map3Address().Value().Hex())
+		return shares, nil
+	}
+
+	for _, key := range node.Microdelegations().AllKeys() {
+		delegation, ok := node.Microdelegations().Get(key)
+		if !ok {
+			return nil, errMicrodelegationNotExist
+		}
+		percentage := common.NewDecFromBigInt(delegation.Amount().Value()).Quo(totalDelegationDec)
+		shares[key] = percentage
+	}
+
+	// TODO(ATLAS): cache shares
+
+	return shares, nil
+}
+
+
+type map3NodeAsParticipant struct {
+	stateDB vm.StateDB
+	node    *microstaking.Storage_Map3NodeWrapper_
+}
+
+func (p map3NodeAsParticipant) restakingAmount() *big.Int {
+	return p.node.TotalDelegation().Value()
+}
+
+func (p map3NodeAsParticipant) postCreateValidator(validator common.Address, amount *big.Int) error {
+	p.node.RestakingReference().ValidatorAddress().SetValue(validator)
+	return nil
+}
+
+func (p map3NodeAsParticipant) postRedelegate(validator common.Address, amount *big.Int) error {
+	p.node.RestakingReference().ValidatorAddress().SetValue(validator)
+	return nil
+}
+
+func (p map3NodeAsParticipant) rewardHandler() RestakingRewardHandler {
+	return &RewardToMap3Node{}
+}
+
+type RewardToMap3Node struct {
+	StateDB vm.StateDB
+}
+
+func (handler RewardToMap3Node) HandleReward(redelegation *restaking.Storage_Redelegation_, epoch *big.Int) (*big.Int, error) {
+	reward := redelegation.Reward().Value()
+	if reward.Cmp(common.Big0) == 0 {
+		return common.Big0, nil
+	}
+	map3Address := redelegation.DelegatorAddress().Value()
+	// TODO(ATLAS): can not continue to delegate after activating the map3 node
+	// calculate shares based on the latest delegation state
+	node, err := handler.StateDB.Map3NodeByAddress(map3Address)
+	if err != nil {
+		return nil, err
+	}
+	shares, err := LookupMicrodelegationShares(node)
+	if err != nil {
+		return nil, err
+	}
+	if err := handler.StateDB.AddMicrodelegationReward(node, reward, shares); err != nil {
+		return nil, err
+	}
+	redelegation.Reward().Clear()
+	return reward, nil
 }

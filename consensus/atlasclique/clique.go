@@ -810,15 +810,14 @@ func handleMap3AndAtlasStaking(chain consensus.ChainReader, header *types.Header
 			return nil, err
 		}
 
-		// unredelegation
-		undelegationReleaser := undelegationToBalance{
-			rewardHandler: &core.RewardToBalance{StateDB: stateDB},
-		}
-
 		// TODO(ATLAS): payout microdelegation and reward
 
 		// Need to be after accumulateRewardsAndCountSigs because unredelegation may release
-		if err := payoutUnredelegations(header, stateDB, &undelegationReleaser); err != nil {
+		releaser, err := NewUndelegationReleaser(stateDB, chain.Config())
+		if err != nil {
+			return nil, err
+		}
+		if err := payoutUnredelegations(header, stateDB, releaser); err != nil {
 			return nil, err
 		}
 	}
@@ -856,26 +855,80 @@ func setLastEpochInCommittee(comm *restaking.Committee_, stateDB *state.StateDB)
 	return nil
 }
 
+func NewUndelegationReleaser(stateDB *state.StateDB, config *params.ChainConfig) (UndelegationReleaser, error) {
+	if config.Atlas == nil {
+		return nil, errors.New("not support to undelegate")
+	}
+	if config.Atlas.RestakingEnable {
+		return undelegationToMap3Node{
+			stateDB:       stateDB,
+			rewardHandler: core.RewardToMap3Node{StateDB: stateDB},
+		}, nil
+	} else {
+		return undelegationToBalance{
+			stateDB:       stateDB,
+			rewardHandler: core.RewardToBalance{StateDB: stateDB},
+		}, nil
+	}
+}
+
 type UndelegationReleaser interface {
-	Release(redelegation *restaking.Storage_Redelegation_, fromValidator common.Address, epoch *big.Int, stateDB *state.StateDB) error
+	Release(redelegation *restaking.Storage_Redelegation_, fromValidator common.Address, epoch *big.Int) (completed bool, err error)
 }
 
 type undelegationToBalance struct {
-	rewardHandler core.RestakingRewardHandler
+	stateDB *state.StateDB
+	rewardHandler core.RewardToBalance
 }
 
-func (u *undelegationToBalance) Release(redelegation *restaking.Storage_Redelegation_, fromValidator common.Address,
-	epoch *big.Int, stateDB *state.StateDB) error {
+func (u undelegationToBalance) Release(redelegation *restaking.Storage_Redelegation_, fromValidator common.Address,
+	epoch *big.Int) (completed bool, err error) {
+	// return undelegation
 	delegator := redelegation.DelegatorAddress().Value()
-	amt, r := redelegation.Amount().Value(), redelegation.Reward().Value()
-	stateDB.AddBalance(delegator, amt)
-	if r.Cmp(common.Big0) > 0 {
-		if err := u.rewardHandler.HandleReward(fromValidator, delegator, r, epoch); err != nil {
-			return err
+	undelegation := redelegation.Undelegation().Amount().Value()
+	u.stateDB.AddBalance(delegator, undelegation)
+	redelegation.Undelegation().Clear()
+
+	// return reward if redelgation is empty
+	if amt := redelegation.Amount().Value(); amt.Cmp(common.Big0) == 0 {
+		_, err := u.rewardHandler.HandleReward(redelegation, epoch)
+		if err != nil {
+			return false, err
 		}
+		return true, nil
 	}
-	return nil
+	return false, nil
 }
+
+type undelegationToMap3Node struct {
+	stateDB *state.StateDB
+	rewardHandler core.RewardToMap3Node
+}
+
+func (u undelegationToMap3Node) Release(redelegation *restaking.Storage_Redelegation_, fromValidator common.Address,
+	epoch *big.Int) (completed bool, err error) {
+	// clear undelegation
+	redelegation.Undelegation().Clear()
+
+	// return reward if redelgation is empty
+	if amt := redelegation.Amount().Value(); amt.Cmp(common.Big0) == 0 {
+		_, err := u.rewardHandler.HandleReward(redelegation, epoch)
+		if err != nil {
+			return false, err
+		}
+
+		// clear restaking reference
+		map3Addr := redelegation.DelegatorAddress().Value()
+		node, err := u.stateDB.Map3NodeByAddress(map3Addr)
+		if err != nil {
+			return false, err
+		}
+		node.RestakingReference().Clear()
+		return true, nil
+	}
+	return false, nil
+}
+
 
 // Withdraw unlocked tokens to the delegators' accounts
 func payoutUnredelegations(header *types.Header, stateDB *state.StateDB, releaser UndelegationReleaser) error {
@@ -896,9 +949,12 @@ func payoutUnredelegations(header *types.Header, stateDB *state.StateDB, release
 			}
 
 			if redelegation.CanReleaseAt(nowEpoch) {
-				toBeRemoved = append(toBeRemoved, delegator)
-				if err := releaser.Release(redelegation, validatorAddr, nowEpoch, stateDB); err != nil {
+				completed, err := releaser.Release(redelegation, validatorAddr, nowEpoch)
+				if err != nil {
 					return err
+				}
+				if completed {
+					toBeRemoved = append(toBeRemoved, delegator)
 				}
 			}
 		}
