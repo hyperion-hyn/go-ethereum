@@ -24,11 +24,13 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
+	"github.com/ethereum/go-ethereum/log"
 )
 
 func TestCheckMessage(t *testing.T) {
 	c := &core{
-		state: StateAcceptRequest,
+		logger: log.New(),
+		state:  StateAcceptRequest,
 		current: newRoundState(&atlas.View{
 			Sequence: big.NewInt(1),
 			Round:    big.NewInt(0),

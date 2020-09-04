@@ -367,7 +367,7 @@ func (c *core) SignSubject(subject *atlas.Subject) (*atlas.Subject, error) {
 	return signedSubject, err
 }
 
-func (c *core) AssembleSignedSubject() (*atlas.Subject, error) {
+func (c *core) AssembleSignedSubject(subject *atlas.Subject) (*atlas.Subject, error) {
 	switch c.state {
 	case StatePrepared, StateConfirmed:
 		var val *atlas.SignPayload
@@ -389,9 +389,8 @@ func (c *core) AssembleSignedSubject() (*atlas.Subject, error) {
 		if err != nil {
 			return nil, err
 		}
-		retval := c.current.Subject()
-		retval.Payload = payload
-		return retval, nil
+		subject.Payload = payload
+		return subject, nil
 	default:
 		return nil, errors.New(fmt.Sprintf("invalid state: %v", c.current))
 	}

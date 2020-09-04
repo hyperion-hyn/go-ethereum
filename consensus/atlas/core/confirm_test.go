@@ -220,7 +220,7 @@ OUTER:
 			t.Errorf("message code mismatch: have %v, want %v", decodedMsg.Code, msgCommit)
 		}
 
-		sub, err := r0.AssembleSignedSubject()
+		sub, err := r0.AssembleSignedSubject(r0.current.Subject())
 
 		var m atlas.Subject
 		err = decodedMsg.Decode(&m)

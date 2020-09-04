@@ -49,10 +49,11 @@ var (
 // Note: If change type of field from fixed-length array to slice, should check all the usage of this struct.
 // or it will fail to initialize instance of this struct.
 type AtlasExtra struct {
+	Seal         [AtlasExtraSignature]byte // proposer's seal
+	Proposer     int                       // proposer's index
 	AggSignature [AtlasExtraSignature]byte // aggregated signature
 	AggPublicKey [AtlasExtraPublicKey]byte // aggregated public key
 	AggBitmap    [AtlasExtraMask]byte      // aggregated bitmap
-	Proposer     int                       // proposer's index
 }
 
 // EncodeRLP serializes ist into the Ethereum RLP format.
@@ -61,25 +62,27 @@ func (ist *AtlasExtra) EncodeRLP(w io.Writer) error {
 	data := math.PaddedBigBytes(value, AtlasExtraProposer)
 
 	return rlp.Encode(w, []interface{}{
+		ist.Seal,
+		data,
 		ist.AggSignature,
 		ist.AggPublicKey,
 		ist.AggBitmap,
-		data,
 	})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the atlas fields from a RLP stream.
 func (ist *AtlasExtra) DecodeRLP(s *rlp.Stream) error {
 	var atlasExtra struct {
+		Seal         [AtlasExtraSignature]byte // proposer's seal
+		Proposer     [AtlasExtraProposer]byte  // proposer's index
 		AggSignature [AtlasExtraSignature]byte // aggregated signature
 		AggPublicKey [AtlasExtraPublicKey]byte // aggregated public key
 		AggBitmap    [AtlasExtraMask]byte      // aggregated bitmap
-		Proposer     [AtlasExtraProposer]byte  // proposer's index
 	}
 	if err := s.Decode(&atlasExtra); err != nil {
 		return err
 	}
-	ist.AggSignature, ist.AggPublicKey, ist.AggBitmap = atlasExtra.AggSignature, atlasExtra.AggPublicKey, atlasExtra.AggBitmap
+	ist.Seal, ist.AggSignature, ist.AggPublicKey, ist.AggBitmap = atlasExtra.Seal, atlasExtra.AggSignature, atlasExtra.AggPublicKey, atlasExtra.AggBitmap
 	ist.Proposer = int(big.NewInt(0).SetBytes(atlasExtra.Proposer[:]).Uint64())
 	return nil
 }
@@ -96,12 +99,12 @@ func ExtractAtlasExtraField(extra []byte) (*AtlasExtra, error) {
 		return nil, ErrInvalidAtlasHeaderExtra
 	}
 
-	var atlasExtra *AtlasExtra
+	var atlasExtra AtlasExtra
 	err := rlp.DecodeBytes(extra[AtlasExtraVanity:], &atlasExtra)
 	if err != nil {
 		return nil, err
 	}
-	return atlasExtra, nil
+	return &atlasExtra, nil
 
 }
 

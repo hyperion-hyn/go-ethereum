@@ -81,7 +81,7 @@ func (ap *testerAccountPool) sign(header *types.Header, validator string) {
 	hashData := crypto.Keccak256([]byte(SealHash(header).Bytes()))
 	sig, _ := crypto.Sign(hashData, ap.accounts[validator])
 
-	writeSeal(header, sig, []byte{})
+	writeSeal(header, sig, 0)
 }
 
 func (ap *testerAccountPool) address(account string) common.Address {

@@ -195,7 +195,7 @@ OUTER:
 
 			s := r0.state
 			r0.state = StateConfirmed
-			signedSubject, err := r0.AssembleSignedSubject()
+			signedSubject, err := r0.AssembleSignedSubject(c.current.Subject())
 			if err != nil {
 				t.Errorf("failed to assemble subject: %v", err)
 			}

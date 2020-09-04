@@ -100,8 +100,6 @@ var (
 	errInvalidAggregatedSignature = errors.New("invalid aggregated signature")
 	// errMismatchTxhashes is returned if the TxHash in header is mismatch.
 	errMismatchTxhashes = errors.New("mismatch transcations hashes")
-	// errMismatchTxhashes is returned if the TxHash in header is mismatch.
-	err = errors.New("mismatch transcations hashes")
 	// errCountBetweenPublicKeyAndSignatureNotMatch is returned if count of public keys and count of signature is mismatch
 	errCountBetweenPublicKeyAndSignatureNotMatch = errors.New("Count between public key and signature not match.")
 )
@@ -545,6 +543,29 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 func (sb *backend) updateBlock(parent *types.Header, block *types.Block) (*types.Block, error) {
 	header := block.Header()
 
+	// sign the hash
+	seal, pubKey, _, err := sb.Sign(SealHash(header).Bytes())
+
+	if err != nil {
+		return nil, err
+	}
+
+	number := header.Number.Uint64()
+	snap, err := sb.snapshot(sb.chain, number-1, header.ParentHash, nil)
+
+	var publicKey bls.PublicKey
+	if err := publicKey.Deserialize(pubKey); err != nil {
+		return nil, err
+	}
+	index, validator := snap.ValSet.GetByPublicKey(&publicKey)
+	if validator == nil {
+		return nil, errUnauthorized
+	}
+	err = writeSeal(header, seal, index)
+	if err != nil {
+		return nil, err
+	}
+
 	return block.WithSeal(header), nil
 }
 
@@ -733,12 +754,12 @@ func prepareExtra(header *types.Header, vals []atlas.Validator) ([]byte, error) 
 
 // writeSeal writes the extra-data field of the given header with the given seals.
 // suggest to rename to writeSeal.
-func writeSeal(h *types.Header, seal []byte, pubkey []byte) error {
+func writeSeal(h *types.Header, seal []byte, proposer int) error {
 	if len(seal) != types.AtlasExtraSignature {
 		return errInvalidSignature
 	}
 
-	if len(pubkey) != types.AtlasExtraPublicKey {
+	if proposer > types.AtlasMaxValidator {
 		return errInvalidPublicKey
 	}
 
@@ -747,8 +768,8 @@ func writeSeal(h *types.Header, seal []byte, pubkey []byte) error {
 		return err
 	}
 
-	copy(atlasExtra.AggSignature[:], seal)
-	copy(atlasExtra.AggPublicKey[:], pubkey)
+	copy(atlasExtra.Seal[:], seal)
+	atlasExtra.Proposer = proposer
 
 	payload, err := rlp.EncodeToBytes(&atlasExtra)
 	if err != nil {
@@ -812,6 +833,7 @@ func WriteCommittedSealsAsExtra(extra []byte, signature []byte, publicKey []byte
 	copy(extraData, extra)
 
 	var atlasExtra *types.AtlasExtra
+	var err error
 	if len(extraData) == types.AtlasExtraVanity {
 		atlasExtra = &types.AtlasExtra{}
 	} else {

@@ -41,6 +41,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	bls_cosi "github.com/ethereum/go-ethereum/crypto/bls"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 // in this test, we can set n to 1, and it means we can process Atlas and commit a
@@ -566,13 +567,16 @@ func TestWriteSeal(t *testing.T) {
 	vanity := bytes.Repeat([]byte{0x00}, types.AtlasExtraVanity)
 	istRawData := hexutil.MustDecode("0xf8a7b860000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000b00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000009000000000000000000000000000000000820000")
 	expectedSeal := bytes.Repeat([]byte{0x00}, types.AtlasExtraSignature)
-	expectedPublicKey := bytes.Repeat([]byte{0x00}, types.AtlasExtraPublicKey)
+	expectedProposer := 0
 	expectedIstExtra := &types.AtlasExtra{
+		Seal:         [96]byte{},
+		Proposer:     0,
 		AggSignature: [96]byte{},
 		AggPublicKey: [48]byte{},
 		AggBitmap:    [16]byte{},
-		Proposer:     0,
 	}
+
+	copy(expectedIstExtra.Seal[:], expectedSeal[:])
 
 	var expectedErr error
 
@@ -580,8 +584,10 @@ func TestWriteSeal(t *testing.T) {
 		Extra: append(vanity, istRawData...),
 	}
 
+	data, _ := rlp.EncodeToBytes(&expectedIstExtra)
+	t.Errorf("%x", data)
 	// normal case
-	err = writeSeal(h, expectedSeal, expectedPublicKey)
+	err := writeSeal(h, expectedSeal, expectedProposer)
 	if err != expectedErr {
 		t.Errorf("error mismatch: have %v, want %v", err, expectedErr)
 	}
@@ -597,7 +603,7 @@ func TestWriteSeal(t *testing.T) {
 
 	// invalid seal
 	unexpectedSeal := append(expectedSeal, make([]byte, 1)...)
-	err = writeSeal(h, unexpectedSeal, expectedPublicKey)
+	err = writeSeal(h, unexpectedSeal, expectedProposer)
 	if err != errInvalidSignature {
 		t.Errorf("error mismatch: have %v, want %v", err, errInvalidSignature)
 	}

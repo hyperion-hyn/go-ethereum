@@ -193,7 +193,7 @@ OUTER:
 
 			s := r0.state
 			r0.state = StatePrepared
-			signedSubject, err := r0.AssembleSignedSubject()
+			signedSubject, err := r0.AssembleSignedSubject(r0.current.Subject())
 			if err != nil {
 				t.Errorf("failed to assemble subject: %v", err)
 			}
@@ -258,7 +258,7 @@ func TestVerifyExpect(t *testing.T) {
 	}
 	valSet := validator.NewSet([]atlas.Validator{peer}, atlas.RoundRobin)
 
-	sys := NewTestSystemWithBackend(uint64(1), uint64(0))
+	sys := NewTestSystemWithBackend(uint64(4), uint64(1))
 
 	testCases := []struct {
 		expected   error
@@ -341,12 +341,14 @@ func TestVerifyExpect(t *testing.T) {
 	for i, test := range testCases {
 		c := sys.backends[0].engine.(*core)
 		c.current = test.roundState
+		c.state = StatePrepared
 
-		signedSubject, err := c.SignSubject(test.expect)
+		signedSubject, err := c.AssembleSignedSubject(test.expect)
 		if err != nil {
 			t.Errorf("failed to sign subject: %v", err)
 		}
 
+		// ATLAS(zgx): should sign and aggragate multiple signature first
 		err = c.verifyExpect(signedSubject, peer)
 		if err != test.expected {
 			t.Errorf("result %d: error mismatch: have %v, want %v", i, err, test.expected)

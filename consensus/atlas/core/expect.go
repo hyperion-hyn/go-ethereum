@@ -29,7 +29,7 @@ func (c *core) sendExpect() {
 
 	// If I'm the proposer and I have the same sequence with the proposal
 	if c.IsProposer() {
-		sub, err := c.AssembleSignedSubject()
+		sub, err := c.AssembleSignedSubject(c.current.Subject())
 		if err != nil {
 			logger.Error("Failed to sign", "view", c.currentView(), "err", err)
 		}

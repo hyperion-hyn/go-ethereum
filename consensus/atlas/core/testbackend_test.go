@@ -133,7 +133,7 @@ func (self *testSystemBackend) Sign(data []byte) ([]byte, []byte, []byte, error)
 	return sighash, pubkey, nil, nil
 }
 
-func (self *testSystemBackend) CheckSignature([]byte, common.Address, []byte) error {
+func (self *testSystemBackend) CheckSignature([]byte, []byte, []byte) error {
 	return nil
 }
 
