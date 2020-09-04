@@ -211,7 +211,7 @@ func (sb *backend) Commit(proposal atlas.Proposal, signature []byte, publicKey [
 	// -- if success, the ChainHeadEvent event will be broadcasted, try to build
 	//    the next block and the previous Seal() will be stopped.
 	// -- otherwise, a error will be returned and a round change event will be fired.
-	if sb.proposedBlockHash == block.Hash() {
+	if sb.proposedBlockHash == sb.SealHash(block.Header()) {
 		// feed block hash to Seal() and wait the Seal() result
 		sb.commitCh <- block
 		return nil

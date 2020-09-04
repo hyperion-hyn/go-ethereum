@@ -228,7 +228,7 @@ func TestCommit(t *testing.T) {
 			}
 		}()
 
-		backend.proposedBlockHash = expBlock.Hash()
+		backend.proposedBlockHash = backend.SealHash(expBlock.Header())
 		signature, publicKey, bitmap, err := test.expectedSign(expBlock)
 		if err != nil {
 			t.Errorf("failed to sign block: %v", err)

@@ -466,7 +466,7 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 		// get the proposed block hash and clear it if the seal() is completed.
 		sb.sealMu.Lock()
 		// ATLAS(zgx): what is the purpose of proposedBlockHash, can we ignore it in FBFT?
-		sb.proposedBlockHash = block.Hash()
+		sb.proposedBlockHash = sb.SealHash(block.Header())
 
 		defer func() {
 			sb.proposedBlockHash = common.Hash{}
