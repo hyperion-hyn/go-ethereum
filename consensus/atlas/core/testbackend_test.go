@@ -137,8 +137,7 @@ func (self *testSystemBackend) CheckSignature([]byte, []byte, []byte) error {
 	return nil
 }
 
-func (self *testSystemBackend) CheckValidatorSignature(data []byte, sig []byte, pubKey []byte) error {
-	hash := crypto.Keccak256Hash([]byte(data))
+func (self *testSystemBackend) CheckValidatorSignature(hash common.Hash, sig []byte, pubKey []byte) error {
 	return atlas.CheckValidatorSignature(hash.Bytes(), sig, pubKey)
 }
 
@@ -254,7 +253,7 @@ func NewTestSystemWithBackend(n, f uint64) *testSystem {
 		})
 		core.valSet = vset
 		core.logger = testLogger
-		core.validateFn = backend.CheckValidatorSignature
+		core.validateHashFn = backend.CheckValidatorSignature
 		core.backlogs = make(map[common.Address]*prque.Prque)
 		core.backlogsMu = new(sync.Mutex)
 		core.roundChangeSet = newRoundChangeSet(core.valSet)

@@ -134,7 +134,7 @@ func (c *core) acceptConfirm(msg *message, src atlas.Validator) error {
 		return err
 	}
 
-	err = c.checkValidatorSignature(confirm.Digest.Bytes(), signPayload.Signature, pubKey.Serialize())
+	err = c.checkValidatorSignature(confirm.Digest, signPayload.Signature, pubKey.Serialize())
 	if err != nil {
 		logger.Error("Failed to verify signature with signer's public key confirm", "signature", signPayload.Signature[:10], "publicKey", pubKey.Serialize()[:10])
 		return err

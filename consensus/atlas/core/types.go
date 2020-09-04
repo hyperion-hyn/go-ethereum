@@ -22,6 +22,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
@@ -133,7 +134,7 @@ func (m *message) DecodeRLP(s *rlp.Stream) error {
 //
 // define the functions that needs to be provided for core.
 
-func (m *message) FromPayload(b []byte, preprocessorFn func(*message) error, validateFn func(payload []byte, signature []byte, publicKey []byte) error) error {
+func (m *message) FromPayload(b []byte, preprocessorFn func(*message) error, validateFn func(hash common.Hash, signature []byte, publicKey []byte) error) error {
 	// Decode message
 	err := rlp.DecodeBytes(b, &m)
 	if err != nil {
@@ -154,7 +155,8 @@ func (m *message) FromPayload(b []byte, preprocessorFn func(*message) error, val
 			return err
 		}
 
-		err := validateFn(payload, m.Signature, m.SignerPubKey)
+		hash := crypto.Keccak256Hash(payload)
+		err := validateFn(hash, m.Signature, m.SignerPubKey)
 		if err != nil {
 			return err
 		}

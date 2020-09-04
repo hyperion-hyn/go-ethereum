@@ -61,7 +61,7 @@ func New(backend atlas.Backend, config *atlas.Config) Engine {
 	r.Register("consensus/atlas/core/sequence", c.sequenceMeter)
 	r.Register("consensus/atlas/core/consensus", c.consensusTimer)
 
-	c.validateFn = c.checkValidatorSignature
+	c.validateHashFn = c.checkValidatorSignature
 	return c
 }
 
@@ -81,7 +81,7 @@ type core struct {
 
 	valSet                atlas.ValidatorSet
 	waitingForRoundChange bool
-	validateFn            func(data []byte, sig []byte, pubKey []byte) error
+	validateHashFn        func(hash common.Hash, sig []byte, pubKey []byte) error
 
 	backlogs   map[common.Address]*prque.Prque
 	backlogsMu *sync.Mutex
@@ -120,7 +120,7 @@ func (c *core) finalizeMessage(msg *message) ([]byte, error) {
 		return nil, err
 	}
 
-	if err := c.validateFn(data, msg.Signature, msg.SignerPubKey); err != nil {
+	if err := c.validateHashFn(hash, msg.Signature, msg.SignerPubKey); err != nil {
 		c.logger.Error("Validate failed after Sign")
 		return nil, err
 	}
@@ -336,8 +336,7 @@ func (c *core) newRoundChangeTimer() {
 	})
 }
 
-func (c *core) checkValidatorSignature(data []byte, sig []byte, pubKey []byte) error {
-	hash := crypto.Keccak256Hash([]byte(data))
+func (c *core) checkValidatorSignature(hash common.Hash, sig []byte, pubKey []byte) error {
 	return atlas.CheckValidatorSignature(hash.Bytes(), sig, pubKey)
 }
 
@@ -399,7 +398,7 @@ func (c *core) verifySignPayload(subject *atlas.Subject, validatorSet atlas.Vali
 	if err := rlp.DecodeBytes(subject.Payload, &signPayload); err != nil {
 		return nil, errFailedDecodeSignPayload
 
-	} else if err = c.checkValidatorSignature(subject.Digest.Bytes(), signPayload.Signature, signPayload.PublicKey); err != nil {
+	} else if err = c.checkValidatorSignature(subject.Digest, signPayload.Signature, signPayload.PublicKey); err != nil {
 		return nil, err
 	}
 

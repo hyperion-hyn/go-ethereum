@@ -229,11 +229,7 @@ func encodeSigHeader(w io.Writer, header *types.Header) {
 type SignHashFn func(hash common.Hash) (signature []byte, publicKey []byte, mask []byte, err error)
 
 func SignSubject(subject *Subject, signFn SignHashFn) (*Subject, error) {
-	var hash common.Hash
-	hw := sha3.NewLegacyKeccak256()
-	hw.Write(subject.Digest.Bytes())
-	hw.Sum(hash[:0])
-
+	hash := subject.Digest
 	signature, publicKey, mask, err := signFn(hash)
 	if err != nil {
 		return nil, err
