@@ -62,8 +62,8 @@ var (
 
 func TestValidator_SanityCheck(t *testing.T) {
 	tests := []struct {
-		editValidator_ func(*Validator_)
-		expErr         error
+		editValidator func(*Validator_)
+		expErr        error
 	}{
 		{
 			func(v *Validator_) {},
@@ -94,11 +94,19 @@ func TestValidator_SanityCheck(t *testing.T) {
 			errInvalidCommissionRate,
 		},
 		{
+			func(v *Validator_) { v.Commission.CommissionRates.MaxRate = nilRate },
+			errInvalidCommissionRate,
+		},
+		{
 			func(v *Validator_) { v.Commission.CommissionRates.MaxRate = negativeRate },
 			errInvalidCommissionRate,
 		},
 		{
 			func(v *Validator_) { v.Commission.CommissionRates.MaxRate = invalidRate },
+			errInvalidCommissionRate,
+		},
+		{
+			func(v *Validator_) { v.Commission.CommissionRates.MaxChangeRate = nilRate },
 			errInvalidCommissionRate,
 		},
 		{
@@ -131,14 +139,13 @@ func TestValidator_SanityCheck(t *testing.T) {
 	}
 	for i, test := range tests {
 		v := makeValidValidator()
-		test.editValidator_(&v)
+		test.editValidator(&v)
 		err := v.SanityCheck(MaxPubKeyAllowed)
 		if assErr := assertError(err, test.expErr); assErr != nil {
 			t.Errorf("Test %v: %v", i, assErr)
 		}
 	}
 }
-
 
 type blsPubSigPair struct {
 	pub BLSPublicKey_
@@ -171,7 +178,7 @@ func makeBLSPubSigPair() blsPubSigPair {
 // makeValidValidator makes a valid Validator data structure
 func makeValidValidator() Validator_ {
 	cr := validCommissionRates
-	c := Commission_{cr, big.NewInt(300)}
+	c := Commission_{CommissionRates: cr, UpdateHeight: big.NewInt(300)}
 	d := Description_{
 		Name:     "Wayne",
 		Identity: "wen",
@@ -184,7 +191,7 @@ func makeValidValidator() Validator_ {
 			Keys: []*Address{&operatorAddr},
 			Set:  map[Address]*Bool{operatorAddr: func() *bool { t := true; return &t }()},
 		},
-		SlotPubKeys: NewBLSKeysWithBLSKey(blsPubSigPairs[0].pub),
+		SlotPubKeys:          NewBLSKeysWithBLSKey(blsPubSigPairs[0].pub),
 		LastEpochInCommittee: big.NewInt(20),
 		MaxTotalDelegation:   twelveK,
 		Status:               uint8(Active),
@@ -207,9 +214,6 @@ func assertError(gotErr, expErr error) error {
 	}
 	return nil
 }
-
-
-
 
 func TestCreateValidatorFromNewMsg(t *testing.T) {
 	tests := []struct {
@@ -467,7 +471,7 @@ func assertValidatorAlignCreateValidator(v Validator_, cv CreateValidator) error
 	if len(v.SlotPubKeys.Keys) != 1 {
 		return fmt.Errorf("len(SlotPubKeys) not equal 1")
 	}
-	if *v.SlotPubKeys.Keys[0] != cv.SlotPubKey {
+	if !reflect.DeepEqual(*v.SlotPubKeys.Keys[0], cv.SlotPubKey) {
 		return fmt.Errorf("SlotPubKey not equal")
 	}
 	if v.LastEpochInCommittee.Cmp(new(big.Int)) != 0 {
@@ -503,4 +507,3 @@ func assertCommissionRatesEqual(c1, c2 CommissionRates_) error {
 	}
 	return nil
 }
-
