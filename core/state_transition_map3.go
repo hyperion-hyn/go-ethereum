@@ -115,7 +115,7 @@ func updateMap3NodeFromPoolByMsg(map3Node *microstaking.Storage_Map3NodeWrapper_
 		pool.DescriptionIdentitySet().Get(i).SetValue(false)
 		pool.DescriptionIdentitySet().Get(msg.Description.Identity).SetValue(true)
 	}
-	map3Node.Map3Node().Description().UpdateDescription(msg.Description)
+	map3Node.Map3Node().Description().IncrementalUpdateFrom(msg.Description)
 
 	if msg.NodeKeyToRemove != nil {
 		for i := 0; i < map3Node.Map3Node().NodeKeys().Length(); i++ {

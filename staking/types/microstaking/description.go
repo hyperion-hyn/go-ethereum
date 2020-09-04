@@ -10,9 +10,7 @@ const (
 	MaxDetailsLength         = 280
 )
 
-// UpdateDescription returns a new Description object with d1 as the base and the fields that's not empty in d2 updated
-// accordingly. An error is returned if the resulting description fields have invalid length.
-func (d *Description_) UpdateFrom(other Description_) error {
+func (d *Description_) IncrementalUpdateFrom(other Description_) error {
 	if other.Name != "" {
 		d.Name = other.Name
 	}
@@ -62,20 +60,20 @@ func (d *Description_) EnsureLength() error {
 }
 
 // Storage_Description_
-func (s *Storage_Description_) UpdateDescription(newDesc Description_) {
-	if newDesc.Name != "" {
-		s.Name().SetValue(newDesc.Name)
+func (s *Storage_Description_) IncrementalUpdateFrom(other Description_) {
+	if other.Name != "" {
+		s.Name().SetValue(other.Name)
 	}
-	if newDesc.Identity != "" {
-		s.Identity().SetValue(newDesc.Identity)
+	if other.Identity != "" {
+		s.Identity().SetValue(other.Identity)
 	}
-	if newDesc.Website != "" {
-		s.Website().SetValue(newDesc.Website)
+	if other.Website != "" {
+		s.Website().SetValue(other.Website)
 	}
-	if newDesc.SecurityContact != "" {
-		s.SecurityContact().SetValue(newDesc.SecurityContact)
+	if other.SecurityContact != "" {
+		s.SecurityContact().SetValue(other.SecurityContact)
 	}
-	if newDesc.Details != "" {
-		s.Details().SetValue(newDesc.Details)
+	if other.Details != "" {
+		s.Details().SetValue(other.Details)
 	}
 }

@@ -305,7 +305,7 @@ func UpdateMap3NodeFromEditMsg(map3Node *Map3Node_, edit *EditMap3Node) error {
 	if map3Node.Map3Address != edit.Map3NodeAddress {
 		return errAddressNotMatch
 	}
-	if err := map3Node.Description.UpdateFrom(edit.Description); err != nil {
+	if err := map3Node.Description.IncrementalUpdateFrom(edit.Description); err != nil {
 		return err
 	}
 
