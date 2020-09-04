@@ -279,20 +279,25 @@ func (s *Storage_Map3NodePool_) RemoveDelegationIndex(delegator, map3Addr common
 }
 
 // CreateValidatorFromNewMsg creates validator from NewValidator message
-func CreateMap3NodeFromNewMsg(msg *CreateMap3Node, map3Addr common.Address, blockNum *big.Int) *Map3Node_ {
-	v := Map3Node_{
-		Map3Address:     map3Addr,
+func CreateMap3NodeFromNewMsg(msg *CreateMap3Node, map3Address common.Address, blockNum *big.Int) (*Map3Node_, error) {
+	if err := common2.VerifyBLSKey(&msg.NodePubKey, &msg.NodeKeySig); err != nil {
+		return nil, err
+	}
+
+	node := Map3Node_{
+		Map3Address:     map3Address,
 		OperatorAddress: msg.OperatorAddress,
 		NodeKeys:        NewBLSKeysWithBLSKey(msg.NodePubKey),
 		Commission: Commission_{
 			Rate:              msg.Commission,
 			RateForNextPeriod: msg.Commission,
+			UpdateHeight:      blockNum,
 		},
 		Description:    msg.Description,
 		CreationHeight: blockNum,
 		Status:         uint8(Pending),
 	}
-	return &v
+	return &node, nil
 }
 
 // UpdateValidatorFromEditMsg updates validator from EditValidator message

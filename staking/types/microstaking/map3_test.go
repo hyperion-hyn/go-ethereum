@@ -2,11 +2,114 @@ package microstaking
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/bls"
 	common2 "github.com/ethereum/go-ethereum/staking/types/common"
+	"github.com/pkg/errors"
+	"math/big"
+	"reflect"
 	"strings"
+	"testing"
 )
+
+var (
+	blsPubSigPairs  = makeBLSPubSigPairs(5)
+	map3NodeAddr, _ = common.Bech32ToAddress("hyn1t2htvpfl862vnwdqnuekd9p4ulh3h6hdldamnd")
+	operatorAddr, _ = common.Bech32ToAddress("hyn1pdv9lrdwl0rg5vglh4xtyrv3w123wsqket7zxy")
+
+	oneMill = new(big.Int).Mul(big.NewInt(2000000), big.NewInt(1e18))
+
+	nilRate      = common.Dec{}
+	negativeRate = common.NewDec(-1)
+	zeroRate     = common.ZeroDec()
+	halfRate     = common.NewDecWithPrec(5, 1)
+	oneRate      = common.NewDec(1)
+	invalidRate  = common.NewDec(2)
+)
+
+var (
+	validDescription = Description_{
+		Name:            "Jacky Wang",
+		Identity:        "jacky@harmony.one",
+		Website:         "harmony.one/jacky",
+		SecurityContact: "jacky@harmony.one",
+		Details:         "Details of jacky",
+	}
+
+	invalidDescription = Description_{
+		Name:            "thisisaverylonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglongname",
+		Identity:        "jacky@harmony.one",
+		Website:         "harmony.one/jacky",
+		SecurityContact: "jacky@harmony.one",
+		Details:         "Details of jacky",
+	}
+
+	validCommissionRates = Commission_{
+		Rate:              halfRate,
+		RateForNextPeriod: halfRate,
+		UpdateHeight:      big.NewInt(10),
+	}
+)
+
+func TestMap3Node_SanityCheck(t *testing.T) {
+	tests := []struct {
+		editMap3Node func(*Map3Node_)
+		expErr       error
+	}{
+		{
+			func(v *Map3Node_) {},
+			nil,
+		},
+		{
+			func(v *Map3Node_) { v.Description = invalidDescription },
+			errors.New("exceed maximum name length"),
+		},
+		{
+			func(v *Map3Node_) { v.NodeKeys.Keys = v.NodeKeys.Keys[:0] },
+			errNeedAtLeastOneSlotKey,
+		},
+		{
+			func(v *Map3Node_) {
+				v.NodeKeys = NewEmptyBLSKeys()
+				v.NodeKeys.Keys = append(v.NodeKeys.Keys, &blsPubSigPairs[0].pub, &blsPubSigPairs[1].pub)
+			},
+			ErrExcessiveBLSKeys,
+		},
+		{
+			func(v *Map3Node_) { v.Commission.Rate = nilRate },
+			errInvalidCommissionRate,
+		},
+		{
+			func(v *Map3Node_) { v.Commission.Rate = negativeRate },
+			errInvalidCommissionRate,
+		},
+		{
+			func(v *Map3Node_) { v.Commission.Rate = invalidRate },
+			errInvalidCommissionRate,
+		},
+		{
+			func(v *Map3Node_) { v.Commission.RateForNextPeriod = nilRate },
+			errInvalidCommissionRate,
+		},
+		{
+			func(v *Map3Node_) { v.Commission.RateForNextPeriod = negativeRate },
+			errInvalidCommissionRate,
+		},
+		{
+			func(v *Map3Node_) { v.Commission.RateForNextPeriod = invalidRate },
+			errInvalidCommissionRate,
+		},
+	}
+	for i, test := range tests {
+		v := makeMap3Node()
+		test.editMap3Node(&v)
+		err := v.SanityCheck(MaxPubKeyAllowed)
+		if assErr := assertError(err, test.expErr); assErr != nil {
+			t.Errorf("Test %v: %v", i, assErr)
+		}
+	}
+}
 
 type blsPubSigPair struct {
 	pub BLSPublicKey_
@@ -52,6 +155,29 @@ func getSigsFromPairs(pairs []blsPubSigPair, indexes []int) []common2.BLSSignatu
 	return sigs
 }
 
+func makeMap3Node() Map3Node_ {
+	c := validCommissionRates
+	d := Description_{
+		Name:     "Wayne",
+		Identity: "wen",
+		Website:  "harmony.one.wen",
+		Details:  "best",
+	}
+	v := Map3Node_{
+		Map3Address:     map3NodeAddr,
+		OperatorAddress: operatorAddr,
+		NodeKeys:        NewBLSKeysWithBLSKey(blsPubSigPairs[0].pub),
+		Commission:      c,
+		Description:     d,
+		CreationHeight:  big.NewInt(12306),
+		Age:             common.NewDecWithPrec(25, 1),
+		Status:          uint8(Active),
+		ActivationEpoch: big.NewInt(1),
+		ReleaseEpoch:    common.NewDec(10),
+	}
+	return v
+}
+
 func assertError(gotErr, expErr error) error {
 	if (gotErr == nil) != (expErr == nil) {
 		return fmt.Errorf("error unexpected [%v] / [%v]", gotErr, expErr)
@@ -61,6 +187,94 @@ func assertError(gotErr, expErr error) error {
 	}
 	if !strings.Contains(gotErr.Error(), expErr.Error()) {
 		return fmt.Errorf("error unexpected [%v] / [%v]", gotErr, expErr)
+	}
+	return nil
+}
+
+func TestCreateMap3NodeFromNewMsg(t *testing.T) {
+	tests := []struct {
+		editCreateValidator func(*CreateMap3Node)
+		expErr              error
+	}{
+		{
+			editCreateValidator: func(cv *CreateMap3Node) {},
+			expErr:              nil,
+		},
+		{
+			editCreateValidator: func(cv *CreateMap3Node) { cv.NodeKeySig = blsPubSigPairs[2].sig },
+			expErr:              errBLSKeysNotMatchSigs,
+		},
+	}
+	for i, test := range tests {
+		cn := makeCreateMap3Node()
+		test.editCreateValidator(&cn)
+
+		n, err := CreateMap3NodeFromNewMsg(&cn, map3NodeAddr, big.NewInt(10))
+		if assErr := assertError(err, test.expErr); assErr != nil {
+			t.Errorf("Test %v: %v", i, assErr)
+		}
+		if err != nil || test.expErr != nil {
+			continue
+		}
+		if err := assertMap3NodeAlignCreateMap3Node(*n, cn); err != nil {
+			t.Error(err)
+		}
+	}
+}
+
+// makeCreateMap3Node makes a structure of CreateValidator
+func makeCreateMap3Node() CreateMap3Node {
+	addr := operatorAddr
+	desc := validDescription
+	return CreateMap3Node{
+		OperatorAddress: addr,
+		Description:     desc,
+		Commission:      halfRate,
+		NodePubKey:      blsPubSigPairs[0].pub,
+		NodeKeySig:      blsPubSigPairs[0].sig,
+		Amount:          oneMill,
+	}
+}
+
+func assertMap3NodeAlignCreateMap3Node(n Map3Node_, cn CreateMap3Node) error {
+	if n.Map3Address != map3NodeAddr {
+		return fmt.Errorf("map3 node address not equal")
+	}
+	if n.OperatorAddress != cn.OperatorAddress {
+		return fmt.Errorf("operator address not equal")
+	}
+	if len(n.NodeKeys.Keys) != 1 {
+		return fmt.Errorf("len(SlotPubKeys) not equal 1")
+	}
+	if !reflect.DeepEqual(*n.NodeKeys.Keys[0], cn.NodePubKey) {
+		return fmt.Errorf("NodeKey not equal")
+	}
+	if !n.Commission.Rate.Equal(cn.Commission) {
+		return fmt.Errorf("commissionRate not equal")
+	}
+	if !n.Commission.RateForNextPeriod.Equal(cn.Commission) {
+		return fmt.Errorf("commissionRateForNextPeriod not equal")
+	}
+	if n.Commission.UpdateHeight.Cmp(n.CreationHeight) != 0 {
+		return fmt.Errorf("validator's update height not equal to creation height")
+	}
+	if err := assertDescriptionEqual(n.Description, cn.Description); err != nil {
+		return fmt.Errorf("description not expected: %v", err)
+	}
+	if n.CreationHeight.Cmp(big.NewInt(10)) != 0 {
+		return fmt.Errorf("CreationHeight not equal")
+	}
+	if !n.Age.IsNil() {
+		return fmt.Errorf("CreationHeight not nil")
+	}
+	if n.Status != uint8(Pending) {
+		return fmt.Errorf("status not pending")
+	}
+	if n.ActivationEpoch != nil {
+		return fmt.Errorf("ActivationEpoch not nil")
+	}
+	if !n.ReleaseEpoch.IsNil() {
+		return fmt.Errorf("ReleaseEpoch not nil")
 	}
 	return nil
 }
