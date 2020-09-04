@@ -176,7 +176,10 @@ func (verifier StakingVerifier) VerifyCreateMap3NodeMsg(stateDB vm.StateDB, chai
 	}
 
 	map3Address := crypto.CreateAddress(signer, stateDB.GetNonce(signer))
-	node := microstaking.CreateMap3NodeFromNewMsg(msg, map3Address, blockNum)
+	node, err := microstaking.CreateMap3NodeFromNewMsg(msg, map3Address, blockNum)
+	if err != nil {
+		return nil, err
+	}
 	if err := node.SanityCheck(microstaking.MaxPubKeyAllowed); err != nil {
 		return nil, err
 	}
