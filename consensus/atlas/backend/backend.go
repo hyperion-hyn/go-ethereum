@@ -296,11 +296,12 @@ func (sb *backend) HasPropsal(hash common.Hash, number *big.Int) bool {
 
 // GetProposer implements atlas.Backend.GetProposer
 func (sb *backend) GetProposer(number uint64) common.Address {
-	if h := sb.chain.GetHeaderByNumber(number); h != nil {
-		a, _ := sb.Author(h)
-		return a
+	h := sb.chain.GetHeaderByNumber(number)
+	if h == nil {
+		return common.Address{}
 	}
-	return common.Address{}
+	vals := sb.getValidators(number, h.Hash())
+	return vals.GetProposer().Signer()
 }
 
 // ParentValidators implements atlas.Backend.GetParentValidators
