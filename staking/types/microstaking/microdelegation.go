@@ -35,7 +35,9 @@ func NewMicrodelegationMap() MicrodelegationMap_ {
 }
 
 func (s *Storage_PendingDelegation_) AddAmount(amount, epoch *big.Int) {
-	panic("no implement")
+	amt := s.Amount().Value()
+	amt = amt.Add(amt, amount)
+	s.Amount().SetValue(amt)
 }
 
 func (s *Storage_PendingDelegation_) SubAmount(amount *big.Int) {
