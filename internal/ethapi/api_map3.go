@@ -84,7 +84,7 @@ func (s *PublicMicroStakingAPI) GetMap3NodeInformation(
 			}
 			return delegations
 		}(),
-		RedelegationReference:  nodeWrapper.RedelegationReference.ValidatorAddress,
+		RedelegationReference:  nodeWrapper.RestakingReference.ValidatorAddress,
 		AccumulatedReward:      nodeWrapper.AccumulatedReward,
 		TotalDelegation:        nodeWrapper.TotalDelegation,
 		TotalPendingDelegation: nodeWrapper.TotalPendingDelegation,
