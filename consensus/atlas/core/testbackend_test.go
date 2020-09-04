@@ -33,6 +33,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/atlas"
 	"github.com/ethereum/go-ethereum/consensus/atlas/validator"
 	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
@@ -174,6 +175,10 @@ func (self *testSystemBackend) GetProposer(number uint64) common.Address {
 
 func (self *testSystemBackend) ParentValidators(proposal atlas.Proposal) atlas.ValidatorSet {
 	return self.peers
+}
+
+func (self *testSystemBackend) SealHash(header *types.Header) common.Hash {
+	return atlas.SealHash(header)
 }
 
 func (sb *testSystemBackend) Close() error {

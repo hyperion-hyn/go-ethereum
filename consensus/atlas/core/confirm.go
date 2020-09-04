@@ -113,8 +113,8 @@ func (c *core) acceptConfirm(msg *message, src atlas.Validator) error {
 		return errFailedDecodeConfirm
 	}
 
-	if confirm.Digest != c.current.Preprepare.Proposal.Hash() {
-		logger.Warn("Inconsistent subjects between PREPARE and proposal", "expected", c.current.Preprepare.Proposal.Hash(), "got", confirm.Digest)
+	if confirm.Digest != c.current.Preprepare.Proposal.SealHash(c.backend) {
+		logger.Warn("Inconsistent subjects between PREPARE and proposal", "expected", c.current.Preprepare.Proposal.SealHash(c.backend), "got", confirm.Digest)
 		return errInconsistentSubject
 	}
 

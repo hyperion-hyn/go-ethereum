@@ -166,7 +166,7 @@ func (c *core) IsProposer() bool {
 }
 
 func (c *core) IsCurrentProposal(blockHash common.Hash) bool {
-	return c.current != nil && c.current.pendingRequest != nil && c.current.pendingRequest.Proposal.Hash() == blockHash
+	return c.current != nil && c.current.pendingRequest != nil && c.current.pendingRequest.Proposal.SealHash(c.backend) == blockHash
 }
 
 func (c *core) commit() {
@@ -208,7 +208,7 @@ func (c *core) startNewRound(round *big.Int) {
 			c.consensusTimer.UpdateSince(c.consensusTimestamp)
 			c.consensusTimestamp = time.Time{}
 		}
-		logger.Trace("Catch up latest proposal", "number", lastProposal.Number().Uint64(), "hash", lastProposal.Hash())
+		logger.Trace("Catch up latest proposal", "number", lastProposal.Number().Uint64(), "hash", lastProposal.SealHash(c.backend))
 	} else if lastProposal.Number().Cmp(big.NewInt(c.current.Sequence().Int64()-1)) == 0 {
 		if round.Cmp(common.Big0) == 0 {
 			// same seq and round, don't need to start new round

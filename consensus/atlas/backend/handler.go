@@ -110,8 +110,8 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 				return false, nil
 			}
 			newRequestedBlock := request.Block
-			if newRequestedBlock.Header().MixDigest == types.AtlasDigest && sb.core.IsCurrentProposal(newRequestedBlock.Hash()) {
-				log.Debug("Proposer already proposed this block", "hash", newRequestedBlock.Hash(), "sender", addr)
+			if newRequestedBlock.Header().MixDigest == types.AtlasDigest && sb.core.IsCurrentProposal(newRequestedBlock.SealHash(sb)) {
+				log.Debug("Proposer already proposed this block", "hash", newRequestedBlock.SealHash(sb), "sender", addr)
 				return true, nil
 			}
 		}

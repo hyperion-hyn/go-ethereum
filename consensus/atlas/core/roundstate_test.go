@@ -69,7 +69,7 @@ func TestLockHash(t *testing.T) {
 	}
 
 	// Lock
-	expected := rs.Proposal().Hash()
+	expected := atlas.SealHash(rs.Proposal().Header())
 	rs.LockHash()
 	if expected != rs.GetLockedHash() {
 		t.Errorf("error mismatch: have %v, want %v", rs.GetLockedHash(), expected)

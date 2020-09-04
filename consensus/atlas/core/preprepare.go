@@ -74,9 +74,9 @@ func (c *core) handlePreprepare(msg *message, src atlas.Validator) error {
 			// Broadcast COMMIT if it is an existing block
 			// 1. The proposer needs to be a proposer matches the given (Sequence + Round)
 			// 2. The given block must exist
-			if valSet.IsProposer(src.Signer()) && c.backend.HasPropsal(preprepare.Proposal.Hash(), preprepare.Proposal.Number()) {
+			if valSet.IsProposer(src.Signer()) && c.backend.HasPropsal(preprepare.Proposal.SealHash(c.backend), preprepare.Proposal.Number()) {
 				// ATLAS(zgx): maybe nothing can be done for old block for lacking multiple-signature.
-				// c.sendCommitForOldBlock(preprepare.View, preprepare.Proposal.Hash())
+				// c.sendCommitForOldBlock(preprepare.View, preprepare.Proposal.SealHash())
 				return nil
 			}
 		}
@@ -108,7 +108,7 @@ func (c *core) handlePreprepare(msg *message, src atlas.Validator) error {
 		// Send ROUND CHANGE if the locked proposal and the received proposal are different
 		// ATLAS(zgx): have checked message come from proposer, Why I am a proposer and have a different hash? duplicated messages?
 		if c.current.IsHashLocked() {
-			if preprepare.Proposal.Hash() == c.current.GetLockedHash() {
+			if preprepare.Proposal.SealHash(c.backend) == c.current.GetLockedHash() {
 				// Broadcast COMMIT and enters Expect state directly
 				if err := c.acceptPreprepare(&preprepare); err != nil {
 					return err

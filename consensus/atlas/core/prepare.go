@@ -112,8 +112,8 @@ func (c *core) acceptPrepare(msg *message, src atlas.Validator) error {
 		return err
 	}
 
-	if prepare.Digest != c.current.Preprepare.Proposal.Hash() {
-		logger.Warn("Inconsistent subjects between PREPARE and proposal", "expected", c.current.Preprepare.Proposal.Hash(), "got", prepare.Digest)
+	if prepare.Digest != c.current.Preprepare.Proposal.SealHash(c.backend) {
+		logger.Warn("Inconsistent subjects between PREPARE and proposal", "expected", c.current.Preprepare.Proposal.SealHash(c.backend), "got", prepare.Digest)
 		return errInconsistentSubject
 	}
 

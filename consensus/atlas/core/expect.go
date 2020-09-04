@@ -76,9 +76,9 @@ func (c *core) handleExpect(msg *message, src atlas.Validator) error {
 			// Broadcast COMMIT if it is an existing block
 			// 1. The proposer needs to be a proposer matches the given (Sequence + Round)
 			// 2. The given block must exist
-			if valSet.IsProposer(src.Signer()) && c.backend.HasPropsal(c.current.Preprepare.Proposal.Hash(), c.current.Preprepare.Proposal.Number()) {
+			if valSet.IsProposer(src.Signer()) && c.backend.HasPropsal(c.current.Preprepare.Proposal.SealHash(c.backend), c.current.Preprepare.Proposal.Number()) {
 				// ATLAS(zgx): maybe nothing can be done for old block for lacking multiple-signature.
-				// c.sendCommitForOldBlock(c.current.Preprepare.View, c.current.Preprepare.Proposal.Hash())
+				// c.sendCommitForOldBlock(c.current.Preprepare.View, c.current.Preprepare.Proposal.SealHash())
 				return nil
 			}
 		}

@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
 )
 
@@ -75,5 +76,7 @@ type Backend interface {
 	// HasBadBlock returns whether the block with the hash is a bad block
 	HasBadProposal(hash common.Hash) bool
 
+	// SealHash returns the hash of a block prior to it being sealed.
+	SealHash(header *types.Header) common.Hash
 	Close() error
 }

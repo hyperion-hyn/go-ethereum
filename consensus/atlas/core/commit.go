@@ -122,8 +122,8 @@ func (c *core) acceptCommit(msg *message, src atlas.Validator) error {
 		return errFailedDecodeConfirm
 	}
 
-	if commit.Digest != c.current.Preprepare.Proposal.Hash() {
-		logger.Warn("Inconsistent subjects between EXPECT and proposal", "expected", c.current.Preprepare.Proposal.Hash(), "got", commit.Digest)
+	if commit.Digest != c.current.Preprepare.Proposal.SealHash(c.backend) {
+		logger.Warn("Inconsistent subjects between EXPECT and proposal", "expected", c.current.Preprepare.Proposal.SealHash(c.backend), "got", commit.Digest)
 		return errInconsistentSubject
 	}
 

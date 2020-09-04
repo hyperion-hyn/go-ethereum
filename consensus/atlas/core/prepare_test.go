@@ -37,7 +37,7 @@ func TestHandlePrepare(t *testing.T) {
 			Round:    big.NewInt(0),
 			Sequence: proposal.Number(),
 		},
-		Digest: proposal.Hash(),
+		Digest: atlas.SealHash(proposal.Header()),
 	}
 
 	testCases := []struct {
@@ -291,7 +291,7 @@ func TestVerifyPrepare(t *testing.T) {
 			expected: nil,
 			prepare: &atlas.Subject{
 				View:   &atlas.View{Round: big.NewInt(0), Sequence: big.NewInt(0)},
-				Digest: newTestProposal().Hash(),
+				Digest: atlas.SealHash(newTestProposal().Header()),
 			},
 			roundState: newTestRoundState(
 				&atlas.View{Round: big.NewInt(0), Sequence: big.NewInt(0)},
@@ -303,7 +303,7 @@ func TestVerifyPrepare(t *testing.T) {
 			expected: errInconsistentSubject,
 			prepare: &atlas.Subject{
 				View:   &atlas.View{Round: big.NewInt(0), Sequence: big.NewInt(0)},
-				Digest: newTestProposal().Hash(),
+				Digest: atlas.SealHash(newTestProposal().Header()),
 			},
 			roundState: newTestRoundState(
 				&atlas.View{Round: big.NewInt(1), Sequence: big.NewInt(1)},
@@ -327,7 +327,7 @@ func TestVerifyPrepare(t *testing.T) {
 			expected: errInconsistentSubject,
 			prepare: &atlas.Subject{
 				View:   &atlas.View{Round: big.NewInt(0), Sequence: nil},
-				Digest: newTestProposal().Hash(),
+				Digest: atlas.SealHash(newTestProposal().Header()),
 			},
 			roundState: newTestRoundState(
 				&atlas.View{Round: big.NewInt(1), Sequence: big.NewInt(1)},
@@ -339,7 +339,7 @@ func TestVerifyPrepare(t *testing.T) {
 			expected: errInconsistentSubject,
 			prepare: &atlas.Subject{
 				View:   &atlas.View{Round: big.NewInt(1), Sequence: big.NewInt(0)},
-				Digest: newTestProposal().Hash(),
+				Digest: atlas.SealHash(newTestProposal().Header()),
 			},
 			roundState: newTestRoundState(
 				&atlas.View{Round: big.NewInt(0), Sequence: big.NewInt(0)},
@@ -351,7 +351,7 @@ func TestVerifyPrepare(t *testing.T) {
 			expected: errInconsistentSubject,
 			prepare: &atlas.Subject{
 				View:   &atlas.View{Round: big.NewInt(0), Sequence: big.NewInt(1)},
-				Digest: newTestProposal().Hash(),
+				Digest: atlas.SealHash(newTestProposal().Header()),
 			},
 			roundState: newTestRoundState(
 				&atlas.View{Round: big.NewInt(0), Sequence: big.NewInt(0)},

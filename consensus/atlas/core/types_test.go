@@ -62,8 +62,8 @@ func testPreprepare(t *testing.T) {
 
 	// if block is encoded/decoded by rlp, we cannot to compare interface data type using reflect.DeepEqual. (like atlas.Proposal)
 	// so individual comparison here.
-	if !reflect.DeepEqual(pp.Proposal.Hash(), decodedPP.Proposal.Hash()) {
-		t.Errorf("proposal hash mismatch: have %v, want %v", decodedPP.Proposal.Hash(), pp.Proposal.Hash())
+	if !reflect.DeepEqual(atlas.SealHash(pp.Proposal.Header()), atlas.SealHash(decodedPP.Proposal.Header())) {
+		t.Errorf("proposal hash mismatch: have %v, want %v", atlas.SealHash(decodedPP.Proposal.Header()), atlas.SealHash(pp.Proposal.Header()))
 	}
 
 	if !reflect.DeepEqual(pp.View, decodedPP.View) {

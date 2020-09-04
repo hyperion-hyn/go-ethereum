@@ -32,11 +32,16 @@ import (
 
 // Proposal supports retrieving height and serialized block to be used during Atlas consensus.
 type Proposal interface {
+	Header() *types.Header
+
 	// Number retrieves the sequence number of this proposal.
 	Number() *big.Int
 
 	// Hash retrieves the hash of this proposal.
 	Hash() common.Hash
+
+	// SealHash retrieves the sealhash of this proposal.
+	SealHash(sealer types.Sealer) common.Hash
 
 	EncodeRLP(w io.Writer) error
 
@@ -202,8 +207,8 @@ func AtlasRLP(header *types.Header) []byte {
 }
 
 func encodeSigHeader(w io.Writer, header *types.Header) {
-	extra := make([]byte, len(header.Extra))
-	copy(extra[:types.AtlasExtraVanity], header.Extra[:types.AtlasExtraVanity])
+	extra := make([]byte, types.AtlasExtraVanity)
+	copy(extra[:types.AtlasExtraVanity], header.Extra[:])
 	err := rlp.Encode(w, []interface{}{
 		header.ParentHash,
 		header.UncleHash,

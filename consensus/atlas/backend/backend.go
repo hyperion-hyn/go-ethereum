@@ -239,7 +239,7 @@ func (sb *backend) Verify(proposal atlas.Proposal) (time.Duration, error) {
 	}
 
 	// check bad block
-	if sb.HasBadProposal(block.Hash()) {
+	if sb.HasBadProposal(block.SealHash(sb)) {
 		return 0, core.ErrBlacklistedHash
 	}
 
