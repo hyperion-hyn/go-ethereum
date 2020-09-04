@@ -125,11 +125,11 @@ func (self *testSystemBackend) Verify(proposal atlas.Proposal) (time.Duration, e
 	return 0, nil
 }
 
-func (self *testSystemBackend) Sign(data []byte) ([]byte, []byte, []byte, error) {
-	testLogger.Info(fmt.Sprintf("testSystemBackend.Sign: %x...", data[:10]))
-	sighash := self.signerKey.SignHash(data).Serialize()
+func (self *testSystemBackend) SignHash(hash common.Hash) ([]byte, []byte, []byte, error) {
+	testLogger.Info(fmt.Sprintf("testSystemBackend.Sign: %x...", hash.Hex()))
+	sighash := self.signerKey.SignHash(hash.Bytes()).Serialize()
 	pubkey := self.signerKey.GetPublicKey().Serialize()
-	testLogger.Info(fmt.Sprintf("testSystemBackend.Sign: data: %x... signature: %x, publicKey: %x", data[:10], sighash[:10], pubkey[:10]))
+	testLogger.Info(fmt.Sprintf("testSystemBackend.Sign: data: %x... signature: %x, publicKey: %x", hash.Hex(), sighash[:10], pubkey[:10]))
 	return sighash, pubkey, nil, nil
 }
 

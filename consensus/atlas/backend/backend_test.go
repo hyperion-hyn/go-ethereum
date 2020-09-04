@@ -38,13 +38,12 @@ import (
 func TestSign(t *testing.T) {
 	b := newBackend()
 	data := []byte("Here is a string....")
-	sig, key, _, err := b.Sign(data)
+	hash := crypto.Keccak256Hash(data)
+	sig, key, _, err := b.SignHash(hash)
 	if err != nil {
 		t.Errorf("error mismatch: have %v, want nil", err)
 	}
 	//Check signature recover
-	hashData := crypto.Keccak256([]byte(data))
-
 	var pubKey bls.PublicKey
 	if err := pubKey.Deserialize(key); err != nil {
 		t.Errorf("failed to deserialize public key: #{key}")
@@ -55,7 +54,7 @@ func TestSign(t *testing.T) {
 		t.Errorf("failed to deserialize signature: #{sig}")
 	}
 
-	if sign.VerifyHash(&pubKey, hashData) == false {
+	if sign.VerifyHash(&pubKey, hash.Bytes()) == false {
 		t.Errorf("failed to verify signature: #{sig}")
 	}
 }

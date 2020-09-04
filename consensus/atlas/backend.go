@@ -54,7 +54,7 @@ type Backend interface {
 
 	// Sign signs input data with the backend's private key
 	// NOTE: input data SHOULD be hash data.
-	Sign([]byte) (signature []byte, publicKey []byte, mask []byte, err error)
+	SignHash(hash common.Hash) (signature []byte, publicKey []byte, mask []byte, err error)
 
 	// CheckSignature verifies the signature by checking if it's signed by
 	// the given validator

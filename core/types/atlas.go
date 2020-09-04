@@ -32,7 +32,7 @@ const (
 	AtlasExtraSignature = 96                           // Fixed number of extra-data bytes reverved for BLS signature
 	AtlasExtraMask      = (AtlasMaxValidator + 7) >> 3 // Fixed number of extra-data bytes reserved for BLS signature bitmap
 	AtlasExtraProposer  = ((AtlasMaxValidator + ((1 << 8) - 1)) >> 8) << 1
-	AtlasExtraSeal      = AtlasExtraSignature + AtlasExtraPublicKey + AtlasExtraMask + AtlasExtraProposer
+	AtlasExtraSeal      = AtlasExtraSignature + AtlasExtraMask
 )
 
 var (

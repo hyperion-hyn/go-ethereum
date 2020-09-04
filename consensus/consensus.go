@@ -166,7 +166,7 @@ type EngineEx interface {
 	Stop() error
 
 	// Authorize injects a signer's id and sign function into the consensus engine to mint new blocks with.
-	Authorize(signer common.Address, signFn SignHashFn)
+	Authorize(signer common.Address, signHashFn SignHashFn)
 }
 
 // Atlas is a consensus engine

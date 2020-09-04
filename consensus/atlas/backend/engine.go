@@ -453,7 +453,7 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 		return err
 	}
 
-	if _, v := snap.ValSet.GetBySigner(sb.address); v == nil {
+	if _, v := snap.ValSet.GetBySigner(sb.signer); v == nil {
 		return errUnauthorized
 	}
 
@@ -505,7 +505,7 @@ func (sb *backend) updateBlock(parent *types.Header, block *types.Block) (*types
 	header := block.Header()
 
 	// sign the hash
-	seal, pubKey, _, err := sb.Sign(SealHash(header).Bytes())
+	seal, pubKey, _, err := sb.SignHash(SealHash(header))
 
 	if err != nil {
 		return nil, err

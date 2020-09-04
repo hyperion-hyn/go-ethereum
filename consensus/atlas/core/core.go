@@ -81,7 +81,7 @@ type core struct {
 
 	valSet                atlas.ValidatorSet
 	waitingForRoundChange bool
-	validateFn            func([]byte, []byte, []byte) error
+	validateFn            func(data []byte, sig []byte, pubKey []byte) error
 
 	backlogs   map[common.Address]*prque.Prque
 	backlogsMu *sync.Mutex
@@ -115,8 +115,13 @@ func (c *core) finalizeMessage(msg *message) ([]byte, error) {
 		return nil, err
 	}
 	hash := crypto.Keccak256Hash(data)
-	msg.Signature, msg.SignerPubKey, _, err = c.backend.Sign(hash.Bytes())
+	msg.Signature, msg.SignerPubKey, _, err = c.backend.SignHash(hash)
 	if err != nil {
+		return nil, err
+	}
+
+	if err := c.validateFn(data, msg.Signature, msg.SignerPubKey); err != nil {
+		c.logger.Error("Validate failed after Sign")
 		return nil, err
 	}
 
@@ -351,7 +356,7 @@ func PrepareCommittedSeal(hash common.Hash) []byte {
 
 func (c *core) SignSubject(subject *atlas.Subject) (*atlas.Subject, error) {
 	signedSubject, err := atlas.SignSubject(subject, func(hash common.Hash) (signature []byte, publicKey []byte, mask []byte, err error) {
-		signature, publicKey, mask, err = c.backend.Sign(hash.Bytes())
+		signature, publicKey, mask, err = c.backend.SignHash(hash)
 		if err != nil {
 			return nil, nil, nil, err
 		}

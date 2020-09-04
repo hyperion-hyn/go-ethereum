@@ -21,6 +21,7 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"math/big"
+	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -40,6 +41,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	bls_cosi "github.com/ethereum/go-ethereum/crypto/bls"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 )
 
@@ -71,7 +73,7 @@ func newBlockChain(n int) (*core.BlockChain, *backend, []*bls.SecretKey) {
 	for _, key := range signerKeys {
 		addr := crypto.PubkeyToSigner(key.GetPublicKey())
 		if addr.String() == proposerAddr.String() {
-			b.signFn = func(account accounts.Account, hash common.Hash) (signature []byte, publicKey []byte, mask []byte, err error) {
+			b.signHashFn = func(account accounts.Account, hash common.Hash) (signature []byte, publicKey []byte, mask []byte, err error) {
 				secrectKey := key
 				sign := secrectKey.SignHash(hash.Bytes())
 
@@ -646,4 +648,8 @@ func TestWriteCommittedSeals(t *testing.T) {
 	if err != errInvalidCommittedSeals {
 		t.Errorf("error mismatch: have %v, want %v", err, errInvalidCommittedSeals)
 	}
+}
+
+func init() {
+	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(log.LvlDebug), log.StreamHandler(os.Stdout, log.TerminalFormat(true))))
 }
