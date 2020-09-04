@@ -302,7 +302,7 @@ func (sb *backend) verifyCommittedSeals(chain consensus.ChainReader, header *typ
 		return errEmptyCommittedSeals
 	}
 
-	if len(extra.AggSignature) != types.AtlasExtraSignature || len(extra.AggBitmap) != types.AtlasExtraMask {
+	if len(extra.AggSignature) != types.AtlasExtraSignature || len(extra.AggBitmap) != types.GetMaskByteCount(snap.ValSet.Size()) {
 		return errInvalidAggregatedSignature
 	}
 
@@ -705,7 +705,7 @@ func writeSeal(h *types.Header, seal []byte, proposer int) error {
 	}
 
 	copy(atlasExtra.AggSignature[:], seal)
-	copy(atlasExtra.AggBitmap[:], bytes.Repeat([]byte{0x00}, len(atlasExtra.AggBitmap)))
+	atlasExtra.AggBitmap = []byte{}
 
 	payload, err := rlp.EncodeToBytes(&atlasExtra)
 	if err != nil {
@@ -717,14 +717,10 @@ func writeSeal(h *types.Header, seal []byte, proposer int) error {
 }
 
 // WriteCommittedSeals writes the extra-data field of a block header with given committed seals.
-func WriteCommittedSeals(h *types.Header, signature []byte, publicKey []byte, bitmap []byte) error {
+func WriteCommittedSeals(h *types.Header, signature []byte, publicKey []byte, bitmap []byte, valSetSize int) error {
 	fmt.Printf("length, signature: %d, public: %d, bitmap: %d\n", len(signature), len(publicKey), len(bitmap))
-	if len(signature) != types.AtlasExtraSignature || len(publicKey) != types.AtlasExtraPublicKey || len(bitmap) > types.AtlasExtraMask {
+	if len(signature) != types.AtlasExtraSignature || len(publicKey) != types.AtlasExtraPublicKey || len(bitmap) != types.GetMaskByteCount(valSetSize) {
 		return errInvalidCommittedSeals
-	}
-
-	if len(bitmap) < types.AtlasExtraMask {
-		bitmap = append(bitmap, make([]byte, types.AtlasExtraMask-len(bitmap))...)
 	}
 
 	fmt.Printf("signature: %v\n", signature)
@@ -732,11 +728,10 @@ func WriteCommittedSeals(h *types.Header, signature []byte, publicKey []byte, bi
 	fmt.Printf("bitmap: %v\n", bitmap)
 
 	switch len(h.Extra) {
-	case types.AtlasExtraVanity, types.AtlasExtraVanity + types.AtlasExtraSeal:
+	case types.AtlasExtraVanity + types.GetExtraSize(valSetSize):
+	default:
 		return errInvalidExtraDataFormat
 	}
-
-	h.Extra = append(h.Extra[:], bytes.Repeat([]byte{0x00}, types.AtlasExtraSeal-len(h.Extra))...)
 
 	atlasExtra, err := types.ExtractAtlasExtra(h)
 	if err != nil {
@@ -744,7 +739,7 @@ func WriteCommittedSeals(h *types.Header, signature []byte, publicKey []byte, bi
 	}
 
 	copy(atlasExtra.AggSignature[:], signature)
-	copy(atlasExtra.AggBitmap[:], bitmap)
+	atlasExtra.AggBitmap = bitmap
 
 	payload, err := rlp.EncodeToBytes(&atlasExtra)
 	if err != nil {
@@ -755,13 +750,9 @@ func WriteCommittedSeals(h *types.Header, signature []byte, publicKey []byte, bi
 	return nil
 }
 
-func WriteCommittedSealsAsExtra(extra []byte, signature []byte, publicKey []byte, bitmap []byte) ([]byte, error) {
-	if len(signature) != types.AtlasExtraSignature || len(publicKey) != types.AtlasExtraPublicKey || len(bitmap) > types.AtlasExtraMask {
+func WriteCommittedSealsAsExtra(extra []byte, signature []byte, publicKey []byte, bitmap []byte, valSetSize int) ([]byte, error) {
+	if len(signature) != types.AtlasExtraSignature || len(publicKey) != types.AtlasExtraPublicKey || len(bitmap) != types.GetMaskByteCount(valSetSize) {
 		return nil, errInvalidCommittedSeals
-	}
-
-	if len(bitmap) < types.AtlasExtraMask {
-		bitmap = append(bitmap, bytes.Repeat([]byte{0x00}, types.AtlasExtraMask-len(bitmap))...)
 	}
 
 	extraData := make([]byte, len(extra))
@@ -779,7 +770,7 @@ func WriteCommittedSealsAsExtra(extra []byte, signature []byte, publicKey []byte
 	}
 
 	copy(atlasExtra.AggSignature[:], signature)
-	copy(atlasExtra.AggBitmap[:], bitmap)
+	atlasExtra.AggBitmap = bitmap
 
 	payload, err := rlp.EncodeToBytes(&atlasExtra)
 	if err != nil {
@@ -809,7 +800,7 @@ func WriteCommittedSealInGenesis(genesis *core.Genesis, extra []byte, signatures
 		sign.Add(signatures[i])
 	}
 
-	data, err := WriteCommittedSealsAsExtra(extra, sign.Serialize(), publicKey.Serialize(), mask.Mask())
+	data, err := WriteCommittedSealsAsExtra(extra, sign.Serialize(), publicKey.Serialize(), mask.Mask(), len(publicKeys))
 	if err != nil {
 		return err
 	}

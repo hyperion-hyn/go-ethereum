@@ -191,7 +191,7 @@ func (w *wizard) makeGenesis() {
 
 		storage.SetupValidatorsInGenesisAt(&consortiumBoard, signers)
 
-		genesis.ExtraData = make([]byte, types.AtlasExtraSeal)
+		genesis.ExtraData = make([]byte, types.GetExtraSize(len(signers)))
 
 		block := genesis.ToBlock(nil)
 		hashdata := atlasBackend.SealHash(block.Header())

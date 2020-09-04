@@ -571,7 +571,7 @@ func TestWriteSeal(t *testing.T) {
 	expectedProposer := 0
 	expectedIstExtra := &types.AtlasExtra{
 		AggSignature: [96]byte{},
-		AggBitmap:    [16]byte{},
+		AggBitmap:    []byte{},
 	}
 
 	copy(expectedIstExtra.AggSignature[:], expectedSeal[:])
@@ -610,16 +610,17 @@ func TestWriteCommittedSeals(t *testing.T) {
 	signerKey, _ := crypto.GenerateBLSKey()
 	sign := signerKey.SignHash(crypto.Keccak256Hash(signerKey.Serialize()).Bytes())
 
+	valSetSize := 1
 	expectedCommittedSeal := sign.Serialize()
 	expectedPublicKey := signerKey.GetPublicKey().Serialize()
-	expectedBitmap := make([]byte, types.AtlasExtraMask)
+	expectedBitmap := make([]byte, types.GetMaskByteCount(valSetSize))
 
 	data := fmt.Sprintf("0x%x%x%x%x", sign.Serialize(), expectedPublicKey, expectedBitmap, math.PaddedBigBytes(big.NewInt(0), 2))
 	istRawData := hexutil.MustDecode(data)
 
 	expectedIstExtra := &types.AtlasExtra{}
 	copy(expectedIstExtra.AggSignature[:], expectedCommittedSeal)
-	copy(expectedIstExtra.AggBitmap[:], expectedBitmap)
+	expectedIstExtra.AggBitmap = expectedBitmap
 
 	var expectedErr error
 
@@ -628,7 +629,7 @@ func TestWriteCommittedSeals(t *testing.T) {
 	}
 
 	// normal case
-	err := WriteCommittedSeals(h, expectedCommittedSeal, expectedPublicKey, expectedBitmap)
+	err := WriteCommittedSeals(h, expectedCommittedSeal, expectedPublicKey, expectedBitmap, valSetSize)
 	if err != expectedErr {
 		t.Errorf("error mismatch: have %v, want %v", err, expectedErr)
 	}
@@ -644,7 +645,7 @@ func TestWriteCommittedSeals(t *testing.T) {
 
 	// invalid seal
 	unexpectedCommittedSeal := append(expectedCommittedSeal, make([]byte, 1)...)
-	err = WriteCommittedSeals(h, unexpectedCommittedSeal, expectedPublicKey, expectedBitmap)
+	err = WriteCommittedSeals(h, unexpectedCommittedSeal, expectedPublicKey, expectedBitmap, valSetSize)
 	if err != errInvalidCommittedSeals {
 		t.Errorf("error mismatch: have %v, want %v", err, errInvalidCommittedSeals)
 	}

@@ -27,12 +27,9 @@ import (
 const (
 	AtlasMaxValidator = 128 // Maximum number of validators, type of AtlasExtra.Proposer should large enough to hold max index
 
-	AtlasExtraVanity    = 32                           // Fixed number of extra-data bytes reserved for validator vanity
-	AtlasExtraPublicKey = 48                           // Fixed number of extra-data bytes reverved for BLS public key
-	AtlasExtraSignature = 96                           // Fixed number of extra-data bytes reverved for BLS signature
-	AtlasExtraMask      = (AtlasMaxValidator + 7) >> 3 // Fixed number of extra-data bytes reserved for BLS signature bitmap
-	AtlasExtraProposer  = ((AtlasMaxValidator + ((1 << 8) - 1)) >> 8) << 1
-	AtlasExtraSeal      = AtlasExtraSignature + AtlasExtraMask
+	AtlasExtraVanity    = 32 // Fixed number of extra-data bytes reserved for validator vanity
+	AtlasExtraPublicKey = 48 // Fixed number of extra-data bytes reverved for BLS public key
+	AtlasExtraSignature = 96 // Fixed number of extra-data bytes reverved for BLS signature
 )
 
 var (
@@ -48,7 +45,7 @@ var (
 // or it will fail to initialize instance of this struct.
 type AtlasExtra struct {
 	AggSignature [AtlasExtraSignature]byte // aggregated signature
-	AggBitmap    [AtlasExtraMask]byte      // aggregated bitmap
+	AggBitmap    []byte                    // aggregated bitmap
 }
 
 // EncodeRLP serializes ist into the Ethereum RLP format.
@@ -64,7 +61,7 @@ func (ist *AtlasExtra) EncodeRLP(w io.Writer) error {
 func (ist *AtlasExtra) DecodeRLP(s *rlp.Stream) error {
 	var atlasExtra struct {
 		AggSignature [AtlasExtraSignature]byte // aggregated signature
-		AggBitmap    [AtlasExtraMask]byte      // aggregated bitmap
+		AggBitmap    []byte                    // aggregated bitmap
 	}
 	if err := s.Decode(&atlasExtra); err != nil {
 		return err
@@ -113,7 +110,7 @@ func AtlasFilteredHeader(h *Header, keepSeal bool) *Header {
 
 	if !keepSeal {
 		reset(atlasExtra.AggSignature[:])
-		reset(atlasExtra.AggBitmap[:])
+		atlasExtra.AggBitmap = make([]byte, 0)
 	}
 
 	payload, err := rlp.EncodeToBytes(&atlasExtra)
@@ -124,4 +121,11 @@ func AtlasFilteredHeader(h *Header, keepSeal bool) *Header {
 	newHeader.Extra = append(newHeader.Extra[:AtlasExtraVanity], payload...)
 
 	return newHeader
+}
+
+func GetMaskByteCount(valSetSize int) int {
+	return (valSetSize + 7) >> 3
+}
+func GetExtraSize(valSetSize int) int {
+	return AtlasExtraSignature + GetMaskByteCount(valSetSize)
 }

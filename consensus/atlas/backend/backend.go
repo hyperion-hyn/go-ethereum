@@ -187,18 +187,23 @@ func (sb *backend) Commit(proposal atlas.Proposal, signature []byte, publicKey [
 	}
 
 	h := block.Header()
+
+	number := h.Number.Uint64()
+	if number == 0 {
+		return errUnknownBlock
+	}
+	snap, err := sb.snapshot(sb.chain, number-1, h.ParentHash, nil)
+	if err != nil {
+		return err
+	}
+
 	// Append seals into extra-data
-	err := WriteCommittedSeals(h, signature, publicKey, bitmap)
+	err = WriteCommittedSeals(h, signature, publicKey, bitmap, snap.ValSet.Size())
 	if err != nil {
 		return err
 	}
 	// update block's header
 	block = block.WithSeal(h)
-
-	sb.logger.Info("Confirm", "address", sb.Address(), "hash", proposal.Hash(), "number", proposal.Number().Uint64())
-	if err := sb.WriteLastCommits(signature, bitmap); err != nil {
-		return err
-	}
 
 	// - if the proposed and committed blocks are the same, send the proposed hash
 	//   to commit channel, which is being watched inside the engine.Seal() function.
@@ -355,31 +360,4 @@ func (c *backend) Authorize(signer common.Address, signHashFn consensus.SignHash
 
 	c.signer = signer
 	c.signHashFn = signHashFn
-}
-
-func (sb *backend) WriteLastCommits(signature []byte, mask []byte) error {
-	if len(signature) != types.AtlasExtraSignature || len(mask) != types.AtlasExtraMask {
-		return types.ErrInvalidAtlasHeaderExtra
-	}
-	data := make([]byte, len(signature)+len(mask))
-	copy(data, signature)
-	copy(data[len(signature):], mask)
-	if err := sb.db.Put(lastCommitsKey, data); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (sb *backend) ReadLastCommits() (signature []byte, mask []byte, err error) {
-	var data []byte
-	data, err = sb.db.Get(lastCommitsKey)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if len(data) != types.AtlasExtraSignature+types.AtlasExtraMask {
-		return nil, nil, types.ErrInvalidAtlasHeaderExtra
-	}
-
-	return data[:types.AtlasExtraSignature], data[types.AtlasExtraSignature:], nil
 }
