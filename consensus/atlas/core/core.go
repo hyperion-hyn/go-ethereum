@@ -31,7 +31,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
 	"github.com/ethereum/go-ethereum/crypto"
-	bls_cosi "github.com/ethereum/go-ethereum/crypto/bls"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
@@ -103,12 +102,6 @@ type core struct {
 	sequenceMeter metrics.Meter
 	// the timer to record consensus duration (from accepting a preprepare to final committed stage)
 	consensusTimer metrics.Timer
-
-	// Commits collected from validators.
-	aggregatedPrepareSig *bls.Sign
-	aggregatedCommitSig  *bls.Sign
-	prepareBitmap        *bls_cosi.Mask
-	commitBitmap         *bls_cosi.Mask
 }
 
 func (c *core) finalizeMessage(msg *message) ([]byte, error) {

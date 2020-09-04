@@ -20,9 +20,13 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/hyperion-hyn/bls/ffi/go/bls"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
 	"github.com/ethereum/go-ethereum/consensus/atlas/validator"
+	bls_cosi "github.com/ethereum/go-ethereum/crypto/bls"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 func TestHandleExpect(t *testing.T) {
@@ -341,7 +345,27 @@ func TestVerifyExpect(t *testing.T) {
 	for i, test := range testCases {
 		c := sys.backends[0].engine.(*core)
 		c.current = test.roundState
+
 		c.state = StatePrepared
+		c.current.aggregatedPrepareSig = &bls.Sign{}
+		c.current.aggregatedPreparePublicKey = &bls.PublicKey{}
+		c.current.prepareBitmap, _ = bls_cosi.NewMask(c.valSet.GetPublicKeys(), nil)
+
+		for _, v := range sys.backends {
+			core := v.engine.(*core)
+			signedSubject, err := core.SignSubject(test.expect)
+			if err != nil {
+				t.Errorf("failed to sign subject: %v", err)
+			}
+			sign, pubKey, err := decodeSignPayload(signedSubject.Payload)
+			if err != nil {
+				t.Errorf("failed to decode SignPayload")
+			}
+
+			c.current.aggregatedPrepareSig.Add(sign)
+			c.current.aggregatedPreparePublicKey.Add(pubKey)
+			c.current.prepareBitmap.SetKey(pubKey, true)
+		}
 
 		signedSubject, err := c.AssembleSignedSubject(test.expect)
 		if err != nil {
@@ -354,4 +378,23 @@ func TestVerifyExpect(t *testing.T) {
 			t.Errorf("result %d: error mismatch: have %v, want %v", i, err, test.expected)
 		}
 	}
+}
+
+func decodeSignPayload(payload []byte) (*bls.Sign, *bls.PublicKey, error) {
+	var signPayload *atlas.SignPayload
+	if err := rlp.DecodeBytes(payload, &signPayload); err != nil {
+		return nil, nil, err
+	}
+
+	var sign bls.Sign
+	if err := sign.Deserialize(signPayload.Signature); err != nil {
+		return nil, nil, err
+	}
+
+	var pubKey bls.PublicKey
+	if err := pubKey.Deserialize(signPayload.PublicKey); err != nil {
+		return nil, nil, err
+	}
+
+	return &sign, &pubKey, nil
 }

@@ -27,7 +27,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
@@ -251,11 +250,20 @@ func SignSubject(subject *Subject, signFn SignHashFn) (*Subject, error) {
 		return nil, err
 	}
 
-	subject.Payload = payload
+	var retval Subject
+	{
+		var data []byte
+		var err error
+		if data, err = rlp.EncodeToBytes(subject); err != nil {
+			return nil, err
+		}
+		if err = rlp.DecodeBytes(data, &retval); err != nil {
+			return nil, err
+		}
+	}
+	retval.Payload = payload
 
-	log.Debug("SignSubject", "hash", fmt.Sprintf("%x", hash.Bytes()[:10]), "sub", fmt.Sprintf("%s", val))
-
-	return subject, nil
+	return &retval, nil
 }
 
 func IsConsistentSubject(a *Subject, b *Subject) bool {

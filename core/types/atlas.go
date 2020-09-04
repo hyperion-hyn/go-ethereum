@@ -19,10 +19,8 @@ package types
 import (
 	"errors"
 	"io"
-	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
@@ -49,23 +47,15 @@ var (
 // Note: If change type of field from fixed-length array to slice, should check all the usage of this struct.
 // or it will fail to initialize instance of this struct.
 type AtlasExtra struct {
-	Seal         [AtlasExtraSignature]byte // proposer's seal
-	Proposer     int                       // proposer's index
 	AggSignature [AtlasExtraSignature]byte // aggregated signature
-	AggPublicKey [AtlasExtraPublicKey]byte // aggregated public key
 	AggBitmap    [AtlasExtraMask]byte      // aggregated bitmap
 }
 
 // EncodeRLP serializes ist into the Ethereum RLP format.
 func (ist *AtlasExtra) EncodeRLP(w io.Writer) error {
-	value := big.NewInt(0).SetUint64(uint64(ist.Proposer))
-	data := math.PaddedBigBytes(value, AtlasExtraProposer)
 
 	return rlp.Encode(w, []interface{}{
-		ist.Seal,
-		data,
 		ist.AggSignature,
-		ist.AggPublicKey,
 		ist.AggBitmap,
 	})
 }
@@ -73,17 +63,13 @@ func (ist *AtlasExtra) EncodeRLP(w io.Writer) error {
 // DecodeRLP implements rlp.Decoder, and load the atlas fields from a RLP stream.
 func (ist *AtlasExtra) DecodeRLP(s *rlp.Stream) error {
 	var atlasExtra struct {
-		Seal         [AtlasExtraSignature]byte // proposer's seal
-		Proposer     [AtlasExtraProposer]byte  // proposer's index
 		AggSignature [AtlasExtraSignature]byte // aggregated signature
-		AggPublicKey [AtlasExtraPublicKey]byte // aggregated public key
 		AggBitmap    [AtlasExtraMask]byte      // aggregated bitmap
 	}
 	if err := s.Decode(&atlasExtra); err != nil {
 		return err
 	}
-	ist.Seal, ist.AggSignature, ist.AggPublicKey, ist.AggBitmap = atlasExtra.Seal, atlasExtra.AggSignature, atlasExtra.AggPublicKey, atlasExtra.AggBitmap
-	ist.Proposer = int(big.NewInt(0).SetBytes(atlasExtra.Proposer[:]).Uint64())
+	ist.AggSignature, ist.AggBitmap = atlasExtra.AggSignature, atlasExtra.AggBitmap
 	return nil
 }
 
@@ -126,7 +112,6 @@ func AtlasFilteredHeader(h *Header, keepSeal bool) *Header {
 	}
 
 	if !keepSeal {
-		atlasExtra.Proposer = 0
 		reset(atlasExtra.AggSignature[:])
 		reset(atlasExtra.AggBitmap[:])
 	}
