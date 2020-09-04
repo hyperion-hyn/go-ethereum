@@ -114,7 +114,9 @@ func (s *Storage_Map3NodeWrapper_) AddMicrodelegation(delegator common.Address, 
 	pending bool, epoch *big.Int) (isNewDelegator bool) {
 	isExist := s.Microdelegations().Contain(delegator)
 	if !isExist {
-		s.Microdelegations().Put(delegator, &Microdelegation_{})
+		s.Microdelegations().Put(delegator, &Microdelegation_{
+			DelegatorAddress: delegator,
+		})
 	}
 	md, _ := s.Microdelegations().Get(delegator)
 	if pending {
