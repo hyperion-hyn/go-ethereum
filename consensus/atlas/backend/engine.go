@@ -215,30 +215,6 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 	// The genesis block is the always valid dead-end
 	number := header.Number.Uint64()
 	if number == 0 {
-		extra, err := types.ExtractAtlasExtra(header)
-		if err != nil {
-			return err
-		}
-		// The length of Confirm seals should be larger than 0
-		if len(extra.AggSignature) == 0 || len(extra.AggBitmap) == 0 {
-			return errEmptyCommittedSeals
-		}
-
-		if len(extra.AggSignature) != types.AtlasExtraSignature || len(extra.AggBitmap) != types.AtlasExtraMask {
-			return errInvalidAggregatedSignature
-		}
-		snap, err := sb.snapshot(sb.chain, number-1, header.ParentHash, nil)
-		if err != nil {
-			return err
-		}
-		publicKey, err := retrieveAggregatedPublicKey(snap.ValSet, extra.AggBitmap[:])
-		if err != nil {
-			return err
-		}
-		hashdata := SealHash(header)
-		if err := atlas.CheckValidatorSignature(hashdata.Bytes(), extra.AggSignature[:], publicKey.Serialize()); err != nil {
-			return err
-		}
 		return nil
 	}
 	// Ensure that the block's timestamp isn't too close to it's parent
