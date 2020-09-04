@@ -727,12 +727,6 @@ func WriteCommittedSeals(h *types.Header, signature []byte, publicKey []byte, bi
 	fmt.Printf("publicKey: %v\n", publicKey)
 	fmt.Printf("bitmap: %v\n", bitmap)
 
-	switch len(h.Extra) {
-	case types.AtlasExtraVanity + types.GetExtraSize(valSetSize):
-	default:
-		return errInvalidExtraDataFormat
-	}
-
 	atlasExtra, err := types.ExtractAtlasExtra(h)
 	if err != nil {
 		return err
