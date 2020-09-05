@@ -19,7 +19,6 @@ package backend
 import (
 	"bytes"
 	"crypto/ecdsa"
-	"fmt"
 	"math/big"
 	"os"
 	"reflect"
@@ -31,7 +30,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
 	"github.com/ethereum/go-ethereum/consensus/atlas/storage"
@@ -541,7 +539,7 @@ func TestPrepareExtra(t *testing.T) {
 	validators := make([]atlas.Validator, 0)
 
 	vanity := make([]byte, types.AtlasExtraVanity)
-	expectedResult := append(vanity, hexutil.MustDecode("0")...)
+	expectedResult := append(vanity, hexutil.MustDecode("0xf863b86000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080")...)
 
 	h := &types.Header{
 		Extra: vanity,
@@ -606,16 +604,15 @@ func TestWriteSeal(t *testing.T) {
 
 func TestWriteCommittedSeals(t *testing.T) {
 	vanity := bytes.Repeat([]byte{0x00}, types.AtlasExtraVanity)
-	signerKey, _ := crypto.GenerateBLSKey()
+	signerKey := &bls.SecretKey{}
+	signerKey.Deserialize(hexutil.MustDecode("0x4efb5175c1eaef2f546306cc836cf21e534fcc48819de418f5050b24fe7c4812"))
 	sign := signerKey.SignHash(crypto.Keccak256Hash(signerKey.Serialize()).Bytes())
 
 	valSetSize := 1
 	expectedCommittedSeal := sign.Serialize()
 	expectedPublicKey := signerKey.GetPublicKey().Serialize()
 	expectedBitmap := make([]byte, types.GetMaskByteCount(valSetSize))
-
-	data := fmt.Sprintf("0x%x%x%x%x", sign.Serialize(), expectedPublicKey, expectedBitmap, math.PaddedBigBytes(big.NewInt(0), 2))
-	istRawData := hexutil.MustDecode(data)
+	istRawData := hexutil.MustDecode("0xf863b860c3f9f64cb4d93b5d3d5d923c5105d491393d9ea754bffb221e25de06d8c9da5e21985e45b1733fd1f6700e07a188b60ea043d905af08299499a5e9841a985bee6435f184a2a7f0558e88ba3cf5ac2eccb8b48f1513027b21972a0ff1b5a8670a00")
 
 	expectedIstExtra := &types.AtlasExtra{}
 	copy(expectedIstExtra.AggSignature[:], expectedCommittedSeal)
