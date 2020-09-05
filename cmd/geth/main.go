@@ -46,7 +46,7 @@ import (
 )
 
 const (
-	clientIdentifier = "geth" // Client identifier to advertise over the network
+	clientIdentifier = "hyperion" // Client identifier to advertise over the network
 )
 
 var (
@@ -203,7 +203,7 @@ func init() {
 	// Initialize the CLI app and start Geth
 	app.Action = geth
 	app.HideVersion = true // we have a command to print the version
-	app.Copyright = "Copyright 2013-2020 The go-ethereum Authors"
+	app.Copyright = "Copyright 2013-2020 The go-ethereum Authors\n             2018-2020 The Hyperion Authors"
 	app.Commands = []cli.Command{
 		// See chaincmd.go:
 		initCommand,
