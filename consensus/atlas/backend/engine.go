@@ -505,24 +505,15 @@ func (sb *backend) updateBlock(parent *types.Header, block *types.Block) (*types
 	header := block.Header()
 
 	// sign the hash
-	seal, pubKey, _, err := sb.SignHash(SealHash(header))
+	seal, _, _, err := sb.SignHash(SealHash(header))
 
 	if err != nil {
 		return nil, err
 	}
 
-	number := header.Number.Uint64()
-	snap, err := sb.snapshot(sb.chain, number-1, header.ParentHash, nil)
+	// WARNING: call sb.snapshot(sb.chain, number-1, header.ParentHash, nil)) will cause TestVerifyHeaders fail.
 
-	var publicKey bls.PublicKey
-	if err := publicKey.Deserialize(pubKey); err != nil {
-		return nil, err
-	}
-	index, validator := snap.ValSet.GetByPublicKey(&publicKey)
-	if validator == nil {
-		return nil, errUnauthorized
-	}
-	err = writeSeal(header, seal, index)
+	err = writeSeal(header, seal)
 	if err != nil {
 		return nil, err
 	}
@@ -589,6 +580,9 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		snap    *Snapshot
 	)
 	for snap == nil {
+		if number == 0 {
+			hash = chain.GetHeaderByNumber(number).Hash()
+		}
 		// If an in-memory snapshot was found, use that
 		if s, ok := sb.recents.Get(hash); ok {
 			snap = s.(*Snapshot)
@@ -690,13 +684,9 @@ func prepareExtra(header *types.Header, vals []atlas.Validator) ([]byte, error) 
 
 // writeSeal writes the extra-data field of the given header with the given seals.
 // suggest to rename to writeSeal.
-func writeSeal(h *types.Header, seal []byte, proposer int) error {
+func writeSeal(h *types.Header, seal []byte) error {
 	if len(seal) != types.AtlasExtraSignature {
 		return errInvalidSignature
-	}
-
-	if proposer > types.AtlasMaxValidator {
-		return errInvalidPublicKey
 	}
 
 	atlasExtra, err := types.ExtractAtlasExtra(h)

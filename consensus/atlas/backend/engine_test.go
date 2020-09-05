@@ -541,7 +541,7 @@ func TestPrepareExtra(t *testing.T) {
 	validators := make([]atlas.Validator, 0)
 
 	vanity := make([]byte, types.AtlasExtraVanity)
-	expectedResult := append(vanity, hexutil.MustDecode("")...)
+	expectedResult := append(vanity, hexutil.MustDecode("0")...)
 
 	h := &types.Header{
 		Extra: vanity,
@@ -568,7 +568,6 @@ func TestWriteSeal(t *testing.T) {
 	vanity := bytes.Repeat([]byte{0x00}, types.AtlasExtraVanity)
 	istRawData := hexutil.MustDecode("0xf873b8600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000009000000000000000000000000000000000")
 	expectedSeal := bytes.Repeat([]byte{0x00}, types.AtlasExtraSignature)
-	expectedProposer := 0
 	expectedIstExtra := &types.AtlasExtra{
 		AggSignature: [96]byte{},
 		AggBitmap:    []byte{},
@@ -583,7 +582,7 @@ func TestWriteSeal(t *testing.T) {
 	}
 
 	// normal case
-	err := writeSeal(h, expectedSeal, expectedProposer)
+	err := writeSeal(h, expectedSeal)
 	if err != expectedErr {
 		t.Errorf("error mismatch: have %v, want %v", err, expectedErr)
 	}
@@ -599,7 +598,7 @@ func TestWriteSeal(t *testing.T) {
 
 	// invalid seal
 	unexpectedSeal := append(expectedSeal, make([]byte, 1)...)
-	err = writeSeal(h, unexpectedSeal, expectedProposer)
+	err = writeSeal(h, unexpectedSeal)
 	if err != errInvalidSignature {
 		t.Errorf("error mismatch: have %v, want %v", err, errInvalidSignature)
 	}
