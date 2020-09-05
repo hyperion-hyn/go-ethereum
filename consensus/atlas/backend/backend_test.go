@@ -36,7 +36,7 @@ import (
 )
 
 func TestSign(t *testing.T) {
-	b := newBackend()
+	b, _ := newBackend(4)
 	data := []byte("Here is a string....")
 	hash := crypto.Keccak256Hash(data)
 	sig, key, _, err := b.SignHash(hash)
@@ -65,7 +65,7 @@ func TestCheckSignature(t *testing.T) {
 	hashData := crypto.Keccak256([]byte(data))
 	sign := key.SignHash(hashData)
 	sig := sign.Serialize()
-	b := newBackend()
+	b, _ := newBackend(4)
 	a := key.GetPublicKey().Serialize()
 	err := b.CheckSignature(data, a, sig)
 	if err != nil {
@@ -170,12 +170,7 @@ func randSetBit(mask *bls_cosi.Mask, n int, v bool) {
 }
 
 func TestCommit(t *testing.T) {
-	privateKeys, _, err := generateSecretKeys(88)
-	if err != nil {
-		t.Errorf("failed to generate %d SecretKeys", 88)
-	}
-
-	backend := newBackend()
+	backend, secretKeys := newBackend(4)
 
 	commitCh := make(chan *types.Block)
 	// Case: it's a proposer, so the backend.commit will receive channel result from backend.Commit function
@@ -189,7 +184,7 @@ func TestCommit(t *testing.T) {
 			nil,
 			func(block *types.Block) ([]byte, []byte, []byte, error) {
 				hashdata := SealHash(block.Header())
-				sign, aggregatedPublicKey, bitmap, err := sealWithKeys(privateKeys, hashdata)
+				sign, aggregatedPublicKey, bitmap, err := sealWithKeys(secretKeys, hashdata)
 				if err != nil {
 					return nil, nil, nil, err
 				}
@@ -243,7 +238,7 @@ func TestCommit(t *testing.T) {
 			// to avoid race condition is occurred by goroutine
 			select {
 			case result := <-commitCh:
-				if result.Hash() != expBlock.Hash() {
+				if result.SealHash(backend) != expBlock.SealHash(backend) {
 					t.Errorf("hash mismatch: have %v, want %v", result.Hash(), expBlock.Hash())
 				}
 			case <-time.After(10 * time.Second):
@@ -258,7 +253,7 @@ func TestGetProposer(t *testing.T) {
 	block := makeBlock(chain, engine, chain.Genesis())
 	chain.InsertChain(types.Blocks{block})
 	expected := engine.GetProposer(1)
-	actual := engine.Address()
+	actual := engine.Signer()
 	if actual != expected {
 		t.Errorf("proposer mismatch: have %v, want %v", actual.Hex(), expected.Hex())
 	}
@@ -321,7 +316,7 @@ func (slice Keys) Swap(i, j int) {
 	slice[i], slice[j] = slice[j], slice[i]
 }
 
-func newBackend() (b *backend) {
-	_, b, _ = newBlockChain(4)
-	return
+func newBackend(n int) (*backend, []*bls.SecretKey) {
+	_, b, secretKeys := newBlockChain(n)
+	return b, secretKeys
 }

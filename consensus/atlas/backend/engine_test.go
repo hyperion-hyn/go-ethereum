@@ -52,6 +52,17 @@ func newBlockChain(n int) (*core.BlockChain, *backend, []*bls.SecretKey) {
 	config := atlas.DefaultConfig
 	// Use the first key as private key
 	b, _ := New(config, memDB).(*backend)
+
+	signerKey := signerKeys[0]
+	signer := crypto.PubkeyToSigner(signerKey.GetPublicKey())
+	signHashFn := func(account accounts.Account, hash common.Hash) (signature []byte, publicKey []byte, mask []byte, err error) {
+		secrectKey := signerKey
+		sign := secrectKey.SignHash(hash.Bytes())
+
+		return sign.Serialize(), secrectKey.GetPublicKey().Serialize(), nil, nil
+	}
+	b.Authorize(signer, signHashFn)
+
 	genesis.MustCommit(memDB)
 	blockchain, err := core.NewBlockChain(memDB, nil, genesis.Config, b, vm.Config{}, nil)
 	if err != nil {
@@ -64,21 +75,6 @@ func newBlockChain(n int) (*core.BlockChain, *backend, []*bls.SecretKey) {
 	}
 	if snap == nil {
 		panic("failed to get snapshot")
-	}
-	proposerAddr := snap.ValSet.GetProposer().Signer()
-
-	// find proposer key
-	for _, key := range signerKeys {
-		addr := crypto.PubkeyToSigner(key.GetPublicKey())
-		if addr.String() == proposerAddr.String() {
-			b.signHashFn = func(account accounts.Account, hash common.Hash) (signature []byte, publicKey []byte, mask []byte, err error) {
-				secrectKey := key
-				sign := secrectKey.SignHash(hash.Bytes())
-
-				return sign.Serialize(), secrectKey.GetPublicKey().Serialize(), nil, nil
-			}
-			b.signer = addr
-		}
 	}
 
 	return blockchain, b, signerKeys

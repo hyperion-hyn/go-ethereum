@@ -22,7 +22,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
@@ -49,20 +48,17 @@ func CheckValidatorSignature(hashdata []byte, sig []byte, pubKey []byte) error {
 	// 1. deserialize signature
 	var sign bls.Sign
 	if err := sign.Deserialize(sig); err != nil {
-		log.Debug("Failed to deserialize bls signature", "err", err)
 		return err
 	}
 
 	// 2. deserialize publicKey
 	var publicKey bls.PublicKey
 	if err := publicKey.Deserialize(pubKey); err != nil {
-		log.Error("Failed to deserialize publicKey", "err", err)
 		return err
 	}
 
 	// 3. verify signature
 	if !sign.VerifyHash(&publicKey, hashdata) {
-		log.Error("Failed to verify data")
 		return ErrInvalidSignature
 	}
 
