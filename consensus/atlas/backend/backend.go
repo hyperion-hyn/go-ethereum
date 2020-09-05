@@ -188,17 +188,11 @@ func (sb *backend) Commit(proposal atlas.Proposal, signature []byte, publicKey [
 
 	h := block.Header()
 
-	number := h.Number.Uint64()
-	if number == 0 {
-		return errUnknownBlock
-	}
-	snap, err := sb.snapshot(sb.chain, number-1, h.ParentHash, nil)
-	if err != nil {
-		return err
-	}
-
 	// Append seals into extra-data
-	err = WriteCommittedSeals(h, signature, publicKey, bitmap, snap.ValSet.Size())
+
+	lastProposal, _ := sb.LastProposal()
+	valSetSize := sb.Validators(lastProposal).Size()
+	err := WriteCommittedSeals(h, signature, publicKey, bitmap, valSetSize)
 	if err != nil {
 		return err
 	}

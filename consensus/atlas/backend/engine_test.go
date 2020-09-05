@@ -254,30 +254,26 @@ func signWithSecretKeys(signers []*bls.SecretKey, hash common.Hash) (*bls.Sign, 
 }
 
 func TestSealCommittedOtherHash(t *testing.T) {
-	chain, engine, signerKeys := newBlockChain(4)
+	chain, engine, _ := newBlockChain(4)
 	block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
 	otherBlock := makeBlockWithoutSeal(chain, engine, block)
 
+	expectedCommittedSeal, expectedCommittedPublicKey, _, _ := engine.SignHash(common.HexToHash("0x01"))
+	lastProposal, _ := engine.LastProposal()
+	valSetSize := engine.Validators(lastProposal).Size()
+	expectedCommittedBitmap := bytes.Repeat([]byte{0x00}, types.GetMaskByteCount(valSetSize))
 	eventSub := engine.EventMux().Subscribe(atlas.RequestEvent{})
 	blockOutputChannel := make(chan *types.Block)
 	stopChannel := make(chan struct{})
 
 	go func() {
-		select {
-		case ev := <-eventSub.Chan():
-			event, ok := ev.Data.(atlas.RequestEvent)
-			if !ok {
-				t.Errorf("unexpected event comes: %v", reflect.TypeOf(ev.Data))
-			}
+		ev := <-eventSub.Chan()
+		if _, ok := ev.Data.(atlas.RequestEvent); !ok {
+			t.Errorf("unexpected event comes: %v", reflect.TypeOf(ev.Data))
+		}
 
-			sign, publicKey, bitmap, err := signWithSecretKeys(signerKeys, SealHash(event.Proposal.(*types.Block).Header()))
-			if err != nil {
-				t.Errorf("failed to sign with secret keys: %v", err)
-			}
-
-			if err := engine.Commit(otherBlock, sign.Serialize(), publicKey.Serialize(), bitmap.Mask()); err != nil {
-				t.Error(err.Error())
-			}
+		if err := engine.Commit(otherBlock, expectedCommittedSeal, expectedCommittedPublicKey, expectedCommittedBitmap); err != nil {
+			t.Error(err.Error())
 		}
 		eventSub.Unsubscribe()
 	}()
@@ -296,11 +292,9 @@ func TestSealCommittedOtherHash(t *testing.T) {
 		close(stopChannel)
 	}
 
-	select {
-	case output := <-blockOutputChannel:
-		if output != nil {
-			t.Error("Block not nil!")
-		}
+	output := <-blockOutputChannel
+	if output != nil {
+		t.Error("Block not nil!")
 	}
 }
 
