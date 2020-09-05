@@ -153,7 +153,10 @@ func (s *Storage_Map3NodeWrapper_) Unmicrodelegate(delegator common.Address, amo
 		s.SubTotalPendingDelegation(amount)
 		toReturn = big.NewInt(0).Set(amount)
 
-		if md.Amount().Value().Uint64() == 0 || md.Undelegation().Amount().Value().Uint64() == 0 {
+		if md.Amount().Value().Uint64() == 0 &&
+			md.Undelegation().Amount().Value().Uint64() == 0 &&
+			md.PendingDelegation().Amount().Value().Uint64() == 0 {
+
 			toReturn = toReturn.Add(toReturn, md.Reward().Value())
 			s.Microdelegations().Remove(delegator)
 			return toReturn, true
