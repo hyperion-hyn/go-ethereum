@@ -63,8 +63,7 @@ func (b *ValidatorWrapperBuilder) SetCreationHeight(creationHeight *big.Int) *Va
 }
 
 func (b *ValidatorWrapperBuilder) AddRedelegation(redelegation Redelegation_) *ValidatorWrapperBuilder {
-	r, _ := redelegation.Copy()
-	b.wrapper.Redelegations.Put(redelegation.DelegatorAddress, *r)
+	b.wrapper.Redelegations.Put(redelegation.DelegatorAddress, redelegation)
 	b.wrapper.TotalDelegation.Add(b.wrapper.TotalDelegation, redelegation.Amount)
 	if b.wrapper.Validator.OperatorAddresses.Contain(redelegation.DelegatorAddress) {
 		b.wrapper.TotalDelegationByOperator.Add(b.wrapper.TotalDelegationByOperator, redelegation.Amount)

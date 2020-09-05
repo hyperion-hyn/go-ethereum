@@ -89,16 +89,16 @@ func TestValidatorWrapperBuilder(t *testing.T) {
 	}
 
 	for i, test := range tests {
-		builder := NewValidatorWrapperBuilder()
-		builder.SetValidatorAddress(test.validatorAddr).
+		v := NewValidatorWrapperBuilder().
+			SetValidatorAddress(test.validatorAddr).
 			AddOperatorAddress(test.operatorAddr).
 			AddSlotPubKey(test.key).
 			SetLastEpochInCommittee(test.lastEpochInCommittee).
 			SetMaxTotalDelegation(test.maxTotalDelegation).
 			SetCommission(test.commission).
 			SetDescription(test.description).
-			SetCreationHeight(test.creationHeight)
-		v := builder.AddRedelegation(test.redelegation).
+			SetCreationHeight(test.creationHeight).
+			AddRedelegation(test.redelegation).
 			SetBlockReward(test.blockReward).
 			SetNumBlocksToSign(test.numBlocksToSign).
 			SetNumBlocksSigned(test.numBlocksSigned).

@@ -28,14 +28,14 @@ func checkValidatorWrapperEqual(w1, w2 ValidatorWrapper_) error {
 	if err := checkValidatorEqual(w1.Validator, w2.Validator); err != nil {
 		return fmt.Errorf(".Validator%v", err)
 	}
-	if err := checkDelegationMapEqual(w1.Redelegations, w2.Redelegations); err != nil {
+	if err := checkRedelegationMapEqual(w1.Redelegations, w2.Redelegations); err != nil {
 		return fmt.Errorf(".Redelegations%v", err)
 	}
 	if err := checkBigIntEqual(w1.Counters.NumBlocksToSign, w2.Counters.NumBlocksToSign); err != nil {
-		return fmt.Errorf("..Counters.NumBlocksToSign %v", err)
+		return fmt.Errorf(".Counters.NumBlocksToSign %v", err)
 	}
 	if err := checkBigIntEqual(w1.Counters.NumBlocksSigned, w2.Counters.NumBlocksSigned); err != nil {
-		return fmt.Errorf("..Counters.NumBlocksSigned %v", err)
+		return fmt.Errorf(".Counters.NumBlocksSigned %v", err)
 	}
 	if err := checkBigIntEqual(w1.BlockReward, w2.BlockReward); err != nil {
 		return fmt.Errorf(".BlockReward %v", err)
@@ -153,7 +153,7 @@ func checkCommissionRateEqual(cr1, cr2 CommissionRates_) error {
 	return nil
 }
 
-func checkDelegationMapEqual(ds1, ds2 RedelegationMap_) error {
+func checkRedelegationMapEqual(ds1, ds2 RedelegationMap_) error {
 	if len(ds1.Keys) != len(ds2.Keys) {
 		return fmt.Errorf(".len not equal: %v / %v", len(ds1.Keys), len(ds2.Keys))
 	}
