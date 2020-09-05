@@ -126,6 +126,12 @@ func AtlasFilteredHeader(h *Header, keepSeal bool) *Header {
 func GetMaskByteCount(valSetSize int) int {
 	return (valSetSize + 7) >> 3
 }
-func GetExtraSize(valSetSize int) int {
-	return AtlasExtraSignature + GetMaskByteCount(valSetSize)
+func GetExtraSize(valSetSize int) (int, error) {
+	var atlasExtra AtlasExtra
+	atlasExtra.AggBitmap = make([]byte, GetMaskByteCount(valSetSize))
+	data, err := rlp.EncodeToBytes(&atlasExtra)
+	if err != nil {
+		return 0, err
+	}
+	return AtlasExtraVanity + len(data), nil
 }

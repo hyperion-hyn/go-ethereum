@@ -153,6 +153,25 @@ func appendValidators(genesis *core.Genesis, signers []*bls.SecretKey, addrs []c
 	return nil
 }
 
+func TestWriteCommittedSealInGenesis(t *testing.T) {
+	genesis := &core.Genesis{}
+	genesis.ExtraData = make([]byte, types.AtlasExtraVanity)
+
+	block := genesis.ToBlock(nil)
+	header := block.Header()
+
+	a := hexutil.MustDecode("0xe21cb91b7a869688156dd8c11ee304fe76eacf692fb6f8bf0d7fc189f98fd5096a858ea43d7169773b45c3999a80cb1168fa721718ff9272b129ccfb0422cbcc6a75d673170061e989b7396b803d8ad4b83f77c50de3750e9709d36ea689050b")
+	signatures := []*bls.Sign{&bls.Sign{}}
+	signatures[0].Deserialize(a)
+	b := hexutil.MustDecode("0xefb2daa826f1bc23d7d61bee8bb383eef6ea5ccc19446dd6ac52e33f3dc219d3e7d82fb2ef7ad1937bdcf3c7cb1de187")
+	publicKeys := []*bls.PublicKey{&bls.PublicKey{}}
+	publicKeys[0].Deserialize(b)
+	err := WriteCommittedSealInGenesis(genesis, header.Extra, signatures, publicKeys)
+	if err != nil {
+		t.Errorf("failed to WriteCommittedSealInGenesis: %v", err)
+	}
+}
+
 func makeHeader(parent *types.Block, config *atlas.Config) *types.Header {
 	header := &types.Header{
 		ParentHash: parent.Hash(),

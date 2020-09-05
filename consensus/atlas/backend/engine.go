@@ -742,16 +742,7 @@ func WriteCommittedSealsAsExtra(extra []byte, signature []byte, publicKey []byte
 	extraData := make([]byte, len(extra))
 	copy(extraData, extra)
 
-	var atlasExtra *types.AtlasExtra
-	var err error
-	if len(extraData) == types.AtlasExtraVanity {
-		atlasExtra = &types.AtlasExtra{}
-	} else {
-		atlasExtra, err = types.ExtractAtlasExtraField(extraData)
-		if err != nil {
-			return nil, err
-		}
-	}
+	atlasExtra := &types.AtlasExtra{}
 
 	copy(atlasExtra.AggSignature[:], signature)
 	atlasExtra.AggBitmap = bitmap
