@@ -149,7 +149,7 @@ func (w *wizard) makeGenesis() {
 		// In the case of atlas, configure the consensus parameters
 		genesis.Difficulty = atlasBackend.DefaultDifficulty
 		genesis.Config.Atlas = &params.AtlasConfig{
-			Period:         15,
+			Period:         8,
 			Epoch:          30000,
 			ProposerPolicy: 0,
 			Ceil2Nby3Block: big.NewInt(0),
@@ -191,9 +191,24 @@ func (w *wizard) makeGenesis() {
 
 		storage.SetupValidatorsInGenesisAt(&consortiumBoard, signers)
 
-		genesis.ExtraData = make([]byte, types.GetExtraSize(len(signers)))
+		genesis.ExtraData = make([]byte, types.AtlasExtraVanity)
 
 		block := genesis.ToBlock(nil)
+
+		for {
+			fmt.Println("When genesis block generate? yyyy-mm-dd hh:mm:ss (default = now)")
+			daytime_format := "2006-01-02 15:04:05"
+			default_daytime := time.Now().Format(daytime_format)
+			s := w.readDefaultString(default_daytime)
+			t, err := time.Parse(daytime_format, s)
+			if err == nil {
+				break
+			}
+			header := block.Header()
+			header.Time = uint64(t.Unix())
+			block = block.WithSeal(header)
+		}
+
 		hashdata := atlasBackend.SealHash(block.Header())
 		publicKeys := make([]*bls.PublicKey, len(signers))
 		for i := 0; i < len(signers); i++ {
