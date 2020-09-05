@@ -186,7 +186,8 @@ func (w *wizard) makeGenesis() {
 		}
 
 		consortiumBoard := core.GenesisAccount{
-			Nonce: 1,
+			Nonce:   1,
+			Balance: new(big.Int).Lsh(big.NewInt(1), 256-7), // 2^256 / 128 (allow many pre-funds without balance overflows)
 		}
 
 		storage.SetupValidatorsInGenesisAt(&consortiumBoard, signers)
