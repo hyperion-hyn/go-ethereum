@@ -280,38 +280,22 @@ func defaultMsgCreateValidator() restaking.CreateValidator {
 
 func defaultExpCreatedValidator() restaking.ValidatorWrapper_ {
 	pub := blsKeys[11].pub
-	v := restaking.Validator_{
-		ValidatorAddress:     createValidatorAddr,
-		OperatorAddresses:    restaking.NewAddressSetWithAddress(createOperatorAddr),
-		SlotPubKeys:          restaking.NewBLSKeysWithBLSKey(pub),
-		LastEpochInCommittee: new(big.Int),
-		MaxTotalDelegation:   millionOnes,
-		Status:               uint8(restaking.Active),
-		Commission: restaking.Commission_{
+	v := restaking.NewValidatorWrapperBuilder().
+		SetValidatorAddress(createValidatorAddr).
+		AddOperatorAddress(createOperatorAddr).
+		AddSlotPubKey(pub).
+		SetMaxTotalDelegation(millionOnes).
+		SetCommission(restaking.Commission_{
 			CommissionRates: defaultCommissionRates,
 			UpdateHeight:    big.NewInt(defaultBlockNumber),
-		},
-		Description:    defaultDesc,
-		CreationHeight: big.NewInt(defaultBlockNumber),
-	}
-
-	redelegations := restaking.NewRedelegationMap()
-	newRedelegation := restaking.Redelegation_{
-		DelegatorAddress: createOperatorAddr,
-		Amount:           defaultDelAmount,
-	}
-	redelegations.Put(createOperatorAddr, newRedelegation)
-
-	w := restaking.ValidatorWrapper_{
-		Validator:                 v,
-		Redelegations:             redelegations,
-		BlockReward:               big.NewInt(0),
-		TotalDelegation:           defaultDelAmount,
-		TotalDelegationByOperator: defaultDelAmount,
-	}
-	w.Counters.NumBlocksSigned = common.Big0
-	w.Counters.NumBlocksToSign = common.Big0
-	return w
+		}).
+		SetDescription(defaultDesc).
+		SetCreationHeight(big.NewInt(defaultBlockNumber)).
+		AddRedelegation(restaking.Redelegation_{
+			DelegatorAddress: createOperatorAddr,
+			Amount:           defaultDelAmount,
+		}).Build()
+	return *v
 }
 
 func TestVerifyEditValidatorMsg(t *testing.T) {
@@ -519,16 +503,16 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 		{
 			name: "max total delegation too small",
 			args: args{
-				stateDB: makeStateDBForStake(t),
+				stateDB:      makeStateDBForStake(t),
 				chainContext: makeFakeChainContextForStake(t),
 				epoch:        big.NewInt(defaultEpoch),
 				blockNum:     big.NewInt(defaultBlockNumber),
-				msg:          func() restaking.EditValidator {
+				msg: func() restaking.EditValidator {
 					msg := defaultMsgEditValidator()
 					msg.MaxTotalDelegation = oneBig
 					return msg
 				}(),
-				signer:       operatorAddr,
+				signer: operatorAddr,
 			},
 			wantErr: errors.New("total delegation can not be bigger than max_total_delegation"),
 		},
