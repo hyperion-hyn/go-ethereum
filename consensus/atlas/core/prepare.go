@@ -155,11 +155,5 @@ func (c *core) acceptPrepare(msg *message, src atlas.Validator) error {
 		c.current.aggregatedPreparePublicKey.Add(pubKey)
 	}
 
-	// Add the PREPARE message to current round state
-	if err := c.current.Prepares.Add(msg); err != nil {
-		logger.Error("Failed to add PREPARE message to round state", "msg", msg, "err", err)
-		return err
-	}
-
 	return nil
 }

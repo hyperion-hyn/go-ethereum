@@ -218,7 +218,7 @@ OUTER:
 			if r0.state != StatePreprepared {
 				t.Errorf("state mismatch: have %v, want %v", r0.state, StatePreprepared)
 			}
-			if r0.current.Prepares.Size() >= r0.QuorumSize() {
+			if r0.current.prepareBitmap.CountEnabled() >= r0.QuorumSize() {
 				t.Errorf("the size of PREPARE messages should be less than %v", r0.QuorumSize())
 			}
 			if r0.current.IsHashLocked() {
@@ -229,8 +229,8 @@ OUTER:
 		}
 
 		// core should have 2F+1 before Ceil2Nby3Block and Ceil(2N/3) after Ceil2Nby3Block PREPARE messages
-		if r0.current.Prepares.Size() < r0.QuorumSize() {
-			t.Errorf("the size of PREPARE messages should be larger than 2F+1 or ceil(2N/3): size %v", r0.current.Confirms.Size())
+		if r0.current.prepareBitmap.CountEnabled() < r0.QuorumSize() {
+			t.Errorf("the size of PREPARE messages should be larger than 2F+1 or ceil(2N/3): size %v", r0.current.confirmBitmap.CountEnabled())
 		}
 
 		// a message will be delivered to backend if ceil(2N/3)

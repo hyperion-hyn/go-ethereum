@@ -157,11 +157,5 @@ func (c *core) acceptConfirm(msg *message, src atlas.Validator) error {
 		c.current.aggregatedConfirmPublicKey.Add(pubKey)
 	}
 
-	// Add the PREPARE message to current round state
-	if err := c.current.Confirms.Add(msg); err != nil {
-		logger.Error("Failed to add PREPARE message to round state", "msg", msg, "err", err)
-		return err
-	}
-
 	return nil
 }

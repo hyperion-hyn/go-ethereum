@@ -37,8 +37,6 @@ func newTestRoundState(view *atlas.View, validatorSet atlas.ValidatorSet) *round
 		round:      view.Round,
 		sequence:   view.Sequence,
 		Preprepare: newTestPreprepare(view),
-		Prepares:   newMessageSet(validatorSet),
-		Confirms:   newMessageSet(validatorSet),
 		mu:         new(sync.RWMutex),
 		hasBadProposal: func(hash common.Hash) bool {
 			return false

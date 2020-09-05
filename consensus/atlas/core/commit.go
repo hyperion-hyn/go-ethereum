@@ -91,7 +91,7 @@ func (c *core) handleCommit(msg *message, src atlas.Validator) error {
 	//
 	// If we already have a proposal, we may have chance to speed up the consensus process
 	// by committing the proposal without PREPARE messages.
-	if c.current.Confirms.Size() >= c.QuorumSize() && c.state.Cmp(StateCommitted) < 0 {
+	if c.current.confirmBitmap.CountEnabled() >= c.QuorumSize() && c.state.Cmp(StateCommitted) < 0 {
 		// Still need to call LockHash here since state can skip Expect state and jump directly to the Confirm state.
 		c.current.LockHash()
 		c.commit()
