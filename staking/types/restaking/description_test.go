@@ -1,7 +1,6 @@
 package restaking
 
 import (
-	"fmt"
 	"github.com/pkg/errors"
 	"testing"
 )
@@ -94,7 +93,7 @@ func TestUpdateDescription(t *testing.T) {
 		if err != nil || test.expErr != nil {
 			continue
 		}
-		if err := assertDescriptionEqual(test.raw, test.expect); err != nil {
+		if err := checkDescriptionEqual(test.raw, test.expect); err != nil {
 			t.Errorf("Test %v: %v", i, err)
 		}
 	}
@@ -179,24 +178,4 @@ func TestDescription_EnsureLength(t *testing.T) {
 			continue
 		}
 	}
-}
-
-// compare two descriptions' items
-func assertDescriptionEqual(d1, d2 Description_) error {
-	if d1.Name != d2.Name {
-		return fmt.Errorf("name not equal: [%v] / [%v]", d1.Name, d2.Name)
-	}
-	if d1.Identity != d2.Identity {
-		return fmt.Errorf("identity not equal: [%v] / [%v]", d1.Identity, d2.Identity)
-	}
-	if d1.Website != d2.Website {
-		return fmt.Errorf("website not equal: [%v] / [%v]", d1.Website, d2.Website)
-	}
-	if d1.SecurityContact != d2.SecurityContact {
-		return fmt.Errorf("security contact not equal: [%v] / [%v]", d1.SecurityContact, d2.SecurityContact)
-	}
-	if d1.Details != d2.Details {
-		return fmt.Errorf("details not equal: [%v] / [%v]", d1.Details, d2.Details)
-	}
-	return nil
 }

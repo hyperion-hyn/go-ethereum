@@ -152,31 +152,21 @@ func (verifier StakingVerifier) VerifyCreateValidatorMsg(stateDB vm.StateDB, blo
 	}
 
 	valAddress := crypto.CreateAddress(signer, stateDB.GetNonce(signer))
-	v, err := restaking.CreateValidatorFromNewMsg(msg, valAddress, blockNum)
+	v, err := restaking.CreateValidatorFromNewMsg(msg, valAddress, p.restakingAmount(), blockNum)
 	if err != nil {
 		return nil, err
 	}
-	if err := v.SanityCheck(restaking.MaxPubKeyAllowed); err != nil {
+
+	// check constraints
+	if err := v.Validator.SanityCheck(restaking.MaxPubKeyAllowed); err != nil {
 		return nil, err
 	}
-
-	if err = sanityCheckForDelegation(msg.MaxTotalDelegation, common.Big0, p.restakingAmount()); err != nil {
+	if err = sanityCheckForDelegation(msg.MaxTotalDelegation, v.TotalDelegation, common.Big0); err != nil {
 		return nil, err
 	}
-
-	wrapper := restaking.ValidatorWrapper_{
-		Validator:                 *v,
-		Redelegations:             restaking.NewRedelegationMap(),
-		TotalDelegation:           big.NewInt(0).Set(p.restakingAmount()),
-		TotalDelegationByOperator: big.NewInt(0).Set(p.restakingAmount()),
-		BlockReward:               big.NewInt(0),
-	}
-	wrapper.Counters.NumBlocksSigned = big.NewInt(0)
-	wrapper.Counters.NumBlocksToSign = big.NewInt(0)
-	wrapper.Redelegations.Put(msg.OperatorAddress, restaking.NewRedelegation(msg.OperatorAddress, p.restakingAmount()))
 
 	return &verification{
-		NewValidator:    &wrapper,
+		NewValidator:    v,
 		NewRedelegation: p.restakingAmount(),
 		Participant:     p,
 	}, nil

@@ -5,9 +5,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
-	staketest "github.com/ethereum/go-ethereum/staking/types/restaking/test"
 	"math/big"
 	"testing"
+)
+
+var (
+	oneMill = new(big.Int).Mul(big.NewInt(1000000), big.NewInt(1e18)) //
 )
 
 func TestSaveNewValidatorToPool(t *testing.T) {
@@ -23,7 +26,7 @@ func TestSaveNewValidatorToPool(t *testing.T) {
 				validatorAddr:      createValidatorAddr,
 				operatorAddr:       createOperatorAddr,
 				key:                &blsKeys[11].pub,
-				maxTotalDelegation: staketest.DefaultMaxTotalDel,
+				maxTotalDelegation: oneMill,
 				commission: restaking.Commission_{
 					CommissionRates: defaultCommissionRates,
 					UpdateHeight:    big.NewInt(defaultBlockNumber),
@@ -48,7 +51,7 @@ func TestSaveNewValidatorToPool(t *testing.T) {
 				validatorAddr:      createValidatorAddr,
 				operatorAddr:       createOperatorAddr,
 				key:                &blsKeys[11].pub,
-				maxTotalDelegation: staketest.DefaultMaxTotalDel,
+				maxTotalDelegation: oneMill,
 				commission: restaking.Commission_{
 					CommissionRates: defaultCommissionRates,
 					UpdateHeight:    big.NewInt(defaultBlockNumber),
@@ -76,7 +79,7 @@ func TestSaveNewValidatorToPool(t *testing.T) {
 				validatorAddr:      createValidatorAddr,
 				operatorAddr:       createOperatorAddr,
 				key:                nil,
-				maxTotalDelegation: staketest.DefaultMaxTotalDel,
+				maxTotalDelegation: oneMill,
 				commission: restaking.Commission_{
 					CommissionRates: defaultCommissionRates,
 					UpdateHeight:    big.NewInt(defaultBlockNumber),
@@ -103,7 +106,7 @@ func TestSaveNewValidatorToPool(t *testing.T) {
 			v, _ := tt.ctx.stateDB.ValidatorByAddress(tt.ctx.validatorAddr)
 			got, _ := v.LoadFully()
 			exp, _ := tt.ctx.newValidator.Copy()
-			if err := staketest.CheckValidatorWrapperEqual(*got, *exp); err != nil {
+			if err := restaking.CheckValidatorWrapperEqual(*got, *exp); err != nil {
 				t.Errorf("Test - %v: %v", tt.name, err)
 			}
 			if err := assertIdentityAndSlotKeySet(tt.ctx.validatorPool, tt.identitySet, tt.slotKeySet); err != nil {
@@ -131,7 +134,7 @@ type saveNewValidatorCtx struct {
 }
 
 func (c *saveNewValidatorCtx) makeStateAndValidator(t *testing.T) {
-	builder := staketest.NewValidatorWrapperBuilder().
+	builder := restaking.NewValidatorWrapperBuilder().
 		SetValidatorAddress(c.validatorAddr).
 		AddOperatorAddress(c.operatorAddr).
 		SetMaxTotalDelegation(c.maxTotalDelegation).
@@ -143,7 +146,7 @@ func (c *saveNewValidatorCtx) makeStateAndValidator(t *testing.T) {
 		builder.AddSlotPubKey(*c.key)
 	}
 	w := builder.Build()
-	c.newValidator = &w
+	c.newValidator = w
 	c.stateDB = makeStateDBForStake(t)
 	c.validatorPool = c.stateDB.ValidatorPool()
 }
@@ -236,7 +239,7 @@ func TestUpdateValidatorFromPoolByMsg(t *testing.T) {
 			v, _ := stateDB.ValidatorByAddress(tt.msg.ValidatorAddress)
 			got, _ := v.Validator().LoadFully()
 
-			if err := staketest.CheckValidatorEqual(*got, *exp); err != nil {
+			if err := restaking.CheckValidatorEqual(*got, *exp); err != nil {
 				t.Errorf("Test - %v: %v", tt.name, err)
 			}
 			if err := assertIdentityAndSlotKeySet(validatorPool, tt.identitySet, tt.slotKeySet); err != nil {

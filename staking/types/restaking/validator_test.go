@@ -233,14 +233,14 @@ func TestCreateValidatorFromNewMsg(t *testing.T) {
 		cv := makeCreateValidator()
 		test.editCreateValidator(&cv)
 
-		v, err := CreateValidatorFromNewMsg(&cv, validatorAddr, common.Big1)
+		v, err := CreateValidatorFromNewMsg(&cv, validatorAddr, common.Big1, common.Big1)
 		if assErr := assertError(err, test.expErr); assErr != nil {
 			t.Errorf("Test %v: %v", i, assErr)
 		}
 		if err != nil || test.expErr != nil {
 			continue
 		}
-		if err := assertValidatorAlignCreateValidator(*v, cv); err != nil {
+		if err := assertValidatorAlignCreateValidator(v.Validator, cv); err != nil {
 			t.Error(err)
 		}
 	}
@@ -387,7 +387,7 @@ func TestUpdateValidatorFromEditMsg(t *testing.T) {
 		expVal := makeValidValidator()
 		test.editExpValidator(&expVal)
 
-		if err := assertValidatorEqual(val, expVal); err != nil {
+		if err := CheckValidatorEqual(val, expVal); err != nil {
 			t.Errorf("Test %v: %v", i, err)
 		}
 	}
@@ -424,43 +424,6 @@ func makeCreateValidator() CreateValidator {
 	}
 }
 
-func assertValidatorEqual(v1, v2 Validator_) error {
-	if v1.ValidatorAddress != v2.ValidatorAddress {
-		return fmt.Errorf("validator address not equal: %v / %v", v1.ValidatorAddress, v2.ValidatorAddress)
-	}
-	if !reflect.DeepEqual(v1.OperatorAddresses, v2.OperatorAddresses) {
-		return fmt.Errorf("operator addresses not equal")
-	}
-	if len(v1.SlotPubKeys.Keys) != len(v2.SlotPubKeys.Keys) {
-		return fmt.Errorf("len(SlotPubKeys) not equal: %v / %v", len(v1.SlotPubKeys.Keys), len(v2.SlotPubKeys.Keys))
-	}
-	for i := range v1.SlotPubKeys.Keys {
-		pk1, pk2 := v1.SlotPubKeys.Keys[i], v2.SlotPubKeys.Keys[i]
-		if *pk1 != *pk2 {
-			return fmt.Errorf("SlotPubKeys[%v] not equal: %s / %s", i, pk1.Hex(), pk2.Hex())
-		}
-	}
-	if v1.LastEpochInCommittee.Cmp(v2.LastEpochInCommittee) != 0 {
-		return fmt.Errorf("LastEpochInCommittee not equal: %v / %v", v1.LastEpochInCommittee, v2.LastEpochInCommittee)
-	}
-	if v1.MaxTotalDelegation.Cmp(v2.MaxTotalDelegation) != 0 {
-		return fmt.Errorf("MaxTotalDelegation not equal: %v / %v", v1.MaxTotalDelegation, v2.MaxTotalDelegation)
-	}
-	if v1.Status != v2.Status {
-		return fmt.Errorf("status not equal: %v / %v", v1.Status, v2.Status)
-	}
-	if err := assertCommissionRatesEqual(v1.Commission.CommissionRates, v2.Commission.CommissionRates); err != nil {
-		return fmt.Errorf("validator.Commission: %v", err)
-	}
-	if err := assertDescriptionEqual(v1.Description, v2.Description); err != nil {
-		return fmt.Errorf("validator.Description: %v", err)
-	}
-	if v1.CreationHeight.Cmp(v2.CreationHeight) != 0 {
-		return fmt.Errorf("CreationHeight not equal: %v / %v", v1.CreationHeight, v2.CreationHeight)
-	}
-	return nil
-}
-
 func assertValidatorAlignCreateValidator(v Validator_, cv CreateValidator) error {
 	if v.ValidatorAddress != validatorAddr {
 		return fmt.Errorf("validator address not equal")
@@ -483,27 +446,14 @@ func assertValidatorAlignCreateValidator(v Validator_, cv CreateValidator) error
 	if v.Status != uint8(Active) {
 		return fmt.Errorf("status not active")
 	}
-	if err := assertCommissionRatesEqual(v.Commission.CommissionRates, cv.CommissionRates); err != nil {
+	if err := checkCommissionRateEqual(v.Commission.CommissionRates, cv.CommissionRates); err != nil {
 		return fmt.Errorf("commissionRate not expected: %v", err)
 	}
 	if v.Commission.UpdateHeight.Cmp(v.CreationHeight) != 0 {
 		return fmt.Errorf("validator's update height not equal to creation height")
 	}
-	if err := assertDescriptionEqual(v.Description, cv.Description); err != nil {
+	if err := checkDescriptionEqual(v.Description, cv.Description); err != nil {
 		return fmt.Errorf("description not expected: %v", err)
-	}
-	return nil
-}
-
-func assertCommissionRatesEqual(c1, c2 CommissionRates_) error {
-	if !c1.Rate.Equal(c2.Rate) {
-		return fmt.Errorf("rate not equal: %v / %v", c1.Rate, c2.Rate)
-	}
-	if !c1.MaxRate.Equal(c2.MaxRate) {
-		return fmt.Errorf("max rate not equal: %v / %v", c1.MaxRate, c2.MaxRate)
-	}
-	if !c1.MaxChangeRate.Equal(c2.MaxChangeRate) {
-		return fmt.Errorf("max change rate not equal: %v / %v", c1.MaxChangeRate, c2.MaxChangeRate)
 	}
 	return nil
 }

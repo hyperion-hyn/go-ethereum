@@ -297,23 +297,22 @@ func (s *Storage_ValidatorPool_) UpdateCommittee(committee *Committee_) {
 }
 
 // CreateValidatorFromNewMsg creates validator from NewValidator message
-func CreateValidatorFromNewMsg(msg *CreateValidator, valAddr common.Address, blockNum *big.Int) (*Validator_, error) {
+func CreateValidatorFromNewMsg(msg *CreateValidator, valAddr common.Address, amount, blockNum *big.Int) (*ValidatorWrapper_, error) {
 	if err := common2.VerifyBLSKey(&msg.SlotPubKey, &msg.SlotKeySig); err != nil {
 		return nil, err
 	}
 
-	v := Validator_{
-		ValidatorAddress:     valAddr,
-		OperatorAddresses:    NewAddressSetWithAddress(msg.OperatorAddress),
-		SlotPubKeys:          NewBLSKeysWithBLSKey(msg.SlotPubKey),
-		LastEpochInCommittee: new(big.Int),
-		MaxTotalDelegation:   msg.MaxTotalDelegation,
-		Status:               uint8(Active),
-		Commission:           Commission_{msg.CommissionRates, blockNum},
-		Description:          msg.Description,
-		CreationHeight:       blockNum,
-	}
-	return &v, nil
+	builder := NewValidatorWrapperBuilder()
+	return builder.SetValidatorAddress(valAddr).
+		AddOperatorAddress(msg.OperatorAddress).
+		AddSlotPubKey(msg.SlotPubKey).
+		SetMaxTotalDelegation(msg.MaxTotalDelegation).
+		SetStatus(Active).
+		SetCommission(Commission_{CommissionRates: msg.CommissionRates, UpdateHeight: blockNum}).
+		SetDescription(msg.Description).
+		SetCreationHeight(blockNum).
+		AddRedelegation(NewRedelegation(msg.OperatorAddress, amount)).
+		Build(), nil
 }
 
 // UpdateValidatorFromEditMsg updates validator from EditValidator message

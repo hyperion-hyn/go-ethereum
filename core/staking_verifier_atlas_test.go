@@ -10,9 +10,9 @@ import (
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/bls"
+	"github.com/ethereum/go-ethereum/params"
 	common2 "github.com/ethereum/go-ethereum/staking/types/common"
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
-	staketest "github.com/ethereum/go-ethereum/staking/types/restaking/test"
 	"github.com/pkg/errors"
 	"math/big"
 	"strings"
@@ -24,7 +24,7 @@ const (
 	defNumPubPerAddr      = 1
 
 	validatorIndex  = 0
-	validatorIndex2  = 7
+	validatorIndex2 = 7
 	delegatorIndex  = 6
 )
 
@@ -34,9 +34,9 @@ var (
 	createOperatorAddr  = makeTestAddr("operator")
 	createValidatorAddr = crypto.CreateAddress(createOperatorAddr, defaultNonce)
 	validatorAddr       = makeTestAddr(fmt.Sprint("val", validatorIndex))
-	validatorAddr2       = makeTestAddr(fmt.Sprint("val", validatorIndex2))
+	validatorAddr2      = makeTestAddr(fmt.Sprint("val", validatorIndex2))
 	operatorAddr        = makeTestAddr(fmt.Sprint("op", validatorIndex))
-	operatorAddr2        = makeTestAddr(fmt.Sprint("op", validatorIndex2))
+	operatorAddr2       = makeTestAddr(fmt.Sprint("op", validatorIndex2))
 	delegatorAddr       = makeTestAddr(delegatorIndex)
 )
 
@@ -157,10 +157,11 @@ func TestCheckValidatorDuplicatedFields(t *testing.T) {
 
 func TestVerifyCreateValidatorMsg(t *testing.T) {
 	type args struct {
-		stateDB  vm.StateDB
-		blockNum *big.Int
-		msg      restaking.CreateValidator
-		signer   common.Address
+		stateDB      vm.StateDB
+		chainContext ChainContext
+		blockNum     *big.Int
+		msg          restaking.CreateValidator
+		signer       common.Address
 	}
 	tests := []struct {
 		name    string
@@ -171,38 +172,42 @@ func TestVerifyCreateValidatorMsg(t *testing.T) {
 		{
 			name: "valid request",
 			args: args{
-				stateDB:  makeStateDBForStake(t),
-				blockNum: big.NewInt(defaultBlockNumber),
-				msg:      defaultMsgCreateValidator(),
-				signer:   createOperatorAddr,
+				stateDB:      makeStateDBForStake(t),
+				chainContext: makeFakeChainContextForStake(t),
+				blockNum:     big.NewInt(defaultBlockNumber),
+				msg:          defaultMsgCreateValidator(),
+				signer:       createOperatorAddr,
 			},
 			want: defaultExpCreatedValidator(),
 		},
 		{
 			name: "state db nil",
 			args: args{
-				stateDB:  nil,
-				blockNum: big.NewInt(defaultBlockNumber),
-				msg:      defaultMsgCreateValidator(),
-				signer:   createOperatorAddr,
+				stateDB:      nil,
+				chainContext: makeFakeChainContextForStake(t),
+				blockNum:     big.NewInt(defaultBlockNumber),
+				msg:          defaultMsgCreateValidator(),
+				signer:       createOperatorAddr,
 			},
 			wantErr: errStateDBIsMissing,
 		},
 		{
 			name: "block number nil",
 			args: args{
-				stateDB:  makeStateDBForStake(t),
-				blockNum: nil,
-				msg:      defaultMsgCreateValidator(),
-				signer:   createOperatorAddr,
+				stateDB:      makeStateDBForStake(t),
+				chainContext: makeFakeChainContextForStake(t),
+				blockNum:     nil,
+				msg:          defaultMsgCreateValidator(),
+				signer:       createOperatorAddr,
 			},
 			wantErr: errBlockNumMissing,
 		},
 		{
 			name: "bls collision (checkDuplicateFields)",
 			args: args{
-				stateDB:  makeStateDBForStake(t),
-				blockNum: big.NewInt(defaultBlockNumber),
+				stateDB:      makeStateDBForStake(t),
+				chainContext: makeFakeChainContextForStake(t),
+				blockNum:     big.NewInt(defaultBlockNumber),
 				msg: func() restaking.CreateValidator {
 					m := defaultMsgCreateValidator()
 					m.SlotPubKey = blsKeys[0].pub
@@ -215,8 +220,9 @@ func TestVerifyCreateValidatorMsg(t *testing.T) {
 		{
 			name: "incorrect signature",
 			args: args{
-				stateDB:  makeStateDBForStake(t),
-				blockNum: big.NewInt(defaultBlockNumber),
+				stateDB:      makeStateDBForStake(t),
+				chainContext: makeFakeChainContextForStake(t),
+				blockNum:     big.NewInt(defaultBlockNumber),
 				msg: func() restaking.CreateValidator {
 					m := defaultMsgCreateValidator()
 					m.SlotKeySig = blsKeys[12].sig
@@ -229,8 +235,9 @@ func TestVerifyCreateValidatorMsg(t *testing.T) {
 		{
 			name: "maxTotalDelegation less currentTotalDelegation",
 			args: args{
-				stateDB:  makeStateDBForStake(t),
-				blockNum: big.NewInt(defaultBlockNumber),
+				stateDB:      makeStateDBForStake(t),
+				chainContext: makeFakeChainContextForStake(t),
+				blockNum:     big.NewInt(defaultBlockNumber),
 				msg: func() restaking.CreateValidator {
 					m := defaultMsgCreateValidator()
 					m.MaxTotalDelegation = new(big.Int).Sub(defaultStakingAmount, big.NewInt(1))
@@ -243,14 +250,15 @@ func TestVerifyCreateValidatorMsg(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := VerifyCreateValidatorMsg(tt.args.stateDB, tt.args.blockNum, &tt.args.msg, tt.args.signer)
+			verifier, _ := NewStakingVerifier(tt.args.chainContext)
+			got, err := verifier.VerifyCreateValidatorMsg(tt.args.stateDB, tt.args.blockNum, &tt.args.msg, tt.args.signer)
 			if assErr := assertError(err, tt.wantErr); assErr != nil {
 				t.Errorf("Test - %v: %v", tt.name, err)
 			}
 			if err != nil || tt.wantErr != nil {
 				return
 			}
-			if err := staketest.CheckValidatorWrapperEqual(*got.NewValidator, tt.want); err != nil {
+			if err := restaking.CheckValidatorWrapperEqual(*got.NewValidator, tt.want); err != nil {
 				t.Errorf("Test - %v: %v", tt.name, err)
 			}
 		})
@@ -263,7 +271,7 @@ func defaultMsgCreateValidator() restaking.CreateValidator {
 		OperatorAddress:    createOperatorAddr,
 		Description:        defaultDesc,
 		CommissionRates:    defaultCommissionRates,
-		MaxTotalDelegation: staketest.DefaultMaxTotalDel,
+		MaxTotalDelegation: millionOnes,
 		SlotPubKey:         pub,
 		SlotKeySig:         sig,
 	}
@@ -277,7 +285,7 @@ func defaultExpCreatedValidator() restaking.ValidatorWrapper_ {
 		OperatorAddresses:    restaking.NewAddressSetWithAddress(createOperatorAddr),
 		SlotPubKeys:          restaking.NewBLSKeysWithBLSKey(pub),
 		LastEpochInCommittee: new(big.Int),
-		MaxTotalDelegation:   staketest.DefaultMaxTotalDel,
+		MaxTotalDelegation:   millionOnes,
 		Status:               uint8(restaking.Active),
 		Commission: restaking.Commission_{
 			CommissionRates: defaultCommissionRates,
@@ -509,6 +517,22 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 			wantErr: errCommissionRateChangeTooFast,
 		},
 		{
+			name: "max total delegation too small",
+			args: args{
+				stateDB: makeStateDBForStake(t),
+				chainContext: makeFakeChainContextForStake(t),
+				epoch:        big.NewInt(defaultEpoch),
+				blockNum:     big.NewInt(defaultBlockNumber),
+				msg:          func() restaking.EditValidator {
+					msg := defaultMsgEditValidator()
+					msg.MaxTotalDelegation = oneBig
+					return msg
+				}(),
+				signer:       operatorAddr,
+			},
+			wantErr: errors.New("total delegation can not be bigger than max_total_delegation"),
+		},
+		{
 			name: "banned validator",
 			args: args{
 				stateDB: func(t *testing.T) *state.StateDB {
@@ -531,7 +555,8 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := VerifyEditValidatorMsg(tt.args.stateDB, tt.args.chainContext, tt.args.epoch, tt.args.blockNum, &tt.args.msg, tt.args.signer)
+			verifier, _ := NewStakingVerifier(tt.args.chainContext)
+			_, err := verifier.VerifyEditValidatorMsg(tt.args.stateDB, tt.args.chainContext, tt.args.epoch, tt.args.blockNum, &tt.args.msg, tt.args.signer)
 			if assErr := assertError(err, tt.wantErr); assErr != nil {
 				t.Errorf("Test - %v: %v", tt.name, err)
 			}
@@ -573,9 +598,10 @@ func defaultMsgEditValidator() restaking.EditValidator {
 
 func TestVerifyRedelegateMsg(t *testing.T) {
 	type args struct {
-		stateDB vm.StateDB
-		msg     restaking.Redelegate
-		signer  common.Address
+		stateDB      vm.StateDB
+		chainContext ChainContext
+		msg          restaking.Redelegate
+		signer       common.Address
 	}
 	tests := []struct {
 		name    string
@@ -585,25 +611,28 @@ func TestVerifyRedelegateMsg(t *testing.T) {
 		{
 			name: "delegate successfully",
 			args: args{
-				stateDB: makeStateDBForStake(t),
-				msg:     defaultMsgDelegate(),
-				signer:  delegatorAddr,
+				stateDB:      makeStateDBForStake(t),
+				chainContext: makeFakeChainContextForStake(t),
+				msg:          defaultMsgDelegate(),
+				signer:       delegatorAddr,
 			},
 			wantErr: nil,
 		},
 		{
 			name: "state db nil",
 			args: args{
-				stateDB: nil,
-				msg:     defaultMsgDelegate(),
-				signer:  delegatorAddr,
+				stateDB:      nil,
+				chainContext: makeFakeChainContextForStake(t),
+				msg:          defaultMsgDelegate(),
+				signer:       delegatorAddr,
 			},
 			wantErr: errStateDBIsMissing,
 		},
 		{
 			name: "validator not exist",
 			args: args{
-				stateDB: makeStateDBForStake(t),
+				stateDB:      makeStateDBForStake(t),
+				chainContext: makeFakeChainContextForStake(t),
 				msg: func() restaking.Redelegate {
 					msg := defaultMsgDelegate()
 					msg.ValidatorAddress = makeTestAddr("addr not in chain")
@@ -616,9 +645,10 @@ func TestVerifyRedelegateMsg(t *testing.T) {
 		{
 			name: "invalid signer",
 			args: args{
-				stateDB: makeStateDBForStake(t),
-				msg:     defaultMsgDelegate(),
-				signer:  makeTestAddr("invalid operator"),
+				stateDB:      makeStateDBForStake(t),
+				chainContext: makeFakeChainContextForStake(t),
+				msg:          defaultMsgDelegate(),
+				signer:       makeTestAddr("invalid operator"),
 			},
 			wantErr: errInvalidSigner,
 		},
@@ -626,7 +656,8 @@ func TestVerifyRedelegateMsg(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := VerifyRedelegateMsg(tt.args.stateDB, &tt.args.msg, tt.args.signer)
+			verifier, _ := NewStakingVerifier(tt.args.chainContext)
+			_, err := verifier.VerifyRedelegateMsg(tt.args.stateDB, &tt.args.msg, tt.args.signer)
 			if assErr := assertError(err, tt.wantErr); assErr != nil {
 				t.Errorf("Test - %v: %v", tt.name, err)
 			}
@@ -643,10 +674,11 @@ func defaultMsgDelegate() restaking.Redelegate {
 
 func TestVerifyUnredelegateMsg(t *testing.T) {
 	type args struct {
-		stateDB vm.StateDB
-		epoch   *big.Int
-		msg     restaking.Unredelegate
-		signer  common.Address
+		stateDB      vm.StateDB
+		chainContext ChainContext
+		epoch        *big.Int
+		msg          restaking.Unredelegate
+		signer       common.Address
 	}
 	tests := []struct {
 		name    string
@@ -656,48 +688,53 @@ func TestVerifyUnredelegateMsg(t *testing.T) {
 		{
 			name: "unredelegate successfully",
 			args: args{
-				stateDB: makeDefaultStateForUndelegate(t),
-				epoch:   big.NewInt(defaultEpoch),
-				msg:     defaultMsgUndelegate(),
-				signer:  operatorAddr2,
+				stateDB:      makeDefaultStateForUndelegate(t),
+				chainContext: makeFakeChainContextForStake(t),
+				epoch:        big.NewInt(defaultEpoch),
+				msg:          defaultMsgUndelegate(),
+				signer:       operatorAddr2,
 			},
 			wantErr: nil,
 		},
 		{
 			name: "state db nil",
 			args: args{
-				stateDB: nil,
-				epoch:   big.NewInt(defaultEpoch),
-				msg:     defaultMsgUndelegate(),
-				signer:  operatorAddr2,
+				stateDB:      nil,
+				chainContext: makeFakeChainContextForStake(t),
+				epoch:        big.NewInt(defaultEpoch),
+				msg:          defaultMsgUndelegate(),
+				signer:       operatorAddr2,
 			},
 			wantErr: errStateDBIsMissing,
 		},
 		{
 			name: "epoch nil",
 			args: args{
-				stateDB: makeDefaultStateForUndelegate(t),
-				epoch:   nil,
-				msg:     defaultMsgUndelegate(),
-				signer:  operatorAddr2,
+				stateDB:      makeDefaultStateForUndelegate(t),
+				chainContext: makeFakeChainContextForStake(t),
+				epoch:        nil,
+				msg:          defaultMsgUndelegate(),
+				signer:       operatorAddr2,
 			},
 			wantErr: errEpochMissing,
 		},
 		{
 			name: "invalid signer",
 			args: args{
-				stateDB: makeDefaultStateForUndelegate(t),
-				epoch:   big.NewInt(defaultEpoch),
-				msg:     defaultMsgUndelegate(),
-				signer:  makeTestAddr("invalid operator"),
+				stateDB:      makeDefaultStateForUndelegate(t),
+				chainContext: makeFakeChainContextForStake(t),
+				epoch:        big.NewInt(defaultEpoch),
+				msg:          defaultMsgUndelegate(),
+				signer:       makeTestAddr("invalid operator"),
 			},
 			wantErr: errInvalidSigner,
 		},
 		{
 			name: "validator not exist",
 			args: args{
-				stateDB: makeDefaultStateForUndelegate(t),
-				epoch:   big.NewInt(defaultEpoch),
+				stateDB:      makeDefaultStateForUndelegate(t),
+				chainContext: makeFakeChainContextForStake(t),
+				epoch:        big.NewInt(defaultEpoch),
 				msg: func() restaking.Unredelegate {
 					msg := defaultMsgUndelegate()
 					msg.ValidatorAddress = makeTestAddr("addr not in chain")
@@ -710,8 +747,9 @@ func TestVerifyUnredelegateMsg(t *testing.T) {
 		{
 			name: "redelegation not exist",
 			args: args{
-				stateDB: makeDefaultStateForUndelegate(t),
-				epoch:   big.NewInt(defaultEpoch),
+				stateDB:      makeDefaultStateForUndelegate(t),
+				chainContext: makeFakeChainContextForStake(t),
+				epoch:        big.NewInt(defaultEpoch),
 				msg: func() restaking.Unredelegate {
 					msg := defaultMsgUndelegate()
 					msg.DelegatorAddress = makeTestAddr("addr not in chain")
@@ -719,13 +757,14 @@ func TestVerifyUnredelegateMsg(t *testing.T) {
 				}(),
 				signer: makeTestAddr("addr not in chain"),
 			},
-			wantErr: errMicrodelegationNotExist,
+			wantErr: errRedelegationNotExist,
 		},
 		{
 			name: "insufficient balance to undelegate",
 			args: args{
-				stateDB: makeDefaultStateForUndelegate(t),
-				epoch:   big.NewInt(defaultEpoch),
+				stateDB:      makeDefaultStateForUndelegate(t),
+				chainContext: makeFakeChainContextForStake(t),
+				epoch:        big.NewInt(defaultEpoch),
 				msg: func() restaking.Unredelegate {
 					msg := defaultMsgUndelegate()
 					msg.DelegatorAddress = delegatorAddr
@@ -738,7 +777,8 @@ func TestVerifyUnredelegateMsg(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := VerifyUnredelegateMsg(tt.args.stateDB, tt.args.epoch, &tt.args.msg, tt.args.signer)
+			verifier, _ := NewStakingVerifier(tt.args.chainContext)
+			_, err := verifier.VerifyUnredelegateMsg(tt.args.stateDB, tt.args.epoch, &tt.args.msg, tt.args.signer)
 			if assErr := assertError(err, tt.wantErr); assErr != nil {
 				t.Errorf("Test - %v: %v", tt.name, err)
 			}
@@ -746,7 +786,7 @@ func TestVerifyUnredelegateMsg(t *testing.T) {
 	}
 }
 
-func makeDefaultSnapVWrapperForUndelegate() restaking.ValidatorWrapper_ {
+func makeDefaultSnapVWrapperForUndelegate() *restaking.ValidatorWrapper_ {
 	w := makeVWrapperByIndex(validatorIndex2)
 	newRedelegation := restaking.Redelegation_{
 		DelegatorAddress: delegatorAddr,
@@ -763,7 +803,7 @@ func makeDefaultSnapVWrapperForUndelegate() restaking.ValidatorWrapper_ {
 func makeDefaultStateForUndelegate(t *testing.T) *state.StateDB {
 	sdb := makeStateDBForStake(t)
 	w := makeDefaultSnapVWrapperForUndelegate()
-	if err := updateStateValidators(sdb, []*restaking.ValidatorWrapper_{&w}); err != nil {
+	if err := updateStateValidators(sdb, []*restaking.ValidatorWrapper_{w}); err != nil {
 		t.Fatal(err)
 	}
 	sdb.IntermediateRoot(false)
@@ -787,9 +827,10 @@ var (
 
 func TestVerifyCollectRedelRewardsMsg(t *testing.T) {
 	type args struct {
-		stateDB vm.StateDB
-		msg     restaking.CollectReward
-		signer  common.Address
+		stateDB      vm.StateDB
+		chainContext ChainContext
+		msg          restaking.CollectReward
+		signer       common.Address
 	}
 	tests := []struct {
 		name    string
@@ -799,34 +840,38 @@ func TestVerifyCollectRedelRewardsMsg(t *testing.T) {
 		{
 			name: "collect successfully",
 			args: args{
-				stateDB: makeStateForReward(t),
-				msg:     defaultMsgCollectReward(),
-				signer:  operatorAddr,
+				stateDB:      makeStateForReward(t),
+				chainContext: makeFakeChainContextForStake(t),
+				msg:          defaultMsgCollectReward(),
+				signer:       operatorAddr,
 			},
 			wantErr: nil,
 		},
 		{
 			name: "state db nil",
 			args: args{
-				stateDB: nil,
-				msg:     defaultMsgCollectReward(),
-				signer:  operatorAddr,
+				stateDB:      nil,
+				chainContext: makeFakeChainContextForStake(t),
+				msg:          defaultMsgCollectReward(),
+				signer:       operatorAddr,
 			},
 			wantErr: errStateDBIsMissing,
 		},
 		{
 			name: "invalid signer",
 			args: args{
-				stateDB: makeStateForReward(t),
-				msg:     defaultMsgCollectReward(),
-				signer:  makeTestAddr("invalid operator"),
+				stateDB:      makeStateForReward(t),
+				chainContext: makeFakeChainContextForStake(t),
+				msg:          defaultMsgCollectReward(),
+				signer:       makeTestAddr("invalid operator"),
 			},
 			wantErr: errInvalidSigner,
 		},
 		{
 			name: "validator not exist",
 			args: args{
-				stateDB: makeStateForReward(t),
+				stateDB:      makeStateForReward(t),
+				chainContext: makeFakeChainContextForStake(t),
 				msg: func() restaking.CollectReward {
 					msg := defaultMsgCollectReward()
 					msg.ValidatorAddress = makeTestAddr("addr not in chain")
@@ -839,7 +884,8 @@ func TestVerifyCollectRedelRewardsMsg(t *testing.T) {
 		{
 			name: "redelegation not exist",
 			args: args{
-				stateDB: makeStateForReward(t),
+				stateDB:      makeStateForReward(t),
+				chainContext: makeFakeChainContextForStake(t),
 				msg: func() restaking.CollectReward {
 					msg := defaultMsgCollectReward()
 					msg.DelegatorAddress = makeTestAddr("addr not in chain")
@@ -847,21 +893,23 @@ func TestVerifyCollectRedelRewardsMsg(t *testing.T) {
 				}(),
 				signer: makeTestAddr("addr not in chain"),
 			},
-			wantErr: errMicrodelegationNotExist,
+			wantErr: errRedelegationNotExist,
 		},
 		{
 			name: "no reward",
 			args: args{
-				stateDB: makeStateDBForStake(t),
-				msg:     defaultMsgCollectReward(),
-				signer:  operatorAddr,
+				stateDB:      makeStateDBForStake(t),
+				chainContext: makeFakeChainContextForStake(t),
+				msg:          defaultMsgCollectReward(),
+				signer:       operatorAddr,
 			},
 			wantErr: errNoRewardsToCollect,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := VerifyCollectRedelRewardMsg(tt.args.stateDB, &tt.args.msg, tt.args.signer)
+			verifier, _ := NewStakingVerifier(tt.args.chainContext)
+			_, err := verifier.VerifyCollectRedelRewardMsg(tt.args.stateDB, &tt.args.msg, tt.args.signer)
 			if assErr := assertError(err, tt.wantErr); assErr != nil {
 				t.Errorf("Test - %v: %v", tt.name, err)
 			}
@@ -932,7 +980,7 @@ func updateStateValidators(sdb *state.StateDB, ws []*restaking.ValidatorWrapper_
 	return nil
 }
 
-func makeVWrapperByIndex(index int) restaking.ValidatorWrapper_ {
+func makeVWrapperByIndex(index int) *restaking.ValidatorWrapper_ {
 	pubGetter := newBLSPubGetter(blsKeys[index*defNumPubPerAddr:])
 
 	return makeStateVWrapperFromGetter(index, defNumPubPerAddr, pubGetter)
@@ -949,12 +997,12 @@ func makeVWrappersForStake(num, numPubsPerVal int) []*restaking.ValidatorWrapper
 	pubGetter := newBLSPubGetter(blsKeys)
 	for i := 0; i != num; i++ {
 		w := makeStateVWrapperFromGetter(i, numPubsPerVal, pubGetter)
-		ws = append(ws, &w)
+		ws = append(ws, w)
 	}
 	return ws
 }
 
-func makeStateVWrapperFromGetter(index int, numPubs int, pubGetter *BLSPubGetter) restaking.ValidatorWrapper_ {
+func makeStateVWrapperFromGetter(index int, numPubs int, pubGetter *BLSPubGetter) *restaking.ValidatorWrapper_ {
 	validatorAddr := makeTestAddr(fmt.Sprint("val", index))
 	operator := makeTestAddr(fmt.Sprint("op", index))
 	pubs := restaking.NewEmptyBLSKeys()
@@ -962,14 +1010,19 @@ func makeStateVWrapperFromGetter(index int, numPubs int, pubGetter *BLSPubGetter
 		pub := pubGetter.getPub()
 		pubs.Keys = append(pubs.Keys, &pub)
 	}
-	w := staketest.NewValidatorWrapperBuilder().
+	w := restaking.NewValidatorWrapperBuilder().
 		SetValidatorAddress(validatorAddr).
 		AddOperatorAddress(operator).
 		AddSlotPubKeys(pubs).
+		SetDescription(defaultDesc).
+		SetCommission(restaking.Commission_{
+			CommissionRates: defaultCommissionRates,
+			UpdateHeight:    big.NewInt(defaultSnapBlockNumber),
+		}).
+		SetMaxTotalDelegation(defaultDelAmount).
 		AddRedelegation(restaking.NewRedelegation(operator, defaultDelAmount)).
 		Build()
 	w.Validator.Description.Identity = makeIdentityStr(index)
-	w.Validator.Commission.UpdateHeight = big.NewInt(defaultSnapBlockNumber)
 	return w
 }
 
@@ -1012,6 +1065,11 @@ func (chain *fakeChainContext) ReadValidatorAtEpoch(epoch *big.Int, validator co
 func (chain *fakeChainContext) ReadValidatorAtEpochOrCurrentBlock(epoch *big.Int, validator common.Address) (*restaking.Storage_ValidatorWrapper_, error) {
 	stateDB := chain.stateDBs[epoch.Uint64()]
 	return stateDB.ValidatorByAddress(validatorAddr)
+}
+
+func (chain *fakeChainContext) Config() *params.ChainConfig {
+	// TODO(ATLAS): restaking enable
+	return &params.ChainConfig{Atlas: &params.AtlasConfig{RestakingEnable: false}}
 }
 
 func makeIdentityStr(item interface{}) string {

@@ -1,31 +1,30 @@
-package staketest
+package restaking
 
 import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	"math/big"
 )
 
 // CheckValidatorWrapperEqual checks the equality of staking.ValidatorWrapper. If not equal, an
 // error is returned. Note nil pointer is treated as zero in this compare function.
-func CheckValidatorWrapperEqual(w1, w2 restaking.ValidatorWrapper_) error {
+func CheckValidatorWrapperEqual(w1, w2 ValidatorWrapper_) error {
 	if err := checkValidatorWrapperEqual(w1, w2); err != nil {
-		return fmt.Errorf("wrapper%v", err)
+		return fmt.Errorf("ValidatorWrapper%v", err)
 	}
 	return nil
 }
 
 // CheckValidatorEqual checks the equality of validator. If not equal, an
 // error is returned. Note nil pointer is treated as zero in this compare function.
-func CheckValidatorEqual(v1, v2 restaking.Validator_) error {
+func CheckValidatorEqual(v1, v2 Validator_) error {
 	if err := checkValidatorEqual(v1, v2); err != nil {
-		return fmt.Errorf("validator%v", err)
+		return fmt.Errorf("Validator%v", err)
 	}
 	return nil
 }
 
-func checkValidatorWrapperEqual(w1, w2 restaking.ValidatorWrapper_) error {
+func checkValidatorWrapperEqual(w1, w2 ValidatorWrapper_) error {
 	if err := checkValidatorEqual(w1.Validator, w2.Validator); err != nil {
 		return fmt.Errorf(".Validator%v", err)
 	}
@@ -50,7 +49,7 @@ func checkValidatorWrapperEqual(w1, w2 restaking.ValidatorWrapper_) error {
 	return nil
 }
 
-func checkValidatorEqual(v1, v2 restaking.Validator_) error {
+func checkValidatorEqual(v1, v2 Validator_) error {
 	if v1.ValidatorAddress != v2.ValidatorAddress {
 		return fmt.Errorf(".Validator address not equal: %x / %x", v1.ValidatorAddress, v2.ValidatorAddress)
 	}
@@ -81,7 +80,7 @@ func checkValidatorEqual(v1, v2 restaking.Validator_) error {
 	return nil
 }
 
-func checkAddressSetEqual(a1, a2 restaking.AddressSet_) error {
+func checkAddressSetEqual(a1, a2 AddressSet_) error {
 	if len(a1.Keys) != len(a2.Keys) {
 		return fmt.Errorf(".len of keys not equal: %v / %v", len(a1.Keys), len(a2.Keys))
 	}
@@ -100,7 +99,7 @@ func checkAddressSetEqual(a1, a2 restaking.AddressSet_) error {
 	return nil
 }
 
-func checkPubKeysEqual(pubs1, pubs2 restaking.BLSPublicKeys_) error {
+func checkPubKeysEqual(pubs1, pubs2 BLSPublicKeys_) error {
 	if len(pubs1.Keys) != len(pubs2.Keys) {
 		return fmt.Errorf(".len not equal: %v / %v", len(pubs1.Keys), len(pubs2.Keys))
 	}
@@ -112,7 +111,7 @@ func checkPubKeysEqual(pubs1, pubs2 restaking.BLSPublicKeys_) error {
 	return nil
 }
 
-func checkDescriptionEqual(d1, d2 restaking.Description_) error {
+func checkDescriptionEqual(d1, d2 Description_) error {
 	if d1.Name != d2.Name {
 		return fmt.Errorf(".Name not equal: %v / %v", d1.Name, d2.Name)
 	}
@@ -131,7 +130,7 @@ func checkDescriptionEqual(d1, d2 restaking.Description_) error {
 	return nil
 }
 
-func checkCommissionEqual(c1, c2 restaking.Commission_) error {
+func checkCommissionEqual(c1, c2 Commission_) error {
 	if err := checkCommissionRateEqual(c1.CommissionRates, c2.CommissionRates); err != nil {
 		return fmt.Errorf(".CommissionRate%v", err)
 	}
@@ -141,7 +140,7 @@ func checkCommissionEqual(c1, c2 restaking.Commission_) error {
 	return nil
 }
 
-func checkCommissionRateEqual(cr1, cr2 restaking.CommissionRates_) error {
+func checkCommissionRateEqual(cr1, cr2 CommissionRates_) error {
 	if err := checkDecEqual(cr1.Rate, cr2.Rate); err != nil {
 		return fmt.Errorf(".Rate %v", err)
 	}
@@ -154,7 +153,7 @@ func checkCommissionRateEqual(cr1, cr2 restaking.CommissionRates_) error {
 	return nil
 }
 
-func checkDelegationMapEqual(ds1, ds2 restaking.RedelegationMap_) error {
+func checkDelegationMapEqual(ds1, ds2 RedelegationMap_) error {
 	if len(ds1.Keys) != len(ds2.Keys) {
 		return fmt.Errorf(".len not equal: %v / %v", len(ds1.Keys), len(ds2.Keys))
 	}
@@ -168,7 +167,7 @@ func checkDelegationMapEqual(ds1, ds2 restaking.RedelegationMap_) error {
 	return nil
 }
 
-func checkRedelegationEqual(d1, d2 restaking.Redelegation_) error {
+func checkRedelegationEqual(d1, d2 Redelegation_) error {
 	if d1.DelegatorAddress != d2.DelegatorAddress {
 		return fmt.Errorf(".DelegatorAddress not equal: %x / %x",
 			d1.DelegatorAddress, d2.DelegatorAddress)
@@ -180,12 +179,12 @@ func checkRedelegationEqual(d1, d2 restaking.Redelegation_) error {
 		return fmt.Errorf(".Reward %v", err)
 	}
 	if err := checkUndelegationEqual(d1.Undelegation, d2.Undelegation); err != nil {
-		return fmt.Errorf(".Undelegations%v", err)
+		return fmt.Errorf(".Undelegation%v", err)
 	}
 	return nil
 }
 
-func checkUndelegationEqual(ud1, ud2 restaking.Undelegation_) error {
+func checkUndelegationEqual(ud1, ud2 Undelegation_) error {
 	if err := checkBigIntEqual(ud1.Amount, ud2.Amount); err != nil {
 		return fmt.Errorf(".Amount %v", err)
 	}
