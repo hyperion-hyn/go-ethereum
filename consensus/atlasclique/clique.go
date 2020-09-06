@@ -813,7 +813,7 @@ func handleMap3AndAtlasStaking(chain consensus.ChainReader, header *types.Header
 		// TODO(ATLAS): payout microdelegation and reward
 
 		// Need to be after accumulateRewardsAndCountSigs because unredelegation may release
-		releaser, err := NewUndelegationReleaser(stateDB, chain.Config())
+		releaser, err := UndelegationReleaserFactory{}.Create(stateDB, chain.Config())
 		if err != nil {
 			return nil, err
 		}
@@ -855,7 +855,10 @@ func setLastEpochInCommittee(comm *restaking.Committee_, stateDB *state.StateDB)
 	return nil
 }
 
-func NewUndelegationReleaser(stateDB *state.StateDB, config *params.ChainConfig) (UndelegationReleaser, error) {
+type UndelegationReleaserFactory struct {
+}
+
+func (f UndelegationReleaserFactory) Create(stateDB *state.StateDB, config *params.ChainConfig) (UndelegationReleaser, error) {
 	if config.Atlas == nil {
 		return nil, errors.New("not support to undelegate")
 	}
