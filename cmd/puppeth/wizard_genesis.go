@@ -164,7 +164,7 @@ func (w *wizard) makeGenesis() {
 
 		var signers []*storage.Signer
 		for {
-			fmt.Printf("%d sealer\n", len(signers))
+			fmt.Printf("%d sealer\n", len(signers)+1)
 			if publicKey, coinbase := w.readBLSPublicKeyAndCoinbase(); publicKey != nil {
 				signers = append(signers, &storage.Signer{
 					PublicKey: publicKey,
@@ -192,6 +192,7 @@ func (w *wizard) makeGenesis() {
 
 		storage.SetupValidatorsInGenesisAt(&consortiumBoard, signers)
 
+		genesis.Mixhash = types.AtlasDigest
 		genesis.ExtraData = make([]byte, types.AtlasExtraVanity)
 
 		block := genesis.ToBlock(nil)
@@ -203,11 +204,11 @@ func (w *wizard) makeGenesis() {
 			s := w.readDefaultString(default_daytime)
 			t, err := time.Parse(daytime_format, s)
 			if err == nil {
+				header := block.Header()
+				header.Time = uint64(t.Unix())
+				block = block.WithSeal(header)
 				break
 			}
-			header := block.Header()
-			header.Time = uint64(t.Unix())
-			block = block.WithSeal(header)
 		}
 
 		hashdata := atlasBackend.SealHash(block.Header())
@@ -218,7 +219,7 @@ func (w *wizard) makeGenesis() {
 
 		signatures := make([]*bls.Sign, len(signers))
 		for i := 0; i < len(signers); i++ {
-			fmt.Printf("%d sealer", i)
+			fmt.Printf("%d sealer\n", i+1)
 			if signature := w.readSignatureWithPublicKey(signers[i].PublicKey, hashdata); signature != nil {
 				signatures[i] = signature
 			}

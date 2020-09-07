@@ -373,7 +373,7 @@ func (w *wizard) readBLSPublicKey() *bls.PublicKey {
 	var publicKey bls.PublicKey
 	for {
 		// Read the address from the user
-		fmt.Printf("> BLS public key: 0x")
+		fmt.Printf("  BLS public key > 0x")
 		text, err := w.in.ReadString('\n')
 		if err != nil {
 			log.Crit("Failed to read user input", "err", err)
@@ -400,7 +400,7 @@ func (w *wizard) readBLSPublicKey() *bls.PublicKey {
 func (w *wizard) readCoinbase() *common.Address {
 	for {
 		// Read the address from the user
-		fmt.Printf("> Coinbase: 0x")
+		fmt.Printf("  Coinbase > 0x")
 		text, err := w.in.ReadString('\n')
 		if err != nil {
 			log.Crit("Failed to read user input", "err", err)
@@ -434,9 +434,9 @@ func (w *wizard) readBLSPublicKeyAndCoinbase() (*bls.PublicKey, *common.Address)
 func (w *wizard) readSignatureWithPublicKey(publicKey *bls.PublicKey, hash common.Hash) *bls.Sign {
 	for {
 		// Read the address from the user
-		fmt.Printf("> BLS public key: 0x%s\n", publicKey.SerializeToHexStr())
-		fmt.Printf(">   Sigh hash: %s\n", hash.String())
-		fmt.Printf(">   Signature: 0x")
+		fmt.Printf("BLS public key > 0x%s\n", publicKey.SerializeToHexStr())
+		fmt.Printf("   Sigh hash > %s\n", hash.String())
+		fmt.Printf("   Signature > 0x")
 		text, err := w.in.ReadString('\n')
 		if err != nil {
 			log.Crit("Failed to read user input", "err", err)
@@ -454,6 +454,10 @@ func (w *wizard) readSignatureWithPublicKey(publicKey *bls.PublicKey, hash commo
 		err = sign.DeserializeHexStr(text)
 		if err != nil {
 			log.Error("Invalid bls public key, please retry")
+			continue
+		}
+
+		if !sign.VerifyHash(publicKey, hash.Bytes()) {
 			continue
 		}
 		return &sign
