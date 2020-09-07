@@ -399,7 +399,7 @@ func (c *Config) NodeKey() *ecdsa.PrivateKey {
 // data folder. If no key can be found, a new one is generated.
 func (c *Config) SignerKey() *bls.SecretKey {
 	// Use any specifically configured key.
-	if c.P2P.PrivateKey != nil {
+	if c.P2P.SignerKey != nil {
 		return c.P2P.SignerKey
 	}
 	// Generate ephemeral key if no datadir is being used.
