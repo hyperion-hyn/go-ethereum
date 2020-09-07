@@ -157,25 +157,18 @@ func getSigsFromPairs(pairs []blsPubSigPair, indexes []int) []common2.BLSSignatu
 
 func makeMap3Node() Map3Node_ {
 	c := validCommissionRates
-	d := Description_{
-		Name:     "Wayne",
-		Identity: "wen",
-		Website:  "harmony.one.wen",
-		Details:  "best",
-	}
-	v := Map3Node_{
-		Map3Address:     map3NodeAddr,
-		OperatorAddress: operatorAddr,
-		NodeKeys:        NewBLSKeysWithBLSKey(blsPubSigPairs[0].pub),
-		Commission:      c,
-		Description:     d,
-		CreationHeight:  big.NewInt(12306),
-		Age:             common.NewDecWithPrec(25, 1),
-		Status:          uint8(Active),
-		ActivationEpoch: big.NewInt(1),
-		ReleaseEpoch:    common.NewDec(10),
-	}
-	return v
+	n := NewMap3NodeWrapperBuilder().
+		SetMap3Address(map3NodeAddr).
+		SetOperatorAddress(operatorAddr).
+		AddNodeKey(blsPubSigPairs[0].pub).
+		SetCommission(c).
+		SetDescription(validDescription).
+		SetCreationHeight(big.NewInt(12306)).
+		SetAge(common.NewDecWithPrec(25, 1)).
+		SetStatus(Active).
+		SetActivationEpoch(big.NewInt(1)).
+		SetReleaseEpoch(common.NewDec(10)).Build()
+	return n.Map3Node
 }
 
 func assertError(gotErr, expErr error) error {
@@ -209,14 +202,15 @@ func TestCreateMap3NodeFromNewMsg(t *testing.T) {
 		cn := makeCreateMap3Node()
 		test.editCreateValidator(&cn)
 
-		n, err := CreateMap3NodeFromNewMsg(&cn, map3NodeAddr, big.NewInt(10), big.NewInt(10))
+		blockNum, epoch := big.NewInt(10), big.NewInt(10)
+		n, err := CreateMap3NodeFromNewMsg(&cn, map3NodeAddr, blockNum, epoch)
 		if assErr := assertError(err, test.expErr); assErr != nil {
 			t.Errorf("Test %v: %v", i, assErr)
 		}
 		if err != nil || test.expErr != nil {
 			continue
 		}
-		if err := assertMap3NodeAlignCreateMap3Node(n.Map3Node, cn); err != nil {
+		if err := assertMap3NodeAlignCreateMap3Node(n.Map3Node, cn, blockNum, epoch); err != nil {
 			t.Error(err)
 		}
 	}
@@ -383,7 +377,7 @@ func makeCreateMap3Node() CreateMap3Node {
 	}
 }
 
-func assertMap3NodeAlignCreateMap3Node(n Map3Node_, cn CreateMap3Node) error {
+func assertMap3NodeAlignCreateMap3Node(n Map3Node_, cn CreateMap3Node, blockNum *big.Int, epoch *big.Int) error {
 	if n.Map3Address != map3NodeAddr {
 		return fmt.Errorf("map3 node address not equal")
 	}
@@ -391,7 +385,7 @@ func assertMap3NodeAlignCreateMap3Node(n Map3Node_, cn CreateMap3Node) error {
 		return fmt.Errorf("operator address not equal")
 	}
 	if len(n.NodeKeys.Keys) != 1 {
-		return fmt.Errorf("len(SlotPubKeys) not equal 1")
+		return fmt.Errorf("len(NodeKeys) not equal 1")
 	}
 	if !reflect.DeepEqual(*n.NodeKeys.Keys[0], cn.NodePubKey) {
 		return fmt.Errorf("NodeKey not equal")
@@ -408,20 +402,23 @@ func assertMap3NodeAlignCreateMap3Node(n Map3Node_, cn CreateMap3Node) error {
 	if err := assertDescriptionEqual(n.Description, cn.Description); err != nil {
 		return fmt.Errorf("description not expected: %v", err)
 	}
-	if n.CreationHeight.Cmp(big.NewInt(10)) != 0 {
+	if n.CreationHeight.Cmp(blockNum) != 0 {
 		return fmt.Errorf("CreationHeight not equal")
 	}
-	if !n.Age.IsNil() {
-		return fmt.Errorf("CreationHeight not nil")
+	if !n.Age.IsZero() {
+		return fmt.Errorf("node age not zero")
 	}
 	if n.Status != uint8(Pending) {
 		return fmt.Errorf("status not pending")
 	}
-	if n.ActivationEpoch != nil {
-		return fmt.Errorf("ActivationEpoch not nil")
+	if n.PendingEpoch.Cmp(epoch) != 0 {
+		return fmt.Errorf("pending epoch not equal")
 	}
-	if !n.ReleaseEpoch.IsNil() {
-		return fmt.Errorf("ReleaseEpoch not nil")
+	if n.ActivationEpoch.Cmp(common.Big0) != 0 {
+		return fmt.Errorf("activation epoch not equal to 0")
+	}
+	if !n.ReleaseEpoch.IsZero() {
+		return fmt.Errorf("release epoch not equal to 0")
 	}
 	return nil
 }

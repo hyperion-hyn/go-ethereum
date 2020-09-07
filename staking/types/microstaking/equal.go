@@ -72,6 +72,9 @@ func checkMap3NodeEqual(v1, v2 Map3Node_) error {
 	if v1.Status != v2.Status {
 		return fmt.Errorf(".Status not equal: %v / %v", v1.Status, v2.Status)
 	}
+	if err := checkBigIntEqual(v1.PendingEpoch, v2.PendingEpoch); err != nil {
+		return fmt.Errorf(".PendingEpoch %v", err)
+	}
 	if err := checkBigIntEqual(v1.ActivationEpoch, v2.ActivationEpoch); err != nil {
 		return fmt.Errorf(".ActivationEpoch %v", err)
 	}

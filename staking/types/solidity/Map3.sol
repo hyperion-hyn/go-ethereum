@@ -42,6 +42,7 @@ struct Map3Node_ {
     uint256 CreationHeight;
     Decimal Age;
     byte Status;
+    uint256 PendingEpoch;
     uint256 ActivationEpoch;
     Decimal ReleaseEpoch;
 }

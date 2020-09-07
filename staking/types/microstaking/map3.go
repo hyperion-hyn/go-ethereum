@@ -299,6 +299,7 @@ func CreateMap3NodeFromNewMsg(msg *CreateMap3Node, map3Address common.Address, b
 		SetDescription(msg.Description).
 		SetCreationHeight(blockNum).
 		SetStatus(Pending).
+		SetPendingEpoch(epoch).
 		AddMicrodelegation(NewMicrodelegation(
 			msg.OperatorAddress, msg.Amount,
 			common.NewDecFromBigInt(epoch).Add(common.NewDec(PendingDelegationLockPeriodInEpoch)),

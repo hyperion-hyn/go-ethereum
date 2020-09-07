@@ -70,6 +70,7 @@ func (s *PublicMicroStakingAPI) GetMap3NodeInformation(
 			CreationHeight:  map3Node.CreationHeight,
 			Age:             map3Node.Age,
 			Status:          map3Node.Status,
+			PendingEpoch:    map3Node.PendingEpoch,
 			ActivationEpoch: map3Node.ActivationEpoch,
 			ReleaseEpoch:    map3Node.ReleaseEpoch,
 		},

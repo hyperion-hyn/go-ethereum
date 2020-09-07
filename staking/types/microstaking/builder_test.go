@@ -48,6 +48,7 @@ func TestMap3NodeWrapperBuilder(t *testing.T) {
 		creationHeight     *big.Int
 		age                common.Dec
 		status             Map3Status
+		pendingEpoch       *big.Int
 		activationEpoch    *big.Int
 		releaseEpoch       common.Dec
 		microdelegation    Microdelegation_
@@ -69,6 +70,7 @@ func TestMap3NodeWrapperBuilder(t *testing.T) {
 			creationHeight:     big.NewInt(1),
 			age:                common.NewDec(1),
 			status:             Active,
+			pendingEpoch:       big.NewInt(1),
 			activationEpoch:    big.NewInt(1),
 			releaseEpoch:       common.NewDec(1),
 			microdelegation:    nonZeroMicrodelegation,
@@ -103,6 +105,7 @@ func TestMap3NodeWrapperBuilder(t *testing.T) {
 		exp.Map3Node.CreationHeight = test.creationHeight
 		exp.Map3Node.Age = test.age
 		exp.Map3Node.Status = uint8(test.status)
+		exp.Map3Node.PendingEpoch = test.pendingEpoch
 		exp.Map3Node.ActivationEpoch = test.activationEpoch
 		exp.Map3Node.ReleaseEpoch = test.releaseEpoch
 		exp.Microdelegations.Put(test.microdelegation.DelegatorAddress, test.microdelegation)

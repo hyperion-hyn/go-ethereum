@@ -62,6 +62,11 @@ func (b *Map3NodeWrapperBuilder) SetActivationEpoch(activationEpoch *big.Int) *M
 	return b
 }
 
+func (b *Map3NodeWrapperBuilder) SetPendingEpoch(pendingEpoch *big.Int) *Map3NodeWrapperBuilder {
+	b.wrapper.Map3Node.PendingEpoch = big.NewInt(0).Set(pendingEpoch)
+	return b
+}
+
 func (b *Map3NodeWrapperBuilder) SetReleaseEpoch(releaseEpoch common.Dec) *Map3NodeWrapperBuilder {
 	b.wrapper.Map3Node.ReleaseEpoch = releaseEpoch
 	return b
@@ -108,6 +113,7 @@ func NewMap3NodeWrapperBuilder() *Map3NodeWrapperBuilder {
 				CreationHeight:  big.NewInt(0),
 				Age:             common.NewDec(0),
 				Status:          uint8(Pending),
+				PendingEpoch:    big.NewInt(0),
 				ActivationEpoch: big.NewInt(0),
 				ReleaseEpoch:    common.NewDec(0),
 			},

@@ -179,27 +179,17 @@ func makeBLSPubSigPair() blsPubSigPair {
 func makeValidValidator() Validator_ {
 	cr := validCommissionRates
 	c := Commission_{CommissionRates: cr, UpdateHeight: big.NewInt(300)}
-	d := Description_{
-		Name:     "Wayne",
-		Identity: "wen",
-		Website:  "harmony.one.wen",
-		Details:  "best",
-	}
-	v := Validator_{
-		ValidatorAddress: validatorAddr,
-		OperatorAddresses: AddressSet_{
-			Keys: []*Address{&operatorAddr},
-			Set:  map[Address]*Bool{operatorAddr: func() *bool { t := true; return &t }()},
-		},
-		SlotPubKeys:          NewBLSKeysWithBLSKey(blsPubSigPairs[0].pub),
-		LastEpochInCommittee: big.NewInt(20),
-		MaxTotalDelegation:   twelveK,
-		Status:               uint8(Active),
-		Commission:           c,
-		Description:          d,
-		CreationHeight:       big.NewInt(12306),
-	}
-	return v
+	v := NewValidatorWrapperBuilder().
+		SetValidatorAddress(validatorAddr).
+		AddOperatorAddress(operatorAddr).
+		AddSlotPubKey(blsPubSigPairs[0].pub).
+		SetLastEpochInCommittee(big.NewInt(20)).
+		SetMaxTotalDelegation(twentyK).
+		SetStatus(Active).
+		SetCommission(c).
+		SetDescription(validDescription).
+		SetCreationHeight(big.NewInt(12306)).Build()
+	return v.Validator
 }
 
 func assertError(gotErr, expErr error) error {
@@ -233,14 +223,15 @@ func TestCreateValidatorFromNewMsg(t *testing.T) {
 		cv := makeCreateValidator()
 		test.editCreateValidator(&cv)
 
-		v, err := CreateValidatorFromNewMsg(&cv, validatorAddr, common.Big1, common.Big1)
+		blockNum := common.Big1
+		v, err := CreateValidatorFromNewMsg(&cv, validatorAddr, common.Big1, blockNum)
 		if assErr := assertError(err, test.expErr); assErr != nil {
 			t.Errorf("Test %v: %v", i, assErr)
 		}
 		if err != nil || test.expErr != nil {
 			continue
 		}
-		if err := assertValidatorAlignCreateValidator(v.Validator, cv); err != nil {
+		if err := assertValidatorAlignCreateValidator(v.Validator, cv, blockNum); err != nil {
 			t.Error(err)
 		}
 	}
@@ -424,7 +415,7 @@ func makeCreateValidator() CreateValidator {
 	}
 }
 
-func assertValidatorAlignCreateValidator(v Validator_, cv CreateValidator) error {
+func assertValidatorAlignCreateValidator(v Validator_, cv CreateValidator, blockNum *big.Int) error {
 	if v.ValidatorAddress != validatorAddr {
 		return fmt.Errorf("validator address not equal")
 	}
@@ -454,6 +445,9 @@ func assertValidatorAlignCreateValidator(v Validator_, cv CreateValidator) error
 	}
 	if err := checkDescriptionEqual(v.Description, cv.Description); err != nil {
 		return fmt.Errorf("description not expected: %v", err)
+	}
+	if v.CreationHeight.Cmp(blockNum) != 0 {
+		return fmt.Errorf("CreationHeight not equal to 0")
 	}
 	return nil
 }

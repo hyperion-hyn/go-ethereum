@@ -13,6 +13,7 @@ type Map3NodeRPC struct {
 	CreationHeight  BigInt       `json:"CreationHeight" storage:"slot=11,offset=0"`
 	Age             Decimal      `json:"Age" storage:"slot=12,offset=0"`
 	Status          Uint8        `json:"Status" storage:"slot=13,offset=0"`
+	PendingEpoch    BigInt       `json:"PendingEpoch" storage:"slot=14,offset=0"`
 	ActivationEpoch BigInt       `json:"ActivationEpoch" storage:"slot=14,offset=0"`
 	ReleaseEpoch    Decimal      `json:"ReleaseEpoch" storage:"slot=15,offset=0"`
 }
