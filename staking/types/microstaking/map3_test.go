@@ -209,14 +209,14 @@ func TestCreateMap3NodeFromNewMsg(t *testing.T) {
 		cn := makeCreateMap3Node()
 		test.editCreateValidator(&cn)
 
-		n, err := CreateMap3NodeFromNewMsg(&cn, map3NodeAddr, big.NewInt(10))
+		n, err := CreateMap3NodeFromNewMsg(&cn, map3NodeAddr, big.NewInt(10), big.NewInt(10))
 		if assErr := assertError(err, test.expErr); assErr != nil {
 			t.Errorf("Test %v: %v", i, assErr)
 		}
 		if err != nil || test.expErr != nil {
 			continue
 		}
-		if err := assertMap3NodeAlignCreateMap3Node(*n, cn); err != nil {
+		if err := assertMap3NodeAlignCreateMap3Node(n.Map3Node, cn); err != nil {
 			t.Error(err)
 		}
 	}

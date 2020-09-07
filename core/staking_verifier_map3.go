@@ -175,32 +175,21 @@ func (verifier StakingVerifier) VerifyCreateMap3NodeMsg(stateDB vm.StateDB, chai
 		return nil, errInsufficientBalanceForStake
 	}
 
-	map3Address := crypto.CreateAddress(signer, stateDB.GetNonce(signer))
-	node, err := microstaking.CreateMap3NodeFromNewMsg(msg, map3Address, blockNum)
-	if err != nil {
-		return nil, err
-	}
-	if err := node.SanityCheck(microstaking.MaxPubKeyAllowed); err != nil {
-		return nil, err
-	}
-
 	_, minSelf, _ := network.LatestMap3StakingRequirement(blockNum, chainContext.Config())
 	if minSelf.Cmp(msg.Amount) > 0 {
 		return nil, ErrSelfDelegationTooSmall
 	}
 
-	// create map3 node wrapper
-	wrapper := microstaking.Map3NodeWrapper_{
-		Map3Node:               *node,
-		Microdelegations:       microstaking.NewMicrodelegationMap(),
-		TotalPendingDelegation: big.NewInt(0).Set(msg.Amount),
+	// create map3 node
+	map3Address := crypto.CreateAddress(signer, stateDB.GetNonce(signer))
+	node, err := microstaking.CreateMap3NodeFromNewMsg(msg, map3Address, blockNum, epoch)
+	if err != nil {
+		return nil, err
 	}
-	wrapper.Microdelegations.Put(msg.OperatorAddress, microstaking.NewMicrodelegation(
-		msg.OperatorAddress, msg.Amount,
-		common.NewDecFromBigInt(epoch).Add(common.NewDec(microstaking.PendingDelegationLockPeriodInEpoch)),
-		true,
-	))
-	return &wrapper, nil
+	if err := node.Map3Node.SanityCheck(microstaking.MaxPubKeyAllowed); err != nil {
+		return nil, err
+	}
+	return node, nil
 }
 
 func (verifier StakingVerifier) VerifyEditMap3NodeMsg(stateDB vm.StateDB, epoch, blockNum *big.Int, msg *microstaking.EditMap3Node, signer common.Address) error {

@@ -282,25 +282,29 @@ func (s *Storage_Map3NodePool_) RemoveDelegationIndex(delegator, map3Addr common
 }
 
 // CreateValidatorFromNewMsg creates validator from NewValidator message
-func CreateMap3NodeFromNewMsg(msg *CreateMap3Node, map3Address common.Address, blockNum *big.Int) (*Map3Node_, error) {
+func CreateMap3NodeFromNewMsg(msg *CreateMap3Node, map3Address common.Address, blockNum, epoch *big.Int) (*Map3NodeWrapper_, error) {
 	if err := common2.VerifyBLSKey(&msg.NodePubKey, &msg.NodeKeySig); err != nil {
 		return nil, err
 	}
 
-	node := Map3Node_{
-		Map3Address:     map3Address,
-		OperatorAddress: msg.OperatorAddress,
-		NodeKeys:        NewBLSKeysWithBLSKey(msg.NodePubKey),
-		Commission: Commission_{
+	builder := NewMap3NodeWrapperBuilder()
+	n := builder.SetMap3Address(map3Address).
+		SetOperatorAddress(msg.OperatorAddress).
+		AddNodeKey(msg.NodePubKey).
+		SetCommission(Commission_{
 			Rate:              msg.Commission,
 			RateForNextPeriod: msg.Commission,
 			UpdateHeight:      blockNum,
-		},
-		Description:    msg.Description,
-		CreationHeight: blockNum,
-		Status:         uint8(Pending),
-	}
-	return &node, nil
+		}).
+		SetDescription(msg.Description).
+		SetCreationHeight(blockNum).
+		SetStatus(Pending).
+		AddMicrodelegation(NewMicrodelegation(
+			msg.OperatorAddress, msg.Amount,
+			common.NewDecFromBigInt(epoch).Add(common.NewDec(PendingDelegationLockPeriodInEpoch)),
+			true,
+		)).Build()
+	return n, nil
 }
 
 // UpdateValidatorFromEditMsg updates validator from EditValidator message
