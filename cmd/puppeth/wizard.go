@@ -435,7 +435,7 @@ func (w *wizard) readSignatureWithPublicKey(publicKey *bls.PublicKey, hash commo
 	for {
 		// Read the address from the user
 		fmt.Printf("BLS public key > 0x%s\n", publicKey.SerializeToHexStr())
-		fmt.Printf("   Sigh hash > %s\n", hash.String())
+		fmt.Printf("   Sign hash > %s\n", hash.String())
 		fmt.Printf("   Signature > 0x")
 		text, err := w.in.ReadString('\n')
 		if err != nil {

@@ -176,14 +176,6 @@ func (w *wizard) makeGenesis() {
 				break
 			}
 		}
-		// Sort the signers
-		for i := 0; i < len(signers); i++ {
-			for j := i + 1; j < len(signers); j++ {
-				if bytes.Compare(signers[i].PublicKey.Serialize()[:], signers[j].PublicKey.Serialize()[:]) > 0 {
-					signers[i], signers[j] = signers[j], signers[i]
-				}
-			}
-		}
 
 		consortiumBoard := core.GenesisAccount{
 			Nonce:   1,
