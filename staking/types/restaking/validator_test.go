@@ -285,7 +285,7 @@ func TestUpdateValidatorFromEditMsg(t *testing.T) {
 				ValidatorAddress: validatorAddr,
 				SlotKeyToRemove:  &blsPubSigPairs[0].pub,
 			},
-			editExpValidator: func(v *Validator_) { v.SlotPubKeys.Keys = nil },
+			editExpValidator: func(v *Validator_) { v.SlotPubKeys = NewEmptyBLSKeys() },
 		},
 		{
 			// Add a bls pub key with signature

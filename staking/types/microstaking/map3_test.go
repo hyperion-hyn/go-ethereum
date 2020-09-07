@@ -58,53 +58,53 @@ func TestMap3Node_SanityCheck(t *testing.T) {
 		expErr       error
 	}{
 		{
-			func(v *Map3Node_) {},
+			func(n *Map3Node_) {},
 			nil,
 		},
 		{
-			func(v *Map3Node_) { v.Description = invalidDescription },
+			func(n *Map3Node_) { n.Description = invalidDescription },
 			errors.New("exceed maximum name length"),
 		},
 		{
-			func(v *Map3Node_) { v.NodeKeys.Keys = v.NodeKeys.Keys[:0] },
+			func(n *Map3Node_) { n.NodeKeys.Keys = n.NodeKeys.Keys[:0] },
 			errNeedAtLeastOneSlotKey,
 		},
 		{
-			func(v *Map3Node_) {
-				v.NodeKeys = NewEmptyBLSKeys()
-				v.NodeKeys.Keys = append(v.NodeKeys.Keys, &blsPubSigPairs[0].pub, &blsPubSigPairs[1].pub)
+			func(n *Map3Node_) {
+				n.NodeKeys = NewEmptyBLSKeys()
+				n.NodeKeys.Keys = append(n.NodeKeys.Keys, &blsPubSigPairs[0].pub, &blsPubSigPairs[1].pub)
 			},
 			ErrExcessiveBLSKeys,
 		},
 		{
-			func(v *Map3Node_) { v.Commission.Rate = nilRate },
+			func(n *Map3Node_) { n.Commission.Rate = nilRate },
 			errInvalidCommissionRate,
 		},
 		{
-			func(v *Map3Node_) { v.Commission.Rate = negativeRate },
+			func(n *Map3Node_) { n.Commission.Rate = negativeRate },
 			errInvalidCommissionRate,
 		},
 		{
-			func(v *Map3Node_) { v.Commission.Rate = invalidRate },
+			func(n *Map3Node_) { n.Commission.Rate = invalidRate },
 			errInvalidCommissionRate,
 		},
 		{
-			func(v *Map3Node_) { v.Commission.RateForNextPeriod = nilRate },
+			func(n *Map3Node_) { n.Commission.RateForNextPeriod = nilRate },
 			errInvalidCommissionRate,
 		},
 		{
-			func(v *Map3Node_) { v.Commission.RateForNextPeriod = negativeRate },
+			func(n *Map3Node_) { n.Commission.RateForNextPeriod = negativeRate },
 			errInvalidCommissionRate,
 		},
 		{
-			func(v *Map3Node_) { v.Commission.RateForNextPeriod = invalidRate },
+			func(n *Map3Node_) { n.Commission.RateForNextPeriod = invalidRate },
 			errInvalidCommissionRate,
 		},
 	}
 	for i, test := range tests {
-		v := makeMap3Node()
-		test.editMap3Node(&v)
-		err := v.SanityCheck(MaxPubKeyAllowed)
+		n := makeMap3Node()
+		test.editMap3Node(&n)
+		err := n.SanityCheck(MaxPubKeyAllowed)
 		if assErr := assertError(err, test.expErr); assErr != nil {
 			t.Errorf("Test %v: %v", i, assErr)
 		}
@@ -190,11 +190,11 @@ func TestCreateMap3NodeFromNewMsg(t *testing.T) {
 		expErr              error
 	}{
 		{
-			editCreateValidator: func(cv *CreateMap3Node) {},
+			editCreateValidator: func(cn *CreateMap3Node) {},
 			expErr:              nil,
 		},
 		{
-			editCreateValidator: func(cv *CreateMap3Node) { cv.NodeKeySig = blsPubSigPairs[2].sig },
+			editCreateValidator: func(cn *CreateMap3Node) { cn.NodeKeySig = blsPubSigPairs[2].sig },
 			expErr:              errBLSKeysNotMatchSigs,
 		},
 	}
@@ -216,152 +216,112 @@ func TestCreateMap3NodeFromNewMsg(t *testing.T) {
 	}
 }
 
+func TestUpdateMap3NodeFromEditMsg(t *testing.T) {
+	tests := []struct {
+		editMap3Node    EditMap3Node
+		editExpMap3Node func(*Map3Node_)
+		expErr          error
+	}{
+		{
+			editMap3Node:    EditMap3Node{Map3NodeAddress: map3NodeAddr},
+			editExpMap3Node: func(*Map3Node_) {},
+		},
+		{
+			// update Description.Name
+			editMap3Node: EditMap3Node{
+				Map3NodeAddress: map3NodeAddr,
+				Description:     Description_{Name: "jacky@harmony.one"},
+			},
+			editExpMap3Node: func(n *Map3Node_) { n.Description.Name = "jacky@harmony.one" },
+		},
+		{
+			// Remove a bls pub key
+			editMap3Node: EditMap3Node{
+				Map3NodeAddress: map3NodeAddr,
+				NodeKeyToRemove: &blsPubSigPairs[0].pub,
+			},
+			editExpMap3Node: func(n *Map3Node_) { n.NodeKeys = NewEmptyBLSKeys() },
+		},
+		{
+			// Add a bls pub key with signature
+			editMap3Node: EditMap3Node{
+				Map3NodeAddress: map3NodeAddr,
+				NodeKeyToAdd:    &blsPubSigPairs[4].pub,
+				NodeKeyToAddSig: &blsPubSigPairs[4].sig,
+			},
+			editExpMap3Node: func(n *Map3Node_) {
+				n.NodeKeys.Keys = append(n.NodeKeys.Keys, &blsPubSigPairs[4].pub)
+			},
+		},
+		{
+			// EditMap3Node having signature without pub will not be a update
+			editMap3Node: EditMap3Node{
+				Map3NodeAddress: map3NodeAddr,
+				NodeKeyToAddSig: &blsPubSigPairs[4].sig,
+			},
+			editExpMap3Node: func(n *Map3Node_) {},
+		},
+		{
+			// invalid address
+			editMap3Node: EditMap3Node{
+				Map3NodeAddress: common.BigToAddress(common.Big1),
+			},
+			expErr: errAddressNotMatch,
+		},
+		{
+			// invalid description
+			editMap3Node: EditMap3Node{
+				Map3NodeAddress: map3NodeAddr,
+				Description:     invalidDescription,
+			},
+			expErr: errors.New("exceed maximum name length"),
+		},
+		{
+			// invalid removing bls key
+			editMap3Node: EditMap3Node{
+				Map3NodeAddress: map3NodeAddr,
+				NodeKeyToRemove: &blsPubSigPairs[4].pub,
+			},
+			expErr: errNodeKeyToRemoveNotFound,
+		},
+		{
+			// add pub not having valid signature
+			editMap3Node: EditMap3Node{
+				Map3NodeAddress: map3NodeAddr,
+				NodeKeyToAdd:    &blsPubSigPairs[4].pub,
+				NodeKeyToAddSig: &blsPubSigPairs[3].sig,
+			},
+			expErr: errBLSKeysNotMatchSigs,
+		},
+		{
+			// add pub key already exist in validator
+			editMap3Node: EditMap3Node{
+				Map3NodeAddress: map3NodeAddr,
+				NodeKeyToAdd:    &blsPubSigPairs[0].pub,
+				NodeKeyToAddSig: &blsPubSigPairs[0].sig,
+			},
+			expErr: errNodeKeyToAddExists,
+		},
+	}
+	for i, test := range tests {
+		node := makeMap3Node()
 
-//func TestUpdateMap3NodeFromEditMsg(t *testing.T) {
-//	tests := []struct {
-//		editMap3Node    EditMap3Node
-//		editExpMap3Node func(*Map3Node_)
-//		expErr          error
-//	}{
-//		{
-//			editMap3Node:    EditMap3Node{Map3NodeAddress: map3NodeAddr},
-//			editExpMap3Node: func(*Map3Node_) {},
-//		},
-//		{
-//			// update Description.Name
-//			editMap3Node: EditMap3Node{
-//				Map3NodeAddress: map3NodeAddr,
-//				Description:      Description_{Name: "jacky@harmony.one"},
-//			},
-//			editExpMap3Node: func(v *Map3Node_) { v.Description.Name = "jacky@harmony.one" },
-//		},
-//		{
-//			// Update CommissionRate
-//			editMap3Node: EditMap3Node{
-//				Map3NodeAddress: map3NodeAddr,
-//			},
-//			editExpMap3Node: func(v *Map3Node_) { v.Commission.CommissionRates.Rate = halfRate },
-//		},
-//		{
-//			// Update MaxTotalDelegation
-//			editMap3Node: EditMap3Node{
-//				Map3NodeAddress:   map3NodeAddr,
-//				MaxTotalDelegation: elevenK,
-//			},
-//			editExpMap3Node: func(v *Map3Node_) { v.MaxTotalDelegation = elevenK },
-//		},
-//		{
-//			// Update MaxTotalDelegation to zero remain unchanged
-//			editMap3Node: EditMap3Node{
-//				Map3NodeAddress:   map3NodeAddr,
-//				MaxTotalDelegation: common.Big0,
-//			},
-//			editExpMap3Node: func(v *Map3Node_) {},
-//		},
-//		{
-//			// Remove a bls pub key
-//			editMap3Node: EditMap3Node{
-//				Map3NodeAddress: map3NodeAddr,
-//				SlotKeyToRemove:  &blsPubSigPairs[0].pub,
-//			},
-//			editExpMap3Node: func(v *Map3Node_) { v.SlotPubKeys.Keys = nil },
-//		},
-//		{
-//			// Add a bls pub key with signature
-//			editMap3Node: EditMap3Node{
-//				Map3NodeAddress: map3NodeAddr,
-//				SlotKeyToAdd:     &blsPubSigPairs[4].pub,
-//				SlotKeyToAddSig:  &blsPubSigPairs[4].sig,
-//			},
-//			editExpMap3Node: func(v *Map3Node_) {
-//				v.SlotPubKeys.Keys = append(v.SlotPubKeys.Keys, &blsPubSigPairs[4].pub)
-//			},
-//		},
-//		{
-//			// EditMap3Node having signature without pub will not be a update
-//			editMap3Node: EditMap3Node{
-//				Map3NodeAddress: map3NodeAddr,
-//				SlotKeyToAddSig:  &blsPubSigPairs[4].sig,
-//			},
-//			editExpMap3Node: func(v *Map3Node_) {},
-//		},
-//		{
-//			// update status
-//			editMap3Node: EditMap3Node{
-//				Map3NodeAddress: map3NodeAddr,
-//				EPOSStatus:       Inactive,
-//			},
-//			editExpMap3Node: func(v *Map3Node_) { v.Status = Uint8(Inactive) },
-//		},
-//		{
-//			// status to banned - not changed
-//			editMap3Node: EditMap3Node{
-//				Map3NodeAddress: map3NodeAddr,
-//				EPOSStatus:       Banned,
-//			},
-//			editExpMap3Node: func(v *Map3Node_) {},
-//		},
-//		{
-//			// invalid address
-//			editMap3Node: EditMap3Node{
-//				Map3NodeAddress: common.BigToAddress(common.Big1),
-//			},
-//			expErr: errAddressNotMatch,
-//		},
-//		{
-//			// invalid description
-//			editMap3Node: EditMap3Node{
-//				Map3NodeAddress: map3NodeAddr,
-//				Description:      invalidDescription,
-//			},
-//			expErr: errors.New("exceed maximum name length"),
-//		},
-//		{
-//			// invalid removing bls key
-//			editMap3Node: EditMap3Node{
-//				Map3NodeAddress: map3NodeAddr,
-//				SlotKeyToRemove:  &blsPubSigPairs[4].pub,
-//			},
-//			expErr: errSlotKeyToRemoveNotFound,
-//		},
-//		{
-//			// add pub not having valid signature
-//			editMap3Node: EditMap3Node{
-//				Map3NodeAddress: map3NodeAddr,
-//				SlotKeyToAdd:     &blsPubSigPairs[4].pub,
-//				SlotKeyToAddSig:  &blsPubSigPairs[3].sig,
-//			},
-//			expErr: errBLSKeysNotMatchSigs,
-//		},
-//		{
-//			// add pub key already exist in validator
-//			editMap3Node: EditMap3Node{
-//				Map3NodeAddress: map3NodeAddr,
-//				SlotKeyToAdd:     &blsPubSigPairs[0].pub,
-//				SlotKeyToAddSig:  &blsPubSigPairs[0].sig,
-//			},
-//			expErr: errSlotKeyToAddExists,
-//		},
-//	}
-//	for i, test := range tests {
-//		node := makeMap3Node()
-//
-//		err := UpdateMap3NodeFromEditMsg(&node, &test.editMap3Node)
-//		if assErr := assertError(err, test.expErr); assErr != nil {
-//			t.Errorf("Test %v: %v", i, assErr)
-//		}
-//		if (err != nil) || (test.expErr != nil) {
-//			continue
-//		}
-//
-//		expNode := makeMap3Node()
-//		test.editExpMap3Node(&expNode)
-//
-//		if err := assertMap3NodeEqual(node, expNode); err != nil {
-//			t.Errorf("Test %v: %v", i, err)
-//		}
-//	}
-//}
+		err := UpdateMap3NodeFromEditMsg(&node, &test.editMap3Node)
+		if assErr := assertError(err, test.expErr); assErr != nil {
+			t.Errorf("Test %v: %v", i, assErr)
+		}
+		if (err != nil) || (test.expErr != nil) {
+			continue
+		}
+
+		expNode := makeMap3Node()
+		test.editExpMap3Node(&expNode)
+
+		if err := CheckMap3NodeEqual(node, expNode); err != nil {
+			t.Errorf("Test %v: %v", i, err)
+		}
+	}
+}
 
 // makeCreateMap3Node makes a structure of CreateValidator
 func makeCreateMap3Node() CreateMap3Node {
