@@ -278,7 +278,7 @@ func CreateConsensusEngine(ctx *node.ServiceContext, chainConfig *params.ChainCo
 
 	// If Atlas is required, set it up
 	if chainConfig.Atlas != nil {
-		if chainConfig.Istanbul.Epoch != 0 {
+		if chainConfig.Atlas.Epoch != 0 {
 			config.Atlas.Epoch = chainConfig.Atlas.Epoch
 		}
 		config.Atlas.ProposerPolicy = atlas.ProposerPolicy(chainConfig.Atlas.ProposerPolicy)
