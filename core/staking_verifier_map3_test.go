@@ -6,6 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
+	common2 "github.com/ethereum/go-ethereum/staking/types/common"
 	"github.com/ethereum/go-ethereum/staking/types/microstaking"
 	"github.com/pkg/errors"
 	"math/big"
@@ -208,8 +209,8 @@ func TestVerifyCreateMap3NodeMsg(t *testing.T) {
 				chainContext: makeFakeChainContextForStake(t),
 				epoch:        big.NewInt(defaultEpoch),
 				blockNum:     big.NewInt(defaultBlockNumber),
-				msg: defaultMsgCreateMap3Node(),
-				signer: operatorAddr,
+				msg:          defaultMsgCreateMap3Node(),
+				signer:       operatorAddr,
 			},
 			wantErr: errInvalidSigner,
 		},
@@ -323,10 +324,208 @@ func defaultExpCreatedMap3Node() microstaking.Map3NodeWrapper_ {
 		SetCreationHeight(big.NewInt(defaultBlockNumber)).
 		SetPendingEpoch(big.NewInt(defaultEpoch)).
 		AddMicrodelegation(microstaking.NewMicrodelegation(createOperatorAddr, twoHundredKOnes,
-		common.NewDec(defaultEpoch).Add(common.NewDec(microstaking.PendingDelegationLockPeriodInEpoch)), true)).
+			common.NewDec(defaultEpoch).Add(common.NewDec(microstaking.PendingDelegationLockPeriodInEpoch)), true)).
 		Build()
 	return *v
 }
+
+func TestVerifyEditMap3NodeMsg(t *testing.T) {
+	type args struct {
+		stateDB  vm.StateDB
+		epoch    *big.Int
+		blockNum *big.Int
+		msg      microstaking.EditMap3Node
+		signer   common.Address
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr error
+	}{
+		{
+			name: "valid request",
+			args: args{
+				stateDB:  makeStateDBForMicrostaking(t),
+				epoch:    big.NewInt(defaultEpoch),
+				blockNum: big.NewInt(defaultBlockNumber),
+				msg:      defaultMsgEditMap3Node(),
+				signer:   operatorAddr,
+			},
+			wantErr: nil,
+		},
+		{
+			name: "state db nil",
+			args: args{
+				stateDB:  nil,
+				epoch:    big.NewInt(defaultEpoch),
+				blockNum: big.NewInt(defaultBlockNumber),
+				msg:      defaultMsgEditMap3Node(),
+				signer:   operatorAddr,
+			},
+			wantErr: errStateDBIsMissing,
+		},
+		{
+			name: "epoch nil",
+			args: args{
+				stateDB:  makeStateDBForMicrostaking(t),
+				epoch:    nil,
+				blockNum: big.NewInt(defaultBlockNumber),
+				msg:      defaultMsgEditMap3Node(),
+				signer:   operatorAddr,
+			},
+			wantErr: errEpochMissing,
+		},
+		{
+			name: "block number nil",
+			args: args{
+				stateDB:  makeStateDBForMicrostaking(t),
+				epoch:    big.NewInt(defaultEpoch),
+				blockNum: nil,
+				msg:      defaultMsgEditMap3Node(),
+				signer:   operatorAddr,
+			},
+			wantErr: errBlockNumMissing,
+		},
+		{
+			name: "invalid signer",
+			args: args{
+				stateDB:  makeStateDBForMicrostaking(t),
+				epoch:    big.NewInt(defaultEpoch),
+				blockNum: big.NewInt(defaultBlockNumber),
+				msg: func() microstaking.EditMap3Node {
+					msg := defaultMsgEditMap3Node()
+					return msg
+				}(),
+				signer: makeTestAddr("invalid operator"),
+			},
+			wantErr: errInvalidSigner,
+		},
+		{
+			name: "bls key collision",
+			args: args{
+				stateDB:  makeStateDBForMicrostaking(t),
+				epoch:    big.NewInt(defaultEpoch),
+				blockNum: big.NewInt(defaultBlockNumber),
+				msg: func() microstaking.EditMap3Node {
+					msg := defaultMsgEditMap3Node()
+					msg.NodeKeyToAdd = &blsKeys[3].pub2
+					msg.NodeKeyToAddSig = &blsKeys[3].sig
+					return msg
+				}(),
+				signer: operatorAddr,
+			},
+			wantErr: errDupMap3NodePubKey,
+		},
+		{
+			name: "identity collision",
+			args: args{
+				stateDB:  makeStateDBForMicrostaking(t),
+				epoch:    big.NewInt(defaultEpoch),
+				blockNum: big.NewInt(defaultBlockNumber),
+				msg: func() microstaking.EditMap3Node {
+					msg := defaultMsgEditMap3Node()
+					msg.Description.Identity = makeIdentityStr(0)
+					return msg
+				}(),
+				signer: operatorAddr,
+			},
+			wantErr: errDupMap3NodeIdentity,
+		},
+		{
+			name: "map3 node not exist",
+			args: args{
+				stateDB:  makeStateDBForMicrostaking(t),
+				epoch:    big.NewInt(defaultEpoch),
+				blockNum: big.NewInt(defaultBlockNumber),
+				msg: func() microstaking.EditMap3Node {
+					msg := defaultMsgEditMap3Node()
+					msg.Map3NodeAddress = makeTestAddr("addr not in chain")
+					return msg
+				}(),
+				signer: operatorAddr,
+			},
+			wantErr: errMap3NodeNotExist,
+		},
+		{
+			name: "invalid operator",
+			args: args{
+				stateDB:  makeStateDBForMicrostaking(t),
+				epoch:    big.NewInt(defaultEpoch),
+				blockNum: big.NewInt(defaultBlockNumber),
+				msg: func() microstaking.EditMap3Node {
+					msg := defaultMsgEditMap3Node()
+					msg.OperatorAddress = makeTestAddr("invalid operator")
+					return msg
+				}(),
+				signer: makeTestAddr("invalid operator"),
+			},
+			wantErr: errInvalidMap3NodeOperator,
+		},
+		{
+			name: "signature cannot be verified",
+			args: args{
+				stateDB:  makeStateDBForMicrostaking(t),
+				epoch:    big.NewInt(defaultEpoch),
+				blockNum: big.NewInt(defaultBlockNumber),
+				msg: func() microstaking.EditMap3Node {
+					msg := defaultMsgEditMap3Node()
+					msg.NodeKeyToAddSig = &blsKeys[13].sig
+					return msg
+				}(),
+				signer: operatorAddr,
+			},
+			wantErr: errors.New("bls keys and corresponding signatures could not be verified"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			verifier, _ := NewStakingVerifier(makeFakeChainContextForStake(t))
+			err := verifier.VerifyEditMap3NodeMsg(tt.args.stateDB, tt.args.epoch, tt.args.blockNum, &tt.args.msg, tt.args.signer)
+			if assErr := assertError(err, tt.wantErr); assErr != nil {
+				t.Errorf("Test - %v: %v", tt.name, err)
+			}
+		})
+	}
+}
+
+var (
+	editDesc2 = microstaking.Description_{
+		Name:            "batman",
+		Identity:        "batman",
+		Website:         "",
+		SecurityContact: "",
+		Details:         "",
+	}
+)
+
+func defaultMsgEditMap3Node() microstaking.EditMap3Node {
+	var (
+		pub0Copy  microstaking.BLSPublicKey_
+		pub12Copy microstaking.BLSPublicKey_
+		sig12Copy common2.BLSSignature
+	)
+	copy(pub0Copy.Key[:], blsKeys[0].pub2.Key[:])
+	copy(pub12Copy.Key[:], blsKeys[12].pub2.Key[:])
+	copy(sig12Copy[:], blsKeys[12].sig[:])
+
+	return microstaking.EditMap3Node{
+		Map3NodeAddress: map3NodeAddr,
+		OperatorAddress: operatorAddr,
+		Description:     editDesc2,
+		NodeKeyToRemove: &pub0Copy,
+		NodeKeyToAdd:    &pub12Copy,
+		NodeKeyToAddSig: &sig12Copy,
+	}
+}
+
+
+
+
+
+
+
+
+
 
 // makeStateDBForMicrostaking make the default state db for restaking test
 func makeStateDBForMicrostaking(t *testing.T) *state.StateDB {

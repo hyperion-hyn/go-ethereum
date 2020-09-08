@@ -1059,6 +1059,10 @@ func (chain *fakeChainContext) ReadValidatorAtEpochOrCurrentBlock(epoch *big.Int
 	return stateDB.ValidatorByAddress(validatorAddr)
 }
 
+func (chain *fakeChainContext) ReadCommitteeAtEpoch(epoch *big.Int) (*restaking.Storage_Committee_, error) {
+	panic("no implement")
+}
+
 func (chain *fakeChainContext) Config() *params.ChainConfig {
 	// TODO(ATLAS): restaking enable
 	return &params.ChainConfig{Atlas: &params.AtlasConfig{RestakingEnable: false}}
