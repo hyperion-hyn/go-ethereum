@@ -60,7 +60,7 @@ import (
 
 // Ethereum implements the Ethereum full node service.
 type Ethereum struct {
-	ctx         *node.ServiceContext
+	ctx         *node.Node
 	config      *Config
 	chainConfig *params.ChainConfig
 
@@ -137,9 +137,9 @@ func New(stack *node.Node, config *Config) (*Ethereum, error) {
 	log.Info("Initialised chain configuration", "config", chainConfig)
 
 	eth := &Ethereum{
-		ctx:            ctx,
+		ctx:               stack,
 		config:            config,
-		chainConfig:    chainConfig,
+		chainConfig:       chainConfig,
 		chainDb:           chainDb,
 		eventMux:          stack.EventMux(),
 		accountManager:    stack.AccountManager(),
@@ -162,7 +162,7 @@ func New(stack *node.Node, config *Config) (*Ethereum, error) {
 
 	// force to set the istanbul etherbase to node key address
 	if chainConfig.Istanbul != nil {
-		eth.etherbase = crypto.PubkeyToAddress(ctx.NodeKey().PublicKey)
+		eth.etherbase = crypto.PubkeyToAddress(stack.Config().NodeKey().PublicKey)
 	}
 
 	if !config.SkipBcVersionCheck {
@@ -272,7 +272,7 @@ func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, co
 		config.Istanbul.ProposerPolicy = istanbul.ProposerPolicy(chainConfig.Istanbul.ProposerPolicy)
 		config.Istanbul.Ceil2Nby3Block = chainConfig.Istanbul.Ceil2Nby3Block
 
-		return istanbulBackend.New(&config.Istanbul, ctx.NodeKey(), db)
+		return istanbulBackend.New(&config.Istanbul, stack.Config().NodeKey(), db)
 	}
 
 	// If Atlas is required, set it up
@@ -302,11 +302,11 @@ func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, co
 			CacheDir:         stack.ResolvePath(config.Ethash.CacheDir),
 			CachesInMem:      config.Ethash.CachesInMem,
 			CachesOnDisk:     config.Ethash.CachesOnDisk,
-			CachesLockMmap:   config.CachesLockMmap,
+			CachesLockMmap:   config.Ethash.CachesLockMmap,
 			DatasetDir:       config.Ethash.DatasetDir,
 			DatasetsInMem:    config.Ethash.DatasetsInMem,
 			DatasetsOnDisk:   config.Ethash.DatasetsOnDisk,
-			DatasetsLockMmap: config.DatasetsLockMmap,
+			DatasetsLockMmap: config.Ethash.DatasetsLockMmap,
 		}, notify, noverify)
 		engine.SetThreads(-1) // Disable CPU mining
 		return engine
@@ -504,9 +504,9 @@ func (s *Ethereum) StartMining(threads int) error {
 
 		if atlas, ok := s.engine.(consensus.EngineEx); ok {
 			// ATLAS(zgx): should put signer key into eth.Config instead of p2p.Config, because signer key can be indepent to p2p
-			signer := crypto.PubkeyToSigner(s.ctx.SignerKey().GetPublicKey())
+			signer := crypto.PubkeyToSigner(s.ctx.Config().SignerKey().GetPublicKey())
 			signFn := func(account accounts.Account, hash common.Hash) ([]byte, []byte, []byte, error) {
-				secrectKey := s.ctx.SignerKey()
+				secrectKey := s.ctx.Config().SignerKey()
 				sign := secrectKey.SignHash(hash.Bytes())
 
 				// ATLAS(zgx): only one signer, so set mask to byte 1 here.
