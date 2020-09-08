@@ -1,10 +1,11 @@
 # Build Geth in a stock Go builder container
 FROM golang:1.15-alpine as builder
 
-RUN apk add --no-cache make gcc musl-dev linux-headers git
+RUN apk add --no-cache make gcc musl-dev linux-headers git \
+    pkgconf g++ gmp-dev openssl-dev
 
 ADD . /go-ethereum
-RUN cd /go-ethereum && make geth
+RUN cd /go-ethereum && make clean && make third_party && make all
 
 # Pull Geth into a second stage deploy alpine container
 FROM alpine:latest
