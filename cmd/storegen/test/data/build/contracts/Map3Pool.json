@@ -1,0 +1,851 @@
+{
+  "abi": [
+    {
+      "inputs": [],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [],
+      "name": "Length",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "Version",
+      "outputs": [
+        {
+          "internalType": "int256",
+          "name": "",
+          "type": "int256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": "608060405234801561001057600080fd5b5061029a6026819055506040518060400160405280600881526020017f4879706572696f6e00000000000000000000000000000000000000000000000081525060279080519060200190610065929190610877565b506001600660000160006101000a81548160ff02191690831515021790555073a07306b4d845bd243da172aee557893172ccd04a600660000160016101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff1602179055506802c3c465ca58ec00006006600301600001600001819055506746ea5ded123f000060066003016000016001016000018190555060ee60f81b600660070160050160006101000a81548160ff021916908360f81c021790555064123456789a60d81b600660070160050160016101000a81548164ffffffffff021916908360d81c02179055506001600660070160050160066101000a81548160ff02191690831515021790555060008090505b60098110156101d95760ff811660f81b600660070160070182600981106101ac57fe5b602091828204019190066101000a81548160ff021916908360f81c02179055508080600101915050610189565b5060008090505b61012c8110156102325760ff811660f81b60066007016008018261012c811061020557fe5b602091828204019190066101000a81548160ff021916908360f81c021790555080806001019150506101e0565b5063deadbeef600660070160120160006004811061024c57fe5b600891828204019190066004026101000a81548163ffffffff021916908363ffffffff16021790555063beeddeed600660070160120160016004811061028e57fe5b600891828204019190066004026101000a81548163ffffffff021916908363ffffffff16021790555063facecafe60066007016012016002600481106102d057fe5b600891828204019190066004026101000a81548163ffffffff021916908363ffffffff16021790555063feedc0de600660070160120160036004811061031257fe5b600891828204019190066004026101000a81548163ffffffff021916908363ffffffff16021790555065ee61f99c1c0460066007016013016005600c811061035657fe5b600591828204019190066006026101000a81548165ffffffffffff021916908365ffffffffffff16021790555061beef600660070160160160006002811061039a57fe5b018190555061dead60066007016016016001600281106103b657fe5b01819055506040518060400160405280601781526020017f4879706572696f6e202d20e6b5b7e4bcafe588a9e5ae890000000000000000008152506006600701600001908051906020019061040c929190610877565b5060405180610140016040528061010c8152602001610c0761010c913960066007016004019080519060200190610444929190610877565b5060405180610100016040528060d88152602001610d1360d89139600660020190805190602001906104779291906108f7565b5063deadbeef60008001600073a07306b4d845bd243da172aee557893172ccd04a73ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020016000206029018190555061beef60008001600073a07306b4d845bd243da172aee557893172ccd04a73ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020016000206020016000733cb0b0b6d52885760a5404eb0a593b979c88bcef73ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060090160026003811061059457fe5b600402016001600281106105a457fe5b600202016000018190555061dead60008001600073a07306b4d845bd243da172aee557893172ccd04a73ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020016000206020016000733cb0b0b6d52885760a5404eb0a593b979c88bcef73ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060090160006003811061066a57fe5b6004020160006002811061067a57fe5b600202016000018190555060008090505b600a8110156107695760008001600073a07306b4d845bd243da172aee557893172ccd04a73ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020016000206020016000733cb0b0b6d52885760a5404eb0a593b979c88bcef73ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060040160018160018154018082558091505003906000526020600020905050808060010191505061068b565b5061778860008001600073a07306b4d845bd243da172aee557893172ccd04a73ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020016000206020016000733cb0b0b6d52885760a5404eb0a593b979c88bcef73ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060040160058154811061082557fe5b9060005260206000209060020201600001819055506001600060030160405161084d90610a02565b908152602001604051809103902060006101000a81548160ff021916908315150217905550610a22565b828054600181600116156101000203166002900490600052602060002090601f016020900481019282601f106108b857805160ff19168380011785556108e6565b828001600101855582156108e6579182015b828111156108e55782518255916020019190600101906108ca565b5b5090506108f39190610977565b5090565b828054600181600116156101000203166002900490600052602060002090601f016020900481019282601f1061093857805160ff1916838001178555610966565b82800160010185558215610966579182015b8281111561096557825182559160200191906001019061094a565b5b5090506109739190610977565b5090565b61099991905b8082111561099557600081600090555060010161097d565b5090565b90565b60006109a9602a83610a17565b91507f307841303733303662346438343542443234334461313732616545353537383960008301527f33313732636364303461000000000000000000000000000000000000000000006020830152602a82019050919050565b6000610a0d8261099c565b9150819050919050565b600081905092915050565b6101d680610a316000396000f3fe608060405234801561001057600080fd5b50600436106100365760003560e01c8063821728821461003b578063bb62860d14610059575b600080fd5b610043610077565b6040516100509190610171565b60405180910390f35b61006161012e565b60405161006e9190610156565b60405180910390f35b600080600001600073a07306b4d845bd243da172aee557893172ccd04a73ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020016000206020016000733cb0b0b6d52885760a5404eb0a593b979c88bcef73ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060040180549050905090565b6000602654905090565b6101418161018c565b82525050565b61015081610196565b82525050565b600060208201905061016b6000830184610138565b92915050565b60006020820190506101866000830184610147565b92915050565b6000819050919050565b600081905091905056fea26469706673582212208e90eceffe0b4074829f15abcb094a87f6d16204ba5b74b41ff838be4aa0af1164736f6c634300060a00334879706572696f6e2c206120646563656e7472616c697a6564206d617020706c6174666f726d2c2061696d7320746f20616368696576652074686520e2809c4f6e65204d6170e2809d20766973696f6e202d20746f2070726f7669646520616e20756e69666965642076696577206f6620676c6f62616c206d6170206461746120616e6420736572766963652c20616e6420746f206d616b6520697420756e6976657273616c6c792061636365737369626c65206a757374206c696b652061207075626c6963207574696c69747920666f72203130422070656f706c652e0ae6b5b7e4bcafe588a9e5ae89e698afe58ebbe4b8ade5bf83e58c96e79a84e59cb0e59bbee7949fe68081e380824d4947664d413047435371475349623344514542415155414134474e4144434269514b4267514451426b51643276554a74794e61324d427734693853304e396b514141487757647231443543505767762f39477347564341556d4c5a684c563645354a6372734c3366634b70616b2b6f4f2b583363686666674f414e566f6c76777150554a6966316369696d6f4d69454f55372b61754c685470526f6858343470686f434a374a3943316e6b6c5478314c36594844726e4d70766c41755266305636484d35526f304c35364c554d775a6d77494441514142",
+  "deployedBytecode": "608060405234801561001057600080fd5b50600436106100365760003560e01c8063821728821461003b578063bb62860d14610059575b600080fd5b610043610077565b6040516100509190610171565b60405180910390f35b61006161012e565b60405161006e9190610156565b60405180910390f35b600080600001600073a07306b4d845bd243da172aee557893172ccd04a73ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020016000206020016000733cb0b0b6d52885760a5404eb0a593b979c88bcef73ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060040180549050905090565b6000602654905090565b6101418161018c565b82525050565b61015081610196565b82525050565b600060208201905061016b6000830184610138565b92915050565b60006020820190506101866000830184610147565b92915050565b6000819050919050565b600081905091905056fea26469706673582212208e90eceffe0b4074829f15abcb094a87f6d16204ba5b74b41ff838be4aa0af1164736f6c634300060a0033",
+  "storage-layout": {
+    "storage": [
+      {
+        "astId": 177,
+        "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+        "label": "pool",
+        "offset": 0,
+        "slot": "0",
+        "type": "t_struct(Map3NodePool_t)175_storage"
+      },
+      {
+        "astId": 179,
+        "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+        "label": "node",
+        "offset": 0,
+        "slot": "6",
+        "type": "t_struct(Map3Node_t)73_storage"
+      },
+      {
+        "astId": 181,
+        "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+        "label": "version",
+        "offset": 0,
+        "slot": "38",
+        "type": "t_int256"
+      },
+      {
+        "astId": 183,
+        "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+        "label": "name",
+        "offset": 0,
+        "slot": "39",
+        "type": "t_string_storage"
+      },
+      {
+        "astId": 186,
+        "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+        "label": "addrs",
+        "offset": 0,
+        "slot": "40",
+        "type": "t_array(t_address)dyn_storage"
+      },
+      {
+        "astId": 189,
+        "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+        "label": "signatures",
+        "offset": 0,
+        "slot": "41",
+        "type": "t_array(t_uint48)dyn_storage"
+      }
+    ],
+    "types": {
+      "t_address": {
+        "encoding": "inplace",
+        "label": "address",
+        "numberOfBytes": "20"
+      },
+      "t_array(t_address)dyn_storage": {
+        "base": "t_address",
+        "encoding": "dynamic_array",
+        "label": "address[]",
+        "numberOfBytes": "32"
+      },
+      "t_array(t_array(t_struct(PendingDelegation_t)83_storage)2_storage)3_storage": {
+        "base": "t_array(t_struct(PendingDelegation_t)83_storage)2_storage",
+        "encoding": "inplace",
+        "label": "struct Map3Pool.PendingDelegation_t[2][3]",
+        "numberOfBytes": "384"
+      },
+      "t_array(t_bytes1)1_storage": {
+        "base": "t_bytes1",
+        "encoding": "inplace",
+        "label": "bytes1[1]",
+        "numberOfBytes": "32"
+      },
+      "t_array(t_bytes1)300_storage": {
+        "base": "t_bytes1",
+        "encoding": "inplace",
+        "label": "bytes1[300]",
+        "numberOfBytes": "320"
+      },
+      "t_array(t_bytes1)9_storage": {
+        "base": "t_bytes1",
+        "encoding": "inplace",
+        "label": "bytes1[9]",
+        "numberOfBytes": "32"
+      },
+      "t_array(t_struct(PendingDelegation_t)83_storage)2_storage": {
+        "base": "t_struct(PendingDelegation_t)83_storage",
+        "encoding": "inplace",
+        "label": "struct Map3Pool.PendingDelegation_t[2]",
+        "numberOfBytes": "128"
+      },
+      "t_array(t_struct(PendingDelegation_t)83_storage)dyn_storage": {
+        "base": "t_struct(PendingDelegation_t)83_storage",
+        "encoding": "dynamic_array",
+        "label": "struct Map3Pool.PendingDelegation_t[]",
+        "numberOfBytes": "32"
+      },
+      "t_array(t_struct(Undelegation_t)78_storage)dyn_storage": {
+        "base": "t_struct(Undelegation_t)78_storage",
+        "encoding": "dynamic_array",
+        "label": "struct Map3Pool.Undelegation_t[]",
+        "numberOfBytes": "32"
+      },
+      "t_array(t_uint256)2_storage": {
+        "base": "t_uint256",
+        "encoding": "inplace",
+        "label": "uint256[2]",
+        "numberOfBytes": "64"
+      },
+      "t_array(t_uint32)4_storage": {
+        "base": "t_uint32",
+        "encoding": "inplace",
+        "label": "uint32[4]",
+        "numberOfBytes": "32"
+      },
+      "t_array(t_uint48)12_storage": {
+        "base": "t_uint48",
+        "encoding": "inplace",
+        "label": "uint48[12]",
+        "numberOfBytes": "96"
+      },
+      "t_array(t_uint48)dyn_storage": {
+        "base": "t_uint48",
+        "encoding": "dynamic_array",
+        "label": "uint48[]",
+        "numberOfBytes": "32"
+      },
+      "t_bool": {
+        "encoding": "inplace",
+        "label": "bool",
+        "numberOfBytes": "1"
+      },
+      "t_bytes1": {
+        "encoding": "inplace",
+        "label": "bytes1",
+        "numberOfBytes": "1"
+      },
+      "t_bytes5": {
+        "encoding": "inplace",
+        "label": "bytes5",
+        "numberOfBytes": "5"
+      },
+      "t_bytes_storage": {
+        "encoding": "bytes",
+        "label": "bytes",
+        "numberOfBytes": "32"
+      },
+      "t_int256": {
+        "encoding": "inplace",
+        "label": "int256",
+        "numberOfBytes": "32"
+      },
+      "t_mapping(t_address,t_bool)": {
+        "encoding": "mapping",
+        "key": "t_address",
+        "label": "mapping(address => bool)",
+        "numberOfBytes": "32",
+        "value": "t_bool"
+      },
+      "t_mapping(t_address,t_mapping(t_address,t_bool))": {
+        "encoding": "mapping",
+        "key": "t_address",
+        "label": "mapping(address => mapping(address => bool))",
+        "numberOfBytes": "32",
+        "value": "t_mapping(t_address,t_bool)"
+      },
+      "t_mapping(t_address,t_struct(Map3NodeWrapper_t)141_storage)": {
+        "encoding": "mapping",
+        "key": "t_address",
+        "label": "mapping(address => struct Map3Pool.Map3NodeWrapper_t)",
+        "numberOfBytes": "32",
+        "value": "t_struct(Map3NodeWrapper_t)141_storage"
+      },
+      "t_mapping(t_address,t_struct(Microdelegation_t)108_storage)": {
+        "encoding": "mapping",
+        "key": "t_address",
+        "label": "mapping(address => struct Map3Pool.Microdelegation_t)",
+        "numberOfBytes": "32",
+        "value": "t_struct(Microdelegation_t)108_storage"
+      },
+      "t_mapping(t_string_memory_ptr,t_bool)": {
+        "encoding": "mapping",
+        "key": "t_string_memory_ptr",
+        "label": "mapping(string => bool)",
+        "numberOfBytes": "32",
+        "value": "t_bool"
+      },
+      "t_mapping(t_string_memory_ptr,t_uint256)": {
+        "encoding": "mapping",
+        "key": "t_string_memory_ptr",
+        "label": "mapping(string => uint256)",
+        "numberOfBytes": "32",
+        "value": "t_uint256"
+      },
+      "t_mapping(t_uint64,t_struct(Map3NodeSnapshot_t)148_storage)": {
+        "encoding": "mapping",
+        "key": "t_uint64",
+        "label": "mapping(uint64 => struct Map3Pool.Map3NodeSnapshot_t)",
+        "numberOfBytes": "32",
+        "value": "t_struct(Map3NodeSnapshot_t)148_storage"
+      },
+      "t_string_memory_ptr": {
+        "encoding": "bytes",
+        "label": "string",
+        "numberOfBytes": "32"
+      },
+      "t_string_storage": {
+        "encoding": "bytes",
+        "label": "string",
+        "numberOfBytes": "32"
+      },
+      "t_struct(CommissionRates_t)12_storage": {
+        "encoding": "inplace",
+        "label": "struct Map3Pool.CommissionRates_t",
+        "members": [
+          {
+            "astId": 7,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "Rate",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint256"
+          },
+          {
+            "astId": 9,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "MaxRate",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_struct(Decimal)5_storage"
+          },
+          {
+            "astId": 11,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "MaxChangeRate",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_uint256"
+          }
+        ],
+        "numberOfBytes": "96"
+      },
+      "t_struct(Commission_t)17_storage": {
+        "encoding": "inplace",
+        "label": "struct Map3Pool.Commission_t",
+        "members": [
+          {
+            "astId": 14,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "CommissionRates",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_struct(CommissionRates_t)12_storage"
+          },
+          {
+            "astId": 16,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "UpdateHeight",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_uint256"
+          }
+        ],
+        "numberOfBytes": "128"
+      },
+      "t_struct(Decimal)5_storage": {
+        "encoding": "inplace",
+        "label": "struct Map3Pool.Decimal",
+        "members": [
+          {
+            "astId": 4,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "f",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint256"
+          }
+        ],
+        "numberOfBytes": "32"
+      },
+      "t_struct(Description_t)58_storage": {
+        "encoding": "inplace",
+        "label": "struct Map3Pool.Description_t",
+        "members": [
+          {
+            "astId": 19,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "Name",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_string_storage"
+          },
+          {
+            "astId": 21,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "Identity",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_string_storage"
+          },
+          {
+            "astId": 23,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "WebSite",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_string_storage"
+          },
+          {
+            "astId": 25,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "SecurityContract",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_string_storage"
+          },
+          {
+            "astId": 27,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "Details",
+            "offset": 0,
+            "slot": "4",
+            "type": "t_string_storage"
+          },
+          {
+            "astId": 29,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "Frozen",
+            "offset": 0,
+            "slot": "5",
+            "type": "t_bytes1"
+          },
+          {
+            "astId": 31,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "Serial",
+            "offset": 1,
+            "slot": "5",
+            "type": "t_bytes5"
+          },
+          {
+            "astId": 33,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "Destroyed",
+            "offset": 6,
+            "slot": "5",
+            "type": "t_bool"
+          },
+          {
+            "astId": 37,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "Flag",
+            "offset": 0,
+            "slot": "6",
+            "type": "t_array(t_bytes1)1_storage"
+          },
+          {
+            "astId": 41,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "Symbol",
+            "offset": 0,
+            "slot": "7",
+            "type": "t_array(t_bytes1)9_storage"
+          },
+          {
+            "astId": 45,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "Signature",
+            "offset": 0,
+            "slot": "8",
+            "type": "t_array(t_bytes1)300_storage"
+          },
+          {
+            "astId": 49,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "Feature",
+            "offset": 0,
+            "slot": "18",
+            "type": "t_array(t_uint32)4_storage"
+          },
+          {
+            "astId": 53,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "Mac",
+            "offset": 0,
+            "slot": "19",
+            "type": "t_array(t_uint48)12_storage"
+          },
+          {
+            "astId": 57,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "Version",
+            "offset": 0,
+            "slot": "22",
+            "type": "t_array(t_uint256)2_storage"
+          }
+        ],
+        "numberOfBytes": "768"
+      },
+      "t_struct(Map3NodePool_t)175_storage": {
+        "encoding": "inplace",
+        "label": "struct Map3Pool.Map3NodePool_t",
+        "members": [
+          {
+            "astId": 152,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "Nodes",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_mapping(t_address,t_struct(Map3NodeWrapper_t)141_storage)"
+          },
+          {
+            "astId": 156,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "NodeSnapshotByEpoch",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_mapping(t_uint64,t_struct(Map3NodeSnapshot_t)148_storage)"
+          },
+          {
+            "astId": 162,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "NodeAddressSetByDelegator",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_mapping(t_address,t_mapping(t_address,t_bool))"
+          },
+          {
+            "astId": 166,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "NodeKeySet",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_mapping(t_string_memory_ptr,t_bool)"
+          },
+          {
+            "astId": 170,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "DescriptionIdentitySet",
+            "offset": 0,
+            "slot": "4",
+            "type": "t_mapping(t_string_memory_ptr,t_bool)"
+          },
+          {
+            "astId": 174,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "NodePriority",
+            "offset": 0,
+            "slot": "5",
+            "type": "t_mapping(t_string_memory_ptr,t_uint256)"
+          }
+        ],
+        "numberOfBytes": "192"
+      },
+      "t_struct(Map3NodeSnapshot_t)148_storage": {
+        "encoding": "inplace",
+        "label": "struct Map3Pool.Map3NodeSnapshot_t",
+        "members": [
+          {
+            "astId": 145,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "Map3Nodes",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_mapping(t_address,t_struct(Map3NodeWrapper_t)141_storage)"
+          },
+          {
+            "astId": 147,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "Epoch",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_uint256"
+          }
+        ],
+        "numberOfBytes": "64"
+      },
+      "t_struct(Map3NodeWrapper_t)141_storage": {
+        "encoding": "inplace",
+        "label": "struct Map3Pool.Map3NodeWrapper_t",
+        "members": [
+          {
+            "astId": 126,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "Map3Node",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_struct(Map3Node_t)73_storage"
+          },
+          {
+            "astId": 130,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "Microdelegations",
+            "offset": 0,
+            "slot": "32",
+            "type": "t_mapping(t_address,t_struct(Microdelegation_t)108_storage)"
+          },
+          {
+            "astId": 132,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "RedelegationReference",
+            "offset": 0,
+            "slot": "33",
+            "type": "t_struct(RedelegationReference_t)113_storage"
+          },
+          {
+            "astId": 134,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "AccumulatedReward",
+            "offset": 0,
+            "slot": "35",
+            "type": "t_uint256"
+          },
+          {
+            "astId": 136,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "nodeState",
+            "offset": 0,
+            "slot": "36",
+            "type": "t_struct(NodeState_t)124_storage"
+          },
+          {
+            "astId": 138,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "TotalDelegation",
+            "offset": 0,
+            "slot": "41",
+            "type": "t_uint256"
+          },
+          {
+            "astId": 140,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "TotalPendingDelegation",
+            "offset": 0,
+            "slot": "42",
+            "type": "t_uint256"
+          }
+        ],
+        "numberOfBytes": "1376"
+      },
+      "t_struct(Map3Node_t)73_storage": {
+        "encoding": "inplace",
+        "label": "struct Map3Pool.Map3Node_t",
+        "members": [
+          {
+            "astId": 60,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "Actived",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_bool"
+          },
+          {
+            "astId": 62,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "NodeAddress",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_address"
+          },
+          {
+            "astId": 64,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "InitiatorAddress",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_address"
+          },
+          {
+            "astId": 66,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "NodeKeys",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_bytes_storage"
+          },
+          {
+            "astId": 68,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "Commission",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_struct(Commission_t)17_storage"
+          },
+          {
+            "astId": 70,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "Description",
+            "offset": 0,
+            "slot": "7",
+            "type": "t_struct(Description_t)58_storage"
+          },
+          {
+            "astId": 72,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "SplittedFrom",
+            "offset": 0,
+            "slot": "31",
+            "type": "t_address"
+          }
+        ],
+        "numberOfBytes": "1024"
+      },
+      "t_struct(Microdelegation_t)108_storage": {
+        "encoding": "inplace",
+        "label": "struct Map3Pool.Microdelegation_t",
+        "members": [
+          {
+            "astId": 85,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "DelegatorAddress",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_address"
+          },
+          {
+            "astId": 87,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "Amount",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_uint256"
+          },
+          {
+            "astId": 89,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "Reward",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_uint256"
+          },
+          {
+            "astId": 92,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "Undelegations",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_array(t_struct(Undelegation_t)78_storage)dyn_storage"
+          },
+          {
+            "astId": 95,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "PendingDelegations",
+            "offset": 0,
+            "slot": "4",
+            "type": "t_array(t_struct(PendingDelegation_t)83_storage)dyn_storage"
+          },
+          {
+            "astId": 99,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "PendingDelegationsfixed",
+            "offset": 0,
+            "slot": "5",
+            "type": "t_array(t_struct(PendingDelegation_t)83_storage)2_storage"
+          },
+          {
+            "astId": 105,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "PendingDelegationsfixed2dimension",
+            "offset": 0,
+            "slot": "9",
+            "type": "t_array(t_array(t_struct(PendingDelegation_t)83_storage)2_storage)3_storage"
+          },
+          {
+            "astId": 107,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "AutoRenew",
+            "offset": 0,
+            "slot": "21",
+            "type": "t_bool"
+          }
+        ],
+        "numberOfBytes": "704"
+      },
+      "t_struct(NodeState_t)124_storage": {
+        "encoding": "inplace",
+        "label": "struct Map3Pool.NodeState_t",
+        "members": [
+          {
+            "astId": 115,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "Status",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_bytes1"
+          },
+          {
+            "astId": 117,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "NodeAge",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_uint256"
+          },
+          {
+            "astId": 119,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "CreationEpoch",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_uint256"
+          },
+          {
+            "astId": 121,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "ActivationEpoch",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_uint256"
+          },
+          {
+            "astId": 123,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "ReleaseEpoch",
+            "offset": 0,
+            "slot": "4",
+            "type": "t_uint256"
+          }
+        ],
+        "numberOfBytes": "160"
+      },
+      "t_struct(PendingDelegation_t)83_storage": {
+        "encoding": "inplace",
+        "label": "struct Map3Pool.PendingDelegation_t",
+        "members": [
+          {
+            "astId": 80,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "Amount",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint256"
+          },
+          {
+            "astId": 82,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "Epoch",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_uint256"
+          }
+        ],
+        "numberOfBytes": "64"
+      },
+      "t_struct(RedelegationReference_t)113_storage": {
+        "encoding": "inplace",
+        "label": "struct Map3Pool.RedelegationReference_t",
+        "members": [
+          {
+            "astId": 110,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "ValidatorAddress",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_address"
+          },
+          {
+            "astId": 112,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "ReleasedTotalDelegation",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_uint256"
+          }
+        ],
+        "numberOfBytes": "64"
+      },
+      "t_struct(Undelegation_t)78_storage": {
+        "encoding": "inplace",
+        "label": "struct Map3Pool.Undelegation_t",
+        "members": [
+          {
+            "astId": 75,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "Amount",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint256"
+          },
+          {
+            "astId": 77,
+            "contract": "data/contracts/Map3Pool.sol:Map3Pool",
+            "label": "Epoch",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_uint256"
+          }
+        ],
+        "numberOfBytes": "64"
+      },
+      "t_uint256": {
+        "encoding": "inplace",
+        "label": "uint256",
+        "numberOfBytes": "32"
+      },
+      "t_uint32": {
+        "encoding": "inplace",
+        "label": "uint32",
+        "numberOfBytes": "4"
+      },
+      "t_uint48": {
+        "encoding": "inplace",
+        "label": "uint48",
+        "numberOfBytes": "6"
+      },
+      "t_uint64": {
+        "encoding": "inplace",
+        "label": "uint64",
+        "numberOfBytes": "8"
+      }
+    }
+  }
+}

@@ -42,6 +42,9 @@ const (
 	HashTy
 	FixedPointTy
 	FunctionTy
+	PointerTy
+	MappingTy
+	DecimalTy
 )
 
 // Type is the reflection of the supported argument type
@@ -50,6 +53,8 @@ type Type struct {
 	Size int
 	T    byte // Our own type checking
 
+	numberOfBytes uint
+
 	stringKind string // holds the unparsed string for deriving signatures
 
 	// Tuple relative fields
@@ -57,6 +62,27 @@ type Type struct {
 	TupleElems    []*Type      // Type information of all tuple fields
 	TupleRawNames []string     // Raw field name of all tuple fields
 	TupleType     reflect.Type // Underlying struct of the tuple
+}
+
+func (t *Type) StringKind() string {
+	return t.stringKind
+}
+
+func (t* Type) SetStringKind(value string) {
+	t.stringKind = value
+}
+
+func (t* Type) NumberOfBytes() uint {
+	switch t.T {
+	case PointerTy:
+		return t.Elem.NumberOfBytes()
+	default:
+		return t.numberOfBytes
+	}
+}
+
+func (t* Type) SetNumberOfBytes(value uint) {
+	t.numberOfBytes = value
 }
 
 var (
