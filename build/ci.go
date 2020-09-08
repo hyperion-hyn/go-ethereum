@@ -145,6 +145,7 @@ var (
 		"bionic": "golang-go",
 		"disco":  "golang-go",
 		"eoan":   "golang-go",
+		"focal":  "golang-go",
 	}
 
 	debGoBootPaths = map[string]string{
@@ -297,7 +298,7 @@ func goToolArch(arch string, cc string, subcmd string, args ...string) *exec.Cmd
 		cmd.Env = append(cmd.Env, "CC="+cc)
 	}
 	for _, e := range os.Environ() {
-		if strings.HasPrefix(e, "GOPATH=") || strings.HasPrefix(e, "GOBIN=") {
+		if strings.HasPrefix(e, "GOBIN=") {
 			continue
 		}
 		cmd.Env = append(cmd.Env, e)
@@ -355,7 +356,7 @@ func doLint(cmdline []string) {
 
 // downloadLinter downloads and unpacks golangci-lint.
 func downloadLinter(cachedir string) string {
-	const version = "1.21.0"
+	const version = "1.22.2"
 
 	csdb := build.MustLoadChecksums("build/checksums.txt")
 	base := fmt.Sprintf("golangci-lint-%s-%s-%s", version, runtime.GOOS, runtime.GOARCH)
