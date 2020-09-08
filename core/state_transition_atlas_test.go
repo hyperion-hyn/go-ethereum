@@ -147,7 +147,7 @@ func (c *saveNewValidatorCtx) makeStateAndValidator(t *testing.T) {
 	}
 	w := builder.Build()
 	c.newValidator = w
-	c.stateDB = makeStateDBForStake(t)
+	c.stateDB = makeStateDBForRestaking(t)
 	c.validatorPool = c.stateDB.ValidatorPool()
 }
 
@@ -225,7 +225,7 @@ func TestUpdateValidatorFromPoolByMsg(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			stateDB := makeStateDBForStake(t)
+			stateDB := makeStateDBForRestaking(t)
 			validatorPool := stateDB.ValidatorPool()
 			validatorSt, _ := stateDB.ValidatorByAddress(tt.msg.ValidatorAddress)
 

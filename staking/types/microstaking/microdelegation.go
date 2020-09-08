@@ -15,14 +15,16 @@ func NewMicrodelegation(delegator common.Address, amount *big.Int, unlockedEpoch
 		DelegatorAddress: delegator,
 		Amount:           big.NewInt(0),
 		Reward:           big.NewInt(0),
+		PendingDelegation: PendingDelegation_{
+			Amount:        big.NewInt(0),
+			UnlockedEpoch: common.NewDec(0),
+		},
 	}
 	if pending {
-		d.PendingDelegation = PendingDelegation_{
-			Amount:        amount,
-			UnlockedEpoch: unlockedEpoch,
-		}
+		d.PendingDelegation.Amount.Set(amount)
+		d.PendingDelegation.UnlockedEpoch = unlockedEpoch
 	} else {
-		d.Amount = amount
+		d.Amount.Set(amount)
 	}
 	return d
 }
