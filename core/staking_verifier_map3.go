@@ -12,6 +12,7 @@ import (
 )
 
 var (
+	errMap3NodeNotExist                     = errors.New("map3 node does not exist")
 	errDupMap3NodeIdentity                  = errors.New("map3 node identity exists")
 	errDupMap3NodePubKey                    = errors.New("map3 node key exists")
 	errInvalidMap3NodeOperator              = errors.New("invalid map3 node operator")
