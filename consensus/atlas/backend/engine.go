@@ -164,7 +164,11 @@ func getSigners(valSet atlas.ValidatorSet, mask []byte) ([]atlas.Validator, erro
 // VerifyHeader checks whether a header conforms to the consensus rules of a
 // given engine. Verifying the seal may be done optionally here, or explicitly
 // via the VerifySeal method.
-func (sb *backend) VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error {
+func (sb *backend) VerifyHeader(chain consensus.ChainHeaderReader, header *types.Header, seal bool) error {
+	return sb._VerifyHeader(chain.(consensus.ChainReader), header, seal)
+}
+
+func (sb *backend) _VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error {
 	return sb.verifyHeader(chain, header, nil)
 }
 
@@ -242,7 +246,11 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 // concurrently. The method returns a quit channel to abort the operations and
 // a results channel to retrieve the async verifications (the order is that of
 // the input slice).
-func (sb *backend) VerifyHeaders(chain consensus.ChainReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
+func (sb *backend) VerifyHeaders(chain consensus.ChainHeaderReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
+	return sb._VerifyHeaders(chain.(consensus.ChainReader), headers, seals)
+}
+
+func (sb *backend) _VerifyHeaders(chain consensus.ChainReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
 	abort := make(chan struct{})
 	results := make(chan error, len(headers))
 	go func() {
@@ -348,7 +356,11 @@ func verifySignature(valSet atlas.ValidatorSet, hash []byte, signature []byte, b
 
 // VerifySeal checks whether the crypto seal on a header is valid according to
 // the consensus rules of the given engine.
-func (sb *backend) VerifySeal(chain consensus.ChainReader, header *types.Header) error {
+func (sb *backend) VerifySeal(chain consensus.ChainHeaderReader, header *types.Header) error {
+	return sb._VerifySeal(chain.(consensus.ChainReader), header)
+}
+
+func (sb *backend) _VerifySeal(chain consensus.ChainReader, header *types.Header) error {
 	// get parent header and ensure the signer is in parent's validator set
 	number := header.Number.Uint64()
 	if number == 0 {
@@ -371,7 +383,11 @@ func (sb *backend) VerifySeal(chain consensus.ChainReader, header *types.Header)
 
 // Prepare initializes the consensus fields of a block header according to the
 // rules of a particular engine. The changes are executed inline.
-func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) error {
+func (sb *backend) Prepare(chain consensus.ChainHeaderReader, header *types.Header) error {
+	return sb._Prepare(chain.(consensus.ChainReader), header)
+}
+
+func (sb *backend) _Prepare(chain consensus.ChainReader, header *types.Header) error {
 	// unused fields, force to set to empty
 	header.Coinbase = common.Address{}
 	header.Nonce = emptyNonce
@@ -410,7 +426,12 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 //
 // Note, the block header and state database might be updated to reflect any
 // consensus rules that happen at finalization (e.g. block rewards).
-func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
+func (sb *backend) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
+	uncles []*types.Header) {
+	sb._Finalize(chain.(consensus.ChainReader), header, state, txs, uncles)
+}
+
+func (sb *backend) _Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header) {
 	// ATLAS(yhx): block reward
 	// No block rewards in Atlas, so the state remains as is and uncles are dropped
@@ -423,7 +444,12 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 //
 // Note, the block header and state database might be updated to reflect any
 // consensus rules that happen at finalization (e.g. block rewards).
-func (sb *backend) FinalizeAndAssemble(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
+func (sb *backend) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
+	uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
+	return sb._FinalizeAndAssemble(chain.(consensus.ChainReader), header, state, txs, uncles, receipts)
+}
+
+func (sb *backend) _FinalizeAndAssemble(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 	// ATLAS(yhx): block reward
 	// No block rewards in Atlas, so the state remains as is and uncles are dropped
@@ -436,7 +462,11 @@ func (sb *backend) FinalizeAndAssemble(chain consensus.ChainReader, header *type
 
 // Seal generates a new block for the given input block with the local miner's
 // seal place on top.
-func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) error {
+func (sb *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) error {
+	return sb._Seal(chain.(consensus.ChainReader), block, results, stop)
+}
+
+func (sb *backend) _Seal(chain consensus.ChainReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) error {
 
 	// update the block header timestamp and signature and propose the block to core engine
 	header := block.Header()
@@ -522,11 +552,11 @@ func (sb *backend) updateBlock(parent *types.Header, block *types.Block) (*types
 }
 
 // APIs returns the RPC APIs this consensus engine provides.
-func (sb *backend) APIs(chain consensus.ChainReader) []rpc.API {
+func (sb *backend) APIs(chain consensus.ChainHeaderReader) []rpc.API {
 	return []rpc.API{{
 		Namespace: "atlas",
 		Version:   "1.0",
-		Service:   &API{chain: chain, atlas: sb},
+		Service:   &API{chain: chain.(consensus.ChainReader), atlas: sb},
 		Public:    true,
 	}}
 }

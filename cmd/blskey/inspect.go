@@ -61,7 +61,7 @@ make sure to use this feature with great caution!`,
 		}
 
 		// Decrypt key with passphrase.
-		passphrase := getPassphrase(ctx)
+		passphrase := getPassphrase(ctx, false)
 		key, err := keystore.DecryptBLSKey(keyjson, passphrase)
 		if err != nil {
 			utils.Fatalf("Error decrypting key: %v", err)
@@ -70,7 +70,7 @@ make sure to use this feature with great caution!`,
 		// Output all relevant information we can retrieve.
 		showPrivate := ctx.Bool("private")
 		out := outputInspect{
-			Address: crypto.PubkeyToSigner(key.PublicKey).String(),
+			Address:   crypto.PubkeyToSigner(key.PublicKey).String(),
 			PublicKey: hex.EncodeToString(key.PrivateKey.GetPublicKey().Serialize()),
 		}
 		if showPrivate {

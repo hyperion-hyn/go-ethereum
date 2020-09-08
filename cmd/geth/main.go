@@ -363,10 +363,6 @@ func geth(ctx *cli.Context) error {
 	defer stack.Close()
 
 	startNode(ctx, stack, backend)
-
-	// Check if a valid consensus is used
-	quorumValidateConsensus(stack, ctx.GlobalBool(utils.RaftModeFlag.Name))
-
 	stack.Wait()
 	return nil
 }

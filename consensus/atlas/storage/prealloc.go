@@ -19,7 +19,7 @@ type Signer struct {
 
 func SetupValidatorsInGenesisAt(account *core.GenesisAccount, validators []*Signer) error {
 	// Prepare storage wrapper to hold state modifications.
-	stateDB, err := state.New(common.Hash{}, state.NewDatabase(rawdb.NewMemoryDatabase()))
+	stateDB, err := state.New(common.Hash{}, state.NewDatabase(rawdb.NewMemoryDatabase()), nil)
 	if err != nil {
 		return err
 	}

@@ -70,7 +70,7 @@ To sign a hash of message, use the --hash flag.
 		}
 
 		// Decrypt key with passphrase.
-		passphrase := getPassphrase(ctx)
+		passphrase := getPassphrase(ctx, false)
 		key, err := keystore.DecryptBLSKey(keyjson, passphrase)
 		if err != nil {
 			utils.Fatalf("Error decrypting key: %v", err)

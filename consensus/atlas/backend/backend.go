@@ -115,7 +115,7 @@ type backend struct {
 }
 
 // zekun: HACK
-func (sb *backend) CalcDifficulty(chain consensus.ChainReader, time uint64, parent *types.Header) *big.Int {
+func (sb *backend) CalcDifficulty(chain consensus.ChainHeaderReader, time uint64, parent *types.Header) *big.Int {
 	return new(big.Int)
 }
 

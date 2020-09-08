@@ -32,7 +32,7 @@ import (
 )
 
 type outputGenerate struct {
-	PublicKey      string
+	PublicKey string
 }
 
 var commandGenerate = cli.Command{
@@ -85,12 +85,12 @@ If you want to encrypt an existing private key, it can be specified by setting
 		id := uuid.NewRandom()
 		key := &keystore.BLSKey{
 			Id:         id,
-			PublicKey:    privateKey.GetPublicKey(),
+			PublicKey:  privateKey.GetPublicKey(),
 			PrivateKey: privateKey,
 		}
 
 		// Encrypt key with passphrase.
-		passphrase := promptPassphrase(true)
+		passphrase := getPassphrase(ctx, true)
 		keyjson, err := keystore.EncryptBLSKey(key, passphrase, keystore.StandardScryptN, keystore.StandardScryptP)
 		if err != nil {
 			utils.Fatalf("Error encrypting key: %v", err)

@@ -10,7 +10,8 @@ require (
 	github.com/VictoriaMetrics/fastcache v1.5.7
 	github.com/aristanetworks/goarista v0.0.0-20190607111240-52c2a7864a08
 	github.com/aws/aws-sdk-go v1.25.48
-	github.com/btcsuite/btcd v0.0.0-20171128150713-2e60448ffcc6
+	github.com/btcsuite/btcd v0.20.1-beta
+	github.com/btcsuite/btcutil v1.0.2
 	github.com/cespare/cp v0.1.0
 	github.com/cloudflare/cloudflare-go v0.10.2-0.20190916151808-a80f83b9add9
 	github.com/davecgh/go-spew v1.1.1
@@ -34,6 +35,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/holiman/uint256 v1.1.1
 	github.com/huin/goupnp v1.0.0
+	github.com/hyperion-hyn/bls v0.0.6
 	github.com/influxdata/influxdb v1.2.3-0.20180221223340-01288bdb0883
 	github.com/jackpal/go-nat-pmp v1.0.2-0.20160603034137-1fa385a6f458
 	github.com/julienschmidt/httprouter v1.2.0
@@ -64,7 +66,7 @@ require (
 	github.com/wsddn/go-ecdh v0.0.0-20161211032359-48726bab9208
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	golang.org/x/net v0.0.0-20200625001655-4c5254603344 // indirect
-	golang.org/x/sync v0.0.0-20181108010431-42b317875d0f
+	golang.org/x/sync v0.0.0-20190423024810-112230192c58
 	golang.org/x/sys v0.0.0-20200323222414-85ca7c5b95cd
 	golang.org/x/text v0.3.2
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4

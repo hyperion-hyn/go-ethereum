@@ -19,6 +19,7 @@ package ethapi
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
 	"strings"
@@ -43,7 +44,6 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/pkg/errors"
 	"github.com/tyler-smith/go-bip39"
 )
 
