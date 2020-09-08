@@ -12,6 +12,13 @@ GOBIN = ./build/bin
 GO ?= latest
 GORUN = env GO111MODULE=on go run
 
+TOP_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+
+CGO_CFLAGS=-I${TOP_DIR}/third_party/mcl/include -I${TOP_DIR}/third_party/bls/include ${CPPFLAGS}
+CGO_LDFLAGS=-L${TOP_DIR}/third_party/mcl/lib -L${TOP_DIR}/third_party/bls/lib ${LDFLAGS}
+
+export CGO_CFLAGS CGO_LDFLAGS
+
 geth:
 	$(GORUN) build/ci.go install ./cmd/geth
 	@echo "Done building."
