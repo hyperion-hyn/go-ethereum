@@ -39,6 +39,7 @@ type ChainContext interface {
 	// ATLAS
 	ReadValidatorAtEpoch(*big.Int, common.Address) (*restaking.Storage_ValidatorWrapper_, error)
 	ReadValidatorAtEpochOrCurrentBlock(*big.Int, common.Address) (*restaking.Storage_ValidatorWrapper_, error)
+	ReadCommitteeAtEpoch(epoch *big.Int) (*restaking.Storage_Committee_, error)
 	Config() *params.ChainConfig
 }
 
