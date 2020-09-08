@@ -280,6 +280,12 @@ func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, co
 		if chainConfig.Atlas.Epoch != 0 {
 			config.Atlas.Epoch = chainConfig.Atlas.Epoch
 		}
+		if chainConfig.Atlas.RequestTimeout != 0 {
+			config.Atlas.RequestTimeout = chainConfig.Atlas.RequestTimeout
+		}
+		if chainConfig.Atlas.Period != 0 {
+			config.Atlas.BlockPeriod = chainConfig.Atlas.Period
+		}
 		config.Atlas.ProposerPolicy = atlas.ProposerPolicy(chainConfig.Atlas.ProposerPolicy)
 		config.Atlas.Ceil2Nby3Block = chainConfig.Atlas.Ceil2Nby3Block
 
