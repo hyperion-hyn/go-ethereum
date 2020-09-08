@@ -10,7 +10,6 @@ import (
 )
 
 var (
-	ErrSelfDelegationTooSmall          = errors.New("self delegation amount too small")
 	errStateDBIsMissing                = errors.New("no stateDB was provided")
 	errChainContextMissing             = errors.New("no chain context was provided")
 	errEpochMissing                    = errors.New("no epoch was provided")

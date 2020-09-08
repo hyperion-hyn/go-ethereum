@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto/bls"
 	"github.com/ethereum/go-ethereum/params"
 	common2 "github.com/ethereum/go-ethereum/staking/types/common"
+	"github.com/ethereum/go-ethereum/staking/types/microstaking"
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	"github.com/pkg/errors"
 	"math/big"
@@ -49,7 +50,6 @@ var (
 	twentyKOnes     = new(big.Int).Mul(big.NewInt(20000), oneBig)
 	twentyFiveKOnes = new(big.Int).Mul(big.NewInt(25000), oneBig)
 	thirtyKOnes     = new(big.Int).Mul(big.NewInt(30000), oneBig)
-	hundredKOnes    = new(big.Int).Mul(big.NewInt(100000), oneBig)
 	millionOnes     = new(big.Int).Mul(big.NewInt(1000000), oneBig)
 
 	negRate           = common.NewDecWithPrec(-1, 10)
@@ -102,7 +102,7 @@ func TestCheckValidatorDuplicatedFields(t *testing.T) {
 		{
 			name: "no duplicated fields",
 			args: args{
-				state:    makeStateDBForStake(t),
+				state:    makeStateDBForRestaking(t),
 				identity: makeIdentityStr("new validator"),
 				keys:     restaking.NewBLSKeysWithBLSKey(blsKeys[11].pub),
 			},
@@ -111,7 +111,7 @@ func TestCheckValidatorDuplicatedFields(t *testing.T) {
 		{
 			name: "empty bls keys",
 			args: args{
-				state:    makeStateDBForStake(t),
+				state:    makeStateDBForRestaking(t),
 				identity: makeIdentityStr("new validator"),
 				keys:     restaking.NewEmptyBLSKeys(),
 			},
@@ -120,7 +120,7 @@ func TestCheckValidatorDuplicatedFields(t *testing.T) {
 		{
 			name: "empty identity",
 			args: args{
-				state:    makeStateDBForStake(t),
+				state:    makeStateDBForRestaking(t),
 				identity: "",
 				keys:     restaking.NewBLSKeysWithBLSKey(blsKeys[11].pub),
 			},
@@ -129,7 +129,7 @@ func TestCheckValidatorDuplicatedFields(t *testing.T) {
 		{
 			name: "identity duplication",
 			args: args{
-				state:    makeStateDBForStake(t),
+				state:    makeStateDBForRestaking(t),
 				identity: makeIdentityStr(0),
 				keys:     restaking.NewBLSKeysWithBLSKey(blsKeys[11].pub),
 			},
@@ -138,7 +138,7 @@ func TestCheckValidatorDuplicatedFields(t *testing.T) {
 		{
 			name: "bls key duplication",
 			args: args{
-				state:    makeStateDBForStake(t),
+				state:    makeStateDBForRestaking(t),
 				identity: makeIdentityStr("new validator"),
 				keys:     restaking.NewBLSKeysWithBLSKey(blsKeys[0].pub),
 			},
@@ -172,7 +172,7 @@ func TestVerifyCreateValidatorMsg(t *testing.T) {
 		{
 			name: "valid request",
 			args: args{
-				stateDB:      makeStateDBForStake(t),
+				stateDB:      makeStateDBForRestaking(t),
 				chainContext: makeFakeChainContextForStake(t),
 				blockNum:     big.NewInt(defaultBlockNumber),
 				msg:          defaultMsgCreateValidator(),
@@ -194,7 +194,7 @@ func TestVerifyCreateValidatorMsg(t *testing.T) {
 		{
 			name: "block number nil",
 			args: args{
-				stateDB:      makeStateDBForStake(t),
+				stateDB:      makeStateDBForRestaking(t),
 				chainContext: makeFakeChainContextForStake(t),
 				blockNum:     nil,
 				msg:          defaultMsgCreateValidator(),
@@ -205,7 +205,7 @@ func TestVerifyCreateValidatorMsg(t *testing.T) {
 		{
 			name: "bls collision (checkDuplicateFields)",
 			args: args{
-				stateDB:      makeStateDBForStake(t),
+				stateDB:      makeStateDBForRestaking(t),
 				chainContext: makeFakeChainContextForStake(t),
 				blockNum:     big.NewInt(defaultBlockNumber),
 				msg: func() restaking.CreateValidator {
@@ -220,7 +220,7 @@ func TestVerifyCreateValidatorMsg(t *testing.T) {
 		{
 			name: "incorrect signature",
 			args: args{
-				stateDB:      makeStateDBForStake(t),
+				stateDB:      makeStateDBForRestaking(t),
 				chainContext: makeFakeChainContextForStake(t),
 				blockNum:     big.NewInt(defaultBlockNumber),
 				msg: func() restaking.CreateValidator {
@@ -235,7 +235,7 @@ func TestVerifyCreateValidatorMsg(t *testing.T) {
 		{
 			name: "maxTotalDelegation less currentTotalDelegation",
 			args: args{
-				stateDB:      makeStateDBForStake(t),
+				stateDB:      makeStateDBForRestaking(t),
 				chainContext: makeFakeChainContextForStake(t),
 				blockNum:     big.NewInt(defaultBlockNumber),
 				msg: func() restaking.CreateValidator {
@@ -247,6 +247,7 @@ func TestVerifyCreateValidatorMsg(t *testing.T) {
 			},
 			wantErr: errors.New("total delegation can not be bigger than max_total_delegation"),
 		},
+		// TODO(ATLAS): restaking test cases
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -315,7 +316,7 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 		{
 			name: "valid request",
 			args: args{
-				stateDB:      makeStateDBForStake(t),
+				stateDB:      makeStateDBForRestaking(t),
 				chainContext: makeFakeChainContextForStake(t),
 				epoch:        big.NewInt(defaultEpoch),
 				blockNum:     big.NewInt(defaultBlockNumber),
@@ -339,7 +340,7 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 		{
 			name: "chain context nil",
 			args: args{
-				stateDB:      makeStateDBForStake(t),
+				stateDB:      makeStateDBForRestaking(t),
 				chainContext: nil,
 				epoch:        big.NewInt(defaultEpoch),
 				blockNum:     big.NewInt(defaultBlockNumber),
@@ -351,7 +352,7 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 		{
 			name: "epoch nil",
 			args: args{
-				stateDB:      makeStateDBForStake(t),
+				stateDB:      makeStateDBForRestaking(t),
 				chainContext: makeFakeChainContextForStake(t),
 				epoch:        nil,
 				blockNum:     big.NewInt(defaultBlockNumber),
@@ -363,7 +364,7 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 		{
 			name: "block number nil",
 			args: args{
-				stateDB:      makeStateDBForStake(t),
+				stateDB:      makeStateDBForRestaking(t),
 				chainContext: makeFakeChainContextForStake(t),
 				epoch:        big.NewInt(defaultEpoch),
 				blockNum:     nil,
@@ -375,7 +376,7 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 		{
 			name: "bls key collision",
 			args: args{
-				stateDB:      makeStateDBForStake(t),
+				stateDB:      makeStateDBForRestaking(t),
 				chainContext: makeFakeChainContextForStake(t),
 				epoch:        big.NewInt(defaultEpoch),
 				blockNum:     big.NewInt(defaultBlockNumber),
@@ -392,7 +393,7 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 		{
 			name: "identity collision",
 			args: args{
-				stateDB:      makeStateDBForStake(t),
+				stateDB:      makeStateDBForRestaking(t),
 				chainContext: makeFakeChainContextForStake(t),
 				epoch:        big.NewInt(defaultEpoch),
 				blockNum:     big.NewInt(defaultBlockNumber),
@@ -408,7 +409,7 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 		{
 			name: "validator not exist",
 			args: args{
-				stateDB:      makeStateDBForStake(t),
+				stateDB:      makeStateDBForRestaking(t),
 				chainContext: makeFakeChainContextForStake(t),
 				epoch:        big.NewInt(defaultEpoch),
 				blockNum:     big.NewInt(defaultBlockNumber),
@@ -424,7 +425,7 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 		{
 			name: "invalid operator",
 			args: args{
-				stateDB:      makeStateDBForStake(t),
+				stateDB:      makeStateDBForRestaking(t),
 				chainContext: makeFakeChainContextForStake(t),
 				epoch:        big.NewInt(defaultEpoch),
 				blockNum:     big.NewInt(defaultBlockNumber),
@@ -440,7 +441,7 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 		{
 			name: "invalid signer",
 			args: args{
-				stateDB:      makeStateDBForStake(t),
+				stateDB:      makeStateDBForRestaking(t),
 				chainContext: makeFakeChainContextForStake(t),
 				epoch:        big.NewInt(defaultEpoch),
 				blockNum:     big.NewInt(defaultBlockNumber),
@@ -455,7 +456,7 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 		{
 			name: "signature cannot be verified",
 			args: args{
-				stateDB:      makeStateDBForStake(t),
+				stateDB:      makeStateDBForRestaking(t),
 				chainContext: makeFakeChainContextForStake(t),
 				epoch:        big.NewInt(defaultEpoch),
 				blockNum:     big.NewInt(defaultBlockNumber),
@@ -471,7 +472,7 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 		{
 			name: "rate exceed maxRate",
 			args: args{
-				stateDB:      makeStateDBForStake(t),
+				stateDB:      makeStateDBForRestaking(t),
 				chainContext: makeFakeChainContextForStake(t),
 				epoch:        big.NewInt(defaultEpoch),
 				blockNum:     big.NewInt(defaultBlockNumber),
@@ -487,7 +488,7 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 		{
 			name: "rate exceed maxChangeRate",
 			args: args{
-				stateDB:      makeStateDBForStake(t),
+				stateDB:      makeStateDBForRestaking(t),
 				chainContext: makeFakeChainContextForStake(t),
 				epoch:        big.NewInt(defaultEpoch),
 				blockNum:     big.NewInt(defaultBlockNumber),
@@ -503,7 +504,7 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 		{
 			name: "max total delegation too small",
 			args: args{
-				stateDB:      makeStateDBForStake(t),
+				stateDB:      makeStateDBForRestaking(t),
 				chainContext: makeFakeChainContextForStake(t),
 				epoch:        big.NewInt(defaultEpoch),
 				blockNum:     big.NewInt(defaultBlockNumber),
@@ -520,7 +521,7 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 			name: "banned validator",
 			args: args{
 				stateDB: func(t *testing.T) *state.StateDB {
-					sdb := makeStateDBForStake(t)
+					sdb := makeStateDBForRestaking(t)
 					vw, err := sdb.ValidatorByAddress(validatorAddr)
 					if err != nil {
 						t.Fatal(err)
@@ -595,7 +596,7 @@ func TestVerifyRedelegateMsg(t *testing.T) {
 		{
 			name: "delegate successfully",
 			args: args{
-				stateDB:      makeStateDBForStake(t),
+				stateDB:      makeStateDBForRestaking(t),
 				chainContext: makeFakeChainContextForStake(t),
 				msg:          defaultMsgDelegate(),
 				signer:       delegatorAddr,
@@ -615,7 +616,7 @@ func TestVerifyRedelegateMsg(t *testing.T) {
 		{
 			name: "validator not exist",
 			args: args{
-				stateDB:      makeStateDBForStake(t),
+				stateDB:      makeStateDBForRestaking(t),
 				chainContext: makeFakeChainContextForStake(t),
 				msg: func() restaking.Redelegate {
 					msg := defaultMsgDelegate()
@@ -629,7 +630,7 @@ func TestVerifyRedelegateMsg(t *testing.T) {
 		{
 			name: "invalid signer",
 			args: args{
-				stateDB:      makeStateDBForStake(t),
+				stateDB:      makeStateDBForRestaking(t),
 				chainContext: makeFakeChainContextForStake(t),
 				msg:          defaultMsgDelegate(),
 				signer:       makeTestAddr("invalid operator"),
@@ -785,7 +786,7 @@ func makeDefaultSnapVWrapperForUndelegate() *restaking.ValidatorWrapper_ {
 }
 
 func makeDefaultStateForUndelegate(t *testing.T) *state.StateDB {
-	sdb := makeStateDBForStake(t)
+	sdb := makeStateDBForRestaking(t)
 	w := makeDefaultSnapVWrapperForUndelegate()
 	if err := updateStateValidators(sdb, []*restaking.ValidatorWrapper_{w}); err != nil {
 		t.Fatal(err)
@@ -882,7 +883,7 @@ func TestVerifyCollectRedelRewardsMsg(t *testing.T) {
 		{
 			name: "no reward",
 			args: args{
-				stateDB:      makeStateDBForStake(t),
+				stateDB:      makeStateDBForRestaking(t),
 				chainContext: makeFakeChainContextForStake(t),
 				msg:          defaultMsgCollectReward(),
 				signer:       operatorAddr,
@@ -910,7 +911,7 @@ func defaultMsgCollectReward() restaking.CollectReward {
 }
 
 func makeStateForReward(t *testing.T) *state.StateDB {
-	sdb := makeStateDBForStake(t)
+	sdb := makeStateDBForRestaking(t)
 	if err := addStateRewardForAddr(sdb, validatorAddr, reward00); err != nil {
 		t.Fatal(err)
 	}
@@ -930,32 +931,33 @@ func addStateRewardForAddr(sdb *state.StateDB, validator common.Address, reward 
 
 // makeFakeChainContextForStake makes the default fakeChainContext for staking test
 func makeFakeChainContextForStake(t *testing.T) *fakeChainContext {
-	stateDB := makeStateDBForStake(t)
+	stateDB := makeStateDBForRestaking(t)
 	return &fakeChainContext{stateDBs: map[uint64]*state.StateDB{
 		defaultEpoch: stateDB,
 	}}
 }
 
-// makeStateDBForStake make the default state db for staking test
-func makeStateDBForStake(t *testing.T) *state.StateDB {
+// makeStateDBForRestaking make the default state db for restaking test
+func makeStateDBForRestaking(t *testing.T) *state.StateDB {
 	sdb, err := newTestStateDB()
 	if err != nil {
 		t.Fatal(err)
 	}
-	ws := makeVWrappersForStake(defNumWrappersInState, defNumPubPerAddr)
+	ws := makeVWrappersForRestaking(defNumWrappersInState, defNumPubPerAddr)
 	if err := updateStateValidators(sdb, ws); err != nil {
 		t.Fatalf("make default state: %v", err)
 	}
 	sdb.SetNonce(createOperatorAddr, defaultNonce)
 	sdb.AddBalance(createOperatorAddr, millionOnes)
 	sdb.AddBalance(delegatorAddr, millionOnes)
-	sdb.Commit(false)
+	sdb.Commit(true)
 	return sdb
 }
 
 func updateStateValidators(sdb *state.StateDB, ws []*restaking.ValidatorWrapper_) error {
 	for _, w := range ws {
 		sdb.ValidatorPool().Validators().Put(w.Validator.ValidatorAddress, w)
+		sdb.IncrementValidatorNonce()
 		for _, k := range w.Validator.SlotPubKeys.Keys {
 			sdb.ValidatorPool().SlotKeySet().Get(k.Hex()).SetValue(true)
 		}
@@ -974,9 +976,9 @@ func newTestStateDB() (*state.StateDB, error) {
 	return state.New(common.Hash{}, state.NewDatabase(rawdb.NewMemoryDatabase()), nil)
 }
 
-// makeVWrappersForStake makes the default staking.ValidatorWrappers for
-// initialization of default state db for staking test
-func makeVWrappersForStake(num, numPubsPerVal int) []*restaking.ValidatorWrapper_ {
+// makeVWrappersForRestaking makes the default restaking.ValidatorWrappers for
+// initialization of default state db for restaking test
+func makeVWrappersForRestaking(num, numPubsPerVal int) []*restaking.ValidatorWrapper_ {
 	ws := make([]*restaking.ValidatorWrapper_, 0, num)
 	pubGetter := newBLSPubGetter(blsKeys)
 	for i := 0; i != num; i++ {
@@ -1028,6 +1030,12 @@ func (g *BLSPubGetter) getPub() restaking.BLSPublicKey_ {
 	return key.pub
 }
 
+func (g *BLSPubGetter) getPub2() microstaking.BLSPublicKey_ {
+	key := g.keys[g.index]
+	g.index++
+	return key.pub2
+}
+
 // fakeChainContext is the fake structure of ChainContext for testing
 type fakeChainContext struct {
 	stateDBs map[uint64]*state.StateDB
@@ -1057,11 +1065,11 @@ func (chain *fakeChainContext) Config() *params.ChainConfig {
 }
 
 func makeIdentityStr(item interface{}) string {
-	return fmt.Sprintf("harmony-one-%v", item)
+	return fmt.Sprintf("hyperion-hyn-%v", item)
 }
 
 func makeTestAddr(item interface{}) common.Address {
-	s := fmt.Sprintf("harmony-one-%v", item)
+	s := fmt.Sprintf("hyperion-hyn-%v", item)
 	return common.BytesToAddress([]byte(s))
 }
 
@@ -1074,8 +1082,9 @@ func makeKeyPairs(size int) []blsPubSigPair {
 }
 
 type blsPubSigPair struct {
-	pub restaking.BLSPublicKey_
-	sig common2.BLSSignature
+	pub  restaking.BLSPublicKey_
+	pub2 microstaking.BLSPublicKey_
+	sig  common2.BLSSignature
 }
 
 func makeBLSKeyPair() blsPubSigPair {
@@ -1087,10 +1096,13 @@ func makeBLSKeyPair() blsPubSigPair {
 	var pub restaking.BLSPublicKey_
 	copy(pub.Key[:], blsPub.Serialize())
 
+	var pub2 microstaking.BLSPublicKey_
+	copy(pub2.Key[:], blsPub.Serialize())
+
 	var signature common2.BLSSignature
 	copy(signature[:], sig.Serialize())
 
-	return blsPubSigPair{pub, signature}
+	return blsPubSigPair{pub: pub, pub2: pub2, sig: signature}
 }
 
 func assertError(got, expect error) error {

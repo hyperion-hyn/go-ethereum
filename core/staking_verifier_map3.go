@@ -12,6 +12,7 @@ import (
 )
 
 var (
+	errDupMap3NodeIdentity                  = errors.New("map3 node identity exists")
 	errDupMap3NodePubKey                    = errors.New("map3 node key exists")
 	errInvalidMap3NodeOperator              = errors.New("invalid map3 node operator")
 	errMicrodelegationNotExist              = errors.New("microdelegation does not exist")
@@ -20,9 +21,10 @@ var (
 	errInsufficientBalanceToUnmicrodelegate = errors.New("insufficient balance to unmicrodelegate")
 	errMicrodelegationStillLocked           = errors.New("microdelegation still locked")
 	errTerminateMap3NodeNotAllowed          = errors.New("not allow to terminate map3 node")
+	errSelfDelegationTooSmall               = errors.New("self delegation amount too small")
 
 	errInvalidMap3NodeStatusToRestake = errors.New("invalid map3 node to restake")
-	errMap3NodeAlreadyRestaking       = errors.New("map3 node already restaked.")
+	errMap3NodeAlreadyRestaking       = errors.New("map3 node already restaked")
 	errInvalidValidatorAddress        = errors.New("validator address not equal to the address of the validator map3 already restaked to")
 )
 
@@ -133,7 +135,7 @@ func checkMap3DuplicatedFields(state vm.StateDB, identity string, keys microstak
 	if identity != "" {
 		identitySet := map3NodePool.DescriptionIdentitySet()
 		if identitySet.Get(identity).Value() {
-			return errors.Wrapf(errDupIdentity, "duplicate identity %s", identity)
+			return errors.Wrapf(errDupMap3NodeIdentity, "duplicate identity %s", identity)
 		}
 	}
 	if len(keys.Keys) != 0 {
@@ -177,7 +179,7 @@ func (verifier StakingVerifier) VerifyCreateMap3NodeMsg(stateDB vm.StateDB, chai
 
 	_, minSelf, _ := network.LatestMap3StakingRequirement(blockNum, chainContext.Config())
 	if minSelf.Cmp(msg.Amount) > 0 {
-		return nil, ErrSelfDelegationTooSmall
+		return nil, errSelfDelegationTooSmall
 	}
 
 	// create map3 node
@@ -363,7 +365,7 @@ func (verifier StakingVerifier) VerifyUnmicrodelegateMsg(stateDB vm.StateDB, cha
 
 		_, minSelf, _ := network.LatestMap3StakingRequirement(blockNum, chainContext.Config())
 		if minSelf.Cmp(total) > 0 {
-			return ErrSelfDelegationTooSmall
+			return errSelfDelegationTooSmall
 		}
 	}
 	return nil
