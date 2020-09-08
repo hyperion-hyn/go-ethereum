@@ -13,3 +13,7 @@ func (lc *LightChain) ReadValidatorAtEpoch(*big.Int, common.Address) (*restaking
 func (lc *LightChain) ReadValidatorAtEpochOrCurrentBlock(*big.Int, common.Address) (*restaking.Storage_ValidatorWrapper_, error) {
 	panic("implement me")
 }
+
+func (lc *LightChain) ReadCommitteeAtEpoch(epoch *big.Int) (*restaking.Storage_Committee_, error) {
+	panic("implement me")
+}
