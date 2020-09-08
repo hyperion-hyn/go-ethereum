@@ -598,7 +598,7 @@ func TestVerifyRedelegateMsg(t *testing.T) {
 			args: args{
 				stateDB:      makeStateDBForRestaking(t),
 				chainContext: makeFakeChainContextForStake(t),
-				msg:          defaultMsgDelegate(),
+				msg:          defaultMsgRedelegate(),
 				signer:       delegatorAddr,
 			},
 			wantErr: nil,
@@ -608,7 +608,7 @@ func TestVerifyRedelegateMsg(t *testing.T) {
 			args: args{
 				stateDB:      nil,
 				chainContext: makeFakeChainContextForStake(t),
-				msg:          defaultMsgDelegate(),
+				msg:          defaultMsgRedelegate(),
 				signer:       delegatorAddr,
 			},
 			wantErr: errStateDBIsMissing,
@@ -619,7 +619,7 @@ func TestVerifyRedelegateMsg(t *testing.T) {
 				stateDB:      makeStateDBForRestaking(t),
 				chainContext: makeFakeChainContextForStake(t),
 				msg: func() restaking.Redelegate {
-					msg := defaultMsgDelegate()
+					msg := defaultMsgRedelegate()
 					msg.ValidatorAddress = makeTestAddr("addr not in chain")
 					return msg
 				}(),
@@ -632,7 +632,7 @@ func TestVerifyRedelegateMsg(t *testing.T) {
 			args: args{
 				stateDB:      makeStateDBForRestaking(t),
 				chainContext: makeFakeChainContextForStake(t),
-				msg:          defaultMsgDelegate(),
+				msg:          defaultMsgRedelegate(),
 				signer:       makeTestAddr("invalid operator"),
 			},
 			wantErr: errInvalidSigner,
@@ -650,7 +650,7 @@ func TestVerifyRedelegateMsg(t *testing.T) {
 	}
 }
 
-func defaultMsgDelegate() restaking.Redelegate {
+func defaultMsgRedelegate() restaking.Redelegate {
 	return restaking.Redelegate{
 		DelegatorAddress: delegatorAddr,
 		ValidatorAddress: validatorAddr,
