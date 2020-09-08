@@ -46,7 +46,7 @@ import (
 )
 
 const (
-	clientIdentifier = "geth" // Client identifier to advertise over the network
+	clientIdentifier = "hyperion" // Client identifier to advertise over the network
 )
 
 var (
@@ -137,6 +137,8 @@ var (
 		utils.NetrestrictFlag,
 		utils.NodeKeyFileFlag,
 		utils.NodeKeyHexFlag,
+		utils.SignerKeyFileFlag,
+		utils.SignerKeyHexFlag,
 		utils.DNSDiscoveryFlag,
 		utils.DeveloperFlag,
 		utils.DeveloperPeriodFlag,
@@ -145,6 +147,7 @@ var (
 		utils.RinkebyFlag,
 		utils.GoerliFlag,
 		utils.YoloV1Flag,
+		utils.OttomanFlag,
 		utils.VMEnableDebugFlag,
 		utils.NetworkIdFlag,
 		utils.EthStatsURLFlag,
@@ -157,6 +160,12 @@ var (
 		utils.EWASMInterpreterFlag,
 		utils.EVMInterpreterFlag,
 		configFileFlag,
+		// Quorum
+		utils.RaftModeFlag,
+		utils.EmitCheckpointsFlag,
+		utils.IstanbulRequestTimeoutFlag,
+		utils.IstanbulBlockPeriodFlag,
+		// End-Quorum
 	}
 
 	rpcFlags = []cli.Flag{
@@ -216,7 +225,7 @@ func init() {
 	// Initialize the CLI app and start Geth
 	app.Action = geth
 	app.HideVersion = true // we have a command to print the version
-	app.Copyright = "Copyright 2013-2020 The go-ethereum Authors"
+	app.Copyright = "Copyright 2013-2020 The go-ethereum Authors\n             2018-2020 The Hyperion Authors"
 	app.Commands = []cli.Command{
 		// See chaincmd.go:
 		initCommand,
@@ -362,6 +371,7 @@ func geth(ctx *cli.Context) error {
 // it unlocks any requested accounts, and starts the RPC/IPC interfaces and the
 // miner.
 func startNode(ctx *cli.Context, stack *node.Node, backend ethapi.Backend) {
+	log.DoEmitCheckpoints = ctx.GlobalBool(utils.EmitCheckpointsFlag.Name)
 	debug.Memsize.Add("node", stack)
 
 	// Start up the node itself

@@ -30,6 +30,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
@@ -594,4 +595,10 @@ func (hc *HeaderChain) Engine() consensus.Engine { return hc.engine }
 // a header chain does not have blocks available for retrieval.
 func (hc *HeaderChain) GetBlock(hash common.Hash, number uint64) *types.Block {
 	return nil
+}
+
+// ATLAS: State implements consensus.ChainReader, and return nil.
+// a header chain does not have state available for retrieval.
+func (hc *HeaderChain) StateAt(root common.Hash) (*state.StateDB, error) {
+	return nil, nil
 }

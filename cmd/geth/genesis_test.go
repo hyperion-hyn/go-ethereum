@@ -28,6 +28,23 @@ var customGenesisTests = []struct {
 	query   string
 	result  string
 }{
+	// Plain genesis file without anything extra
+	{
+		genesis: `{
+			"alloc"      : {},
+			"coinbase"   : "0x0000000000000000000000000000000000000000",
+			"difficulty" : "0x20000",
+			"extraData"  : "",
+			"gasLimit"   : "0x2fefd8",
+			"nonce"      : "0x0000000000000042",
+			"mixhash"    : "0x0000000000000000000000000000000000000000000000000000000000000000",
+			"parentHash" : "0x0000000000000000000000000000000000000000000000000000000000000000",
+			"timestamp"  : "0x00",
+			"config"     : {"isQuorum":false}
+		}`,
+		query:  "eth.getBlock(0).nonce",
+		result: "0x0000000000000042",
+	},
 	// Genesis file with an empty chain configuration (ensure missing fields work)
 	{
 		genesis: `{
@@ -40,7 +57,7 @@ var customGenesisTests = []struct {
 			"mixhash"    : "0x0000000000000000000000000000000000000000000000000000000000000000",
 			"parentHash" : "0x0000000000000000000000000000000000000000000000000000000000000000",
 			"timestamp"  : "0x00",
-			"config"     : {}
+			"config"     : {"isQuorum":false}
 		}`,
 		query:  "eth.getBlock(0).nonce",
 		result: "0x0000000000001338",
@@ -60,7 +77,8 @@ var customGenesisTests = []struct {
 			"config"     : {
 				"homesteadBlock" : 42,
 				"daoForkBlock"   : 141,
-				"daoForkSupport" : true
+				"daoForkSupport" : true,
+				"isQuorum"		 : false
 			}
 		}`,
 		query:  "eth.getBlock(0).nonce",

@@ -69,6 +69,15 @@ var YoloV1Bootnodes = []string{
 	"enode://9e1096aa59862a6f164994cb5cb16f5124d6c992cdbf4535ff7dea43ea1512afe5448dca9df1b7ab0726129603f1a3336b631e4d7a1a44c94daddd03241587f9@35.178.210.161:30303",
 }
 
+// Ottoman are the enode URLs of the P2P bootstrap nodes running on the
+// Ottoman test network.
+var OttomanBootnodes = []string{
+	"enode://851ceb576681cf1e0d46ee9f049d6c678f229d806d1b41afe5b6d3c99a43fbbb7271d60e4c43cc5535e125a61db4ea2424823a3ad2c5959e8125f546cd1a7969@13.76.136.158:30303",  //SG
+	"enode://e3b5624752b86b60aa492edd65bdc906f9861a5e9113abd8f908443d1f64395c0e2bdd2e1825154837fd72da9d2e55e4f231411d5ca99ba9c90e14ba2f5612f6@52.163.118.231:30303", //SG
+	"enode://3a1c96fe1fe9da5d4ea3b1a65bfecb4571101b519595cab6deb2eb029209353cdbc91c8d3751d0c6c00e5440657b678508e99bd9e934d4a0c1ad553fc1cb9155@13.76.140.250:30303",  //SG
+	"enode://aebe74e4ab7db8074d1cb9634dab3fd8c5745f8cc4868da2007ff754721085b189ffaf44b8041219de90b55df3ac515bbd0e1df7fde8d7684df0ecfb12534a73@52.187.45.126:30303",  //SG
+}
+
 const dnsPrefix = "enrtree://AKA3AM6LPBYEUDMVNU3BSVQJ5AD45Y7YPOHJLEF6W26QOE4VTUDPE@"
 
 // KnownDNSNetwork returns the address of a public DNS-based node list for the given

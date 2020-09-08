@@ -1,12 +1,17 @@
 package params
 
-import "math"
+import (
+	"math"
+	"math/big"
+)
 
 type AtlasConfig struct {
-	Period                uint64 `json:"period"` // Number of seconds between blocks to enforce
-	BlocksPerEpoch        uint64 `json:"epoch"`  // Epoch length to reset votes and checkpoint
-	BlocksPerHalfingCycle uint64 `json:"halfing_cycle"`
-	RestakingEnable       bool   `json:"restaking_enable"`
+	Period                uint64   `json:"period"` // Number of seconds between blocks to enforce
+	BlocksPerEpoch        uint64   `json:"epoch"`  // Epoch length to reset votes and checkpoint
+	BlocksPerHalfingCycle uint64   `json:"halfing_cycle"`
+	RestakingEnable       bool     `json:"restaking_enable"`
+	ProposerPolicy        uint64   `json:"policy"`                   // The policy for proposer selection
+	Ceil2Nby3Block        *big.Int `json:"ceil2Nby3Block,omitempty"` // Number of confirmations required to move from one state to next [2F + 1 to Ceil(2N/3)]
 }
 
 func (c *AtlasConfig) IsLastBlock(blockNum uint64) bool {
@@ -44,5 +49,5 @@ func (c *AtlasConfig) EpochByBlock(blockNum uint64) uint64 {
 }
 
 func (c *AtlasConfig) String() string {
-	return "atlas_clique"
+	return "atlas"
 }

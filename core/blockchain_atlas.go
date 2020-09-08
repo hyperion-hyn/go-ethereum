@@ -3,6 +3,7 @@ package core
 import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	"math/big"
 )
@@ -54,3 +55,6 @@ func (bc *BlockChain) ReadCommitteeAtEpoch(epoch *big.Int) (*restaking.Storage_C
 	}
 	return pool.Committee(), nil
 }
+
+// ChainDb returns the database
+func (bc *BlockChain) ChainDb() ethdb.Database { return bc.db }

@@ -32,6 +32,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/hyperion-hyn/bls/ffi/go/bls"
 	"github.com/pborman/uuid"
 )
 
@@ -46,6 +47,15 @@ type Key struct {
 	// we only store privkey as pubkey/address can be derived from it
 	// privkey in this struct is always in plaintext
 	PrivateKey *ecdsa.PrivateKey
+}
+
+type BLSKey struct {
+	Id uuid.UUID // Version 4 "random" for unique id not derived from key data
+	// to simplify lookups we also store the address
+	PublicKey *bls.PublicKey
+	// we only store privkey as pubkey/address can be derived from it
+	// privkey in this struct is always in plaintext
+	PrivateKey *bls.SecretKey
 }
 
 type keyStore interface {

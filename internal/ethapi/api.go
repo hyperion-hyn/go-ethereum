@@ -47,6 +47,15 @@ import (
 	"github.com/tyler-smith/go-bip39"
 )
 
+const (
+	defaultGasPrice = params.GWei
+)
+
+var (
+	// ErrInvalidChainID when ChainID of signer does not match that of running node
+	errInvalidChainID = errors.New("invalid chain id for signer")
+)
+
 // PublicEthereumAPI provides an API to access Ethereum related information.
 // It offers only methods that operate on public data that is freely available to anyone.
 type PublicEthereumAPI struct {

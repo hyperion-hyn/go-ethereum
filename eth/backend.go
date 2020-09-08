@@ -20,7 +20,6 @@ package eth
 import (
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/consensus/atlasclique"
 	"math/big"
 	"runtime"
 	"sync"
@@ -30,13 +29,18 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus"
+	"github.com/ethereum/go-ethereum/consensus/atlas"
+	atlasBackend "github.com/ethereum/go-ethereum/consensus/atlas/backend"
 	"github.com/ethereum/go-ethereum/consensus/clique"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
+	"github.com/ethereum/go-ethereum/consensus/istanbul"
+	istanbulBackend "github.com/ethereum/go-ethereum/consensus/istanbul/backend"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/bloombits"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/eth/filters"
 	"github.com/ethereum/go-ethereum/eth/gasprice"
@@ -56,7 +60,9 @@ import (
 
 // Ethereum implements the Ethereum full node service.
 type Ethereum struct {
-	config *Config
+	ctx         *node.Node
+	config      *Config
+	chainConfig *params.ChainConfig
 
 	// Handlers
 	txPool          *core.TxPool
@@ -87,6 +93,11 @@ type Ethereum struct {
 	p2pServer *p2p.Server
 
 	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and etherbase)
+}
+
+// HACK(joel) this was added just to make the eth chain config visible to RegisterRaftService
+func (s *Ethereum) ChainConfig() *params.ChainConfig {
+	return s.chainConfig
 }
 
 // New creates a new Ethereum object (including the
@@ -126,11 +137,13 @@ func New(stack *node.Node, config *Config) (*Ethereum, error) {
 	log.Info("Initialised chain configuration", "config", chainConfig)
 
 	eth := &Ethereum{
+		ctx:               stack,
 		config:            config,
+		chainConfig:       chainConfig,
 		chainDb:           chainDb,
 		eventMux:          stack.EventMux(),
 		accountManager:    stack.AccountManager(),
-		engine:            CreateConsensusEngine(stack, chainConfig, &config.Ethash, config.Miner.Notify, config.Miner.Noverify, chainDb),
+		engine:            CreateConsensusEngine(stack, chainConfig, config, config.Miner.Notify, config.Miner.Noverify, chainDb),
 		closeBloomHandler: make(chan struct{}),
 		networkID:         config.NetworkId,
 		gasPrice:          config.Miner.GasPrice,
@@ -146,6 +159,11 @@ func New(stack *node.Node, config *Config) (*Ethereum, error) {
 		dbVer = fmt.Sprintf("%d", *bcVersion)
 	}
 	log.Info("Initialising Ethereum protocol", "versions", ProtocolVersions, "network", config.NetworkId, "dbversion", dbVer)
+
+	// force to set the istanbul etherbase to node key address
+	if chainConfig.Istanbul != nil {
+		eth.etherbase = crypto.PubkeyToAddress(stack.Config().NodeKey().PublicKey)
+	}
 
 	if !config.SkipBcVersionCheck {
 		if bcVersion != nil && *bcVersion > core.BlockChainVersion {
@@ -199,7 +217,7 @@ func New(stack *node.Node, config *Config) (*Ethereum, error) {
 		return nil, err
 	}
 	eth.miner = miner.New(eth, &config.Miner, chainConfig, eth.EventMux(), eth.engine, eth.isLocalBlock)
-	eth.miner.SetExtra(makeExtraData(config.Miner.ExtraData))
+	eth.miner.SetExtra(makeExtraData(config.Miner.ExtraData, eth.chainConfig.IsQuorum))
 
 	eth.APIBackend = &EthAPIBackend{stack.Config().ExtRPCEnabled(), eth, nil}
 	gpoParams := config.GPO
@@ -223,7 +241,7 @@ func New(stack *node.Node, config *Config) (*Ethereum, error) {
 	return eth, nil
 }
 
-func makeExtraData(extra []byte) []byte {
+func makeExtraData(extra []byte, isQuorum bool) []byte {
 	if len(extra) == 0 {
 		// create default extradata
 		extra, _ = rlp.EncodeToBytes([]interface{}{
@@ -233,26 +251,43 @@ func makeExtraData(extra []byte) []byte {
 			runtime.GOOS,
 		})
 	}
-	if uint64(len(extra)) > params.MaximumExtraDataSize {
-		log.Warn("Miner extra data exceed limit", "extra", hexutil.Bytes(extra), "limit", params.MaximumExtraDataSize)
+	if uint64(len(extra)) > params.GetMaximumExtraDataSize(isQuorum) {
+		log.Warn("Miner extra data exceed limit", "extra", hexutil.Bytes(extra), "limit", params.GetMaximumExtraDataSize(isQuorum))
 		extra = nil
 	}
 	return extra
 }
 
 // CreateConsensusEngine creates the required type of consensus engine instance for an Ethereum service
-func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, config *ethash.Config, notify []string, noverify bool, db ethdb.Database) consensus.Engine {
+func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, config *Config, notify []string, noverify bool, db ethdb.Database) consensus.Engine {
 	// If proof-of-authority is requested, set it up
 	if chainConfig.Clique != nil {
 		return clique.New(chainConfig.Clique, db)
 	}
+	// If Istanbul is requested, set it up
+	if chainConfig.Istanbul != nil {
+		if chainConfig.Istanbul.Epoch != 0 {
+			config.Istanbul.Epoch = chainConfig.Istanbul.Epoch
+		}
+		config.Istanbul.ProposerPolicy = istanbul.ProposerPolicy(chainConfig.Istanbul.ProposerPolicy)
+		config.Istanbul.Ceil2Nby3Block = chainConfig.Istanbul.Ceil2Nby3Block
 
-	//ATLAS : add init atlas clique Engine
-	if chainConfig.Atlas != nil {
-		return atlasclique.NewAtlasClique(chainConfig.Atlas, db)
+		return istanbulBackend.New(&config.Istanbul, stack.Config().NodeKey(), db)
 	}
+
+	// If Atlas is required, set it up
+	if chainConfig.Atlas != nil {
+		if chainConfig.Atlas.BlocksPerEpoch != 0 {
+			config.Atlas.Epoch = chainConfig.Atlas.BlocksPerEpoch
+		}
+		config.Atlas.ProposerPolicy = atlas.ProposerPolicy(chainConfig.Atlas.ProposerPolicy)
+		config.Atlas.Ceil2Nby3Block = chainConfig.Atlas.Ceil2Nby3Block
+
+		return atlasBackend.New(&config.Atlas, db)
+	}
+
 	// Otherwise assume proof-of-work
-	switch config.PowMode {
+	switch config.Ethash.PowMode {
 	case ethash.ModeFake:
 		log.Warn("Ethash used in fake mode")
 		return ethash.NewFaker()
@@ -264,14 +299,14 @@ func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, co
 		return ethash.NewShared()
 	default:
 		engine := ethash.New(ethash.Config{
-			CacheDir:         stack.ResolvePath(config.CacheDir),
-			CachesInMem:      config.CachesInMem,
-			CachesOnDisk:     config.CachesOnDisk,
-			CachesLockMmap:   config.CachesLockMmap,
-			DatasetDir:       config.DatasetDir,
-			DatasetsInMem:    config.DatasetsInMem,
-			DatasetsOnDisk:   config.DatasetsOnDisk,
-			DatasetsLockMmap: config.DatasetsLockMmap,
+			CacheDir:         stack.ResolvePath(config.Ethash.CacheDir),
+			CachesInMem:      config.Ethash.CachesInMem,
+			CachesOnDisk:     config.Ethash.CachesOnDisk,
+			CachesLockMmap:   config.Ethash.CachesLockMmap,
+			DatasetDir:       config.Ethash.DatasetDir,
+			DatasetsInMem:    config.Ethash.DatasetsInMem,
+			DatasetsOnDisk:   config.Ethash.DatasetsOnDisk,
+			DatasetsLockMmap: config.Ethash.DatasetsLockMmap,
 		}, notify, noverify)
 		engine.SetThreads(-1) // Disable CPU mining
 		return engine
@@ -419,8 +454,12 @@ func (s *Ethereum) shouldPreserve(block *types.Block) bool {
 // SetEtherbase sets the mining reward address.
 func (s *Ethereum) SetEtherbase(etherbase common.Address) {
 	s.lock.Lock()
+	defer s.lock.Unlock()
+	if _, ok := s.engine.(consensus.Istanbul); ok {
+		log.Error("Cannot set etherbase in Istanbul consensus")
+		return
+	}
 	s.etherbase = etherbase
-	s.lock.Unlock()
 
 	s.miner.SetEtherbase(etherbase)
 }
@@ -462,14 +501,19 @@ func (s *Ethereum) StartMining(threads int) error {
 			}
 			clique.Authorize(eb, wallet.SignData)
 		}
-		//ATLAS
-		if clique, ok := s.engine.(*atlasclique.AtlasClique); ok {
-			wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
-			if wallet == nil || err != nil {
-				log.Error("Etherbase account unavailable locally", "err", err)
-				return fmt.Errorf("signer missing: %v", err)
+
+		if atlas, ok := s.engine.(consensus.EngineEx); ok {
+			// ATLAS(zgx): should put signer key into eth.Config instead of p2p.Config, because signer key can be indepent to p2p
+			signer := crypto.PubkeyToSigner(s.ctx.Config().SignerKey().GetPublicKey())
+			signFn := func(account accounts.Account, hash common.Hash) ([]byte, []byte, []byte, error) {
+				secrectKey := s.ctx.Config().SignerKey()
+				sign := secrectKey.SignHash(hash.Bytes())
+
+				// ATLAS(zgx): only one signer, so set mask to byte 1 here.
+				return sign.Serialize(), secrectKey.GetPublicKey().Serialize(), nil, nil
 			}
-			clique.Authorize(eb, wallet.SignData)
+
+			atlas.Authorize(signer, signFn)
 		}
 
 		// If mining is started, we can disable the transaction rejection mechanism

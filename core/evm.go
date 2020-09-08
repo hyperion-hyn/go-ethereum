@@ -17,14 +17,15 @@
 package core
 
 import (
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/staking/types/restaking"
 )
 
 // ChainContext supports retrieving headers and consensus parameters from the
@@ -37,6 +38,8 @@ type ChainContext interface {
 	GetHeader(common.Hash, uint64) *types.Header
 
 	// ATLAS
+	// Database retrieves the blockchain's database.
+	Database() ethdb.Database
 	ReadValidatorAtEpoch(*big.Int, common.Address) (*restaking.Storage_ValidatorWrapper_, error)
 	ReadValidatorAtEpochOrCurrentBlock(*big.Int, common.Address) (*restaking.Storage_ValidatorWrapper_, error)
 	ReadCommitteeAtEpoch(epoch *big.Int) (*restaking.Storage_Committee_, error)

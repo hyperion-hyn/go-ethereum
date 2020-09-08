@@ -1,0 +1,92 @@
+{
+  "abi": [
+    {
+      "inputs": [],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [],
+      "name": "Version",
+      "outputs": [
+        {
+          "internalType": "int32",
+          "name": "",
+          "type": "int32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": "6080604052348015600f57600080fd5b50608e8061001e6000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063bb62860d14602d575b600080fd5b6033604f565b604051808260030b60030b815260200191505060405180910390f35b6000601690509056fea2646970667358221220b44f6cb707213765788b93e6864e53acf071cad4da7db356766c0851df73494e64736f6c634300060a0033",
+  "deployedBytecode": "6080604052348015600f57600080fd5b506004361060285760003560e01c8063bb62860d14602d575b600080fd5b6033604f565b604051808260030b60030b815260200191505060405180910390f35b6000601690509056fea2646970667358221220b44f6cb707213765788b93e6864e53acf071cad4da7db356766c0851df73494e64736f6c634300060a0033",
+  "storage-layout": {
+    "storage": [
+      {
+        "astId": 12,
+        "contract": "contracts/consortium.sol:consortium",
+        "label": "committee",
+        "offset": 0,
+        "slot": "0",
+        "type": "t_struct(Committee_t)10_storage"
+      }
+    ],
+    "types": {
+      "t_address": {
+        "encoding": "inplace",
+        "label": "address",
+        "numberOfBytes": "20"
+      },
+      "t_array(t_struct(Validator_t)6_storage)dyn_storage": {
+        "base": "t_struct(Validator_t)6_storage",
+        "encoding": "dynamic_array",
+        "label": "struct consortium.Validator_t[]",
+        "numberOfBytes": "32"
+      },
+      "t_bytes_storage": {
+        "encoding": "bytes",
+        "label": "bytes",
+        "numberOfBytes": "32"
+      },
+      "t_struct(Committee_t)10_storage": {
+        "encoding": "inplace",
+        "label": "struct consortium.Committee_t",
+        "members": [
+          {
+            "astId": 9,
+            "contract": "contracts/consortium.sol:consortium",
+            "label": "members",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_array(t_struct(Validator_t)6_storage)dyn_storage"
+          }
+        ],
+        "numberOfBytes": "32"
+      },
+      "t_struct(Validator_t)6_storage": {
+        "encoding": "inplace",
+        "label": "struct consortium.Validator_t",
+        "members": [
+          {
+            "astId": 3,
+            "contract": "contracts/consortium.sol:consortium",
+            "label": "PublicKey",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_bytes_storage"
+          },
+          {
+            "astId": 5,
+            "contract": "contracts/consortium.sol:consortium",
+            "label": "Coinbase",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_address"
+          }
+        ],
+        "numberOfBytes": "64"
+      }
+    }
+  }
+}

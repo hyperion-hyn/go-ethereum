@@ -48,3 +48,7 @@ profile.cov
 
 **/yarn-error.log
 **/node_modules
+
+vendor/
+
+.ethereum

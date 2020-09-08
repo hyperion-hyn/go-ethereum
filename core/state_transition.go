@@ -26,6 +26,10 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 )
 
+var (
+	emptyAddress = common.Address{}
+)
+
 /*
 The State Transitioning Model
 
@@ -263,7 +267,11 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		ret, st.gas, vmerr = st.evm.Call(sender, st.to(), st.data, st.gas, st.value)
 	}
 	st.refundGas()
-	st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
+
+	if st.evm.Coinbase != emptyAddress {
+		// ATLAS(zgx): carefully
+		st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
+	}
 
 	return &ExecutionResult{
 		UsedGas:    st.gasUsed(),

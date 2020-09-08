@@ -6,6 +6,7 @@ require (
 	github.com/Azure/azure-pipeline-go v0.2.2 // indirect
 	github.com/Azure/azure-storage-blob-go v0.7.0
 	github.com/Azure/go-autorest/autorest/adal v0.8.0 // indirect
+	github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6 // indirect
 	github.com/VictoriaMetrics/fastcache v1.5.7
 	github.com/aristanetworks/goarista v0.0.0-20190607111240-52c2a7864a08
 	github.com/aws/aws-sdk-go v1.25.48
@@ -15,29 +16,34 @@ require (
 	github.com/cloudflare/cloudflare-go v0.10.2-0.20190916151808-a80f83b9add9
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckarep/golang-set v1.7.1
-	github.com/dlclark/regexp2 v1.2.0 // indirect
+	github.com/dlclark/regexp2 v1.2.1 // indirect
 	github.com/docker/docker v1.4.2-0.20180625184442-8e610b2b55bf
 	github.com/dop251/goja v0.0.0-20200219165308-d1232e640a87
 	github.com/edsrzf/mmap-go v1.0.0
 	github.com/fatih/color v1.7.0
 	github.com/fjl/memsize v0.0.0-20180929194037-2a09253e352a
 	github.com/gballet/go-libpcsclite v0.0.0-20190607065134-2772fd86a8ff
+	github.com/go-ole/go-ole v1.2.1 // indirect
 	github.com/go-sourcemap/sourcemap v2.1.2+incompatible // indirect
 	github.com/go-stack/stack v1.8.0
+	github.com/golang/mock v1.4.4
 	github.com/golang/protobuf v1.3.2
 	github.com/golang/snappy v0.0.2-0.20200707131729-196ae77b8a26
-	github.com/google/go-cmp v0.3.1 // indirect
+	github.com/google/go-cmp v0.3.1
 	github.com/gorilla/websocket v1.4.1-0.20190629185528-ae1634f6a989
 	github.com/graph-gophers/graphql-go v0.0.0-20191115155744-f33e81362277
-	github.com/harmony-one/bls v0.0.6
 	github.com/harmony-one/harmony v1.9.0
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/holiman/uint256 v1.1.1
 	github.com/huin/goupnp v1.0.0
+	github.com/hyperion-hyn/bls v0.0.6
 	github.com/influxdata/influxdb v1.2.3-0.20180221223340-01288bdb0883
 	github.com/jackpal/go-nat-pmp v1.0.2-0.20160603034137-1fa385a6f458
 	github.com/julienschmidt/httprouter v1.2.0
 	github.com/karalabe/usb v0.0.0-20190919080040-51dc0efba356
+	github.com/kr/pretty v0.1.0 // indirect
+	github.com/kylelemons/godebug v1.1.0 // indirect
+	github.com/legendtkl/godag v0.0.0-20180408040019-5a81fba2c676 // indirect
 	github.com/mattn/go-colorable v0.1.4
 	github.com/mattn/go-isatty v0.0.8
 	github.com/naoina/go-stringutil v0.1.0 // indirect
@@ -47,6 +53,7 @@ require (
 	github.com/peterh/liner v1.1.1-0.20190123174540-a2c9a5303de7
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/tsdb v0.7.1
+	github.com/protolambda/gocyto v0.0.1 // indirect
 	github.com/rjeczalik/notify v0.9.2
 	github.com/rs/cors v1.7.0
 	github.com/rs/xhandler v0.0.0-20160618193221-ed27b6fd6521 // indirect
@@ -64,9 +71,12 @@ require (
 	golang.org/x/sys v0.0.0-20200323222414-85ca7c5b95cd
 	golang.org/x/text v0.3.2
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
+	gopkg.in/karalabe/cookiejar.v2 v2.0.0-20150724131613-8dcd6a7f4951
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce
 	gopkg.in/olebedev/go-duktape.v3 v3.0.0-20200619000410-60c24ae608a6
 	gopkg.in/urfave/cli.v1 v1.20.0
 	gopkg.in/yaml.v2 v2.2.7
 	gotest.tools v2.2.0+incompatible // indirect
 )
+
+replace github.com/hyperion-hyn/bls v0.0.6 => ./third_party/bls

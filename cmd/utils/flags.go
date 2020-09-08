@@ -36,6 +36,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/fdlimit"
 	"github.com/ethereum/go-ethereum/consensus"
+	"github.com/ethereum/go-ethereum/consensus/atlas"
+	atlasBackend "github.com/ethereum/go-ethereum/consensus/atlas/backend"
 	"github.com/ethereum/go-ethereum/consensus/clique"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
 	"github.com/ethereum/go-ethereum/core"
@@ -65,6 +67,7 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	whisper "github.com/ethereum/go-ethereum/whisper/whisperv6"
 	pcsclite "github.com/gballet/go-libpcsclite"
+	"github.com/hyperion-hyn/bls/ffi/go/bls"
 	cli "gopkg.in/urfave/cli.v1"
 )
 
@@ -129,7 +132,7 @@ var (
 	}
 	NetworkIdFlag = cli.Uint64Flag{
 		Name:  "networkid",
-		Usage: "Network identifier (integer, 1=Frontier, 3=Ropsten, 4=Rinkeby, 5=Görli)",
+		Usage: "Network identifier (integer, 1=Frontier, 3=Ropsten, 4=Rinkeby, 5=Görli, 1024=Ottoman, 2048=Atlas)",
 		Value: eth.DefaultConfig.NetworkId,
 	}
 	GoerliFlag = cli.BoolFlag{
@@ -147,6 +150,14 @@ var (
 	RopstenFlag = cli.BoolFlag{
 		Name:  "ropsten",
 		Usage: "Ropsten network: pre-configured proof-of-work test network",
+	}
+	OttomanFlag = cli.BoolFlag{
+		Name:  "ottoman",
+		Usage: "Ottoman network: pre-configured istanbul bft test network",
+	}
+	AtlasFlag = cli.BoolFlag{
+		Name:  "atlas",
+		Usage: "Atlas network: pre-configured atlas test network",
 	}
 	DeveloperFlag = cli.BoolFlag{
 		Name:  "dev",
@@ -592,6 +603,14 @@ var (
 		Name:  "nodekeyhex",
 		Usage: "P2P node key as hex (for testing)",
 	}
+	SignerKeyFileFlag = cli.StringFlag{
+		Name:  "signerkey",
+		Usage: "signer key file",
+	}
+	SignerKeyHexFlag = cli.StringFlag{
+		Name:  "signerkeyhex",
+		Usage: "signer key as hex (for testing)",
+	}
 	NATFlag = cli.StringFlag{
 		Name:  "nat",
 		Usage: "NAT port mapping mechanism (any|none|upnp|pmp|extip:<IP>)",
@@ -649,6 +668,30 @@ var (
 	WhisperRestrictConnectionBetweenLightClientsFlag = cli.BoolFlag{
 		Name:  "shh.restrict-light",
 		Usage: "Restrict connection between two whisper light clients",
+	}
+
+	// Quorum
+	EmitCheckpointsFlag = cli.BoolFlag{
+		Name:  "emitcheckpoints",
+		Usage: "If enabled, emit specially formatted logging checkpoints",
+	}
+
+	// Raft flags
+	RaftModeFlag = cli.BoolFlag{
+		Name:  "istanbul",
+		Usage: "If enabled, uses Istanbul for consensus",
+	}
+
+	// Istanbul settings
+	IstanbulRequestTimeoutFlag = cli.Uint64Flag{
+		Name:  "istanbul.requesttimeout",
+		Usage: "Timeout for each Istanbul round in milliseconds",
+		Value: eth.DefaultConfig.Istanbul.RequestTimeout,
+	}
+	IstanbulBlockPeriodFlag = cli.Uint64Flag{
+		Name:  "istanbul.blockperiod",
+		Usage: "Default minimum difference between two consecutive block's timestamps in seconds",
+		Value: eth.DefaultConfig.Istanbul.BlockPeriod,
 	}
 
 	// Metrics flags
@@ -743,6 +786,9 @@ func MakeDataDir(ctx *cli.Context) string {
 		if ctx.GlobalBool(YoloV1Flag.Name) {
 			return filepath.Join(path, "yolo-v1")
 		}
+		if ctx.GlobalBool(OttomanFlag.Name) {
+			return filepath.Join(path, "ottoman")
+		}
 		return path
 	}
 	Fatalf("Cannot determine default data directory, please set manually (--datadir)")
@@ -775,6 +821,31 @@ func setNodeKey(ctx *cli.Context, cfg *p2p.Config) {
 	}
 }
 
+// setSignerKey creates a signer key from set command line flags, either loading it
+// from a file or as a specified hex value.
+func setSignerKey(ctx *cli.Context, cfg *p2p.Config) {
+	var (
+		hex  = ctx.GlobalString(SignerKeyHexFlag.Name)
+		file = ctx.GlobalString(SignerKeyFileFlag.Name)
+		key  *bls.SecretKey
+		err  error
+	)
+	switch {
+	case file != "" && hex != "":
+		Fatalf("Options %q and %q are mutually exclusive", SignerKeyFileFlag.Name, SignerKeyHexFlag.Name)
+	case file != "":
+		if key, err = crypto.LoadBLS(file); err != nil {
+			Fatalf("Option %q: %v", SignerKeyFileFlag.Name, err)
+		}
+		cfg.SignerKey = key
+	case hex != "":
+		if key, err = crypto.HexToBLS(hex); err != nil {
+			Fatalf("Option %q: %v", SignerKeyHexFlag.Name, err)
+		}
+		cfg.SignerKey = key
+	}
+}
+
 // setNodeUserIdent creates the user identifier from CLI flags.
 func setNodeUserIdent(ctx *cli.Context, cfg *node.Config) {
 	if identity := ctx.GlobalString(IdentityFlag.Name); len(identity) > 0 {
@@ -801,6 +872,8 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 		urls = params.GoerliBootnodes
 	case ctx.GlobalBool(YoloV1Flag.Name):
 		urls = params.YoloV1Bootnodes
+	case ctx.GlobalBool(OttomanFlag.Name):
+		urls = params.OttomanBootnodes
 	case cfg.BootstrapNodes != nil:
 		return // already set, don't apply defaults.
 	}
@@ -1124,6 +1197,7 @@ func MakePasswordList(ctx *cli.Context) []string {
 
 func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	setNodeKey(ctx, cfg)
+	setSignerKey(ctx, cfg)
 	setNAT(ctx, cfg)
 	setListenAddress(ctx, cfg)
 	setBootstrapNodes(ctx, cfg)
@@ -1268,6 +1342,8 @@ func setDataDir(ctx *cli.Context, cfg *node.Config) {
 		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "goerli")
 	case ctx.GlobalBool(YoloV1Flag.Name) && cfg.DataDir == node.DefaultDataDir():
 		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "yolo-v1")
+	case ctx.GlobalBool(OttomanFlag.Name) && cfg.DataDir == node.DefaultDataDir():
+		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "ottoman")
 	}
 }
 
@@ -1423,6 +1499,15 @@ func setWhitelist(ctx *cli.Context, cfg *eth.Config) {
 	}
 }
 
+func setIstanbul(ctx *cli.Context, cfg *eth.Config) {
+	if ctx.GlobalIsSet(IstanbulRequestTimeoutFlag.Name) {
+		cfg.Istanbul.RequestTimeout = ctx.GlobalUint64(IstanbulRequestTimeoutFlag.Name)
+	}
+	if ctx.GlobalIsSet(IstanbulBlockPeriodFlag.Name) {
+		cfg.Istanbul.BlockPeriod = ctx.GlobalUint64(IstanbulBlockPeriodFlag.Name)
+	}
+}
+
 // CheckExclusive verifies that only a single instance of the provided flags was
 // set by the user. Each flag might optionally be followed by a string type to
 // specialize it further.
@@ -1480,7 +1565,7 @@ func SetShhConfig(ctx *cli.Context, stack *node.Node, cfg *whisper.Config) {
 // SetEthConfig applies eth-related command line flags to the config.
 func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 	// Avoid conflicting network flags
-	CheckExclusive(ctx, DeveloperFlag, LegacyTestnetFlag, RopstenFlag, RinkebyFlag, GoerliFlag, YoloV1Flag)
+	CheckExclusive(ctx, DeveloperFlag, LegacyTestnetFlag, RopstenFlag, RinkebyFlag, GoerliFlag, YoloV1Flag, OttomanFlag)
 	CheckExclusive(ctx, LegacyLightServFlag, LightServeFlag, SyncModeFlag, "light")
 	CheckExclusive(ctx, DeveloperFlag, ExternalSignerFlag) // Can't use both ephemeral unlocked and external signer
 	CheckExclusive(ctx, GCModeFlag, "archive", TxLookupLimitFlag)
@@ -1499,6 +1584,7 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 	setMiner(ctx, &cfg.Miner)
 	setWhitelist(ctx, cfg)
 	setLes(ctx, cfg)
+	setIstanbul(ctx, cfg)
 
 	if ctx.GlobalIsSet(SyncModeFlag.Name) {
 		cfg.SyncMode = *GlobalTextMarshaler(ctx, SyncModeFlag.Name).(*downloader.SyncMode)
@@ -1605,6 +1691,16 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 			cfg.NetworkId = 133519467574833 // "yolov1"
 		}
 		cfg.Genesis = core.DefaultYoloV1GenesisBlock()
+	case ctx.GlobalBool(OttomanFlag.Name):
+		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
+			cfg.NetworkId = 1024
+		}
+		cfg.Genesis = core.DefaultOttomanGenesisBlock()
+	case ctx.GlobalBool(AtlasFlag.Name):
+		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
+			cfg.NetworkId = 2048
+		}
+		cfg.Genesis = core.DefaultAtlasGenesisBlock()
 	case ctx.GlobalBool(DeveloperFlag.Name):
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
 			cfg.NetworkId = 1337
@@ -1797,6 +1893,10 @@ func MakeGenesis(ctx *cli.Context) *core.Genesis {
 		genesis = core.DefaultGoerliGenesisBlock()
 	case ctx.GlobalBool(YoloV1Flag.Name):
 		genesis = core.DefaultYoloV1GenesisBlock()
+	case ctx.GlobalBool(OttomanFlag.Name):
+		genesis = core.DefaultOttomanGenesisBlock()
+	case ctx.GlobalBool(AtlasFlag.Name):
+		genesis = core.DefaultAtlasGenesisBlock()
 	case ctx.GlobalBool(DeveloperFlag.Name):
 		Fatalf("Developer chains are ephemeral")
 	}
@@ -1814,6 +1914,14 @@ func MakeChain(ctx *cli.Context, stack *node.Node, readOnly bool) (chain *core.B
 	var engine consensus.Engine
 	if config.Clique != nil {
 		engine = clique.New(config.Clique, chainDb)
+	} else if config.Atlas != nil {
+		atlasConfig := atlas.DefaultConfig
+		if config.Atlas.BlocksPerEpoch != 0 {
+			atlasConfig.Epoch = config.Atlas.BlocksPerEpoch
+		}
+		atlasConfig.ProposerPolicy = atlas.ProposerPolicy(config.Atlas.ProposerPolicy)
+		atlasConfig.Ceil2Nby3Block = config.Atlas.Ceil2Nby3Block
+		engine = atlasBackend.New(atlasConfig, chainDb)
 	} else {
 		engine = ethash.NewFaker()
 		if !ctx.GlobalBool(FakePoWFlag.Name) {

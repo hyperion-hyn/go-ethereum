@@ -132,6 +132,7 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, gethConfig) {
 		cfg.Ethstats.URL = ctx.GlobalString(utils.EthStatsURLFlag.Name)
 	}
 	utils.SetShhConfig(ctx, stack, &cfg.Shh)
+	cfg.Eth.RaftMode = ctx.GlobalBool(utils.RaftModeFlag.Name)
 
 	return stack, cfg
 }

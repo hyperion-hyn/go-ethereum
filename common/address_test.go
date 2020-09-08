@@ -119,7 +119,7 @@ func BenchmarkAddressToBech32(b *testing.B) {
 func TestParseAddr(t *testing.T) {
 	var tests = []struct {
 		input string
-		want  string
+		want  string		
 	}{
 		{"0x15a128e599b74842bccba860311efa92991bffb5", "0x15a128e599b74842BCcBa860311Efa92991bffb5"},
 		{"hyn1zksj3evekayy90xt4psrz8h6j2v3hla4840g9v", "0x15a128e599b74842BCcBa860311Efa92991bffb5"},

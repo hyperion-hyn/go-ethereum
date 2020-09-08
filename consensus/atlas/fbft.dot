@@ -1,0 +1,84 @@
+digraph fbft {
+    // neato -Tsvg -o fbft.svg consensus/atlas/fbft.dot && open fbft.svg
+
+    pad=1
+    ranksep=2
+    //nodesep=2
+    node [style="rounded"]
+    // splines=spline
+
+
+
+    "New round" [shape="rectangle" style="rounded" ]
+    "Announced" [shape="rectangle" style="rounded" xlabel="Validator wait 1 ANNOUNCE message" ]
+    "Round change" [shape="rectangle" style="rounded"]
+    "Prepared" [shape="rectangle" style="rounded" xlabel="Proposer wait 2F+1 PREPARE message"]
+    "Expected" [shape="rectangle" style="rounded" xlabel="Validator wait 1 EXPECT message" ]
+    "Confirmed" [shape="rectangle" style="rounded" xlabel="Proposer wait 2F+1 CONFIRM message" ]
+    "Committed" [shape="rectangle" style="rounded" xlabel="Validator wait 1 COMMIT message" ]
+    "InsertBlock" [label="" shape="diamond" style="rounded" ]
+
+
+    // normal
+    "New round" -> "Announced" [fontcolor="blue" label="Proposer broadcasts\nANNOUNCE message" ]
+    "Announced" -> "Prepared"  [fontcolor="red" label="Validator broadcasts\nPREPARE message" ]
+    "Prepared" -> "Expected"  [fontcolor="blue" label="Proposer broadcasts\nEXPECT message" ]
+    "Expected" -> "Confirmed"  [fontcolor="red" label="Validator broadcasts\nCONFIRM message" ]
+    "Confirmed" -> "Committed"  [fontcolor="blue" label="Proposer broadcasts\nCOMMIT message" ]
+    "Committed" -> "InsertBlock"  [fontcolor="blue" label="Insert block" ]
+    "InsertBlock" -> "Round change" [label="insertion fails" ]
+    "InsertBlock" -> "New round" [label="Insertion succeeds"]
+
+    // round change
+    "Announced" -> "Round change" [label="Timeout" style="dashed"]
+    "Announced" -> "Round change" [label="Invalid proposal(block)" style="solid"]
+
+    "Prepared" -> "Round change" [label="Timeout" style="dashed"]
+
+    "Expected" -> "Round change" [label="Timeout" style="dashed"]
+    "Expected" -> "Round change" [label="Invalid aggregated signatures" style="solid"]
+
+    "Confirmed" -> "Round change" [label="Timeout" style="dashed"]
+
+    "Round change" -> "New round" [style="solid"]
+
+    // group
+
+    {
+        node[style=invis]
+        { rank=same; A[group=g1];B[group=g2];C[group=g3];D[group=g4] }
+        A->B->C->D[style=invis]
+    }
+
+    {
+        rank=same;
+        "New round"[group=g1]; "Announced"[group=g3]
+        "New round"->"Announced"[style=invis]
+    }
+    {
+        rank=same;
+        "Prepared"[group=g4];
+    }
+    {
+        rank=same;
+        "Round change"[group=g2]; "Expected"[group=g3]
+        "Round change" -> "Expected"[style=invis]
+    }
+    {
+        rank=same;
+        "Confirmed"[group=g4];
+    }
+    {
+        rank=same;
+        "Committed"[group=g3]; "InsertBlock"[group=g2];
+        "InsertBlock" -> "Committed"[style=invis]
+    }
+
+    {
+        edge[style=invis]
+        A->"New round"
+        B->"Round change"->"InsertBlock"[weight=100]
+        C->"Announced"->"Expected"->"Committed" [weight=100]
+        D->"Prepared" -> "Confirmed" [weight=100]
+    }
+}

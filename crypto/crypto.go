@@ -21,6 +21,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -33,6 +34,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/hyperion-hyn/bls/ffi/go/bls"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -270,3 +272,71 @@ func zeroBytes(bytes []byte) {
 		bytes[i] = 0
 	}
 }
+
+// RandPrivateKey returns a random private key.
+func RandPrivateKey() *bls.SecretKey {
+	sec := bls.SecretKey{}
+	sec.SetByCSPRNG()
+	return &sec
+}
+
+func GenerateBLSKey() (*bls.SecretKey, error) {
+	privateKey := RandPrivateKey()
+	return privateKey, nil
+}
+
+// SaveBLS saves a BLS private key to the given file with
+// restrictive permissions. The key data is saved hex-encoded.
+func SaveBLS(file string, key *bls.SecretKey) error {
+	k := hex.EncodeToString(key.Serialize())
+	return ioutil.WriteFile(file, []byte(k), 0600)
+}
+
+// toECDSA creates a private key with the given D value. The strict parameter
+// controls whether the key's length should be enforced at the curve size or
+// it can also accept legacy encodings (0 prefixes).
+func toBLS(d []byte, strict bool) (*bls.SecretKey, error) {
+	priv := &bls.SecretKey{}
+	err := priv.Deserialize(d)
+
+	return priv, err
+}
+
+// ToECDSA creates a private key with the given D value.
+func ToBLS(d []byte) (*bls.SecretKey, error) {
+	return toBLS(d, true)
+}
+
+// LoadECDSA loads a secp256k1 private key from the given file.
+func LoadBLS(file string) (*bls.SecretKey, error) {
+	buf := make([]byte, 64)
+	fd, err := os.Open(file)
+	if err != nil {
+		return nil, err
+	}
+	defer fd.Close()
+	if _, err := io.ReadFull(fd, buf); err != nil {
+		return nil, err
+	}
+
+	key, err := hex.DecodeString(string(buf))
+	if err != nil {
+		return nil, err
+	}
+	return ToBLS(key)
+}
+
+// HexToECDSA parses a secp256k1 private key.
+func HexToBLS(hexkey string) (*bls.SecretKey, error) {
+	b, err := hex.DecodeString(hexkey)
+	if err != nil {
+		return nil, errors.New("invalid hex string")
+	}
+	return ToBLS(b)
+}
+
+func PubkeyToSigner(p *bls.PublicKey) common.Address {
+	hash := sha256.Sum256(p.Serialize())
+	return common.BytesToAddress(hash[:20])
+}
+

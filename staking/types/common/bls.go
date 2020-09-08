@@ -2,7 +2,7 @@ package common
 
 import (
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/harmony-one/bls/ffi/go/bls"
+	"github.com/hyperion-hyn/bls/ffi/go/bls"
 	"github.com/pkg/errors"
 )
 

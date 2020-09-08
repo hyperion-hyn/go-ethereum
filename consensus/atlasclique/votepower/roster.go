@@ -6,7 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
-	"github.com/harmony-one/bls/ffi/go/bls"
+	"github.com/hyperion-hyn/bls/ffi/go/bls"
 	"github.com/pkg/errors"
 )
 

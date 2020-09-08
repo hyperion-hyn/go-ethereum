@@ -155,6 +155,8 @@ func SetupGenesisBlock(db ethdb.Database, genesis *Genesis) (*params.ChainConfig
 	if genesis != nil && genesis.Config == nil {
 		return params.AllEthashProtocolChanges, common.Hash{}, errGenesisNoConfig
 	}
+	// ATLAS: ensure staking state
+	// ATLAS: where to store staking state?
 	// Just commit the new block if there is no stored genesis block.
 	stored := rawdb.ReadCanonicalHash(db, 0)
 	if (stored == common.Hash{}) {
@@ -388,6 +390,33 @@ func DefaultYoloV1GenesisBlock() *Genesis {
 		GasLimit:   0x47b760,
 		Difficulty: big.NewInt(1),
 		Alloc:      decodePrealloc(yoloV1AllocData),
+	}
+}
+
+// DefaultOttomanGenesisBlock returns the Ottoman network genesis block.
+func DefaultOttomanGenesisBlock() *Genesis {
+	return &Genesis{
+		Config:     params.OttomanChainConfig,
+		Timestamp:  1496993285,
+		ExtraData:  hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000000f89af85494475cc98b5521ab2a1335683e7567c8048bfe79ed9407d8299de61faed3686ba4c4e6c3b9083d7e2371944fe035ce99af680d89e2c4d73aca01dbfc1bd2fd94dc421209441a754f79c4a4ecd2b49c935aad0312b8410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0"),
+		GasLimit:   4700000,
+		Difficulty: big.NewInt(1),
+		Mixhash:    common.HexToHash("0x63746963616c2062797a616e74696e65206661756c7420746f6c6572616e6365"),
+		Alloc:      decodePrealloc(ottomanAllocData),
+	}
+}
+
+// DefaultAtlasGenesisBlock returns the Atlas network genesis block.
+func DefaultAtlasGenesisBlock() *Genesis {
+	// ATLAS(zgx): DefaultAtlasGenesisBlock
+	return &Genesis{
+		Config:     params.AtlasChainConfig,
+		Timestamp:  1496993285,
+		ExtraData:  hexutil.MustDecode(""),
+		GasLimit:   4700000,
+		Difficulty: big.NewInt(1),
+		Mixhash:    common.HexToHash("0x63746963616c2062797a616e74696e65206661756c7420746f6c6572616e6365"),
+		Alloc:      decodePrealloc(atlasAllocData),
 	}
 }
 
