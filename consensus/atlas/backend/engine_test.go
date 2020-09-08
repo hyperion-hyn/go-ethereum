@@ -64,7 +64,7 @@ func newBlockChain(n int) (*core.BlockChain, *backend, []*bls.SecretKey) {
 	b.Authorize(signer, signHashFn)
 
 	genesis.MustCommit(memDB)
-	blockchain, err := core.NewBlockChain(memDB, nil, genesis.Config, b, vm.Config{}, nil)
+	blockchain, err := core.NewBlockChain(memDB, nil, genesis.Config, b, vm.Config{}, nil, nil)
 	if err != nil {
 		panic(err)
 	}

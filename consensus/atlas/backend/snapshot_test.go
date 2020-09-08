@@ -370,7 +370,7 @@ func TestVoting(t *testing.T) {
 		}
 		// ATLAS(zgx): should mapping accounts and keys
 		engine := New(config, db).(*backend)
-		chain, err := core.NewBlockChain(db, nil, genesis.Config, engine, vm.Config{}, nil)
+		chain, err := core.NewBlockChain(db, nil, genesis.Config, engine, vm.Config{}, nil, nil)
 
 		// Assemble a chain of headers from the cast votes
 		headers := make([]*types.Header, len(tt.votes))
