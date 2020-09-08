@@ -17,8 +17,8 @@
 package node
 
 import (
-	"path/filepath"
 	"crypto/ecdsa"
+	"path/filepath"
 	"reflect"
 
 	"github.com/hyperion-hyn/bls/ffi/go/bls"
@@ -96,12 +96,12 @@ func (ctx *ServiceContext) ExtRPCEnabled() bool {
 
 // NodeKey returns node key from config
 func (ctx *ServiceContext) NodeKey() *ecdsa.PrivateKey {
-	return ctx.config.NodeKey()
+	return ctx.Config.NodeKey()
 }
 
 // SignerKey returns signer key from config
 func (ctx *ServiceContext) SignerKey() *bls.SecretKey {
-	return ctx.config.SignerKey()
+	return ctx.Config.SignerKey()
 }
 
 // ServiceConstructor is the function signature of the constructors needed to be
