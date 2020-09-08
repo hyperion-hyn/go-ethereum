@@ -57,6 +57,7 @@ require (
 	github.com/prometheus/tsdb v0.7.1
 	github.com/protolambda/gocyto v0.0.1 // indirect
 	github.com/rjeczalik/notify v0.9.2
+	github.com/robertkrimen/otto v0.0.0-20170205013659-6a77b7cbc37d // indirect
 	github.com/rs/cors v1.7.0
 	github.com/rs/xhandler v0.0.0-20160618193221-ed27b6fd6521 // indirect
 	github.com/status-im/keycard-go v0.0.0-20190316090335-8537d3370df4
