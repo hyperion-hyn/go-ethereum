@@ -20,9 +20,11 @@ package consensus
 import (
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rpc"
 )
@@ -53,6 +55,9 @@ type ChainReader interface {
 
 	// GetBlock retrieves a block from the database by hash and number.
 	GetBlock(hash common.Hash, number uint64) *types.Block
+
+	// StateAt returns a new mutable state based on a particular point in time.
+	StateAt(root common.Hash) (*state.StateDB, error)
 }
 
 // Engine is an algorithm agnostic consensus engine.
@@ -122,10 +127,55 @@ type Engine interface {
 	Close() error
 }
 
+// Handler should be implemented is the consensus needs to handle and send peer's message
+type Handler interface {
+	// NewChainHead handles a new head block comes
+	NewChainHead() error
+
+	// HandleMsg handles a message from peer
+	HandleMsg(address common.Address, data p2p.Msg) (bool, error)
+
+	// SetBroadcaster sets the broadcaster to send message to peers
+	SetBroadcaster(Broadcaster)
+}
+
 // PoW is a consensus engine based on proof-of-work.
 type PoW interface {
 	Engine
 
 	// Hashrate returns the current mining hashrate of a PoW consensus engine.
 	Hashrate() float64
+}
+
+// Istanbul is a consensus engine to avoid byzantine failure
+type Istanbul interface {
+	Engine
+
+	// Start starts the engine
+	Start(chain ChainReader, currentBlock func() *types.Block, hasBadBlock func(hash common.Hash) bool) error
+
+	// Stop stops the engine
+	Stop() error
+}
+
+// SignHashFn is a signer callback function to request a header to be signed by a
+// backing account.
+type SignHashFn func(accounts.Account, common.Hash) (signature []byte, publicKey []byte, mask []byte, err error)
+
+type EngineEx interface {
+	Engine
+
+	// Start starts the engine
+	Start(chain ChainReader, currentBlock func() *types.Block, hasBadBlock func(hash common.Hash) bool) error
+
+	// Stop stops the engine
+	Stop() error
+
+	// Authorize injects a signer's id and sign function into the consensus engine to mint new blocks with.
+	Authorize(signer common.Address, signHashFn SignHashFn)
+}
+
+// Atlas is a consensus engine
+type Atlas interface {
+	EngineEx
 }

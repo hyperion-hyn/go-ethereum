@@ -1,3 +1,9 @@
 [submodule "tests"]
 	path = tests/testdata
 	url = https://github.com/ethereum/tests
+[submodule "third_party/bls"]
+	path = third_party/bls
+	url = https://github.com/hyperion-hyn/bls
+[submodule "third_party/mcl"]
+	path = third_party/mcl
+	url = https://github.com/hyperion-hyn/mcl

@@ -27,11 +27,12 @@ import (
 	"sync/atomic"
 	"time"
 
+	"golang.org/x/crypto/sha3"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
-	"golang.org/x/crypto/sha3"
 )
 
 var (
@@ -101,6 +102,8 @@ type headerMarshaling struct {
 // Hash returns the block hash of the header, which is simply the keccak256 hash of its
 // RLP encoding.
 func (h *Header) Hash() common.Hash {
+	// If the mix digest is equivalent to the predefined Istanbul digest, use Istanbul
+	// specific hash calculation.
 	return rlpHash(h)
 }
 
@@ -174,6 +177,9 @@ type Block struct {
 	// caches
 	hash atomic.Value
 	size atomic.Value
+
+	// caches
+	sealhash atomic.Value
 
 	// Td is used by package core to store the total difficulty
 	// of the chain up to and including the block.
@@ -411,6 +417,20 @@ func (b *Block) Hash() common.Hash {
 	}
 	v := b.header.Hash()
 	b.hash.Store(v)
+	return v
+}
+
+type Sealer interface {
+	SealHash(header *Header) common.Hash
+}
+
+func (b *Block) SealHash(sealer Sealer) common.Hash {
+	if hash := b.sealhash.Load(); hash != nil {
+		return hash.(common.Hash)
+	}
+
+	v := sealer.SealHash(b.header)
+	b.sealhash.Store(v)
 	return v
 }
 

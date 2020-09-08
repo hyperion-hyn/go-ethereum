@@ -20,6 +20,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/consensus/clique"
+	"github.com/ethereum/go-ethereum/consensus/ethash"
 	"math"
 	"math/big"
 	"sync"
@@ -31,6 +33,7 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/forkid"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/eth/fetcher"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -95,6 +98,8 @@ type ProtocolManager struct {
 	wg        sync.WaitGroup
 	peerWG    sync.WaitGroup
 
+	engine consensus.Engine
+
 	// Test fields or hooks
 	broadcastTxAnnouncesOnly bool // Testing field, disable transaction propagation
 }
@@ -114,6 +119,14 @@ func NewProtocolManager(config *params.ChainConfig, checkpoint *params.TrustedCh
 		whitelist:  whitelist,
 		txsyncCh:   make(chan *txsync),
 		quitSync:   make(chan struct{}),
+		engine:      engine,
+	}
+
+	if handler, ok := manager.engine.(consensus.Handler); ok {
+		handler.SetBroadcaster(manager)
+		for key, value := range protocolLengths {
+			protocolLengths[key] = value + 1
+		}
 	}
 
 	if mode == downloader.FullSync {
@@ -387,6 +400,15 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		return errResp(ErrMsgTooLarge, "%v > %v", msg.Size, protocolMaxMsgSize)
 	}
 	defer msg.Discard()
+
+	if handler, ok := pm.engine.(consensus.Handler); ok {
+		pubKey := p.Node().Pubkey()
+		addr := crypto.PubkeyToAddress(*pubKey)
+		handled, err := handler.HandleMsg(addr, msg)
+		if handled {
+			return err
+		}
+	}
 
 	// Handle the message depending on its contents
 	switch {
@@ -806,6 +828,10 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 	return nil
 }
 
+func (pm *ProtocolManager) Enqueue(id string, block *types.Block) {
+	pm.blockFetcher.Enqueue(id, block)
+}
+
 // BroadcastBlock will either propagate a block to a subset of its peers, or
 // will only announce its availability (depending what's requested).
 func (pm *ProtocolManager) BroadcastBlock(block *types.Block, propagate bool) {
@@ -920,6 +946,7 @@ type NodeInfo struct {
 	Genesis    common.Hash         `json:"genesis"`    // SHA3 hash of the host's genesis block
 	Config     *params.ChainConfig `json:"config"`     // Chain configuration for the fork rules
 	Head       common.Hash         `json:"head"`       // SHA3 hash of the host's best owned block
+	Consensus  string              `json:"consensus"`  // Consensus mechanism in use
 }
 
 // NodeInfo retrieves some protocol metadata about the running host node.
@@ -931,5 +958,46 @@ func (pm *ProtocolManager) NodeInfo() *NodeInfo {
 		Genesis:    pm.blockchain.Genesis().Hash(),
 		Config:     pm.blockchain.Config(),
 		Head:       currentBlock.Hash(),
+		Consensus:  pm.getConsensusAlgorithm(),
 	}
+}
+
+// Quorum
+func (pm *ProtocolManager) getConsensusAlgorithm() string {
+	var consensusAlgo string
+	switch pm.engine.(type) {
+	case consensus.Istanbul:
+		consensusAlgo = "istanbul"
+	case *clique.Clique:
+		consensusAlgo = "clique"
+	case *ethash.Ethash:
+		consensusAlgo = "ethash"
+	default:
+		consensusAlgo = "unknown"
+	}
+	return consensusAlgo
+}
+
+// Quorum
+func (self *ProtocolManager) FindPeers(targets map[common.Address]bool) map[common.Address]consensus.Peer {
+	m := make(map[common.Address]consensus.Peer)
+
+	want := func(addr common.Address) bool {
+		if targets == nil {
+			return true
+		}
+		if targets[addr] {
+			return true
+		}
+		return false
+	}
+
+	for _, p := range self.peers.Peers() {
+		pubKey := p.Node().Pubkey()
+		addr := crypto.PubkeyToAddress(*pubKey)
+		if want(addr) {
+			m[addr] = p
+		}
+	}
+	return m
 }

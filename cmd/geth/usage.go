@@ -44,6 +44,7 @@ var AppHelpFlagGroups = []flags.FlagGroup{
 			utils.RinkebyFlag,
 			utils.YoloV1Flag,
 			utils.RopstenFlag,
+			utils.OttomanFlag,
 			utils.SyncModeFlag,
 			utils.ExitWhenSyncedFlag,
 			utils.GCModeFlag,
@@ -239,6 +240,22 @@ var AppHelpFlagGroups = []flags.FlagGroup{
 			utils.SnapshotFlag,
 			cli.HelpFlag,
 		},
+	},
+	{
+		Name: "RAFT",
+		Flags: []cli.Flag{
+			utils.RaftModeFlag,
+		},
+	},
+	{
+		Name: "ISTANBUL",
+		Flags: []cli.Flag{
+			utils.IstanbulRequestTimeoutFlag,
+			utils.IstanbulBlockPeriodFlag,
+		},
+	},
+	{
+		Name: "MISC",
 	},
 }
 

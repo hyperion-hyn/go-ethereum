@@ -23,6 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/ethdb"
 )
 
 // ChainContext supports retrieving headers and consensus parameters from the
@@ -30,6 +31,9 @@ import (
 type ChainContext interface {
 	// Engine retrieves the chain's consensus engine.
 	Engine() consensus.Engine
+
+	// Database retrieves the blockchain's database.
+	Database() ethdb.Database
 
 	// GetHeader returns the hash corresponding to their hash.
 	GetHeader(common.Hash, uint64) *types.Header
@@ -55,6 +59,7 @@ func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author
 		Difficulty:  new(big.Int).Set(header.Difficulty),
 		GasLimit:    header.GasLimit,
 		GasPrice:    new(big.Int).Set(msg.GasPrice()),
+		EpochNumber: header.Epoch(),
 	}
 }
 

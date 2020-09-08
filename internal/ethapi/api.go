@@ -19,7 +19,6 @@ package ethapi
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"math/big"
 	"strings"
@@ -44,7 +43,17 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/pkg/errors"
 	"github.com/tyler-smith/go-bip39"
+)
+
+const (
+	defaultGasPrice = params.GWei
+)
+
+var (
+	// ErrInvalidChainID when ChainID of signer does not match that of running node
+	errInvalidChainID = errors.New("invalid chain id for signer")
 )
 
 // PublicEthereumAPI provides an API to access Ethereum related information.

@@ -25,7 +25,9 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus/atlas"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
+	"github.com/ethereum/go-ethereum/consensus/istanbul"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/eth/gasprice"
@@ -77,6 +79,7 @@ var DefaultConfig = Config{
 	RPCGasCap:   25000000,
 	GPO:         DefaultFullGPOConfig,
 	RPCTxFeeCap: 1, // 1 ether
+	Istanbul: *istanbul.DefaultConfig,
 }
 
 func init() {
@@ -163,6 +166,14 @@ type Config struct {
 	// Enables tracking of SHA3 preimages in the VM
 	EnablePreimageRecording bool
 
+	// Quorum
+	// Istanbul options
+	RaftMode bool
+	Istanbul istanbul.Config
+
+	// Atlas
+	Atlas atlas.Config
+
 	// Miscellaneous options
 	DocRoot string `toml:"-"`
 
@@ -185,3 +196,14 @@ type Config struct {
 	// CheckpointOracle is the configuration for checkpoint oracle.
 	CheckpointOracle *params.CheckpointOracleConfig `toml:",omitempty"`
 }
+
+// 	Quorum
+type Mode uint
+
+const (
+	ModeNormal Mode = iota
+	ModeShared
+	ModeTest
+	ModeFake
+	ModeFullFake
+)

@@ -20,9 +20,29 @@ import (
 	"math"
 	"math/big"
 
+	"github.com/pkg/errors"
+
+	"github.com/ethereum/go-ethereum/core/types"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
+)
+
+var (
+	errInvalidSigner               = errors.New("invalid signer for staking transaction")
+	errInsufficientBalanceForStake = errors.New("insufficient balance to stake")
+	errValidatorExist              = errors.New("staking validator already exists")
+	errValidatorNotExist           = errors.New("staking validator does not exist")
+	errNoDelegationToUndelegate    = errors.New("no delegation to undelegate")
+	errCommissionRateChangeTooFast = errors.New("commission rate can not be changed more than MaxChangeRate within the same epoch")
+	errCommissionRateChangeTooHigh = errors.New("commission rate can not be higher than MaxCommissionRate")
+	errNoRewardsToCollect          = errors.New("no rewards to collect")
+	errNegativeAmount              = errors.New("amount can not be negative")
+)
+
+var (
+	emptyAddress = common.Address{}
 )
 
 /*
@@ -52,6 +72,7 @@ type StateTransition struct {
 	data       []byte
 	state      vm.StateDB
 	evm        *vm.EVM
+	bc         ChainContext
 }
 
 // Message represents a message sent to a contract.
@@ -66,6 +87,7 @@ type Message interface {
 	Nonce() uint64
 	CheckNonce() bool
 	Data() []byte
+	Type() types.TransactionType
 }
 
 // ExecutionResult includes all output after executing given evm
@@ -260,7 +282,11 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		ret, st.gas, vmerr = st.evm.Call(sender, st.to(), st.data, st.gas, st.value)
 	}
 	st.refundGas()
-	st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
+
+	if st.evm.Coinbase != emptyAddress {
+		// ATLAS(zgx): carefully
+		st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
+	}
 
 	return &ExecutionResult{
 		UsedGas:    st.gasUsed(),

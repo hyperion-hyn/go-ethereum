@@ -17,6 +17,7 @@
 package node
 
 import (
+	"crypto/ecdsa"
 	"errors"
 	"fmt"
 	"net/http"
@@ -26,6 +27,9 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/hyperion-hyn/bls/ffi/go/bls"
+	"github.com/prometheus/tsdb/fileutil"
+
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -33,7 +37,6 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/prometheus/tsdb/fileutil"
 )
 
 // Node is a container on which services can be registered.
@@ -487,6 +490,17 @@ func (n *Node) Server() *p2p.Server {
 	defer n.lock.Unlock()
 
 	return n.server
+}
+
+// Quorum
+//
+// delegate call to node.Config
+func (n *Node) GetNodeKey() *ecdsa.PrivateKey {
+	return n.config.NodeKey()
+}
+
+func (n *Node) GetSignerKey() *bls.SecretKey {
+	return n.config.SignerKey()
 }
 
 // DataDir retrieves the current datadir used by the protocol stack.

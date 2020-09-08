@@ -29,6 +29,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hyperion-hyn/bls/ffi/go/bls"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/mclock"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -71,6 +73,9 @@ var errServerStopped = errors.New("server stopped")
 type Config struct {
 	// This field must be set to a valid secp256k1 private key.
 	PrivateKey *ecdsa.PrivateKey `toml:"-"`
+
+	// SignerKey must be set to a valid bls secret key.
+	SignerKey *bls.SecretKey `toml:"-"`
 
 	// MaxPeers is the maximum number of peers that can be
 	// connected. It must be greater than zero.

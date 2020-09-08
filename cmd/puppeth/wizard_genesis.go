@@ -29,8 +29,13 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/hyperion-hyn/bls/ffi/go/bls"
+
 	"github.com/ethereum/go-ethereum/common"
+	atlasBackend "github.com/ethereum/go-ethereum/consensus/atlas/backend"
+	"github.com/ethereum/go-ethereum/consensus/atlas/storage"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 )
@@ -59,8 +64,11 @@ func (w *wizard) makeGenesis() {
 	fmt.Println("Which consensus engine to use? (default = clique)")
 	fmt.Println(" 1. Ethash - proof-of-work")
 	fmt.Println(" 2. Clique - proof-of-authority")
+	fmt.Println(" 3. Atlas - proof-of-staking")
+	// TODO: select consensus engine
 
 	choice := w.read()
+	consensusEngine := choice
 	switch {
 	case choice == "1":
 		// In case of ethash, we're pretty much done
@@ -105,6 +113,8 @@ func (w *wizard) makeGenesis() {
 			copy(genesis.ExtraData[32+i*common.AddressLength:], signer[:])
 		}
 
+	case choice == "3":
+
 	default:
 		log.Crit("Invalid consensus engine choice", "choice", choice)
 	}
@@ -133,6 +143,90 @@ func (w *wizard) makeGenesis() {
 	fmt.Println()
 	fmt.Println("Specify your chain/network ID if you want an explicit one (default = random)")
 	genesis.Config.ChainID = new(big.Int).SetUint64(uint64(w.readDefaultInt(rand.Intn(65536))))
+
+	switch {
+	case consensusEngine == "3":
+		// In the case of atlas, configure the consensus parameters
+		genesis.Difficulty = atlasBackend.DefaultDifficulty
+		genesis.Config.Atlas = &params.AtlasConfig{
+			Period:         8,
+			Epoch:          30000,
+			ProposerPolicy: 0,
+			Ceil2Nby3Block: big.NewInt(0),
+		}
+		fmt.Println()
+		fmt.Println("How many seconds should blocks take? (default = 15)")
+		genesis.Config.Atlas.Period = uint64(w.readDefaultInt(15))
+
+		// We also need the initial list of signers
+		fmt.Println()
+		fmt.Println("Which accounts are allowed to seal? (mandatory at least one)")
+
+		var signers []*storage.Signer
+		for {
+			fmt.Printf("%d sealer\n", len(signers)+1)
+			if publicKey, coinbase := w.readBLSPublicKeyAndCoinbase(); publicKey != nil {
+				signers = append(signers, &storage.Signer{
+					PublicKey: publicKey,
+					Coinbase:  *coinbase,
+				})
+				continue
+			}
+			if len(signers) > 0 {
+				break
+			}
+		}
+
+		consortiumBoard := core.GenesisAccount{
+			Nonce:   1,
+			Balance: new(big.Int).Lsh(big.NewInt(1), 256-7), // 2^256 / 128 (allow many pre-funds without balance overflows)
+		}
+
+		storage.SetupValidatorsInGenesisAt(&consortiumBoard, signers)
+
+		genesis.Mixhash = types.AtlasDigest
+		genesis.ExtraData = make([]byte, types.AtlasExtraVanity)
+
+		block := genesis.ToBlock(nil)
+
+		for {
+			fmt.Println("When genesis block generate? yyyy-mm-dd hh:mm:ss (default = now)")
+			daytime_format := "2006-01-02 15:04:05"
+			default_daytime := time.Now().Format(daytime_format)
+			s := w.readDefaultString(default_daytime)
+			t, err := time.Parse(daytime_format, s)
+			if err == nil {
+				header := block.Header()
+				header.Time = uint64(t.Unix())
+				block = block.WithSeal(header)
+				break
+			}
+		}
+
+		hashdata := atlasBackend.SealHash(block.Header())
+		publicKeys := make([]*bls.PublicKey, len(signers))
+		for i := 0; i < len(signers); i++ {
+			publicKeys[i] = signers[i].PublicKey
+		}
+
+		signatures := make([]*bls.Sign, len(signers))
+		for i := 0; i < len(signers); i++ {
+			fmt.Printf("%d sealer\n", i+1)
+			if signature := w.readSignatureWithPublicKey(signers[i].PublicKey, hashdata); signature != nil {
+				signatures[i] = signature
+			}
+		}
+
+		fmt.Printf("header %#v\n", block.Header())
+		header := block.Header()
+
+		if err := atlasBackend.WriteCommittedSealInGenesis(genesis, header.Extra, signatures, publicKeys); err != nil {
+			fmt.Println("failed to write committed seals, %v", err)
+		}
+		copy(genesis.ExtraData[:], header.Extra[:])
+
+		genesis.Alloc[common.HexToAddress(atlasBackend.CONSORTIUM_BOARD)] = consortiumBoard
+	}
 
 	// All done, store the genesis and flush to disk
 	log.Info("Configured new genesis block")

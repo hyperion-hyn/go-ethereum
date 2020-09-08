@@ -34,6 +34,7 @@ var Modules = map[string]string{
 	"txpool":     TxpoolJs,
 	"les":        LESJs,
 	"lespay":     LESPayJs,
+	"istanbul":   IstanbulJS,
 }
 
 const ChequebookJs = `
@@ -467,10 +468,17 @@ web3._extend({
 });
 `
 
+// ATLAS: add new/delegate/undelegate/withdraw/collect methods
 const EthJs = `
 web3._extend({
 	property: 'eth',
 	methods: [
+		new web3._extend.Method({
+			name: 'sendRawPrivateTransaction',
+			call: 'eth_sendRawPrivateTransaction',
+			params: 2,
+			inputFormatter: [null, null]
+		}),
 		new web3._extend.Method({
 			name: 'chainId',
 			call: 'eth_chainId',
@@ -545,6 +553,12 @@ web3._extend({
 			params: 3,
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter, null, web3._extend.formatters.inputBlockNumberFormatter]
 		}),
+		new web3._extend.Method({
+			name: 'storageRoot',
+			call: 'eth_storageRoot',
+			params: 2,
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter, null]
+		})
 	],
 	properties: [
 		new web3._extend.Property({
@@ -885,6 +899,70 @@ web3._extend({
 		new web3._extend.Property({
 			name: 'requestStats',
 			getter: 'lespay_requestStats'
+		}),
+	]
+});
+`
+
+const IstanbulJS = `
+web3._extend({
+	property: 'istanbul',
+	methods:
+	[
+		new web3._extend.Method({
+			name: 'getSnapshot',
+			call: 'istanbul_getSnapshot',
+			params: 1,
+			inputFormatter: [null]
+		}),
+		new web3._extend.Method({
+			name: 'getSnapshotAtHash',
+			call: 'istanbul_getSnapshotAtHash',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getValidators',
+			call: 'istanbul_getValidators',
+			params: 1,
+			inputFormatter: [null]
+		}),
+		new web3._extend.Method({
+			name: 'getValidatorsAtHash',
+			call: 'istanbul_getValidatorsAtHash',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'propose',
+			call: 'istanbul_propose',
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'discard',
+			call: 'istanbul_discard',
+			params: 1
+		}),
+
+		new web3._extend.Method({
+			name: 'getSignersFromBlock',
+			call: 'istanbul_getSignersFromBlock',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
+			name: 'getSignersFromBlockByHash',
+			call: 'istanbul_getSignersFromBlockByHash',
+			params: 1
+		}),
+	],
+	properties:
+	[
+		new web3._extend.Property({
+			name: 'candidates',
+			getter: 'istanbul_candidates'
+		}),
+		new web3._extend.Property({
+			name: 'nodeAddress',
+			getter: 'istanbul_nodeAddress'
 		}),
 	]
 });

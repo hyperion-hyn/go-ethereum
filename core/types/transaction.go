@@ -36,6 +36,14 @@ var (
 	ErrInvalidSig = errors.New("invalid transaction v, r, s values")
 )
 
+// TransactionType different types of transactions
+type TransactionType byte
+
+// Different Transaction Types
+const (
+	Normal TransactionType = iota
+)
+
 type Transaction struct {
 	data txdata    // Consensus contents of a transaction
 	time time.Time // Time first seen locally (spam avoidance)
@@ -61,6 +69,8 @@ type txdata struct {
 
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
+
+	Type		 TransactionType	// Default: normal tx
 }
 
 type txdataMarshaling struct {
@@ -238,6 +248,7 @@ func (tx *Transaction) AsMessage(s Signer) (Message, error) {
 		amount:     tx.data.Amount,
 		data:       tx.data.Payload,
 		checkNonce: true,
+		txType:     tx.data.Type,
 	}
 
 	var err error
@@ -271,6 +282,14 @@ func (tx *Transaction) Cost() *big.Int {
 // The return values should not be modified by the caller.
 func (tx *Transaction) RawSignatureValues() (v, r, s *big.Int) {
 	return tx.data.V, tx.data.R, tx.data.S
+}
+
+func (tx *Transaction) SetType(txType TransactionType) {
+	tx.data.Type = txType
+}
+
+func (tx *Transaction) Type() TransactionType {
+	return tx.data.Type
 }
 
 // Transactions is a Transaction slice type for basic sorting.
@@ -417,6 +436,7 @@ type Message struct {
 	gasPrice   *big.Int
 	data       []byte
 	checkNonce bool
+	txType     TransactionType
 }
 
 func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, checkNonce bool) Message {
@@ -440,3 +460,4 @@ func (m Message) Gas() uint64          { return m.gasLimit }
 func (m Message) Nonce() uint64        { return m.nonce }
 func (m Message) Data() []byte         { return m.data }
 func (m Message) CheckNonce() bool     { return m.checkNonce }
+func (m Message) Type() TransactionType{ return m.txType }

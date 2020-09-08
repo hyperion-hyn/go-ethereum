@@ -284,6 +284,13 @@ func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *par
 		}
 	}
 	// Ensure that a previous crash in SetHead doesn't leave extra ancients
+	// The first thing the node will do is reconstruct the verification data for
+	// the head block (ethash cache or clique voting snapshot). Might as well do
+	// it in advance.
+	if err := bc.engine.VerifyHeader(bc, bc.CurrentHeader(), true); err != nil {
+		return nil, err
+	}
+
 	if frozen, err := bc.db.Ancients(); err == nil && frozen > 0 {
 		var (
 			needRewind bool
@@ -2281,6 +2288,11 @@ func (bc *BlockChain) BadBlocks() []*types.Block {
 	return blocks
 }
 
+// HasBadBlock returns whether the block with the hash is a bad block. dep: Istanbul
+func (bc *BlockChain) HasBadBlock(hash common.Hash) bool {
+	return bc.badBlocks.Contains(hash)
+}
+
 // addBadBlock adds a bad block to the bad-block LRU cache
 func (bc *BlockChain) addBadBlock(block *types.Block) {
 	bc.badBlocks.Add(block.Hash(), block)
@@ -2420,6 +2432,9 @@ func (bc *BlockChain) Config() *params.ChainConfig { return bc.chainConfig }
 
 // Engine retrieves the blockchain's consensus engine.
 func (bc *BlockChain) Engine() consensus.Engine { return bc.engine }
+
+// Database retrieves the blockchain's database.
+func (bc *BlockChain) Database() ethdb.Database { return bc.db }
 
 // SubscribeRemovedLogsEvent registers a subscription of RemovedLogsEvent.
 func (bc *BlockChain) SubscribeRemovedLogsEvent(ch chan<- RemovedLogsEvent) event.Subscription {
