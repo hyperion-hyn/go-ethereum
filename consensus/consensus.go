@@ -61,6 +61,7 @@ type ChainReader interface {
 	ReadValidatorAtBlock(blockNum *big.Int, validatorAddress common.Address) (*restaking.Storage_ValidatorWrapper_, error)
 	ReadValidatorAtEpoch(epoch *big.Int, validatorAddress common.Address) (*restaking.Storage_ValidatorWrapper_, error)
 	ReadCommitteeAtEpoch(epoch *big.Int) (*restaking.Storage_Committee_, error)
+	ReadValidatorAtEpochOrCurrentBlock(*big.Int, common.Address) (*restaking.Storage_ValidatorWrapper_, error)
 }
 
 // Engine is an algorithm agnostic consensus engine.

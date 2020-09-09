@@ -26,3 +26,7 @@ func (cr *fakeChainReader) ReadValidatorAtEpoch(epoch *big.Int, validatorAddress
 func (cr *fakeChainReader) ReadCommitteeAtEpoch(epoch *big.Int) (*restaking.Storage_Committee_, error) {
 	panic("implement me")
 }
+
+func (cr *fakeChainReader) ReadValidatorAtEpochOrCurrentBlock(b *big.Int, address common.Address) (*restaking.Storage_ValidatorWrapper_, error) {
+	panic("implement me")
+}
