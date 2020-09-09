@@ -210,7 +210,7 @@ func TestVerifyCreateMap3NodeMsg(t *testing.T) {
 				epoch:        big.NewInt(defaultEpoch),
 				blockNum:     big.NewInt(defaultBlockNumber),
 				msg:          defaultMsgCreateMap3Node(),
-				signer:       operatorAddr,
+				signer:       makeTestAddr("invalid operator"),
 			},
 			wantErr: errInvalidSigner,
 		},
@@ -518,14 +518,92 @@ func defaultMsgEditMap3Node() microstaking.EditMap3Node {
 	}
 }
 
+func TestVerifyTerminateMap3NodeMsg(t *testing.T) {
+	type args struct {
+		stateDB vm.StateDB
+		epoch   *big.Int
+		msg     microstaking.TerminateMap3Node
+		signer  common.Address
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr error
+	}{
+		{
+			name: "terminate successfully",
+			args: args{
+				stateDB: makeStateDBForMicrostaking(t),
+				epoch:   big.NewInt(defaultEpoch),
+				msg:     defaultMsgTerminateMap3Node(),
+				signer:  operatorAddr,
+			},
+			wantErr: nil,
+		},
+		{
+			name: "state db nil",
+			args: args{
+				stateDB: nil,
+				epoch:   big.NewInt(defaultEpoch),
+				msg:     defaultMsgTerminateMap3Node(),
+				signer:  operatorAddr,
+			},
+			wantErr: errStateDBIsMissing,
+		},
+		{
+			name: "epoch nil",
+			args: args{
+				stateDB: makeStateDBForMicrostaking(t),
+				epoch:   nil,
+				msg:     defaultMsgTerminateMap3Node(),
+				signer:  operatorAddr,
+			},
+			wantErr: errEpochMissing,
+		},
+		{
+			name: "map3 node not exist",
+			args: args{
+				stateDB: makeStateDBForMicrostaking(t),
+				epoch:   big.NewInt(defaultEpoch),
+				msg: func() microstaking.TerminateMap3Node {
+					msg := defaultMsgTerminateMap3Node()
+					msg.Map3NodeAddress = makeTestAddr("addr not in chain")
+					return msg
+				}(),
+				signer: operatorAddr,
+			},
+			wantErr: errMap3NodeNotExist,
+		},
+		{
+			name: "invalid signer",
+			args: args{
+				stateDB: makeStateDBForMicrostaking(t),
+				epoch:   big.NewInt(defaultEpoch),
+				msg:     defaultMsgTerminateMap3Node(),
+				signer:  makeTestAddr("invalid operator"),
+			},
+			wantErr: errInvalidSigner,
+		},
+		// TODO(ATLAS): Add test cases.
+		// TODO(ATLAS): Epoch.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			verifier, _ := NewStakingVerifier(makeFakeChainContextForStake(t))
+			err := verifier.VerifyTerminateMap3NodeMsg(tt.args.stateDB, tt.args.epoch, &tt.args.msg, tt.args.signer)
+			if assErr := assertError(err, tt.wantErr); assErr != nil {
+				t.Errorf("Test - %v: %v", tt.name, err)
+			}
+		})
+	}
+}
 
-
-
-
-
-
-
-
+func defaultMsgTerminateMap3Node() microstaking.TerminateMap3Node {
+	return microstaking.TerminateMap3Node{
+		Map3NodeAddress: map3NodeAddr,
+		OperatorAddress: operatorAddr,
+	}
+}
 
 // makeStateDBForMicrostaking make the default state db for restaking test
 func makeStateDBForMicrostaking(t *testing.T) *state.StateDB {
