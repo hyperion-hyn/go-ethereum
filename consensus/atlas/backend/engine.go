@@ -38,11 +38,9 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
-	"github.com/ethereum/go-ethereum/consensus/atlas/storage"
 	"github.com/ethereum/go-ethereum/consensus/atlas/validator"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
 )
@@ -433,7 +431,9 @@ func (sb *backend) Finalize(chain consensus.ChainHeaderReader, header *types.Hea
 
 func (sb *backend) _Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header) {
-	// ATLAS(yhx): block reward
+	chainReader := chain.(consensus.ChainReader) // ATLAS
+	_, _ = handleMap3AndAtlasStaking(chainReader, header, state) // ATLAS
+
 	// No block rewards in Atlas, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	header.UncleHash = nilUncleHash
@@ -451,8 +451,14 @@ func (sb *backend) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header
 
 func (sb *backend) _FinalizeAndAssemble(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
-	// ATLAS(yhx): block reward
-	// No block rewards in Atlas, so the state remains as is and uncles are dropped
+	// ATLAS
+	chainReader := chain.(consensus.ChainReader)
+	_, err := handleMap3AndAtlasStaking(chainReader, header, state)
+	if err != nil {
+		return nil, err
+	}
+	// ATLAS - END
+
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	header.UncleHash = nilUncleHash
 
@@ -604,87 +610,27 @@ func (sb *backend) Stop() error {
 
 // snapshot retrieves the authorization snapshot at a given point in time.
 func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*Snapshot, error) {
-	// Search for a snapshot in memory or on disk for checkpoints
-	var (
-		headers []*types.Header
-		snap    *Snapshot
-	)
-	for snap == nil {
-		if number == 0 {
-			hash = chain.GetHeaderByNumber(number).Hash()
-		}
-		// If an in-memory snapshot was found, use that
-		if s, ok := sb.recents.Get(hash); ok {
-			snap = s.(*Snapshot)
-			break
-		}
-		// If an on-disk checkpoint snapshot can be found, use that
-		if number%checkpointInterval == 0 {
-			if s, err := loadSnapshot(sb.config.Epoch, sb.db, hash); err == nil {
-				log.Trace("Loaded voting snapshot form disk", "number", number, "hash", hash)
-				snap = s
-				break
-			}
-		}
+	if number == 0 {
+		hash = chain.GetHeaderByNumber(number).Hash()
+	}
 
-		// If we're at block zero, make a snapshot
-		if number == 0 {
-			genesis := chain.GetHeaderByNumber(0)
-			if err := sb.VerifyHeader(chain, genesis, false); err != nil {
-				return nil, err
-			}
-			stateDB, err := chain.StateAt(genesis.Root)
-			if err != nil {
-				return nil, err
-			}
-			validators, err := getValidators(stateDB, MaxValidatorCount)
-			if err != nil {
-				return nil, err
-			}
-			snap = newSnapshot(sb.config.Epoch, 0, genesis.Hash(), validator.NewSet(validators, sb.config.ProposerPolicy))
-			if err := snap.store(sb.db); err != nil {
-				return nil, err
-			}
-			log.Trace("Stored genesis voting snapshot to disk")
-			break
-		}
-		// No snapshot for this header, gather the header and move backward
-		var header *types.Header
-		if len(parents) > 0 {
-			// If we have explicit parents, pick from there (enforced)
-			header = parents[len(parents)-1]
-			if header.Hash() != hash || header.Number.Uint64() != number {
-				return nil, consensus.ErrUnknownAncestor
-			}
-			parents = parents[:len(parents)-1]
-		} else {
-			// No explicit parents (or no more left), reach out to the database
-			header = chain.GetHeader(hash, number)
-			if header == nil {
-				return nil, consensus.ErrUnknownAncestor
-			}
-		}
-		headers = append(headers, header)
-		number, hash = number-1, header.ParentHash
+	// If an in-memory snapshot was found, use that
+	if s, ok := sb.recents.Get(hash); ok {
+		snap := s.(*Snapshot)
+		return snap, nil
 	}
-	// Previous snapshot found, apply any pending headers on top of it
-	for i := 0; i < len(headers)/2; i++ {
-		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
-	}
-	snap, err := snap.apply(sb.config, chain, headers)
+
+	stateDB, err := chain.StateAt(hash)
 	if err != nil {
 		return nil, err
 	}
-	sb.recents.Add(snap.Hash, snap)
-
-	// If we've generated a new checkpoint snapshot, save to disk
-	if snap.Number%checkpointInterval == 0 && len(headers) > 0 {
-		if err = snap.store(sb.db); err != nil {
-			return nil, err
-		}
-		log.Trace("Stored voting snapshot to disk", "number", snap.Number, "hash", snap.Hash)
+	validators, err := getValidators(stateDB, MaxValidatorCount)
+	if err != nil {
+		return nil, err
 	}
-	return snap, err
+	snap := newSnapshot(sb.config.Epoch, number, hash, validator.NewSet(validators, sb.config.ProposerPolicy))
+	sb.recents.Add(hash, snap)
+	return snap, nil
 }
 
 // SealHash returns the hash of a block prior to it being sealed.
@@ -816,20 +762,21 @@ func WriteCommittedSealInGenesis(genesis *core.Genesis, extra []byte, signatures
 
 // ATLAS(yhx): getValidators
 func getValidators(state *state.StateDB, numVal int) ([]atlas.Validator, error) {
-	var global storage.Global_t
+	committee, err := state.ValidatorPool().Committee().Load()
+	if err != nil {
+		return nil, err
+	}
 
-	wrapper := storage.New(&global, state, common.HexToAddress(CONSORTIUM_BOARD), big.NewInt(0))
-	length := wrapper.Committee().Members().Length()
+	length := len(committee.Slots.Entrys)
 	validators := make([]atlas.Validator, length)
 	for i := 0; i < length; i++ {
-		member := wrapper.Committee().Members().Get(i)
-		validator, err := validator.New(member.PublicKey().Value(), member.Coinbase().Value())
+		member := committee.Slots.Entrys[i]
+		v, err := validator.New(member.BLSPublicKey.Key[:], member.EcdsaAddress)
 		if err != nil {
 			return nil, err
 		}
-		validators[i] = validator
+		validators[i] = v
 	}
-
 	return validators, nil
 }
 

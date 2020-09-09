@@ -15,7 +15,7 @@ type Reader interface {
 // RoundHeader is the interface of block.Header for calculating the BallotResult.
 type RoundHeader interface {
 	Number() *big.Int
-	LastCommitBitmap() []byte
+	LastCommitBitmap() ([]byte, error)
 }
 
 // ValidatorState is the interface of state.DB
@@ -31,7 +31,10 @@ func (c CommitBitmapReader) Number() *big.Int {
 	return c.Header.Number
 }
 
-func (c CommitBitmapReader) LastCommitBitmap() []byte {
-	// TODO(ATLAS): get LastCommitBitmap from parent header extra
-	panic("implement me")
+func (c CommitBitmapReader) LastCommitBitmap() ([]byte, error) {
+	extra, err := types.ExtractAtlasExtra(c.Header)
+	if err != nil {
+		return nil, err
+	}
+	return extra.AggBitmap, nil
 }

@@ -52,9 +52,11 @@ func BlockSigners(
 func BallotResult(
 	header RoundHeader, parentCommittee *restaking.Committee_,
 ) (*restaking.Slots_, *restaking.Slots_, *restaking.Slots_, error) {
-	payable, missing, err := BlockSigners(
-		header.LastCommitBitmap(), parentCommittee,
-	)
+	bitmap, err := header.LastCommitBitmap()
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	payable, missing, err := BlockSigners(bitmap, parentCommittee)
 	return &parentCommittee.Slots, payable, missing, err
 }
 

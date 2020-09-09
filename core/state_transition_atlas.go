@@ -142,8 +142,10 @@ func (st *StateTransition) StakingTransitionDb() (*ExecutionResult, error) {
 	}
 	st.refundGas()
 
-	// TODO(ATLAS): Txn Fees
-	st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
+	if st.evm.Coinbase != emptyAddress {
+		// ATLAS(zgx): carefully
+		st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
+	}
 
 	return &ExecutionResult{
 		UsedGas: st.gasUsed(),
