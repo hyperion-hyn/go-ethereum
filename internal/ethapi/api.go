@@ -1567,7 +1567,7 @@ func SubmitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (c
 		return common.Hash{}, err
 	}
 	if tx.Type() != types.Normal {
-		log.Info("Submitted staking transaction", "fullhash", tx.Hash().Hex(), "recipient")
+		log.Info("Submitted staking transaction", "fullhash", tx.Hash().Hex())
 	} else if tx.To() == nil {
 		signer := types.MakeSigner(b.ChainConfig(), b.CurrentBlock().Number())
 		from, err := types.Sender(signer, tx)
