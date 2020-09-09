@@ -32,3 +32,20 @@ func (ec *Client) GetMap3NodeInformation(
 	return &map3Node, err
 
 }
+
+func (ec *Client) GetMap3NodeDelegation(
+	ctx context.Context, map3NodeAddress common.Address, delegatorAddress common.Address, blockNumber *big.Int) (*microstaking.Microdelegation_, error) {
+
+	var bytes hexutil.Bytes
+
+	err := ec.c.CallContext(ctx, &bytes, "eth_getMap3NodeDelegation", map3NodeAddress, delegatorAddress, toBlockNumArg(blockNumber))
+	if err != nil {
+		return nil, err
+	}
+	var redelegation microstaking.Microdelegation_
+	err = rlp.DecodeBytes(bytes, &redelegation)
+	if err != nil {
+		return nil, err
+	}
+	return &redelegation, err
+}
