@@ -156,5 +156,7 @@ geth-windows-amd64:
 	@ls -ld $(GOBIN)/geth-windows-* | grep amd64
 
 third_party:
+	- go mod init github.com/hyperion-hyn/mcl
+	- go mod init github.com/hyperion-hyn/bls
 	make -C third_party/mcl lib/libmcl.a -j8
 	make -C third_party/bls lib/libbls384_256.a BLS_SWAP_G=1 -j8
