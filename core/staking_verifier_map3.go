@@ -17,7 +17,7 @@ var (
 	errDupMap3NodePubKey                    = errors.New("map3 node key exists")
 	errInvalidMap3NodeOperator              = errors.New("invalid map3 node operator")
 	errMicrodelegationNotExist              = errors.New("microdelegation does not exist")
-	errInvalidNodeStateForDelegation        = errors.New("invalid map3 node status for delegation")
+	errInvalidNodeStatusForDelegation       = errors.New("invalid map3 node status for delegation")
 	errUnmicrodelegateNotAllowed            = errors.New("invalid map3 node status to unmicrodelegate")
 	errInsufficientBalanceToUnmicrodelegate = errors.New("insufficient balance to unmicrodelegate")
 	errMicrodelegationStillLocked           = errors.New("microdelegation still locked")
@@ -299,7 +299,7 @@ func (verifier StakingVerifier) VerifyMicrodelegateMsg(stateDB vm.StateDB, chain
 
 	status := wrapper.Map3Node().Status().Value()
 	if status != uint8(microstaking.Pending) {
-		return errInvalidNodeStateForDelegation
+		return errInvalidNodeStatusForDelegation
 	}
 
 	// Check if there is enough liquid token to delegate

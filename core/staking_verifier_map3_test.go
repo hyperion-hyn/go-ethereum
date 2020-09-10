@@ -614,7 +614,7 @@ func TestVerifyTerminateMap3NodeMsg(t *testing.T) {
 					msg.OperatorAddress = map3OperatorAddr2
 					return msg
 				}(),
-				signer:  map3OperatorAddr2,
+				signer: map3OperatorAddr2,
 			},
 			wantErr: errTerminateMap3NodeNotAllowed,
 		},
@@ -629,7 +629,7 @@ func TestVerifyTerminateMap3NodeMsg(t *testing.T) {
 					msg.OperatorAddress = map3OperatorAddr3
 					return msg
 				}(),
-				signer:  map3OperatorAddr3,
+				signer: map3OperatorAddr3,
 			},
 			wantErr: errMicrodelegationStillLocked,
 		},
@@ -650,23 +650,6 @@ func defaultMsgTerminateMap3Node() microstaking.TerminateMap3Node {
 		Map3NodeAddress: map3NodeAddr,
 		OperatorAddress: map3OperatorAddr,
 	}
-}
-
-// makeStateDBForMicrostaking make the default state db for restaking test
-func makeStateDBForMicrostaking(t *testing.T) *state.StateDB {
-	sdb, err := newTestStateDB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	ws := makeNodeWrappersForMicrostaking(defNumNodeWrappersInState, defNumPubPerNode)
-	if err := updateStateMap3Nodes(sdb, ws); err != nil {
-		t.Fatalf("make default state: %v", err)
-	}
-	sdb.SetNonce(createOperatorAddr, defaultNonce)
-	sdb.AddBalance(createOperatorAddr, twoHundredKOnes)
-	sdb.AddBalance(delegatorAddr, tenKOnes)
-	sdb.Commit(true)
-	return sdb
 }
 
 func makeStateForTerminating(t *testing.T) *state.StateDB {
@@ -701,6 +684,200 @@ func updateUnlockedEpochForAddr(sdb *state.StateDB, map3Addr, delegator common.A
 	}
 	m.PendingDelegation().UnlockedEpoch().SetValue(unlockedEpoch)
 	return nil
+}
+
+func TestVerifyMicrodelegateMsg(t *testing.T) {
+	type args struct {
+		stateDB      vm.StateDB
+		chainContext ChainContext
+		blockNum     *big.Int
+		msg          microstaking.Microdelegate
+		signer       common.Address
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr error
+	}{
+		{
+			name: "delegate successfully",
+			args: args{
+				stateDB:      makeStateForMicrodelegating(t),
+				chainContext: makeFakeChainContextForStake(t),
+				blockNum:     big.NewInt(defaultBlockNumber),
+				msg:          defaultMsgMicrodelegate(),
+				signer:       delegatorAddr,
+			},
+			wantErr: nil,
+		},
+		{
+			name: "state db nil",
+			args: args{
+				stateDB:      nil,
+				chainContext: makeFakeChainContextForStake(t),
+				blockNum:     big.NewInt(defaultBlockNumber),
+				msg:          defaultMsgMicrodelegate(),
+				signer:       delegatorAddr,
+			},
+			wantErr: errStateDBIsMissing,
+		},
+		{
+			name: "chain context nil",
+			args: args{
+				stateDB:      makeStateForMicrodelegating(t),
+				chainContext: nil,
+				blockNum:     big.NewInt(defaultBlockNumber),
+				msg:          defaultMsgMicrodelegate(),
+				signer:       createOperatorAddr,
+			},
+			wantErr: errChainContextMissing,
+		},
+		{
+			name: "block number nil",
+			args: args{
+				stateDB:      makeStateForMicrodelegating(t),
+				chainContext: makeFakeChainContextForStake(t),
+				blockNum:     nil,
+				msg:          defaultMsgMicrodelegate(),
+				signer:       createOperatorAddr,
+			},
+			wantErr: errBlockNumMissing,
+		},
+		{
+			name: "invalid signer",
+			args: args{
+				stateDB:      makeStateForMicrodelegating(t),
+				chainContext: makeFakeChainContextForStake(t),
+				blockNum:     big.NewInt(defaultBlockNumber),
+				msg:          defaultMsgMicrodelegate(),
+				signer:       makeTestAddr("invalid operator"),
+			},
+			wantErr: errInvalidSigner,
+		},
+		{
+			name: "negative amount",
+			args: args{
+				stateDB:      makeStateForMicrodelegating(t),
+				chainContext: makeFakeChainContextForStake(t),
+				blockNum:     big.NewInt(defaultBlockNumber),
+				msg: func() microstaking.Microdelegate {
+					m := defaultMsgMicrodelegate()
+					m.Amount = big.NewInt(-1)
+					return m
+				}(),
+				signer: delegatorAddr,
+			},
+			wantErr: errNegativeAmount,
+		},
+		{
+			name: "map3 node not exist",
+			args: args{
+				stateDB:  makeStateForMicrodelegating(t),
+				chainContext: makeFakeChainContextForStake(t),
+				blockNum: big.NewInt(defaultBlockNumber),
+				msg: func() microstaking.Microdelegate {
+					msg := defaultMsgMicrodelegate()
+					msg.Map3NodeAddress = makeTestAddr("addr not in chain")
+					return msg
+				}(),
+				signer: delegatorAddr,
+			},
+			wantErr: errMap3NodeNotExist,
+		},
+		{
+			name: "invalid status",
+			args: args{
+				stateDB:  makeStateForMicrodelegating(t),
+				chainContext: makeFakeChainContextForStake(t),
+				blockNum: big.NewInt(defaultBlockNumber),
+				msg: func() microstaking.Microdelegate {
+					msg := defaultMsgMicrodelegate()
+					msg.Map3NodeAddress = map3NodeAddr2
+					return msg
+				}(),
+				signer:   delegatorAddr,
+			},
+			wantErr: errInvalidNodeStatusForDelegation,
+		},
+		{
+			name: "insufficient balance",
+			args: args{
+				stateDB:      makeStateForMicrodelegating(t),
+				chainContext: makeFakeChainContextForStake(t),
+				blockNum:     big.NewInt(defaultBlockNumber),
+				msg: func() microstaking.Microdelegate {
+					m := defaultMsgMicrodelegate()
+					m.Amount = oneMill
+					return m
+				}(),
+				signer: delegatorAddr,
+			},
+			wantErr: errInsufficientBalanceForStake,
+		},
+		{
+			name: "delegation too small",
+			args: args{
+				stateDB:      makeStateForMicrodelegating(t),
+				chainContext: makeFakeChainContextForStake(t),
+				blockNum:     big.NewInt(defaultBlockNumber),
+				msg: func() microstaking.Microdelegate {
+					m := defaultMsgMicrodelegate()
+					m.Amount = oneBig
+					return m
+				}(),
+				signer: delegatorAddr,
+			},
+			wantErr: errDelegationTooSmall,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			verifier, _ := NewStakingVerifier(tt.args.chainContext)
+			err := verifier.VerifyMicrodelegateMsg(tt.args.stateDB, tt.args.chainContext, tt.args.blockNum, &tt.args.msg, tt.args.signer)
+			if assErr := assertError(err, tt.wantErr); assErr != nil {
+				t.Errorf("Test - %v: %v", tt.name, err)
+			}
+		})
+	}
+}
+
+func defaultMsgMicrodelegate() microstaking.Microdelegate {
+	return microstaking.Microdelegate{
+		Map3NodeAddress:  map3NodeAddr,
+		DelegatorAddress: delegatorAddr,
+		Amount:           tenKOnes,
+	}
+}
+
+func makeStateForMicrodelegating(t *testing.T) *state.StateDB {
+	sdb := makeStateDBForMicrostaking(t)
+	if err := changeMap3StatusForAddr(sdb, map3NodeAddr2, microstaking.Active); err != nil {
+		t.Fatal(err)
+	}
+	sdb.IntermediateRoot(true)
+	return sdb
+}
+
+
+
+
+
+
+// makeStateDBForMicrostaking make the default state db for restaking test
+func makeStateDBForMicrostaking(t *testing.T) *state.StateDB {
+	sdb, err := newTestStateDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ws := makeNodeWrappersForMicrostaking(defNumNodeWrappersInState, defNumPubPerNode)
+	if err := updateStateMap3Nodes(sdb, ws); err != nil {
+		t.Fatalf("make default state: %v", err)
+	}
+	sdb.SetNonce(createOperatorAddr, defaultNonce)
+	sdb.AddBalance(createOperatorAddr, twoHundredKOnes)
+	sdb.AddBalance(delegatorAddr, tenKOnes)
+	sdb.Commit(true)
+	return sdb
 }
 
 func makeNodeWrappersForMicrostaking(num, numPubsPerNode int) []*microstaking.Map3NodeWrapper_ {
