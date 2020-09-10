@@ -622,7 +622,7 @@ func TestVerifyTerminateMap3NodeMsg(t *testing.T) {
 			name: "microdelegation still locked",
 			args: args{
 				stateDB: makeStateForTerminating(t),
-				epoch:   big.NewInt(defaultEpoch),
+				epoch:   big.NewInt(defaultEpoch - 1),
 				msg: func() microstaking.TerminateMap3Node {
 					msg := defaultMsgTerminateMap3Node()
 					msg.Map3NodeAddress = map3NodeAddr3
@@ -657,9 +657,6 @@ func makeStateForTerminating(t *testing.T) *state.StateDB {
 	if err := changeMap3StatusForAddr(sdb, map3NodeAddr2, microstaking.Active); err != nil {
 		t.Fatal(err)
 	}
-	if err := updateUnlockedEpochForAddr(sdb, map3NodeAddr3, map3OperatorAddr3, common.NewDec(1000)); err != nil {
-		t.Fatal(err)
-	}
 	sdb.IntermediateRoot(true)
 	return sdb
 }
@@ -670,19 +667,6 @@ func changeMap3StatusForAddr(sdb *state.StateDB, map3Addr common.Address, status
 		return err
 	}
 	n.Map3Node().Status().SetValue(uint8(status))
-	return nil
-}
-
-func updateUnlockedEpochForAddr(sdb *state.StateDB, map3Addr, delegator common.Address, unlockedEpoch common.Dec) error {
-	n, err := sdb.Map3NodeByAddress(map3Addr)
-	if err != nil {
-		return err
-	}
-	m, ok := n.Microdelegations().Get(delegator)
-	if !ok {
-		return errMicrodelegationNotExist
-	}
-	m.PendingDelegation().UnlockedEpoch().SetValue(unlockedEpoch)
 	return nil
 }
 
@@ -772,9 +756,9 @@ func TestVerifyMicrodelegateMsg(t *testing.T) {
 		{
 			name: "map3 node not exist",
 			args: args{
-				stateDB:  makeStateForMicrodelegating(t),
+				stateDB:      makeStateForMicrodelegating(t),
 				chainContext: makeFakeChainContextForStake(t),
-				blockNum: big.NewInt(defaultBlockNumber),
+				blockNum:     big.NewInt(defaultBlockNumber),
 				msg: func() microstaking.Microdelegate {
 					msg := defaultMsgMicrodelegate()
 					msg.Map3NodeAddress = makeTestAddr("addr not in chain")
@@ -787,15 +771,15 @@ func TestVerifyMicrodelegateMsg(t *testing.T) {
 		{
 			name: "invalid status",
 			args: args{
-				stateDB:  makeStateForMicrodelegating(t),
+				stateDB:      makeStateForMicrodelegating(t),
 				chainContext: makeFakeChainContextForStake(t),
-				blockNum: big.NewInt(defaultBlockNumber),
+				blockNum:     big.NewInt(defaultBlockNumber),
 				msg: func() microstaking.Microdelegate {
 					msg := defaultMsgMicrodelegate()
 					msg.Map3NodeAddress = map3NodeAddr2
 					return msg
 				}(),
-				signer:   delegatorAddr,
+				signer: delegatorAddr,
 			},
 			wantErr: errInvalidNodeStatusForDelegation,
 		},
@@ -858,10 +842,229 @@ func makeStateForMicrodelegating(t *testing.T) *state.StateDB {
 	return sdb
 }
 
+func TestVerifyUnmicrodelegateMsg(t *testing.T) {
+	type args struct {
+		stateDB      vm.StateDB
+		chainContext ChainContext
+		blockNum     *big.Int
+		epoch        *big.Int
+		msg          microstaking.Unmicrodelegate
+		signer       common.Address
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr error
+	}{
+		{
+			name: "unmicrodelegate successfully",
+			args: args{
+				stateDB:      makeDefaultStateForUnmicrodelegate(t),
+				chainContext: makeFakeChainContextForStake(t),
+				blockNum:     big.NewInt(defaultBlockNumber),
+				epoch:        big.NewInt(defaultEpoch),
+				msg:          defaultMsgUnmicrodelegate(),
+				signer:       map3OperatorAddr,
+			},
+			wantErr: nil,
+		},
+		{
+			name: "state db nil",
+			args: args{
+				stateDB:      nil,
+				chainContext: makeFakeChainContextForStake(t),
+				blockNum:     big.NewInt(defaultBlockNumber),
+				epoch:        big.NewInt(defaultEpoch),
+				msg:          defaultMsgUnmicrodelegate(),
+				signer:       map3OperatorAddr,
+			},
+			wantErr: errStateDBIsMissing,
+		},
+		{
+			name: "chain context nil",
+			args: args{
+				stateDB:      makeDefaultStateForUnmicrodelegate(t),
+				chainContext: nil,
+				blockNum:     big.NewInt(defaultBlockNumber),
+				epoch:        big.NewInt(defaultEpoch),
+				msg:          defaultMsgUnmicrodelegate(),
+				signer:       map3OperatorAddr,
+			},
+			wantErr: errChainContextMissing,
+		},
+		{
+			name: "block number nil",
+			args: args{
+				stateDB:      makeDefaultStateForUnmicrodelegate(t),
+				chainContext: makeFakeChainContextForStake(t),
+				blockNum:     nil,
+				epoch:        big.NewInt(defaultEpoch),
+				msg:          defaultMsgUnmicrodelegate(),
+				signer:       map3OperatorAddr,
+			},
+			wantErr: errBlockNumMissing,
+		},
+		{
+			name: "epoch nil",
+			args: args{
+				stateDB:      makeDefaultStateForUnmicrodelegate(t),
+				chainContext: makeFakeChainContextForStake(t),
+				blockNum:     big.NewInt(defaultBlockNumber),
+				epoch:        nil,
+				msg:          defaultMsgUnmicrodelegate(),
+				signer:       map3OperatorAddr,
+			},
+			wantErr: errEpochMissing,
+		},
+		{
+			name: "negative amount",
+			args: args{
+				stateDB:      makeDefaultStateForUnmicrodelegate(t),
+				chainContext: makeFakeChainContextForStake(t),
+				blockNum:     big.NewInt(defaultBlockNumber),
+				epoch:        big.NewInt(defaultEpoch),
+				msg: func() microstaking.Unmicrodelegate {
+					m := defaultMsgUnmicrodelegate()
+					m.Amount = big.NewInt(-1)
+					return m
+				}(),
+				signer: map3OperatorAddr,
+			},
+			wantErr: errNegativeAmount,
+		},
+		{
+			name: "invalid signer",
+			args: args{
+				stateDB:      makeDefaultStateForUnmicrodelegate(t),
+				chainContext: makeFakeChainContextForStake(t),
+				blockNum:     big.NewInt(defaultBlockNumber),
+				epoch:        big.NewInt(defaultEpoch),
+				msg:          defaultMsgUnmicrodelegate(),
+				signer:       makeTestAddr("invalid delegator"),
+			},
+			wantErr: errInvalidSigner,
+		},
+		{
+			name: "map3 node not exist",
+			args: args{
+				stateDB:      makeDefaultStateForUnmicrodelegate(t),
+				chainContext: makeFakeChainContextForStake(t),
+				blockNum:     big.NewInt(defaultBlockNumber),
+				epoch:        big.NewInt(defaultEpoch),
+				msg: func() microstaking.Unmicrodelegate {
+					msg := defaultMsgUnmicrodelegate()
+					msg.Map3NodeAddress = makeTestAddr("addr not in chain")
+					return msg
+				}(),
+				signer: map3OperatorAddr,
+			},
+			wantErr: errMap3NodeNotExist,
+		},
+		{
+			name: "invalid status",
+			args: args{
+				stateDB:      makeDefaultStateForUnmicrodelegate(t),
+				chainContext: makeFakeChainContextForStake(t),
+				blockNum:     big.NewInt(defaultBlockNumber),
+				epoch:        big.NewInt(defaultEpoch),
+				msg: func() microstaking.Unmicrodelegate {
+					msg := defaultMsgUnmicrodelegate()
+					msg.Map3NodeAddress = map3NodeAddr2
+					return msg
+				}(),
+				signer: map3OperatorAddr,
+			},
+			wantErr: errUnmicrodelegateNotAllowed,
+		},
+		{
+			name: "microdelegation not exist",
+			args: args{
+				stateDB:      makeDefaultStateForUnmicrodelegate(t),
+				chainContext: makeFakeChainContextForStake(t),
+				blockNum:     big.NewInt(defaultBlockNumber),
+				epoch:        big.NewInt(defaultEpoch),
+				msg: func() microstaking.Unmicrodelegate {
+					msg := defaultMsgUnmicrodelegate()
+					msg.DelegatorAddress = makeTestAddr("addr not in chain")
+					return msg
+				}(),
+				signer: makeTestAddr("addr not in chain"),
+			},
+			wantErr: errMicrodelegationNotExist,
+		},
+		{
+			name: "insufficient balance to unmicrodelegate",
+			args: args{
+				stateDB:      makeDefaultStateForUnmicrodelegate(t),
+				chainContext: makeFakeChainContextForStake(t),
+				blockNum:     big.NewInt(defaultBlockNumber),
+				epoch:        big.NewInt(defaultEpoch),
+				msg: func() microstaking.Unmicrodelegate {
+					msg := defaultMsgUnmicrodelegate()
+					msg.Amount = big.NewInt(0).Add(oneMill, common.Big1)
+					return msg
+				}(),
+				signer: map3OperatorAddr,
+			},
+			wantErr: errInsufficientBalanceToUnmicrodelegate,
+		},
+		{
+			name: "microdelegation still locked",
+			args: args{
+				stateDB:      makeDefaultStateForUnmicrodelegate(t),
+				chainContext: makeFakeChainContextForStake(t),
+				blockNum:     big.NewInt(defaultBlockNumber),
+				epoch:        big.NewInt(defaultEpoch - 1),
+				msg:          defaultMsgUnmicrodelegate(),
+				signer:       map3OperatorAddr,
+			},
+			wantErr: errMicrodelegationStillLocked,
+		},
+		{
+			name: "self delegation too small",
+			args: args{
+				stateDB:      makeDefaultStateForUnmicrodelegate(t),
+				chainContext: makeFakeChainContextForStake(t),
+				epoch:        big.NewInt(defaultEpoch),
+				blockNum:     big.NewInt(defaultBlockNumber),
+				msg: func() microstaking.Unmicrodelegate {
+					m := defaultMsgUnmicrodelegate()
+					m.Amount = big.NewInt(0).Sub(oneMill, common.Big1)
+					return m
+				}(),
+				signer: map3OperatorAddr,
+			},
+			wantErr: errSelfDelegationTooSmall,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			verifier, _ := NewStakingVerifier(tt.args.chainContext)
+			err := verifier.VerifyUnmicrodelegateMsg(tt.args.stateDB, tt.args.chainContext, tt.args.blockNum, tt.args.epoch, &tt.args.msg, tt.args.signer)
+			if assErr := assertError(err, tt.wantErr); assErr != nil {
+				t.Errorf("Test - %v: %v", tt.name, err)
+			}
+		})
+	}
+}
 
+func makeDefaultStateForUnmicrodelegate(t *testing.T) *state.StateDB {
+	sdb := makeStateDBForMicrostaking(t)
+	if err := changeMap3StatusForAddr(sdb, map3NodeAddr2, microstaking.Active); err != nil {
+		t.Fatal(err)
+	}
+	sdb.IntermediateRoot(true)
+	return sdb
+}
 
-
-
+// undelegate from delegator which has already go one entry for undelegation
+func defaultMsgUnmicrodelegate() microstaking.Unmicrodelegate {
+	return microstaking.Unmicrodelegate{
+		Map3NodeAddress:  map3NodeAddr,
+		DelegatorAddress: map3OperatorAddr,
+		Amount:           tenKOnes,
+	}
+}
 
 // makeStateDBForMicrostaking make the default state db for restaking test
 func makeStateDBForMicrostaking(t *testing.T) *state.StateDB {
@@ -904,7 +1107,7 @@ func makeStateNodeWrapperFromGetter(index int, numPubs int, pubGetter *BLSPubGet
 		AddNodeKeys(pubs).
 		SetDescription(defaultDesc2).
 		SetCommission(defaultCommission).
-		AddMicrodelegation(microstaking.NewMicrodelegation(operator, defaultDelAmount, common.NewDec(defaultEpoch), false)).
+		AddMicrodelegation(microstaking.NewMicrodelegation(operator, defaultDelAmount, common.NewDec(defaultEpoch), true)).
 		Build()
 	w.Map3Node.Description.Identity = makeIdentityStr(index)
 	return w
