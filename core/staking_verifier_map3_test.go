@@ -18,7 +18,8 @@ const (
 	defNumPubPerNode          = 1
 
 	map3NodeIndex  = 0
-	map3NodeIndex2 = 7
+	map3NodeIndex2 = 1
+	map3NodeIndex3 = 2
 )
 
 var (
@@ -27,6 +28,10 @@ var (
 	createMap3NodeAddr = crypto.CreateAddress(createOperatorAddr, defaultNonce)
 	map3NodeAddr       = makeTestAddr(fmt.Sprint("map3", map3NodeIndex))
 	map3NodeAddr2      = makeTestAddr(fmt.Sprint("map3", map3NodeIndex2))
+	map3NodeAddr3      = makeTestAddr(fmt.Sprint("map3", map3NodeIndex3))
+	map3OperatorAddr   = makeTestAddr(fmt.Sprint("op", map3NodeIndex))
+	map3OperatorAddr2  = makeTestAddr(fmt.Sprint("op", map3NodeIndex2))
+	map3OperatorAddr3  = makeTestAddr(fmt.Sprint("op", map3NodeIndex3))
 
 	defaultDesc2 = microstaking.Description_{
 		Name:            "SuperHero",
@@ -349,7 +354,7 @@ func TestVerifyEditMap3NodeMsg(t *testing.T) {
 				epoch:    big.NewInt(defaultEpoch),
 				blockNum: big.NewInt(defaultBlockNumber),
 				msg:      defaultMsgEditMap3Node(),
-				signer:   operatorAddr,
+				signer:   map3OperatorAddr,
 			},
 			wantErr: nil,
 		},
@@ -360,7 +365,7 @@ func TestVerifyEditMap3NodeMsg(t *testing.T) {
 				epoch:    big.NewInt(defaultEpoch),
 				blockNum: big.NewInt(defaultBlockNumber),
 				msg:      defaultMsgEditMap3Node(),
-				signer:   operatorAddr,
+				signer:   map3OperatorAddr,
 			},
 			wantErr: errStateDBIsMissing,
 		},
@@ -371,7 +376,7 @@ func TestVerifyEditMap3NodeMsg(t *testing.T) {
 				epoch:    nil,
 				blockNum: big.NewInt(defaultBlockNumber),
 				msg:      defaultMsgEditMap3Node(),
-				signer:   operatorAddr,
+				signer:   map3OperatorAddr,
 			},
 			wantErr: errEpochMissing,
 		},
@@ -382,7 +387,7 @@ func TestVerifyEditMap3NodeMsg(t *testing.T) {
 				epoch:    big.NewInt(defaultEpoch),
 				blockNum: nil,
 				msg:      defaultMsgEditMap3Node(),
-				signer:   operatorAddr,
+				signer:   map3OperatorAddr,
 			},
 			wantErr: errBlockNumMissing,
 		},
@@ -412,7 +417,7 @@ func TestVerifyEditMap3NodeMsg(t *testing.T) {
 					msg.NodeKeyToAddSig = &blsKeys[3].sig
 					return msg
 				}(),
-				signer: operatorAddr,
+				signer: map3OperatorAddr,
 			},
 			wantErr: errDupMap3NodePubKey,
 		},
@@ -427,7 +432,7 @@ func TestVerifyEditMap3NodeMsg(t *testing.T) {
 					msg.Description.Identity = makeIdentityStr(0)
 					return msg
 				}(),
-				signer: operatorAddr,
+				signer: map3OperatorAddr,
 			},
 			wantErr: errDupMap3NodeIdentity,
 		},
@@ -442,7 +447,7 @@ func TestVerifyEditMap3NodeMsg(t *testing.T) {
 					msg.Map3NodeAddress = makeTestAddr("addr not in chain")
 					return msg
 				}(),
-				signer: operatorAddr,
+				signer: map3OperatorAddr,
 			},
 			wantErr: errMap3NodeNotExist,
 		},
@@ -472,7 +477,7 @@ func TestVerifyEditMap3NodeMsg(t *testing.T) {
 					msg.NodeKeyToAddSig = &blsKeys[13].sig
 					return msg
 				}(),
-				signer: operatorAddr,
+				signer: map3OperatorAddr,
 			},
 			wantErr: errors.New("bls keys and corresponding signatures could not be verified"),
 		},
@@ -510,7 +515,7 @@ func defaultMsgEditMap3Node() microstaking.EditMap3Node {
 
 	return microstaking.EditMap3Node{
 		Map3NodeAddress: map3NodeAddr,
-		OperatorAddress: operatorAddr,
+		OperatorAddress: map3OperatorAddr,
 		Description:     editDesc2,
 		NodeKeyToRemove: &pub0Copy,
 		NodeKeyToAdd:    &pub12Copy,
@@ -533,10 +538,10 @@ func TestVerifyTerminateMap3NodeMsg(t *testing.T) {
 		{
 			name: "terminate successfully",
 			args: args{
-				stateDB: makeStateDBForMicrostaking(t),
+				stateDB: makeStateForTerminating(t),
 				epoch:   big.NewInt(defaultEpoch),
 				msg:     defaultMsgTerminateMap3Node(),
-				signer:  operatorAddr,
+				signer:  map3OperatorAddr,
 			},
 			wantErr: nil,
 		},
@@ -546,46 +551,88 @@ func TestVerifyTerminateMap3NodeMsg(t *testing.T) {
 				stateDB: nil,
 				epoch:   big.NewInt(defaultEpoch),
 				msg:     defaultMsgTerminateMap3Node(),
-				signer:  operatorAddr,
+				signer:  map3OperatorAddr,
 			},
 			wantErr: errStateDBIsMissing,
 		},
 		{
 			name: "epoch nil",
 			args: args{
-				stateDB: makeStateDBForMicrostaking(t),
+				stateDB: makeStateForTerminating(t),
 				epoch:   nil,
 				msg:     defaultMsgTerminateMap3Node(),
-				signer:  operatorAddr,
+				signer:  map3OperatorAddr,
 			},
 			wantErr: errEpochMissing,
 		},
 		{
-			name: "map3 node not exist",
-			args: args{
-				stateDB: makeStateDBForMicrostaking(t),
-				epoch:   big.NewInt(defaultEpoch),
-				msg: func() microstaking.TerminateMap3Node {
-					msg := defaultMsgTerminateMap3Node()
-					msg.Map3NodeAddress = makeTestAddr("addr not in chain")
-					return msg
-				}(),
-				signer: operatorAddr,
-			},
-			wantErr: errMap3NodeNotExist,
-		},
-		{
 			name: "invalid signer",
 			args: args{
-				stateDB: makeStateDBForMicrostaking(t),
+				stateDB: makeStateForTerminating(t),
 				epoch:   big.NewInt(defaultEpoch),
 				msg:     defaultMsgTerminateMap3Node(),
 				signer:  makeTestAddr("invalid operator"),
 			},
 			wantErr: errInvalidSigner,
 		},
-		// TODO(ATLAS): Add test cases.
-		// TODO(ATLAS): Epoch.
+		{
+			name: "map3 node not exist",
+			args: args{
+				stateDB: makeStateForTerminating(t),
+				epoch:   big.NewInt(defaultEpoch),
+				msg: func() microstaking.TerminateMap3Node {
+					msg := defaultMsgTerminateMap3Node()
+					msg.Map3NodeAddress = makeTestAddr("addr not in chain")
+					return msg
+				}(),
+				signer: map3OperatorAddr,
+			},
+			wantErr: errMap3NodeNotExist,
+		},
+		{
+			name: "invalid operator",
+			args: args{
+				stateDB: makeStateForTerminating(t),
+				epoch:   big.NewInt(defaultEpoch),
+				msg: func() microstaking.TerminateMap3Node {
+					msg := defaultMsgTerminateMap3Node()
+					msg.OperatorAddress = makeTestAddr("invalid operator")
+					return msg
+				}(),
+				signer: makeTestAddr("invalid operator"),
+			},
+			wantErr: errInvalidMap3NodeOperator,
+		},
+		{
+			name: "invalid status",
+			args: args{
+				stateDB: makeStateForTerminating(t),
+				epoch:   big.NewInt(defaultEpoch),
+				msg: func() microstaking.TerminateMap3Node {
+					msg := defaultMsgTerminateMap3Node()
+					msg.Map3NodeAddress = map3NodeAddr2
+					msg.OperatorAddress = map3OperatorAddr2
+					return msg
+				}(),
+				signer:  map3OperatorAddr2,
+			},
+			wantErr: errTerminateMap3NodeNotAllowed,
+		},
+		{
+			name: "microdelegation still locked",
+			args: args{
+				stateDB: makeStateForTerminating(t),
+				epoch:   big.NewInt(defaultEpoch),
+				msg: func() microstaking.TerminateMap3Node {
+					msg := defaultMsgTerminateMap3Node()
+					msg.Map3NodeAddress = map3NodeAddr3
+					msg.OperatorAddress = map3OperatorAddr3
+					return msg
+				}(),
+				signer:  map3OperatorAddr3,
+			},
+			wantErr: errMicrodelegationStillLocked,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -601,7 +648,7 @@ func TestVerifyTerminateMap3NodeMsg(t *testing.T) {
 func defaultMsgTerminateMap3Node() microstaking.TerminateMap3Node {
 	return microstaking.TerminateMap3Node{
 		Map3NodeAddress: map3NodeAddr,
-		OperatorAddress: operatorAddr,
+		OperatorAddress: map3OperatorAddr,
 	}
 }
 
@@ -620,6 +667,40 @@ func makeStateDBForMicrostaking(t *testing.T) *state.StateDB {
 	sdb.AddBalance(delegatorAddr, tenKOnes)
 	sdb.Commit(true)
 	return sdb
+}
+
+func makeStateForTerminating(t *testing.T) *state.StateDB {
+	sdb := makeStateDBForMicrostaking(t)
+	if err := changeMap3StatusForAddr(sdb, map3NodeAddr2, microstaking.Active); err != nil {
+		t.Fatal(err)
+	}
+	if err := updateUnlockedEpochForAddr(sdb, map3NodeAddr3, map3OperatorAddr3, common.NewDec(1000)); err != nil {
+		t.Fatal(err)
+	}
+	sdb.IntermediateRoot(true)
+	return sdb
+}
+
+func changeMap3StatusForAddr(sdb *state.StateDB, map3Addr common.Address, status microstaking.Map3Status) error {
+	n, err := sdb.Map3NodeByAddress(map3Addr)
+	if err != nil {
+		return err
+	}
+	n.Map3Node().Status().SetValue(uint8(status))
+	return nil
+}
+
+func updateUnlockedEpochForAddr(sdb *state.StateDB, map3Addr, delegator common.Address, unlockedEpoch common.Dec) error {
+	n, err := sdb.Map3NodeByAddress(map3Addr)
+	if err != nil {
+		return err
+	}
+	m, ok := n.Microdelegations().Get(delegator)
+	if !ok {
+		return errMicrodelegationNotExist
+	}
+	m.PendingDelegation().UnlockedEpoch().SetValue(unlockedEpoch)
+	return nil
 }
 
 func makeNodeWrappersForMicrostaking(num, numPubsPerNode int) []*microstaking.Map3NodeWrapper_ {
@@ -646,7 +727,7 @@ func makeStateNodeWrapperFromGetter(index int, numPubs int, pubGetter *BLSPubGet
 		AddNodeKeys(pubs).
 		SetDescription(defaultDesc2).
 		SetCommission(defaultCommission).
-		AddMicrodelegation(microstaking.NewMicrodelegation(operator, defaultDelAmount, common.NewDec(10), false)).
+		AddMicrodelegation(microstaking.NewMicrodelegation(operator, defaultDelAmount, common.NewDec(defaultEpoch), false)).
 		Build()
 	w.Map3Node.Description.Identity = makeIdentityStr(index)
 	return w
