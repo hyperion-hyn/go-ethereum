@@ -1066,6 +1066,98 @@ func defaultMsgUnmicrodelegate() microstaking.Unmicrodelegate {
 	}
 }
 
+func TestVerifyCollectMicordelRewardsMsg(t *testing.T) {
+	type args struct {
+		stateDB vm.StateDB
+		msg     microstaking.CollectRewards
+		signer  common.Address
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr error
+	}{
+		{
+			name: "collect successfully",
+			args: args{
+				stateDB: makeStateForMicrostakingReward(t),
+				msg:     defaultMsgCollectMicrodelRewards(),
+				signer:  map3OperatorAddr,
+			},
+			wantErr: nil,
+		},
+		{
+			name: "state db nil",
+			args: args{
+				stateDB: nil,
+				msg:     defaultMsgCollectMicrodelRewards(),
+				signer:  map3OperatorAddr,
+			},
+			wantErr: errStateDBIsMissing,
+		},
+		{
+			name: "invalid signer",
+			args: args{
+				stateDB: makeStateForMicrostakingReward(t),
+				msg:     defaultMsgCollectMicrodelRewards(),
+				signer:  makeTestAddr("invalid operator"),
+			},
+			wantErr: errInvalidSigner,
+		},
+		{
+			name: "no reward",
+			args: args{
+				stateDB: makeStateForMicrostakingReward(t),
+				msg: func() microstaking.CollectRewards {
+					m := defaultMsgCollectMicrodelRewards()
+					m.DelegatorAddress = operatorAddr2
+					return m
+				}(),
+				signer:  operatorAddr2,
+			},
+			wantErr: errNoRewardsToCollect,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			verifier, _ := NewStakingVerifier(makeFakeChainContextForStake(t))
+			err := verifier.VerifyCollectMicrostakingRewardsMsg(tt.args.stateDB, &tt.args.msg, tt.args.signer)
+			if assErr := assertError(err, tt.wantErr); assErr != nil {
+				t.Errorf("Test - %v: %v", tt.name, err)
+			}
+		})
+	}
+}
+
+// undelegate from delegator which has already go one entry for undelegation
+func defaultMsgCollectMicrodelRewards() microstaking.CollectRewards {
+	return microstaking.CollectRewards{
+		DelegatorAddress: map3OperatorAddr,
+	}
+}
+
+func makeStateForMicrostakingReward(t *testing.T) *state.StateDB {
+	sdb := makeStateDBForMicrostaking(t)
+	if err := addStateMicrostakingRewardForAddr(sdb, map3NodeAddr, map3OperatorAddr, reward00); err != nil {
+		t.Fatal(err)
+	}
+	sdb.IntermediateRoot(true)
+	return sdb
+}
+
+func addStateMicrostakingRewardForAddr(sdb *state.StateDB, map3Addr, delegator common.Address, reward *big.Int) error {
+	w, err := sdb.Map3NodeByAddress(map3Addr)
+	if err != nil {
+		return err
+	}
+	redelegation, ok := w.Microdelegations().Get(delegator)
+	if !ok {
+		return errMicrodelegationNotExist
+	}
+	redelegation.AddReward(reward)
+	return nil
+}
+
 // makeStateDBForMicrostaking make the default state db for restaking test
 func makeStateDBForMicrostaking(t *testing.T) *state.StateDB {
 	sdb, err := newTestStateDB()
@@ -1114,13 +1206,23 @@ func makeStateNodeWrapperFromGetter(index int, numPubs int, pubGetter *BLSPubGet
 }
 
 func updateStateMap3Nodes(sdb *state.StateDB, ws []*microstaking.Map3NodeWrapper_) error {
+	pool := sdb.Map3NodePool()
 	for _, w := range ws {
-		sdb.Map3NodePool().Nodes().Put(w.Map3Node.Map3Address, w)
+		pool.Nodes().Put(w.Map3Node.Map3Address, w)
 		sdb.IncrementMap3NodeNonce()
 		for _, k := range w.Map3Node.NodeKeys.Keys {
-			sdb.Map3NodePool().NodeKeySet().Get(k.Hex()).SetValue(true)
+			pool.NodeKeySet().Get(k.Hex()).SetValue(true)
 		}
-		sdb.Map3NodePool().DescriptionIdentitySet().Get(w.Map3Node.Description.Identity).SetValue(true)
+		pool.DescriptionIdentitySet().Get(w.Map3Node.Description.Identity).SetValue(true)
+
+		for _, key := range w.Microdelegations.Keys {
+			delegator := *key
+			index := microstaking.DelegationIndex_{
+				Map3Address: w.Map3Node.Map3Address,
+				IsOperator:  delegator == w.Map3Node.OperatorAddress,
+			}
+			pool.UpdateDelegationIndex(delegator, &index)
+		}
 	}
 	return nil
 }

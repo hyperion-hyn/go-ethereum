@@ -58,12 +58,12 @@ func (pool *TxPool) validateStakingTx(tx *types.Transaction) error {
 		}
 		_, err := verifier.VerifyUnredelegateMsg(pool.currentState, pendingEpoch, stkMsg, msg.From())
 		return err
-	case types.CollectRedelReward:
+	case types.CollectRestakingReward:
 		stkMsg := &restaking.CollectReward{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return err
 		}
-		_, err := verifier.VerifyCollectRedelRewardMsg(pool.currentState, stkMsg, msg.From())
+		_, err := verifier.VerifyCollectRestakingRewardMsg(pool.currentState, stkMsg, msg.From())
 		return err
 	case types.CreateMap3:
 		stkMsg := &microstaking.CreateMap3Node{}
@@ -96,12 +96,12 @@ func (pool *TxPool) validateStakingTx(tx *types.Transaction) error {
 			return err
 		}
 		return verifier.VerifyUnmicrodelegateMsg(pool.currentState, chainContext, pendingBlockNumber, pendingEpoch, stkMsg, msg.From())
-	case types.CollectMap3Rewards:
+	case types.CollectMicrostakingRewards:
 		stkMsg := &microstaking.CollectRewards{}
 		if err := rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return err
 		}
-		return verifier.VerifyCollectMicrodelRewardsMsg(pool.currentState, stkMsg, msg.From())
+		return verifier.VerifyCollectMicrostakingRewardsMsg(pool.currentState, stkMsg, msg.From())
 	}
 
 	return nil

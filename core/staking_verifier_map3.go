@@ -372,7 +372,7 @@ func (verifier StakingVerifier) VerifyUnmicrodelegateMsg(stateDB vm.StateDB, cha
 	return nil
 }
 
-func (verifier StakingVerifier) VerifyCollectMicrodelRewardsMsg(stateDB vm.StateDB, msg *microstaking.CollectRewards, signer common.Address) error {
+func (verifier StakingVerifier) VerifyCollectMicrostakingRewardsMsg(stateDB vm.StateDB, msg *microstaking.CollectRewards, signer common.Address) error {
 	if stateDB == nil {
 		return errStateDBIsMissing
 	}

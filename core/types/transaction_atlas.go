@@ -17,7 +17,7 @@ const (
 	EditValidator
 	Redelegate
 	Unredelegate
-	CollectRedelReward
+	CollectRestakingReward
 
 	// map3 node
 	CreateMap3
@@ -25,7 +25,7 @@ const (
 	TerminateMap3
 	Microdelegate
 	Unmicrodelegate
-	CollectMap3Rewards
+	CollectMicrostakingRewards
 )
 
 func NewStakingTransaction(nonce uint64, gasLimit uint64, gasPrice *big.Int, data []byte, txType TransactionType) *Transaction {
@@ -45,8 +45,8 @@ func (txType TransactionType) String() string {
 		return "Redelegate"
 	} else if txType == Unredelegate {
 		return "Unredelegate"
-	} else if txType == CollectRedelReward {
-		return "CollectRedelegationReward"
+	} else if txType == CollectRestakingReward {
+		return "CollectRestakingReward"
 	} else if txType == CreateMap3 {
 		return "CreateMap3Node"
 	} else if txType == EditMap3 {
@@ -57,8 +57,8 @@ func (txType TransactionType) String() string {
 		return "Microdelegate"
 	} else if txType == Unmicrodelegate {
 		return "Unmicrodelegate"
-	} else if txType == CollectMap3Rewards {
-		return "CollectMap3Rewards"
+	} else if txType == CollectMicrostakingRewards {
+		return "CollectMicrostakingRewards"
 	}
 	return "Normal"
 }
