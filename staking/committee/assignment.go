@@ -95,7 +95,8 @@ func prepareOrders(stakedReader DataProvider, lastEpoch *big.Int) (map[common.Ad
 			return nil, err
 		}
 		// snapshot of validator at the beginning of the given epoch
-		snapshot, err := stakedReader.ReadValidatorAtEpoch(lastEpoch, candidates[i])
+		// ATLAS todo
+		snapshot, err := stakedReader.ReadValidatorAtEpochOrCurrentBlock(lastEpoch, candidates[i])
 		if err != nil {
 			return nil, err
 		}
@@ -161,6 +162,7 @@ type StakingCandidatesReader interface {
 
 // ChainReader is a subset of Engine.ChainReader, just enough to do assignment
 type ChainReader interface {
+	ReadValidatorAtEpochOrCurrentBlock(*big.Int, common.Address) (*restaking.Storage_ValidatorWrapper_, error)
 	ReadValidatorAtEpoch(epoch *big.Int, validatorAddress common.Address) (*restaking.Storage_ValidatorWrapper_, error)
 	// GetCommitteeAtEpoch retrieves sharding state given the epoch number.
 	// This api reads the shard state cached or saved on the chaindb.

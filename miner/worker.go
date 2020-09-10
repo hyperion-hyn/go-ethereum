@@ -952,7 +952,10 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 	// Create an empty block based on temporary copied state for
 	// sealing in advance without waiting block execution finished.
 	if !noempty && atomic.LoadUint32(&w.noempty) == 0 {
-		w.commit(uncles, nil, false, tstart)
+		err := w.commit(uncles, nil, false, tstart) //ATLAS
+		if err != nil {
+			log.Error("Failed to work commit", "err", err)
+		}
 	}
 
 	// Fill the block with all available pending transactions.
