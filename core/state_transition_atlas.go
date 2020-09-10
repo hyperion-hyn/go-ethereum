@@ -92,7 +92,7 @@ func (st *StateTransition) StakingTransitionDb() (*ExecutionResult, error) {
 			return nil, err
 		}
 		err = st.verifyAndApplyUnredelegateTx(verifier, stkMsg, msg.From())
-	case types.CollectRedelReward:
+	case types.CollectRestakingReward:
 		stkMsg := &restaking.CollectReward{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return nil, err
@@ -130,7 +130,7 @@ func (st *StateTransition) StakingTransitionDb() (*ExecutionResult, error) {
 			return nil, err
 		}
 		err = st.verifyAndApplyUnmicrodelegateTx(verifier, stkMsg, msg.From())
-	case types.CollectMap3Rewards:
+	case types.CollectMicrostakingRewards:
 		stkMsg := &microstaking.CollectRewards{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return nil, err
@@ -194,7 +194,7 @@ func (st *StateTransition) verifyAndApplyUnredelegateTx(verifier StakingVerifier
 }
 
 func (st *StateTransition) verifyAndApplyCollectRedelRewardTx(verifier StakingVerifier, msg *restaking.CollectReward, signer common.Address) (*big.Int, error) {
-	verified, err := verifier.VerifyCollectRedelRewardMsg(st.state, msg, signer)
+	verified, err := verifier.VerifyCollectRestakingRewardMsg(st.state, msg, signer)
 	if err != nil {
 		return network.NoReward, err
 	}

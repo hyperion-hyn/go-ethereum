@@ -81,7 +81,7 @@ func (st *StateTransition) verifyAndApplyUnmicrodelegateTx(verifier StakingVerif
 }
 
 func (st *StateTransition) verifyAndApplyCollectMicrodelRewardsTx(verifier StakingVerifier, msg *microstaking.CollectRewards, signer common.Address) (*big.Int, error) {
-	if err := verifier.VerifyCollectMicrodelRewardsMsg(st.state, msg, signer); err != nil {
+	if err := verifier.VerifyCollectMicrostakingRewardsMsg(st.state, msg, signer); err != nil {
 		return network.NoReward, err
 	}
 	map3NodePool := st.state.Map3NodePool()

@@ -673,10 +673,10 @@ func TestVerifyUnredelegateMsg(t *testing.T) {
 		{
 			name: "unredelegate successfully",
 			args: args{
-				stateDB:      makeDefaultStateForUndelegate(t),
+				stateDB:      makeDefaultStateForUnredelegate(t),
 				chainContext: makeFakeChainContextForStake(t),
 				epoch:        big.NewInt(defaultEpoch),
-				msg:          defaultMsgUndelegate(),
+				msg:          defaultMsgUnredelegate(),
 				signer:       operatorAddr2,
 			},
 			wantErr: nil,
@@ -687,7 +687,7 @@ func TestVerifyUnredelegateMsg(t *testing.T) {
 				stateDB:      nil,
 				chainContext: makeFakeChainContextForStake(t),
 				epoch:        big.NewInt(defaultEpoch),
-				msg:          defaultMsgUndelegate(),
+				msg:          defaultMsgUnredelegate(),
 				signer:       operatorAddr2,
 			},
 			wantErr: errStateDBIsMissing,
@@ -695,10 +695,10 @@ func TestVerifyUnredelegateMsg(t *testing.T) {
 		{
 			name: "epoch nil",
 			args: args{
-				stateDB:      makeDefaultStateForUndelegate(t),
+				stateDB:      makeDefaultStateForUnredelegate(t),
 				chainContext: makeFakeChainContextForStake(t),
 				epoch:        nil,
-				msg:          defaultMsgUndelegate(),
+				msg:          defaultMsgUnredelegate(),
 				signer:       operatorAddr2,
 			},
 			wantErr: errEpochMissing,
@@ -706,10 +706,10 @@ func TestVerifyUnredelegateMsg(t *testing.T) {
 		{
 			name: "invalid signer",
 			args: args{
-				stateDB:      makeDefaultStateForUndelegate(t),
+				stateDB:      makeDefaultStateForUnredelegate(t),
 				chainContext: makeFakeChainContextForStake(t),
 				epoch:        big.NewInt(defaultEpoch),
-				msg:          defaultMsgUndelegate(),
+				msg:          defaultMsgUnredelegate(),
 				signer:       makeTestAddr("invalid operator"),
 			},
 			wantErr: errInvalidSigner,
@@ -717,11 +717,11 @@ func TestVerifyUnredelegateMsg(t *testing.T) {
 		{
 			name: "validator not exist",
 			args: args{
-				stateDB:      makeDefaultStateForUndelegate(t),
+				stateDB:      makeDefaultStateForUnredelegate(t),
 				chainContext: makeFakeChainContextForStake(t),
 				epoch:        big.NewInt(defaultEpoch),
 				msg: func() restaking.Unredelegate {
-					msg := defaultMsgUndelegate()
+					msg := defaultMsgUnredelegate()
 					msg.ValidatorAddress = makeTestAddr("addr not in chain")
 					return msg
 				}(),
@@ -732,11 +732,11 @@ func TestVerifyUnredelegateMsg(t *testing.T) {
 		{
 			name: "redelegation not exist",
 			args: args{
-				stateDB:      makeDefaultStateForUndelegate(t),
+				stateDB:      makeDefaultStateForUnredelegate(t),
 				chainContext: makeFakeChainContextForStake(t),
 				epoch:        big.NewInt(defaultEpoch),
 				msg: func() restaking.Unredelegate {
-					msg := defaultMsgUndelegate()
+					msg := defaultMsgUnredelegate()
 					msg.DelegatorAddress = makeTestAddr("addr not in chain")
 					return msg
 				}(),
@@ -747,11 +747,11 @@ func TestVerifyUnredelegateMsg(t *testing.T) {
 		{
 			name: "insufficient balance to undelegate",
 			args: args{
-				stateDB:      makeDefaultStateForUndelegate(t),
+				stateDB:      makeDefaultStateForUnredelegate(t),
 				chainContext: makeFakeChainContextForStake(t),
 				epoch:        big.NewInt(defaultEpoch),
 				msg: func() restaking.Unredelegate {
-					msg := defaultMsgUndelegate()
+					msg := defaultMsgUnredelegate()
 					msg.DelegatorAddress = delegatorAddr
 					return msg
 				}(),
@@ -771,7 +771,7 @@ func TestVerifyUnredelegateMsg(t *testing.T) {
 	}
 }
 
-func makeDefaultSnapVWrapperForUndelegate() *restaking.ValidatorWrapper_ {
+func makeDefaultSnapVWrapperForUnredelegate() *restaking.ValidatorWrapper_ {
 	w := makeVWrapperByIndex(validatorIndex2)
 	newRedelegation := restaking.Redelegation_{
 		DelegatorAddress: delegatorAddr,
@@ -785,18 +785,18 @@ func makeDefaultSnapVWrapperForUndelegate() *restaking.ValidatorWrapper_ {
 	return w
 }
 
-func makeDefaultStateForUndelegate(t *testing.T) *state.StateDB {
+func makeDefaultStateForUnredelegate(t *testing.T) *state.StateDB {
 	sdb := makeStateDBForRestaking(t)
-	w := makeDefaultSnapVWrapperForUndelegate()
+	w := makeDefaultSnapVWrapperForUnredelegate()
 	if err := updateStateValidators(sdb, []*restaking.ValidatorWrapper_{w}); err != nil {
 		t.Fatal(err)
 	}
-	sdb.IntermediateRoot(false)
+	sdb.IntermediateRoot(true)
 	return sdb
 }
 
 // undelegate from delegator which has already go one entry for undelegation
-func defaultMsgUndelegate() restaking.Unredelegate {
+func defaultMsgUnredelegate() restaking.Unredelegate {
 	return restaking.Unredelegate{
 		DelegatorAddress: operatorAddr2,
 		ValidatorAddress: validatorAddr2,
@@ -810,7 +810,7 @@ var (
 	reward11 = twentyFiveKOnes
 )
 
-func TestVerifyCollectRedelRewardsMsg(t *testing.T) {
+func TestVerifyCollectRedelRewardMsg(t *testing.T) {
 	type args struct {
 		stateDB      vm.StateDB
 		chainContext ChainContext
@@ -894,7 +894,7 @@ func TestVerifyCollectRedelRewardsMsg(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			verifier, _ := NewStakingVerifier(tt.args.chainContext)
-			_, err := verifier.VerifyCollectRedelRewardMsg(tt.args.stateDB, &tt.args.msg, tt.args.signer)
+			_, err := verifier.VerifyCollectRestakingRewardMsg(tt.args.stateDB, &tt.args.msg, tt.args.signer)
 			if assErr := assertError(err, tt.wantErr); assErr != nil {
 				t.Errorf("Test - %v: %v", tt.name, err)
 			}
@@ -915,7 +915,7 @@ func makeStateForReward(t *testing.T) *state.StateDB {
 	if err := addStateRewardForAddr(sdb, validatorAddr, reward00); err != nil {
 		t.Fatal(err)
 	}
-	sdb.IntermediateRoot(false)
+	sdb.IntermediateRoot(true)
 	return sdb
 }
 

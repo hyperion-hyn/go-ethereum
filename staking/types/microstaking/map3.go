@@ -273,7 +273,7 @@ func (s *Storage_Map3NodeWrapperMap_) Get(key common.Address) (*Storage_Map3Node
 
 func (s *Storage_Map3NodePool_) UpdateDelegationIndex(delegator common.Address, index *DelegationIndex_) {
 	indexMap := s.DelegationIndexMapByDelegator().Get(delegator)
-	indexMap.Put(delegator, index)
+	indexMap.Put(index.Map3Address, index)
 }
 
 func (s *Storage_Map3NodePool_) RemoveDelegationIndex(delegator, map3Addr common.Address) {
