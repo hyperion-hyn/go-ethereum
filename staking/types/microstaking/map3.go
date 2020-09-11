@@ -85,6 +85,48 @@ func (n *Map3Node_) SanityCheck(maxPubKeyAllowed int) error {
 	return nil
 }
 
+func (n *Map3Node_) ToSimplifiedMap3Node() *SimplifiedMap3Node {
+	return &SimplifiedMap3Node{
+		Map3Address:     n.Map3Address,
+		OperatorAddress: n.OperatorAddress,
+		NodeKeys: func() []SimplifiedNodeKey {
+			var nodeKeys []SimplifiedNodeKey
+			for _, nodeKey := range n.NodeKeys.Keys {
+				nodeKeys = append(nodeKeys, nodeKey.Key)
+			}
+			return nodeKeys
+		}(),
+		Commission:      n.Commission,
+		Description:     n.Description,
+		CreationHeight:  n.CreationHeight,
+		Age:             n.Age,
+		Status:          n.Status,
+		PendingEpoch:    n.PendingEpoch,
+		ActivationEpoch: n.ActivationEpoch,
+		ReleaseEpoch:    n.ReleaseEpoch,
+	}
+}
+
+func (n *Map3NodeWrapper_) ToSimplifiedMap3NodeWrapper() *SimplifiedMap3NodeWrapper {
+	return &SimplifiedMap3NodeWrapper{
+		Map3Node: *n.Map3Node.ToSimplifiedMap3Node(),
+		Microdelegations: func() []Microdelegation_ {
+			var delegations []Microdelegation_
+			for _, key := range n.Microdelegations.Keys {
+				delegation, ok := n.Microdelegations.Get(*key)
+				if ok {
+					delegations = append(delegations, delegation)
+				}
+			}
+			return delegations
+		}(),
+		RedelegationReference:  n.RestakingReference.ValidatorAddress,
+		AccumulatedReward:      n.AccumulatedReward,
+		TotalDelegation:        n.TotalDelegation,
+		TotalPendingDelegation: n.TotalPendingDelegation,
+	}
+}
+
 // Storage_Map3NodeWrapper_
 func (s *Storage_Map3NodeWrapper_) AddTotalDelegation(amount *big.Int) {
 	totalDelegation := s.TotalDelegation().Value()
@@ -353,4 +395,72 @@ func UpdateMap3NodeFromEditMsg(map3Node *Map3Node_, edit *EditMap3Node) error {
 		}
 	}
 	return nil
+}
+
+type SimplifiedNodeKey = [48]uint8
+
+type SimplifiedMap3Node struct {
+	Map3Address     common.Address      `json:"Map3Address"`
+	OperatorAddress common.Address      `json:"OperatorAddress"`
+	NodeKeys        []SimplifiedNodeKey `json:"NodeKeys"`
+	Commission      Commission_         `json:"Commission"`
+	Description     Description_        `json:"Description"`
+	CreationHeight  *big.Int            `json:"CreationHeight"`
+	Age             common.Dec          `json:"Age"`
+	Status          uint8               `json:"Status"`
+	PendingEpoch    *big.Int            `json:"PendingEpoch"`
+	ActivationEpoch *big.Int            `json:"ActivationEpoch"`
+	ReleaseEpoch    common.Dec          `json:"ReleaseEpoch"`
+}
+
+func (n *SimplifiedMap3Node) ToMap3Node() *Map3Node_ {
+	return &Map3Node_{
+		Map3Address:     n.Map3Address,
+		OperatorAddress: n.OperatorAddress,
+		NodeKeys: func() BLSPublicKeys_ {
+			nodeKeys := NewEmptyBLSKeys()
+			for _, nodeKey := range n.NodeKeys {
+				nodeKeys.Keys = append(nodeKeys.Keys, &BLSPublicKey_{
+					Key: nodeKey,
+				})
+			}
+			return nodeKeys
+		}(),
+		Commission:      n.Commission,
+		Description:     n.Description,
+		CreationHeight:  n.CreationHeight,
+		Age:             n.Age,
+		Status:          n.Status,
+		PendingEpoch:    n.PendingEpoch,
+		ActivationEpoch: n.ActivationEpoch,
+		ReleaseEpoch:    n.ReleaseEpoch,
+	}
+}
+
+type SimplifiedMap3NodeWrapper struct {
+	Map3Node               SimplifiedMap3Node `json:"Map3Node"`
+	Microdelegations       []Microdelegation_ `json:"Microdelegations"`
+	RedelegationReference  common.Address     `json:"RedelegationReference"`
+	AccumulatedReward      *big.Int           `json:"AccumulatedReward"`
+	TotalDelegation        *big.Int           `json:"TotalDelegation"`
+	TotalPendingDelegation *big.Int           `json:"TotalPendingDelegation"`
+}
+
+func (n *SimplifiedMap3NodeWrapper) ToMap3NodeWrapper() *Map3NodeWrapper_ {
+	return &Map3NodeWrapper_{
+		Map3Node: *n.Map3Node.ToMap3Node(),
+		Microdelegations: func() MicrodelegationMap_ {
+			delegations := NewMicrodelegationMap()
+			for _, delegation := range n.Microdelegations {
+				delegations.Put(delegation.DelegatorAddress, delegation)
+			}
+			return delegations
+		}(),
+		RestakingReference: RestakingReference_{
+			ValidatorAddress: n.RedelegationReference,
+		},
+		AccumulatedReward:      n.AccumulatedReward,
+		TotalDelegation:        n.TotalDelegation,
+		TotalPendingDelegation: n.TotalPendingDelegation,
+	}
 }
