@@ -16,7 +16,7 @@ func (ec *Client) GetAllMap3NodeAddresses(ctx context.Context, blockNumber *big.
 }
 
 func (ec *Client) GetMap3NodeInformation(
-	ctx context.Context, map3NodeAddress common.Address, blockNumber *big.Int) (*microstaking.Map3NodeWrapperRPC, error) {
+	ctx context.Context, map3NodeAddress common.Address, blockNumber *big.Int) (*microstaking.SimplifiedMap3NodeWrapper, error) {
 
 	var bytes hexutil.Bytes
 
@@ -24,7 +24,7 @@ func (ec *Client) GetMap3NodeInformation(
 	if err != nil {
 		return nil, err
 	}
-	var map3Node microstaking.Map3NodeWrapperRPC
+	var map3Node microstaking.SimplifiedMap3NodeWrapper
 	err = rlp.DecodeBytes(bytes, &map3Node)
 	if err != nil {
 		return nil, err
