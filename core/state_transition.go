@@ -263,7 +263,15 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		ret, st.gas, vmerr = st.evm.Call(sender, st.to(), st.data, st.gas, st.value)
 	}
 	st.refundGas()
-	st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
+
+	// ATLAS
+	emptyAddress := common.Address{}
+	fee := new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)
+	if st.evm.Coinbase != emptyAddress {
+		st.state.AddBalance(st.evm.Coinbase, fee)
+	} else {
+		st.state.AddTxFee(st.evm.BlockNumber, fee)
+	}
 
 	return &ExecutionResult{
 		UsedGas:    st.gasUsed(),
