@@ -990,17 +990,18 @@ func updateCommitteeForNextEpoch(chain consensus.ChainReader, header *types.Head
 func accumulateRewardsAndCountSigs(
 	bc consensus.ChainReader, state *state.StateDB, header *types.Header,
 ) (reward.Reader, error) {
-	blockNum := header.Number.Uint64()
-	if blockNum <= 1 {
+	if header.Number.Uint64() <= 1 {
 		// genesis block has no parent to reward.
 		return network.EmptyPayout, nil
 	}
 
 	blockReward := network.CalcBlockReward(header.Number, bc.Config())
+	lastBlockFee := state.TxFee(big.NewInt(0).Sub(header.Number, common.Big1))
+	totalReward := big.NewInt(0).Add(blockReward, lastBlockFee)
 
 	// If too much is staked, then possible to have negative reward,
 	// not an error, just a possible economic situation, hence we return
-	if blockReward.Sign() == -1 { // negative
+	if totalReward.Sign() == -1 { // negative
 		return network.EmptyPayout, nil
 	}
 
@@ -1030,7 +1031,7 @@ func accumulateRewardsAndCountSigs(
 		voterShare := voter.OverallPercent
 		allSignersShare = allSignersShare.Add(voterShare)
 	}
-	blockRewardDec := common.NewDecFromBigInt(blockReward)
+	totalRewardDec := common.NewDecFromBigInt(totalReward)
 	for member := range payable.Entrys {
 		// TODO Give out whatever leftover to the last voter/handle
 		// what to do about share of those that didn't sign
@@ -1040,7 +1041,7 @@ func accumulateRewardsAndCountSigs(
 		if err != nil {
 			return network.EmptyPayout, err
 		}
-		due := blockRewardDec.Mul(
+		due := totalRewardDec.Mul(
 			voter.OverallPercent.Quo(allSignersShare),
 		).RoundInt()
 		newRewards.Add(newRewards, due)
