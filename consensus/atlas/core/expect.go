@@ -22,7 +22,6 @@ import (
 	"github.com/hyperion-hyn/bls/ffi/go/bls"
 
 	"github.com/ethereum/go-ethereum/consensus/atlas"
-	"github.com/ethereum/go-ethereum/crypto"
 	bls_cosi "github.com/ethereum/go-ethereum/crypto/bls"
 )
 
@@ -77,7 +76,7 @@ func (c *core) handleExpect(msg *message, src atlas.Validator) error {
 	if c.state == StatePreprepared || c.state == StatePrepared {
 		// Send ROUND CHANGE if the locked proposal and the received proposal are different
 		if expect.Digest == c.current.GetLockedHash() {
-			if err := c.acceptExpect(&expect); err != nil {
+			if err := c.acceptExpect(&expect, src); err != nil {
 				return err
 			}
 			c.setState(StateExpected)
@@ -95,9 +94,21 @@ func (c *core) verifyExpect(expect *atlas.Subject, src atlas.Validator) error {
 	logger := c.logger.New("from", src, "state", c.state)
 
 	sub := c.current.Subject()
-	if !atlas.IsConsistentSubject(sub, expect) {
+	if !atlas.IsConsistentSubject(expect, sub) {
 		logger.Warn("Inconsistent subjects between expect and proposal", "expected", sub, "got", expect)
 		return errInconsistentSubject
+	}
+
+	return nil
+}
+
+func (c *core) acceptExpect(expect *atlas.Subject, src atlas.Validator) error {
+	logger := c.logger.New("from", src, "state", c.state)
+
+	if err := c.backend.CheckSignature(expect.Payload, c.valSet.GetProposer().PublicKey().Serialize(), expect.Signature); err == errInvalidSignature {
+		logger.Error("Leader give a expect with invalid signature")
+		c.sendNextRoundChange()
+		return errInvalidSignature
 	}
 
 	signPayload, err := c.verifySignPayload(expect, c.valSet)
@@ -112,28 +123,12 @@ func (c *core) verifyExpect(expect *atlas.Subject, src atlas.Validator) error {
 	}
 
 	var sign bls.Sign
-	if err := sign.Deserialize(expect.Signature); err != nil {
+	if err := sign.Deserialize(signPayload.Signature); err != nil {
 		logger.Error("Failed to deserialize signature", "err", err)
 		return err
 	}
 
-	hash := crypto.Keccak256Hash(expect.Payload)
-	if sign.VerifyHash(c.valSet.GetProposer().PublicKey(), hash.Bytes()) == false {
-		logger.Error("Leader give an expect with invalid signature")
-		c.sendNextRoundChange()
-		return errInvalidSignature
-	}
-
-	if bitmap.CountEnabled() < c.QuorumSize() {
-		return errNotSatisfyQuorum
-	}
-
-	return nil
-}
-
-func (c *core) acceptExpect(prepare *atlas.Subject) error {
-	// ATLAS(zgx): please refer to acceptPrepare
 	c.consensusTimestamp = time.Now()
-	c.current.SetExpect(prepare)
+	c.current.SetExpect(expect)
 	return nil
 }

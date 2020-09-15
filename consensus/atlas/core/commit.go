@@ -21,7 +21,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
-	"github.com/ethereum/go-ethereum/crypto"
 	bls_cosi "github.com/ethereum/go-ethereum/crypto/bls"
 )
 
@@ -124,6 +123,12 @@ func (c *core) acceptCommit(msg *message, src atlas.Validator) error {
 		return errFailedDecodeConfirm
 	}
 
+	if err := c.backend.CheckSignature(commit.Payload, c.valSet.GetProposer().PublicKey().Serialize(), commit.Signature); err == errInvalidSignature {
+		logger.Error("Leader give a commit with invalid signature")
+		c.sendNextRoundChange()
+		return errInvalidSignature
+	}
+
 	signPayload, err := c.verifySignPayload(&commit, c.valSet)
 	if err != nil {
 		return err
@@ -136,16 +141,9 @@ func (c *core) acceptCommit(msg *message, src atlas.Validator) error {
 	}
 
 	var sign bls.Sign
-	if err := sign.Deserialize(commit.Signature); err != nil {
+	if err := sign.Deserialize(signPayload.Signature); err != nil {
 		logger.Error("Failed to deserialize signature", "err", err)
 		return err
-	}
-
-	hash := crypto.Keccak256Hash(commit.Payload)
-	if sign.VerifyHash(c.valSet.GetProposer().PublicKey(), hash.Bytes()) == false {
-		logger.Error("Leader give a commit with invalid signature")
-		c.sendNextRoundChange()
-		return errInvalidSignature
 	}
 
 	c.current.aggregatedConfirmSig = &sign
