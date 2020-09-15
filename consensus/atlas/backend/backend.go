@@ -289,14 +289,14 @@ func (sb *backend) CheckSignature(data []byte, pubKey []byte, sig []byte) error 
 }
 
 // HasPropsal implements atlas.Backend.HashBlock
-func (sb *backend) HasPropsal(hash common.Hash, number *big.Int) bool {
+func (sb *backend) HasPropsal(sealhash common.Hash, number *big.Int) bool {
 	header := sb.chain.GetHeaderByNumber(number.Uint64())
 	if header == nil {
 		return false
 	}
 
 	val := sb.SealHash(header)
-	return val == hash
+	return val == sealhash
 }
 
 // GetProposer implements atlas.Backend.GetProposer
