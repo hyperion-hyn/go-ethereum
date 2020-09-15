@@ -136,7 +136,7 @@ func (c *core) verifyPreprepare(preprepare *atlas.Preprepare, src atlas.Validato
 	}
 
 	hash := preprepare.Proposal.SealHash(c.backend)
-	if sign.VerifyHash(src.PublicKey(), hash.Bytes()) == false {
+	if ok := sign.VerifyHash(src.PublicKey(), hash.Bytes()); !ok {
 		return errInvalidSignature
 	}
 
