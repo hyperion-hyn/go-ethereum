@@ -454,6 +454,9 @@ func (s *Ethereum) shouldPreserve(block *types.Block) bool {
 	if _, ok := s.engine.(*clique.Clique); ok {
 		return false
 	}
+	if _, ok := s.engine.(consensus.Atlas); ok {
+		return false
+	}
 	return s.isLocalBlock(block)
 }
 
