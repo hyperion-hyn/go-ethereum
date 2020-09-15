@@ -461,7 +461,9 @@ func (s *Ethereum) shouldPreserve(block *types.Block) bool {
 func (s *Ethereum) SetEtherbase(etherbase common.Address) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	if _, ok := s.engine.(consensus.Istanbul); ok {
+	if _, ok := s.engine.(consensus.Atlas); ok {
+		log.Error("Cannot set etherbase in Atlas consensus")
+	} else if _, ok := s.engine.(consensus.Istanbul); ok {
 		log.Error("Cannot set etherbase in Istanbul consensus")
 		return
 	}
