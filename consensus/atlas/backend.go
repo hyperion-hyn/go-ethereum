@@ -47,7 +47,7 @@ type Backend interface {
 
 	// Commit delivers an approved proposal to backend.
 	// The delivered proposal will be put into blockchain.
-	Commit(proposal Proposal, signature []byte, publicKey []byte, bitmap []byte) error
+	Commit(proposal Proposal, signature []byte, bitmap []byte) error
 
 	// Verify verifies the proposal. If a consensus.ErrFutureBlock error is returned,
 	// the time difference of the proposal and current time is also returned.

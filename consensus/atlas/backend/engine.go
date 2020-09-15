@@ -730,10 +730,11 @@ func writeSeal(h *types.Header, seal []byte) error {
 }
 
 // WriteCommittedSeals writes the extra-data field of a block header with given committed seals.
-func WriteCommittedSeals(h *types.Header, signature []byte, publicKey []byte, bitmap []byte, valSetSize int) error {
-	if len(signature) != types.AtlasExtraSignature || len(publicKey) != types.AtlasExtraPublicKey || len(bitmap) != types.GetMaskByteCount(valSetSize) {
+func WriteCommittedSeals(h *types.Header, signature []byte, bitmap []byte, valSetSize int) error {
+	if len(signature) != types.AtlasExtraSignature || len(bitmap) != types.GetMaskByteCount(valSetSize) {
 		return errInvalidCommittedSeals
 	}
+
 
 	atlasExtra, err := types.ExtractAtlasExtra(h)
 	if err != nil {

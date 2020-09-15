@@ -634,7 +634,7 @@ func TestWriteCommittedSeals(t *testing.T) {
 	}
 
 	// normal case
-	err := WriteCommittedSeals(h, expectedCommittedSeal, expectedPublicKey, expectedBitmap, valSetSize)
+	err := WriteCommittedSeals(h, expectedCommittedSeal, expectedBitmap, valSetSize)
 	if err != expectedErr {
 		t.Errorf("error mismatch: have %v, want %v", err, expectedErr)
 	}
@@ -650,7 +650,7 @@ func TestWriteCommittedSeals(t *testing.T) {
 
 	// invalid seal
 	unexpectedCommittedSeal := append(expectedCommittedSeal, make([]byte, 1)...)
-	err = WriteCommittedSeals(h, unexpectedCommittedSeal, expectedPublicKey, expectedBitmap, valSetSize)
+	err = WriteCommittedSeals(h, unexpectedCommittedSeal, expectedBitmap, valSetSize)
 	if err != errInvalidCommittedSeals {
 		t.Errorf("error mismatch: have %v, want %v", err, errInvalidCommittedSeals)
 	}

@@ -176,7 +176,7 @@ func (sb *backend) Gossip(valSet atlas.ValidatorSet, payload []byte) error {
 }
 
 // Commit implements atlas.Backend.Commit
-func (sb *backend) Commit(proposal atlas.Proposal, signature []byte, publicKey []byte, bitmap []byte) error {
+func (sb *backend) Commit(proposal atlas.Proposal, signature []byte, bitmap []byte) error {
 	// ATLAS(zgx): should save signature and bitmap into db, proposal is a sealed block.
 	// Check if the proposal is a valid block
 	block := &types.Block{}
@@ -192,7 +192,7 @@ func (sb *backend) Commit(proposal atlas.Proposal, signature []byte, publicKey [
 
 	lastProposal, _ := sb.LastProposal()
 	valSetSize := sb.Validators(lastProposal).Size()
-	err := WriteCommittedSeals(h, signature, publicKey, bitmap, valSetSize)
+	err := WriteCommittedSeals(h, signature, bitmap, valSetSize)
 	if err != nil {
 		return err
 	}
