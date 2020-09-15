@@ -140,7 +140,7 @@ func (c *core) handleMsg(payload []byte) error {
 	preprocessor := func(m *message) error {
 		_, validator := c.valSet.GetBySigner(m.Signer)
 		if validator == nil {
-			return errInvalidSigner
+			return atlas.ErrUnauthorizedAddress
 		}
 		m.SignerPubKey = validator.PublicKey().Serialize()
 		return nil
