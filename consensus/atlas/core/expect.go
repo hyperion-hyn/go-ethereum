@@ -19,7 +19,6 @@ package core
 import (
 	"time"
 
-	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
 	bls_cosi "github.com/ethereum/go-ethereum/crypto/bls"
 )
@@ -63,73 +62,22 @@ func (c *core) handleExpect(msg *message, src atlas.Validator) error {
 		return errNotFromProposer
 	}
 
-	// Ensure we have the same view with the PREPARED message
-	// If it is old message, see if we need to broadcast COMMIT
 	if err := c.checkMessage(msgExpect, expect.View); err != nil {
-		if err == errOldMessage {
-			// ATLAS(zgx): what if old message is different from preprepare.proposal?
-			// Get validator set for the given proposal
-			valSet := c.backend.ParentValidators(c.current.Preprepare.Proposal).Copy()
-			previousProposer := c.backend.GetProposer(c.current.Preprepare.Proposal.Number().Uint64() - 1)
-			valSet.CalcProposer(previousProposer, c.current.Preprepare.View.Round.Uint64())
-
-			// Broadcast COMMIT if it is an existing block
-			// 1. The proposer needs to be a proposer matches the given (Sequence + Round)
-			// 2. The given block must exist
-			if valSet.IsProposer(src.Signer()) && c.backend.HasPropsal(c.current.Preprepare.Proposal.SealHash(c.backend), c.current.Preprepare.Proposal.Number()) {
-				// ATLAS(zgx): maybe nothing can be done for old block for lacking multiple-signature.
-				// c.sendCommitForOldBlock(c.current.Preprepare.View, c.current.Preprepare.Proposal.SealHash())
-				return nil
-			}
-		}
 		return err
 	}
 
-	// Verify the proposal we received
-	if duration, err := c.backend.Verify(c.current.Preprepare.Proposal); err != nil {
-		// if it's a future block, we will handle it again after the duration
-		if err == consensus.ErrFutureBlock {
-			logger.Info("Proposed block will be handled in the future", "err", err, "duration", duration)
-			c.stopFuturePreprepareTimer()
-			// ATLAS(zgx): futurePreprepareTimer hold one timer, how to process multiple future block?
-			c.futurePreprepareTimer = time.AfterFunc(duration, func() {
-				c.sendEvent(backlogEvent{
-					src: src,
-					msg: msg,
-				})
-			})
-		} else {
-			logger.Warn("Failed to verify proposal", "err", err, "duration", duration)
-			c.sendNextRoundChange()
-		}
-		return err
-	}
-
-	// Here is about to accept the PREPARED
+	// Here is about to accept the EXPECT message
 	if c.state == StatePreprepared || c.state == StatePrepared {
 		// Send ROUND CHANGE if the locked proposal and the received proposal are different
-		if c.current.IsHashLocked() {
-			if expect.Digest == c.current.GetLockedHash() {
-				// Broadcast COMMIT and enters Expect state directly
-				if err := c.acceptExpect(&expect); err != nil {
-					return err
-				}
-				// ATLAS(zgx): LockHash in handlePrepare, so set state to StatePrepared directly
-				c.setState(StateExpected)
-				c.sendConfirm()
-			} else {
-				// Send round change
-				c.sendNextRoundChange()
-			}
-		} else {
-			// Either
-			//   1. the locked proposal and the received proposal match
-			//   2. we have no locked proposal
+		if expect.Digest == c.current.GetLockedHash() {
 			if err := c.acceptExpect(&expect); err != nil {
 				return err
 			}
 			c.setState(StateExpected)
 			c.sendConfirm()
+		} else {
+			// Send round change
+			c.sendNextRoundChange()
 		}
 	}
 
