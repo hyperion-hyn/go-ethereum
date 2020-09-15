@@ -65,21 +65,6 @@ func (c *core) handlePreprepare(msg *message, src atlas.Validator) error {
 	// Ensure we have the same view with the PRE-PREPARE message
 	// If it is old message, see if we need to broadcast COMMIT
 	if err := c.checkMessage(msgPreprepare, preprepare.View); err != nil {
-		if err == errOldMessage {
-			// ATLAS(zgx): When/Why will node receive the old message? if this node receive old message, whether these messages have been broadcast to peer?
-			// Get validator set for the given proposal
-			valSet := c.backend.ParentValidators(preprepare.Proposal).Copy()
-			previousProposer := c.backend.GetProposer(preprepare.Proposal.Number().Uint64() - 1)
-			valSet.CalcProposer(previousProposer, preprepare.View.Round.Uint64())
-			// Broadcast COMMIT if it is an existing block
-			// 1. The proposer needs to be a proposer matches the given (Sequence + Round)
-			// 2. The given block must exist
-			if valSet.IsProposer(src.Signer()) && c.backend.HasPropsal(preprepare.Proposal.SealHash(c.backend), preprepare.Proposal.Number()) {
-				// ATLAS(zgx): maybe nothing can be done for old block for lacking multiple-signature.
-				// c.sendCommitForOldBlock(preprepare.View, preprepare.Proposal.SealHash())
-				return nil
-			}
-		}
 		return err
 	}
 
@@ -89,7 +74,6 @@ func (c *core) handlePreprepare(msg *message, src atlas.Validator) error {
 		if err == consensus.ErrFutureBlock {
 			logger.Info("Proposed block will be handled in the future", "err", err, "duration", duration)
 			c.stopFuturePreprepareTimer()
-			// ATLAS(zgx): futurePreprepareTimer hold one timer, how to process multiple future block?
 			c.futurePreprepareTimer = time.AfterFunc(duration, func() {
 				c.sendEvent(backlogEvent{
 					src: src,
@@ -106,17 +90,8 @@ func (c *core) handlePreprepare(msg *message, src atlas.Validator) error {
 	// Here is about to accept the PRE-PREPARE
 	if c.state == StateAcceptRequest {
 		// Send ROUND CHANGE if the locked proposal and the received proposal are different
-		// ATLAS(zgx): have checked message come from proposer, Why I am a proposer and have a different hash? duplicated messages?
 		if c.current.IsHashLocked() {
-			if preprepare.Proposal.SealHash(c.backend) == c.current.GetLockedHash() {
-				// Broadcast COMMIT and enters Expect state directly
-				if err := c.acceptPreprepare(&preprepare); err != nil {
-					return err
-				}
-				// ATLAS(zgx): LockHash is invoked in handlePrepare, so set state to StatePrepared directly
-				c.setState(StatePrepared)
-				c.sendExpect()
-			} else {
+			if preprepare.Proposal.SealHash(c.backend) != c.current.GetLockedHash() {
 				// Send round change
 				c.sendNextRoundChange()
 			}
@@ -128,6 +103,7 @@ func (c *core) handlePreprepare(msg *message, src atlas.Validator) error {
 				return err
 			}
 			c.setState(StatePreprepared)
+			c.current.LockHash()
 			c.sendPrepare()
 		}
 	}
