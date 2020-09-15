@@ -290,7 +290,13 @@ func (sb *backend) CheckSignature(data []byte, pubKey []byte, sig []byte) error 
 
 // HasPropsal implements atlas.Backend.HashBlock
 func (sb *backend) HasPropsal(hash common.Hash, number *big.Int) bool {
-	return sb.chain.GetHeader(hash, number.Uint64()) != nil
+	header := sb.chain.GetHeaderByNumber(number.Uint64())
+	if header == nil {
+		return false
+	}
+
+	val := sb.SealHash(header)
+	return val == hash
 }
 
 // GetProposer implements atlas.Backend.GetProposer
