@@ -335,18 +335,14 @@ func verifySignature(valSet atlas.ValidatorSet, hash []byte, signature []byte, b
 		return errInvalidCommittedSeals
 	}
 
-	var aggregatePublicKey bls.PublicKey
-	publicKeys := mask.GetPubKeyFromMask(true)
-	for _, publicKey := range publicKeys {
-		aggregatePublicKey.Add(publicKey)
-	}
+	aggregatePublicKey := mask.AggregatePublic
 
 	var sign bls.Sign
 	if err := sign.Deserialize(signature); err != nil {
 		return err
 	}
 
-	if err := sign.VerifyHash(&aggregatePublicKey, hash); err == false {
+	if ok := sign.VerifyHash(aggregatePublicKey, hash); !ok {
 		return errInvalidAggregatedSignature
 	}
 
@@ -734,7 +730,6 @@ func WriteCommittedSeals(h *types.Header, signature []byte, bitmap []byte, valSe
 	if len(signature) != types.AtlasExtraSignature || len(bitmap) != types.GetMaskByteCount(valSetSize) {
 		return errInvalidCommittedSeals
 	}
-
 
 	atlasExtra, err := types.ExtractAtlasExtra(h)
 	if err != nil {
