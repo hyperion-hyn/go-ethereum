@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/bls"
+	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/params"
 	common2 "github.com/ethereum/go-ethereum/staking/types/common"
 	"github.com/ethereum/go-ethereum/staking/types/microstaking"
@@ -1066,6 +1067,10 @@ func (chain *fakeChainContext) ReadCommitteeAtEpoch(epoch *big.Int) (*restaking.
 func (chain *fakeChainContext) Config() *params.ChainConfig {
 	// TODO(ATLAS): restaking enable
 	return &params.ChainConfig{Atlas: &params.AtlasConfig{RestakingEnable: false}}
+}
+
+func (chain *fakeChainContext) Database() ethdb.Database {
+	panic("no implement")
 }
 
 func makeIdentityStr(item interface{}) string {
