@@ -32,9 +32,11 @@ func (c *core) handleRequest(request *atlas.Request) error {
 
 	logger.Trace("handleRequest", "number", request.Proposal.Number(), "hash", request.Proposal.SealHash(c.backend))
 
-	// ATLAS(zgx): what if c.state != StateAcceptRequest, should I set pendingRequest? should I put this line in if block and return errFutureMessage?
-	c.current.pendingRequest = request
+	// ATLAS(zgx): only msg come from proposer is acceptable.
+
+	// new leader will re-send proposed request created by old leader
 	if c.state == StateAcceptRequest {
+		c.current.pendingRequest = request
 		c.sendPreprepare(request)
 	}
 	return nil
