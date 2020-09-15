@@ -16,7 +16,7 @@ func (ec *Client) GetAllValidatorAddresses(ctx context.Context, blockNumber *big
 }
 
 func (ec *Client) GetValidatorInformation(
-	ctx context.Context, validatorAddress common.Address, blockNumber *big.Int) (*restaking.SimplifiedValidatorWrapper, error) {
+	ctx context.Context, validatorAddress common.Address, blockNumber *big.Int) (*restaking.PlainValidatorWrapper, error) {
 
 	var bytes hexutil.Bytes
 
@@ -24,7 +24,7 @@ func (ec *Client) GetValidatorInformation(
 	if err != nil {
 		return nil, err
 	}
-	var validator restaking.SimplifiedValidatorWrapper
+	var validator restaking.PlainValidatorWrapper
 	err = rlp.DecodeBytes(bytes, &validator)
 	if err != nil {
 		return nil, err
@@ -53,7 +53,7 @@ func (ec *Client) GetCommitteeAtEpoch(ctx context.Context, epoch uint64) ([]comm
 }
 
 func (ec *Client) GetValidatorInformationAtEpoch(
-	ctx context.Context, validatorAddress common.Address, epoch uint64) (*restaking.SimplifiedValidatorWrapper, error) {
+	ctx context.Context, validatorAddress common.Address, epoch uint64) (*restaking.PlainValidatorWrapper, error) {
 
 	var bytes hexutil.Bytes
 
@@ -61,7 +61,7 @@ func (ec *Client) GetValidatorInformationAtEpoch(
 	if err != nil {
 		return nil, err
 	}
-	var validator restaking.SimplifiedValidatorWrapper
+	var validator restaking.PlainValidatorWrapper
 	err = rlp.DecodeBytes(bytes, &validator)
 	if err != nil {
 		return nil, err

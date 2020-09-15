@@ -3,6 +3,7 @@ package restaking
 import (
 	"bytes"
 	"encoding/hex"
+	"encoding/json"
 	"github.com/harmony-one/bls/ffi/go/bls"
 	"github.com/pkg/errors"
 	"math/big"
@@ -52,6 +53,22 @@ func (pk *BLSPublicKey_) FromLibBLSPublicKey(key *bls.PublicKey) error {
 	}
 	copy(pk.Key[:], bs)
 	return nil
+}
+
+func (pk *BLSPublicKey_) UnmarshalJSON(data []byte) error {
+	var h string
+	if err := json.Unmarshal(data, &h); err != nil {
+		return err
+	}
+	key := bls.PublicKey{}
+	if err := key.DeserializeHexStr(h); err != nil {
+		return err
+	}
+	return pk.FromLibBLSPublicKey(&key)
+}
+
+func (pk *BLSPublicKey_) MarshalJSON() ([]byte, error) {
+	return json.Marshal(pk.Hex())
 }
 
 // Storage_BLSPublicKey_
