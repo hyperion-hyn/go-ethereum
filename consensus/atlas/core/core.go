@@ -176,7 +176,7 @@ func (c *core) commit() {
 	proposal := c.current.Proposal()
 	if proposal != nil {
 		committedSignature := c.current.aggregatedConfirmSig.Serialize()
-		committedBitmap := c.current.confirmBitmap.Bitmap
+		committedBitmap := c.current.confirmBitmap.Mask()
 
 		if err := c.backend.Commit(proposal, committedSignature, committedBitmap); err != nil {
 			c.current.UnlockHash() //Unlock block when insertion fails
