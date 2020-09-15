@@ -19,7 +19,6 @@ package backend
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"math"
 
@@ -413,11 +412,6 @@ func (sb *backend) _Prepare(chain consensus.ChainReader, header *types.Header) e
 	}
 	header.Extra = extra
 
-	// set header's timestamp
-	header.Time = parent.Time + sb.config.BlockPeriod
-	if header.Time < uint64(time.Now().Unix()) {
-		header.Time = uint64(time.Now().Unix())
-	}
 	return nil
 }
 
@@ -513,10 +507,9 @@ func (sb *backend) _Seal(chain consensus.ChainReader, block *types.Block, result
 				// return the result. Otherwise, keep waiting the next hash.
 				if result != nil && block.SealHash(sb) == result.SealHash(sb) {
 					// wait for the timestamp of header, use this to adjust the block period
-					delay := time.Unix(int64(header.Time), 0).Sub(now())
-					// ATLAS(zgx): what if delay is negative?
+					delay := math.Floor(time.Unix(int64(header.Time+sb.config.BlockPeriod), 0).Sub(now()).Seconds() + 1)
 					select {
-					case <-time.After(delay):
+					case <-time.After(time.Duration(delay) * time.Second):
 					}
 					results <- result
 					return
@@ -738,14 +731,9 @@ func writeSeal(h *types.Header, seal []byte) error {
 
 // WriteCommittedSeals writes the extra-data field of a block header with given committed seals.
 func WriteCommittedSeals(h *types.Header, signature []byte, publicKey []byte, bitmap []byte, valSetSize int) error {
-	fmt.Printf("length, signature: %d, public: %d, bitmap: %d\n", len(signature), len(publicKey), len(bitmap))
 	if len(signature) != types.AtlasExtraSignature || len(publicKey) != types.AtlasExtraPublicKey || len(bitmap) != types.GetMaskByteCount(valSetSize) {
 		return errInvalidCommittedSeals
 	}
-
-	fmt.Printf("signature: %v\n", signature)
-	fmt.Printf("publicKey: %v\n", publicKey)
-	fmt.Printf("bitmap: %v\n", bitmap)
 
 	atlasExtra, err := types.ExtractAtlasExtra(h)
 	if err != nil {
