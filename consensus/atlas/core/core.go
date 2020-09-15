@@ -31,6 +31,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
 	"github.com/ethereum/go-ethereum/crypto"
+	bls_cosi "github.com/ethereum/go-ethereum/crypto/bls"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
@@ -175,10 +176,9 @@ func (c *core) commit() {
 	proposal := c.current.Proposal()
 	if proposal != nil {
 		committedSignature := c.current.aggregatedConfirmSig.Serialize()
-		committedPublicKey := c.current.aggregatedConfirmPublicKey.Serialize()
 		committedBitmap := c.current.confirmBitmap.Bitmap
 
-		if err := c.backend.Commit(proposal, committedSignature, committedPublicKey, committedBitmap); err != nil {
+		if err := c.backend.Commit(proposal, committedSignature, committedBitmap); err != nil {
 			c.current.UnlockHash() //Unlock block when insertion fails
 			c.sendNextRoundChange()
 			return
@@ -354,7 +354,7 @@ func PrepareCommittedSeal(hash common.Hash) []byte {
 }
 
 func (c *core) SignSubject(subject *atlas.Subject) (*atlas.Subject, error) {
-	signedSubject, err := atlas.SignSubject(subject, func(hash common.Hash) (signature []byte, publicKey []byte, mask []byte, err error) {
+	signedSubject, err := atlas.SignSubject(subject, c.valSet, func(hash common.Hash) (signature []byte, publicKey []byte, mask []byte, err error) {
 		signature, publicKey, mask, err = c.backend.SignHash(hash)
 		if err != nil {
 			return nil, nil, nil, err
@@ -372,13 +372,11 @@ func (c *core) AssembleSignedSubject(subject *atlas.Subject) (*atlas.Subject, er
 		case StatePrepared:
 			val = &atlas.SignPayload{
 				Signature: c.current.aggregatedPrepareSig.Serialize(),
-				PublicKey: c.current.aggregatedPreparePublicKey.Serialize(),
 				Mask:      c.current.prepareBitmap.Mask(),
 			}
 		case StateConfirmed:
 			val = &atlas.SignPayload{
 				Signature: c.current.aggregatedConfirmSig.Serialize(),
-				PublicKey: c.current.aggregatedConfirmPublicKey.Serialize(),
 				Mask:      c.current.confirmBitmap.Mask(),
 			}
 		}
@@ -386,7 +384,13 @@ func (c *core) AssembleSignedSubject(subject *atlas.Subject) (*atlas.Subject, er
 		if err != nil {
 			return nil, err
 		}
+		hash := crypto.Keccak256Hash(payload)
+		signature, _, _, err := c.backend.SignHash(hash)
+		if err != nil {
+			return nil, errFailedSignData
+		}
 		subject.Payload = payload
+		subject.Signature = signature
 		return subject, nil
 	default:
 		return nil, errors.New(fmt.Sprintf("invalid state: %v", c.current))
@@ -397,8 +401,17 @@ func (c *core) verifySignPayload(subject *atlas.Subject, validatorSet atlas.Vali
 	var signPayload atlas.SignPayload
 	if err := rlp.DecodeBytes(subject.Payload, &signPayload); err != nil {
 		return nil, errFailedDecodeSignPayload
+	}
 
-	} else if err = c.checkValidatorSignature(subject.Digest, signPayload.Signature, signPayload.PublicKey); err != nil {
+	bitmap, _ := bls_cosi.NewMask(c.valSet.GetPublicKeys(), nil)
+	if err := bitmap.SetMask(signPayload.Mask); err != nil {
+		c.logger.Error("Failed to SetMask", "err", err)
+		return nil, err
+	}
+
+	publicKey := bitmap.AggregatePublic
+
+	if err := c.checkValidatorSignature(subject.Digest, signPayload.Signature, publicKey.Serialize()); err != nil {
 		return nil, err
 	}
 

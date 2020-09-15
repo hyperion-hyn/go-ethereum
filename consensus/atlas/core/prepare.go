@@ -98,7 +98,6 @@ func (c *core) verifyPrepare(prepare *atlas.Subject, src atlas.Validator) error 
 		return errInconsistentSubject
 	}
 
-	// ATLAS(zgx): should verifySignPayload here?
 	return nil
 }
 
@@ -145,7 +144,6 @@ func (c *core) acceptPrepare(msg *message, src atlas.Validator) error {
 
 	if err := c.current.prepareBitmap.SetKey(pubKey, true); err == nil {
 		c.current.aggregatedPrepareSig.Add(&sign)
-		c.current.aggregatedPreparePublicKey.Add(pubKey)
 	}
 
 	return nil

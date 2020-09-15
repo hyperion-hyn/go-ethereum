@@ -19,6 +19,8 @@ package core
 import (
 	"time"
 
+	"github.com/hyperion-hyn/bls/ffi/go/bls"
+
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
 )
@@ -30,9 +32,17 @@ func (c *core) sendPreprepare(request *atlas.Request) {
 	if c.current.Sequence().Cmp(request.Proposal.Number()) == 0 && c.IsProposer() {
 		curView := c.currentView()
 
+		hash := request.Proposal.SealHash(c.backend)
+		signature, _, _, err := c.backend.SignHash(hash)
+		if err != nil {
+			logger.Error("Failed to SignHash", "err", err)
+			return
+		}
+
 		preprepare, err := Encode(&atlas.Preprepare{
-			View:     curView,
-			Proposal: request.Proposal,
+			View:      curView,
+			Proposal:  request.Proposal,
+			Signature: signature,
 		})
 		if err != nil {
 			logger.Error("Failed to encode", "view", curView)
@@ -65,6 +75,10 @@ func (c *core) handlePreprepare(msg *message, src atlas.Validator) error {
 	// Ensure we have the same view with the PRE-PREPARE message
 	// If it is old message, see if we need to broadcast COMMIT
 	if err := c.checkMessage(msgPreprepare, preprepare.View); err != nil {
+		return err
+	}
+
+	if err := c.verifyPreprepare(&preprepare, src); err != nil {
 		return err
 	}
 
@@ -106,6 +120,24 @@ func (c *core) handlePreprepare(msg *message, src atlas.Validator) error {
 			c.current.LockHash()
 			c.sendPrepare()
 		}
+	}
+
+	return nil
+}
+
+// verifyPrepare verifies if the received PREPARE message is equivalent to our subject
+func (c *core) verifyPreprepare(preprepare *atlas.Preprepare, src atlas.Validator) error {
+	logger := c.logger.New("from", src, "state", c.state)
+
+	var sign bls.Sign
+	if err := sign.Deserialize(preprepare.Signature); err != nil {
+		logger.Error("Failed to deserialize signature", "err", err)
+		return err
+	}
+
+	hash := preprepare.Proposal.SealHash(c.backend)
+	if sign.VerifyHash(src.PublicKey(), hash.Bytes()) == false {
+		return errInvalidSignature
 	}
 
 	return nil

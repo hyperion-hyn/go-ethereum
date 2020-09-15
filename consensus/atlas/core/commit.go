@@ -21,6 +21,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
+	"github.com/ethereum/go-ethereum/crypto"
 	bls_cosi "github.com/ethereum/go-ethereum/crypto/bls"
 )
 
@@ -134,19 +135,19 @@ func (c *core) acceptCommit(msg *message, src atlas.Validator) error {
 		return err
 	}
 
-	var publicKey bls.PublicKey
-	if err := publicKey.Deserialize(signPayload.PublicKey); err != nil {
-		logger.Error("Failed to deserialize public key", "err", err)
-		return err
-	}
-
 	var sign bls.Sign
 	if err := sign.Deserialize(signPayload.Signature); err != nil {
 		logger.Error("Failed to deserialize signature", "err", err)
 		return err
 	}
 
-	c.current.aggregatedConfirmPublicKey = &publicKey
+	hash := crypto.Keccak256Hash(commit.Payload)
+	if sign.VerifyHash(bitmap.AggregatePublic, hash.Bytes()) == false {
+		logger.Error("Leader give a commit with invalid signature")
+		c.sendNextRoundChange()
+		return errInvalidSignature
+	}
+
 	c.current.aggregatedConfirmSig = &sign
 	c.current.confirmBitmap = bitmap
 

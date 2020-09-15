@@ -357,13 +357,12 @@ func TestVerifyExpect(t *testing.T) {
 			if err != nil {
 				t.Errorf("failed to sign subject: %v", err)
 			}
-			sign, pubKey, err := decodeSignPayload(signedSubject.Payload)
+			sign, pubKey, err := decodeSignPayload(signedSubject.Payload, c.valSet)
 			if err != nil {
 				t.Errorf("failed to decode SignPayload")
 			}
 
 			c.current.aggregatedPrepareSig.Add(sign)
-			c.current.aggregatedPreparePublicKey.Add(pubKey)
 			c.current.prepareBitmap.SetKey(pubKey, true)
 		}
 
@@ -380,7 +379,7 @@ func TestVerifyExpect(t *testing.T) {
 	}
 }
 
-func decodeSignPayload(payload []byte) (*bls.Sign, *bls.PublicKey, error) {
+func decodeSignPayload(payload []byte, valSet atlas.ValidatorSet) (*bls.Sign, *bls.PublicKey, error) {
 	var signPayload *atlas.SignPayload
 	if err := rlp.DecodeBytes(payload, &signPayload); err != nil {
 		return nil, nil, err
@@ -391,10 +390,12 @@ func decodeSignPayload(payload []byte) (*bls.Sign, *bls.PublicKey, error) {
 		return nil, nil, err
 	}
 
-	var pubKey bls.PublicKey
-	if err := pubKey.Deserialize(signPayload.PublicKey); err != nil {
+	bitmap, _ := bls_cosi.NewMask(valSet.GetPublicKeys(), nil)
+	if err := bitmap.SetMask(signPayload.Mask); err != nil {
 		return nil, nil, err
 	}
 
-	return &sign, &pubKey, nil
+	publicKey := bitmap.AggregatePublic
+
+	return &sign, publicKey, nil
 }

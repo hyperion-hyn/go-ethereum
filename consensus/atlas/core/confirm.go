@@ -98,7 +98,6 @@ func (c *core) verifyConfirm(confirm *atlas.Subject, src atlas.Validator) error 
 		return errInconsistentSubject
 	}
 
-	// ATLAS(zgx): should verifySignPayload here?
 	return nil
 }
 
@@ -147,7 +146,6 @@ func (c *core) acceptConfirm(msg *message, src atlas.Validator) error {
 
 	if err := c.current.confirmBitmap.SetKey(pubKey, true); err == nil {
 		c.current.aggregatedConfirmSig.Add(&sign)
-		c.current.aggregatedConfirmPublicKey.Add(pubKey)
 	}
 
 	return nil

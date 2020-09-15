@@ -19,7 +19,10 @@ package core
 import (
 	"time"
 
+	"github.com/hyperion-hyn/bls/ffi/go/bls"
+
 	"github.com/ethereum/go-ethereum/consensus/atlas"
+	"github.com/ethereum/go-ethereum/crypto"
 	bls_cosi "github.com/ethereum/go-ethereum/crypto/bls"
 )
 
@@ -66,6 +69,10 @@ func (c *core) handleExpect(msg *message, src atlas.Validator) error {
 		return err
 	}
 
+	if err := c.verifyExpect(&expect, src); err != nil {
+		return err
+	}
+
 	// Here is about to accept the EXPECT message
 	if c.state == StatePreprepared || c.state == StatePrepared {
 		// Send ROUND CHANGE if the locked proposal and the received proposal are different
@@ -81,13 +88,6 @@ func (c *core) handleExpect(msg *message, src atlas.Validator) error {
 		}
 	}
 
-	return nil
-}
-
-func (c *core) acceptExpect(prepare *atlas.Subject) error {
-	// ATLAS(zgx): please refer to acceptPrepare
-	c.consensusTimestamp = time.Now()
-	c.current.SetExpect(prepare)
 	return nil
 }
 
@@ -111,9 +111,29 @@ func (c *core) verifyExpect(expect *atlas.Subject, src atlas.Validator) error {
 		return err
 	}
 
+	var sign bls.Sign
+	if err := sign.Deserialize(signPayload.Signature); err != nil {
+		logger.Error("Failed to deserialize signature", "err", err)
+		return err
+	}
+
+	hash := crypto.Keccak256Hash(expect.Payload)
+	if sign.VerifyHash(bitmap.AggregatePublic, hash.Bytes()) == false {
+		logger.Error("Leader give an expect with invalid signature")
+		c.sendNextRoundChange()
+		return errInvalidSignature
+	}
+
 	if bitmap.CountEnabled() < c.QuorumSize() {
 		return errNotSatisfyQuorum
 	}
 
+	return nil
+}
+
+func (c *core) acceptExpect(prepare *atlas.Subject) error {
+	// ATLAS(zgx): please refer to acceptPrepare
+	c.consensusTimestamp = time.Now()
+	c.current.SetExpect(prepare)
 	return nil
 }
