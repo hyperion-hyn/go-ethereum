@@ -51,7 +51,7 @@ func (s *PublicMicroStakingAPI) GetMap3NodeInformation(
 		return nil, err
 	}
 
-	nodeWrapperRPC := nodeWrapper.ToSimplifiedMap3NodeWrapper()
+	nodeWrapperRPC := nodeWrapper.ToPlainMap3NodeWrapper()
 	encodeBytes, err := rlp.EncodeToBytes(&nodeWrapperRPC)
 	if err != nil {
 		return nil, err
