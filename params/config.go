@@ -432,6 +432,8 @@ func (c *ChainConfig) String() string {
 		engine = c.Clique
 	case c.Istanbul != nil:
 		engine = c.Istanbul
+	case c.Atlas != nil:
+		engine = c.Atlas
 	default:
 		engine = "unknown"
 	}

@@ -110,20 +110,21 @@ type Preprepare struct {
 
 // EncodeRLP serializes b into the Ethereum RLP format.
 func (b *Preprepare) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{b.View, b.Proposal})
+	return rlp.Encode(w, []interface{}{b.View, b.Proposal, b.Signature})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
 func (b *Preprepare) DecodeRLP(s *rlp.Stream) error {
 	var preprepare struct {
-		View     *View
-		Proposal *types.Block
+		View      *View
+		Proposal  *types.Block
+		Signature []byte
 	}
 
 	if err := s.Decode(&preprepare); err != nil {
 		return err
 	}
-	b.View, b.Proposal = preprepare.View, preprepare.Proposal
+	b.View, b.Proposal, b.Signature = preprepare.View, preprepare.Proposal, preprepare.Signature
 
 	return nil
 }
@@ -137,21 +138,22 @@ type Subject struct {
 
 // EncodeRLP serializes b into the Ethereum RLP format.
 func (b *Subject) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{b.View, b.Digest, b.Payload})
+	return rlp.Encode(w, []interface{}{b.View, b.Digest, b.Payload, b.Signature})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
 func (b *Subject) DecodeRLP(s *rlp.Stream) error {
 	var subject struct {
-		View    *View
-		Digest  common.Hash
-		Payload []byte
+		View      *View
+		Digest    common.Hash
+		Payload   []byte
+		Signature []byte // Signature of Payload
 	}
 
 	if err := s.Decode(&subject); err != nil {
 		return err
 	}
-	b.View, b.Digest, b.Payload = subject.View, subject.Digest, subject.Payload
+	b.View, b.Digest, b.Payload, b.Signature = subject.View, subject.Digest, subject.Payload, subject.Signature
 	return nil
 }
 

@@ -136,13 +136,13 @@ func (c *core) acceptCommit(msg *message, src atlas.Validator) error {
 	}
 
 	var sign bls.Sign
-	if err := sign.Deserialize(signPayload.Signature); err != nil {
+	if err := sign.Deserialize(commit.Signature); err != nil {
 		logger.Error("Failed to deserialize signature", "err", err)
 		return err
 	}
 
 	hash := crypto.Keccak256Hash(commit.Payload)
-	if sign.VerifyHash(bitmap.AggregatePublic, hash.Bytes()) == false {
+	if sign.VerifyHash(c.valSet.GetProposer().PublicKey(), hash.Bytes()) == false {
 		logger.Error("Leader give a commit with invalid signature")
 		c.sendNextRoundChange()
 		return errInvalidSignature
