@@ -24,7 +24,7 @@ var (
 	errTerminateMap3NodeNotAllowed          = errors.New("not allow to terminate map3 node")
 	errSelfDelegationTooSmall               = errors.New("self delegation amount too small")
 
-	errInvalidMap3NodeStatusToRestake = errors.New("invalid map3 node to restake")
+	errInvalidMap3NodeStatusToRestake = errors.New("invalid map3 node status to restake")
 	errMap3NodeAlreadyRestaking       = errors.New("map3 node already restaked")
 	errInvalidValidatorAddress        = errors.New("validator address not equal to the address of the validator map3 already restaked to")
 )
