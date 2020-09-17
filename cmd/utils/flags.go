@@ -1943,7 +1943,7 @@ func MakeChain(ctx *cli.Context, stack *node.Node, readOnly bool) (chain *core.B
 		}
 		atlasConfig.ProposerPolicy = atlas.ProposerPolicy(config.Atlas.ProposerPolicy)
 		atlasConfig.Ceil2Nby3Block = config.Atlas.Ceil2Nby3Block
-		engine = atlasBackend.New(atlasConfig, stack.GetNodeKey(), chainDb)
+		engine = atlasBackend.New(atlasConfig, stack.GetNodeKey(), chainDb, stack.GetAnnotation())
 	} else {
 		engine = ethash.NewFaker()
 		if !ctx.GlobalBool(FakePoWFlag.Name) {

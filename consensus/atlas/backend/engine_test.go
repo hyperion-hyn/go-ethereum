@@ -54,7 +54,7 @@ func newBlockChain(n int) (*core.BlockChain, *backend, []*bls.SecretKey) {
 	privateKey := privateKeys[0]
 	signerKey := signerKeys[0]
 
-	b, _ := New(config, privateKey, memDB).(*backend)
+	b, _ := New(config, privateKey, memDB, "").(*backend)
 	signer := crypto.PubkeyToSigner(signerKey.GetPublicKey())
 	signHashFn := func(account accounts.Account, hash common.Hash) (signature []byte, publicKey []byte, mask []byte, err error) {
 		secrectKey := signerKey
@@ -62,7 +62,7 @@ func newBlockChain(n int) (*core.BlockChain, *backend, []*bls.SecretKey) {
 
 		return sign.Serialize(), secrectKey.GetPublicKey().Serialize(), nil, nil
 	}
-	b.Authorize(signer, signHashFn, "")
+	b.Authorize(signer, signHashFn)
 
 	genesis.MustCommit(memDB)
 	blockchain, err := core.NewBlockChain(memDB, nil, genesis.Config, b, vm.Config{}, nil, nil)

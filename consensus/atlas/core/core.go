@@ -46,7 +46,7 @@ func New(backend atlas.Backend, config *atlas.Config) Engine {
 		address:            backend.Address(),
 		state:              StateAcceptRequest,
 		handlerWg:          new(sync.WaitGroup),
-		logger:             log.New("annotation", backend.Annotation()),
+		logger:             log.New("annotation", backend.Annotation(), "signer", backend.Signer()),
 		backend:            backend,
 		backlogs:           make(map[common.Address]*prque.Prque),
 		backlogsMu:         new(sync.Mutex),

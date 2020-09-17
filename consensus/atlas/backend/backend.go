@@ -49,7 +49,7 @@ var (
 )
 
 // New creates an Ethereum backend for Atlas core engine.
-func New(config *atlas.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database) consensus.Atlas {
+func New(config *atlas.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database, annotation string) consensus.Atlas {
 	// Allocate the snapshot caches and create the engine
 	recents, _ := lru.NewARC(inmemorySnapshots)
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
@@ -59,7 +59,8 @@ func New(config *atlas.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database) 
 		config:         config,
 		atlasEventMux:  new(event.TypeMux),
 		address:        crypto.PubkeyToAddress(privateKey.PublicKey),
-		logger:         log.New(),
+		annotation:     annotation,
+		logger:         log.New("annotation", annotation),
 		db:             db,
 		commitCh:       make(chan *types.Block, 1),
 		recents:        recents,
@@ -362,12 +363,11 @@ func (sb *backend) Close() error {
 
 // Authorize injects a private key into the consensus engine to mint new blocks
 // with.
-func (c *backend) Authorize(signer common.Address, signHashFn consensus.SignHashFn, annotation string) {
+func (c *backend) Authorize(signer common.Address, signHashFn consensus.SignHashFn) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	c.annotation = annotation
 	c.signer = signer
 	c.signHashFn = signHashFn
-	c.logger = log.New("annotation", c.Annotation())
+	c.logger = log.New("annotation", c.annotation, "signer", c.signer)
 }

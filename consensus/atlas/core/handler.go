@@ -88,6 +88,7 @@ func (c *core) handleEvents() {
 			// A real event arrived, process interesting content
 			switch ev := event.Data.(type) {
 			case atlas.RequestEvent:
+				c.logger.Debug("RequestEvent", "sealhash", ev.Proposal.SealHash(c.backend), "number", ev.Proposal.Number())
 				r := &atlas.Request{
 					Proposal: ev.Proposal,
 				}
@@ -164,8 +165,8 @@ func (c *core) handleMsg(payload []byte) error {
 }
 
 func (c *core) handleCheckedMsg(msg *message, src atlas.Validator) error {
-	logger := c.logger.New("address", c.address, "from", src)
-
+	logger := c.logger.New("from", src)
+	logger.Debug("handleCheckedMsg", "code", msg.Code)
 	// Store the message if it's a future message
 	testBacklog := func(err error) error {
 		if err == errFutureMessage {
