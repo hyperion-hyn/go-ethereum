@@ -152,6 +152,7 @@ func (s *Storage_Map3NodeWrapper_) SubTotalPendingDelegation(amount *big.Int) {
 	s.TotalPendingDelegation().SetValue(totalPendingDelegation)
 }
 
+// TODO ATLAS  weight average
 func (s *Storage_Map3NodeWrapper_) AddMicrodelegation(delegator common.Address, amount *big.Int,
 	pending bool, epoch *big.Int) (isNewDelegator bool) {
 	isExist := s.Microdelegations().Contain(delegator)
