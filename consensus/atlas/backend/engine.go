@@ -408,6 +408,11 @@ func (sb *backend) _Prepare(chain consensus.ChainReader, header *types.Header) e
 	}
 	header.Extra = extra
 
+	// set header's timestamp
+	header.Time = parent.Time + sb.config.BlockPeriod
+	if header.Time < uint64(time.Now().Unix()) {
+		header.Time = uint64(time.Now().Unix())
+	}
 	return nil
 }
 
