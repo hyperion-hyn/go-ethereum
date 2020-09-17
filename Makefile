@@ -7,6 +7,7 @@
 .PHONY: geth-linux-arm geth-linux-arm-5 geth-linux-arm-6 geth-linux-arm-7 geth-linux-arm64
 .PHONY: geth-darwin geth-darwin-386 geth-darwin-amd64
 .PHONY: geth-windows geth-windows-386 geth-windows-amd64
+.PHONY: third_party
 
 GOBIN = ./build/bin
 GO ?= latest
@@ -14,8 +15,8 @@ GORUN = env GO111MODULE=on go run
 
 TOP_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
-CGO_CFLAGS=-I${TOP_DIR}/third_party/mcl/include -I${TOP_DIR}/third_party/bls/include ${CPPFLAGS}
-CGO_LDFLAGS=-L${TOP_DIR}/third_party/mcl/lib -L${TOP_DIR}/third_party/bls/lib ${LDFLAGS}
+CGO_CFLAGS=-I$(TOP_DIR)/third_party/mcl/include -I$(TOP_DIR)/third_party/bls/include $(CPPFLAGS)
+CGO_LDFLAGS=-L$(TOP_DIR)/third_party/mcl/lib -L$(TOP_DIR)/third_party/bls/lib $(LDFLAGS)
 
 export CGO_CFLAGS CGO_LDFLAGS
 
@@ -153,3 +154,9 @@ geth-windows-amd64:
 	$(GORUN) build/ci.go xgo -- --go=$(GO) --targets=windows/amd64 -v ./cmd/geth
 	@echo "Windows amd64 cross compilation done:"
 	@ls -ld $(GOBIN)/geth-windows-* | grep amd64
+
+third_party:
+	- go mod init github.com/hyperion-hyn/mcl
+	- go mod init github.com/hyperion-hyn/bls
+	make -C third_party/mcl lib/libmcl.a -j8
+	make -C third_party/bls lib/libbls384_256.a BLS_SWAP_G=1 -j8

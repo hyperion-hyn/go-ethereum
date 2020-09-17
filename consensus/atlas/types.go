@@ -23,10 +23,12 @@ import (
 	"math/big"
 	"reflect"
 
+	"github.com/hyperion-hyn/bls/ffi/go/bls"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	bls_cosi "github.com/ethereum/go-ethereum/crypto/bls"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
@@ -101,53 +103,57 @@ func (v *View) Cmp(y *View) int {
 }
 
 type Preprepare struct {
-	View     *View
-	Proposal Proposal
+	View      *View
+	Proposal  Proposal
+	Signature []byte
 }
 
 // EncodeRLP serializes b into the Ethereum RLP format.
 func (b *Preprepare) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{b.View, b.Proposal})
+	return rlp.Encode(w, []interface{}{b.View, b.Proposal, b.Signature})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
 func (b *Preprepare) DecodeRLP(s *rlp.Stream) error {
 	var preprepare struct {
-		View     *View
-		Proposal *types.Block
+		View      *View
+		Proposal  *types.Block
+		Signature []byte
 	}
 
 	if err := s.Decode(&preprepare); err != nil {
 		return err
 	}
-	b.View, b.Proposal = preprepare.View, preprepare.Proposal
+	b.View, b.Proposal, b.Signature = preprepare.View, preprepare.Proposal, preprepare.Signature
 
 	return nil
 }
 
 type Subject struct {
-	View    *View
-	Digest  common.Hash
-	Payload []byte
+	View      *View
+	Digest    common.Hash
+	Payload   []byte
+	Signature []byte // Signature of Payload
 }
 
 // EncodeRLP serializes b into the Ethereum RLP format.
 func (b *Subject) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{b.View, b.Digest, b.Payload})
+	return rlp.Encode(w, []interface{}{b.View, b.Digest, b.Payload, b.Signature})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
 func (b *Subject) DecodeRLP(s *rlp.Stream) error {
 	var subject struct {
-		View    *View
-		Digest  common.Hash
-		Payload []byte
+		View      *View
+		Digest    common.Hash
+		Payload   []byte
+		Signature []byte // Signature of Payload
 	}
 
 	if err := s.Decode(&subject); err != nil {
 		return err
 	}
-	b.View, b.Digest, b.Payload = subject.View, subject.Digest, subject.Payload
+	b.View, b.Digest, b.Payload, b.Signature = subject.View, subject.Digest, subject.Payload, subject.Signature
 	return nil
 }
 
@@ -157,32 +163,30 @@ func (b Subject) String() string {
 
 type SignPayload struct {
 	Signature []byte
-	PublicKey []byte
 	Mask      []byte
 }
 
 // EncodeRLP serializes b into the Ethereum RLP format.
 func (b *SignPayload) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{b.Signature, b.PublicKey, b.Mask})
+	return rlp.Encode(w, []interface{}{b.Signature, b.Mask})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
 func (b *SignPayload) DecodeRLP(s *rlp.Stream) error {
 	var obj struct {
 		Signature []byte
-		PublicKey []byte
 		Mask      []byte
 	}
 
 	if err := s.Decode(&obj); err != nil {
 		return err
 	}
-	b.Signature, b.PublicKey, b.Mask = obj.Signature, obj.PublicKey, obj.Mask
+	b.Signature, b.Mask = obj.Signature, obj.Mask
 	return nil
 }
 
 func (b SignPayload) String() string {
-	return fmt.Sprintf("{ Signature: %x, PublicKey: %x}", b.Signature[:10], b.PublicKey[:10])
+	return fmt.Sprintf("{ Signature: %x, PublicKey: %x}", b.Signature[:10], b.Mask)
 }
 
 // SealHash returns the hash of a block prior to it being sealed.
@@ -233,17 +237,25 @@ func encodeSigHeader(w io.Writer, header *types.Header) {
 
 type SignHashFn func(hash common.Hash) (signature []byte, publicKey []byte, mask []byte, err error)
 
-func SignSubject(subject *Subject, signFn SignHashFn) (*Subject, error) {
+func SignSubject(subject *Subject, valset ValidatorSet, signFn SignHashFn) (*Subject, error) {
 	hash := subject.Digest
-	signature, publicKey, mask, err := signFn(hash)
+	signature, publicKey, _, err := signFn(hash)
 	if err != nil {
 		return nil, err
 	}
 
+	var pubKey bls.PublicKey
+	if err := pubKey.Deserialize(publicKey); err != nil {
+		return nil, err
+	}
+
+	bitmap, err := bls_cosi.NewMask(valset.GetPublicKeys(), nil)
+	if err := bitmap.SetKey(&pubKey, true); err != nil {
+		return nil, err
+	}
 	val := SignPayload{
 		Signature: signature,
-		PublicKey: publicKey,
-		Mask:      mask,
+		Mask:      bitmap.Mask(),
 	}
 
 	payload, err := rlp.EncodeToBytes(&val)

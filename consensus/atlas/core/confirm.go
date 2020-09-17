@@ -46,6 +46,11 @@ func (c *core) sendConfirm() {
 func (c *core) handleConfirm(msg *message, src atlas.Validator) error {
 	logger := c.logger.New("from", src, "state", c.state)
 
+	// only proposer can/need handle confirm
+	if !c.IsProposer() {
+		return nil
+	}
+
 	// Decode PREPARE message
 	var confirm atlas.Subject
 	err := msg.Decode(&confirm)
@@ -73,16 +78,9 @@ func (c *core) handleConfirm(msg *message, src atlas.Validator) error {
 		return err
 	}
 
-	if !c.IsProposer() {
-		return nil
-	}
-
 	// Change to Confirm state if we've received enough Expect messages or it is locked
 	// and we are in earlier state before Expect state.
-	if (c.current.GetConfirmSize() >= c.QuorumSize()) &&
-		c.state.Cmp(StateConfirmed) < 0 {
-		// ATLAS(zgx): wanting for more time to collect signatures for rewarding
-		c.current.LockHash()
+	if c.current.GetConfirmSize() >= c.QuorumSize() {
 		c.setState(StateConfirmed)
 		c.sendCommit()
 	}
@@ -100,7 +98,6 @@ func (c *core) verifyConfirm(confirm *atlas.Subject, src atlas.Validator) error 
 		return errInconsistentSubject
 	}
 
-	// ATLAS(zgx): should verifySignPayload here?
 	return nil
 }
 
@@ -108,14 +105,14 @@ func (c *core) acceptConfirm(msg *message, src atlas.Validator) error {
 	// TODO(zgx): should reset if error occure
 	logger := c.logger.New("from", src, "state", c.state)
 
+	// only in the Expect state can accept CONFIRM signature
+	if c.state != StateExpected {
+		return nil
+	}
+
 	var confirm atlas.Subject
 	if err := msg.Decode(&confirm); err != nil {
 		return errFailedDecodeConfirm
-	}
-
-	if confirm.Digest != c.current.Preprepare.Proposal.SealHash(c.backend) {
-		logger.Warn("Inconsistent subjects between PREPARE and proposal", "expected", c.current.Preprepare.Proposal.SealHash(c.backend), "got", confirm.Digest)
-		return errInconsistentSubject
 	}
 
 	var signPayload atlas.SignPayload
@@ -147,14 +144,8 @@ func (c *core) acceptConfirm(msg *message, src atlas.Validator) error {
 		return errDuplicateMessage
 	}
 
-	// ATLAS(zgx): should wait more time to collect signature for rewarding
-	if c.state == StateConfirmed {
-		return nil
-	}
-
 	if err := c.current.confirmBitmap.SetKey(pubKey, true); err == nil {
 		c.current.aggregatedConfirmSig.Add(&sign)
-		c.current.aggregatedConfirmPublicKey.Add(pubKey)
 	}
 
 	return nil

@@ -119,7 +119,7 @@ func NewProtocolManager(config *params.ChainConfig, checkpoint *params.TrustedCh
 		whitelist:  whitelist,
 		txsyncCh:   make(chan *txsync),
 		quitSync:   make(chan struct{}),
-		engine:      engine,
+		engine:     engine,
 	}
 
 	if handler, ok := manager.engine.(consensus.Handler); ok {
@@ -966,6 +966,8 @@ func (pm *ProtocolManager) NodeInfo() *NodeInfo {
 func (pm *ProtocolManager) getConsensusAlgorithm() string {
 	var consensusAlgo string
 	switch pm.engine.(type) {
+	case consensus.Atlas:
+		consensusAlgo = "atlas"
 	case consensus.Istanbul:
 		consensusAlgo = "istanbul"
 	case *clique.Clique:

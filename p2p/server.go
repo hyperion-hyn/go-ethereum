@@ -74,6 +74,9 @@ type Config struct {
 	// This field must be set to a valid secp256k1 private key.
 	PrivateKey *ecdsa.PrivateKey `toml:"-"`
 
+	// Annotation is description of node
+	Annotation string `toml:"-"`
+
 	// SignerKey must be set to a valid bls secret key.
 	SignerKey *bls.SecretKey `toml:"-"`
 

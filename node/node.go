@@ -495,6 +495,10 @@ func (n *Node) Server() *p2p.Server {
 // Quorum
 //
 // delegate call to node.Config
+func (n *Node) GetAnnotation() string {
+	return n.config.Annotation()
+}
+
 func (n *Node) GetNodeKey() *ecdsa.PrivateKey {
 	return n.config.NodeKey()
 }

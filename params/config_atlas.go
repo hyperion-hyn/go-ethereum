@@ -5,9 +5,11 @@ import (
 	"math/big"
 )
 
+// AtlasConfig is the consensus engine configs for Istanbul based sealing.
 type AtlasConfig struct {
-	Period                uint64   `json:"period"` // Number of seconds between blocks to enforce
-	BlocksPerEpoch        uint64   `json:"epoch"`  // Epoch length to reset votes and checkpoint
+	RequestTimeout        uint64   `json:"requestTimeout"` // The timeout for each Atlas round in milliseconds.
+	Period                uint64   `json:"period"`         // Number of seconds between blocks to enforce
+	BlocksPerEpoch        uint64   `json:"epoch"`          // Epoch length to reset votes and checkpoint
 	BlocksPerHalfingCycle uint64   `json:"halfing_cycle"`
 	RestakingEnable       bool     `json:"restaking_enable"`
 	ProposerPolicy        uint64   `json:"policy"`                   // The policy for proposer selection

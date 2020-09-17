@@ -47,13 +47,14 @@ import (
 // block by one node. Otherwise, if n is larger than 1, we have to generate
 // other fake events to process Atlas.
 func newBlockChain(n int) (*core.BlockChain, *backend, []*bls.SecretKey) {
-	genesis, _, signerKeys := getGenesisAndKeys(n)
+	genesis, privateKeys, signerKeys := getGenesisAndKeys(n)
 	memDB := rawdb.NewMemoryDatabase()
 	config := atlas.DefaultConfig
 	// Use the first key as private key
-	b, _ := New(config, memDB).(*backend)
-
+	privateKey := privateKeys[0]
 	signerKey := signerKeys[0]
+
+	b, _ := New(config, privateKey, memDB, "").(*backend)
 	signer := crypto.PubkeyToSigner(signerKey.GetPublicKey())
 	signHashFn := func(account accounts.Account, hash common.Hash) (signature []byte, publicKey []byte, mask []byte, err error) {
 		secrectKey := signerKey
@@ -634,7 +635,7 @@ func TestWriteCommittedSeals(t *testing.T) {
 	}
 
 	// normal case
-	err := WriteCommittedSeals(h, expectedCommittedSeal, expectedPublicKey, expectedBitmap, valSetSize)
+	err := WriteCommittedSeals(h, expectedCommittedSeal, expectedBitmap, valSetSize)
 	if err != expectedErr {
 		t.Errorf("error mismatch: have %v, want %v", err, expectedErr)
 	}
@@ -650,7 +651,7 @@ func TestWriteCommittedSeals(t *testing.T) {
 
 	// invalid seal
 	unexpectedCommittedSeal := append(expectedCommittedSeal, make([]byte, 1)...)
-	err = WriteCommittedSeals(h, unexpectedCommittedSeal, expectedPublicKey, expectedBitmap, valSetSize)
+	err = WriteCommittedSeals(h, unexpectedCommittedSeal, expectedBitmap, valSetSize)
 	if err != errInvalidCommittedSeals {
 		t.Errorf("error mismatch: have %v, want %v", err, errInvalidCommittedSeals)
 	}

@@ -58,7 +58,7 @@ func CheckValidatorSignature(hashdata []byte, sig []byte, pubKey []byte) error {
 	}
 
 	// 3. verify signature
-	if !sign.VerifyHash(&publicKey, hashdata) {
+	if ok := sign.VerifyHash(&publicKey, hashdata); !ok {
 		return ErrInvalidSignature
 	}
 

@@ -271,8 +271,7 @@ func TestSignVerify(t *testing.T) {
 		}
 
 		publicKey := secretKey.GetPublicKey()
-		ok := sign.VerifyHash(publicKey, hash)
-		if !ok {
+		if ok := sign.VerifyHash(publicKey, hash); !ok {
 			t.Errorf("failed to verify hash")
 		}
 	}
@@ -290,7 +289,7 @@ func TestMultipleSign(t *testing.T) {
 
 	var aggregatedPublicKey bls.PublicKey
 	var aggregatedSign bls.Sign
-	for i := 0; i < KEY_COUNT - 1; i++ {
+	for i := 0; i < KEY_COUNT-1; i++ {
 		aggregatedPublicKey.Add(keys[i].GetPublicKey())
 		sign := keys[i].SignHash(hash)
 		aggregatedSign.Add(sign)

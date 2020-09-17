@@ -46,6 +46,11 @@ func (c *core) sendPrepare() {
 func (c *core) handlePrepare(msg *message, src atlas.Validator) error {
 	logger := c.logger.New("from", src, "state", c.state)
 
+	if !c.IsProposer() {
+		logger.Debug("only proposer can handle PREPARE message", "msg", msg)
+		return nil
+	}
+
 	// Decode PREPARE message
 	var prepare atlas.Subject
 	err := msg.Decode(&prepare)
@@ -68,21 +73,14 @@ func (c *core) handlePrepare(msg *message, src atlas.Validator) error {
 		return errNotFromCommittee
 	}
 
-	// ATLAS(zgx): after send out expect, should stop accept prepare.
 	if err := c.acceptPrepare(msg, src); err != nil {
 		return err
 	}
 
-	if !c.IsProposer() {
-		logger.Error("message come from no-proposer", "msg", msg)
-		return nil
-	}
-
-	// Change to Expect state if we've received enough PREPARE messages or it is locked
+	// Change to PREPARE state if we've received enough PREPARE messages or it is locked
 	// and we are in earlier state before Expect state.
 	if ((c.current.IsHashLocked() && prepare.Digest == c.current.GetLockedHash()) || c.current.GetPrepareSize() >= c.QuorumSize()) &&
 		c.state.Cmp(StatePrepared) < 0 {
-		c.current.LockHash()
 		c.setState(StatePrepared)
 		c.sendExpect()
 	}
@@ -100,21 +98,19 @@ func (c *core) verifyPrepare(prepare *atlas.Subject, src atlas.Validator) error 
 		return errInconsistentSubject
 	}
 
-	// ATLAS(zgx): should verifySignPayload here?
 	return nil
 }
 
 func (c *core) acceptPrepare(msg *message, src atlas.Validator) error {
 	logger := c.logger.New("from", src, "state", c.state)
 
+	if c.state != StatePreprepared {
+		return nil
+	}
+
 	var prepare atlas.Subject
 	if err := msg.Decode(&prepare); err != nil {
 		return err
-	}
-
-	if prepare.Digest != c.current.Preprepare.Proposal.SealHash(c.backend) {
-		logger.Warn("Inconsistent subjects between PREPARE and proposal", "expected", c.current.Preprepare.Proposal.SealHash(c.backend), "got", prepare.Digest)
-		return errInconsistentSubject
 	}
 
 	var signPayload *atlas.SignPayload
@@ -146,13 +142,8 @@ func (c *core) acceptPrepare(msg *message, src atlas.Validator) error {
 		return errDuplicateMessage
 	}
 
-	if c.state == StatePrepared {
-		return nil
-	}
-
 	if err := c.current.prepareBitmap.SetKey(pubKey, true); err == nil {
 		c.current.aggregatedPrepareSig.Add(&sign)
-		c.current.aggregatedPreparePublicKey.Add(pubKey)
 	}
 
 	return nil

@@ -17,6 +17,8 @@
 package core
 
 import (
+	"github.com/hyperion-hyn/bls/ffi/go/bls"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
 	bls_cosi "github.com/ethereum/go-ethereum/crypto/bls"
@@ -87,15 +89,14 @@ func (c *core) handleCommit(msg *message, src atlas.Validator) error {
 		return err
 	}
 
-	// Commit the proposal once we have enough COMMIT messages and we are not in the Confirm state.
+	// Commit the proposal once we have enough CONFIRM signature and we are not in the Confirm state.
 	//
 	// If we already have a proposal, we may have chance to speed up the consensus process
 	// by committing the proposal without PREPARE messages.
-	if c.current.confirmBitmap.CountEnabled() >= c.QuorumSize() && c.state.Cmp(StateCommitted) < 0 {
-		// Still need to call LockHash here since state can skip Expect state and jump directly to the Confirm state.
-		c.current.LockHash()
+	if c.current.confirmBitmap.CountEnabled() >= c.QuorumSize() && (c.state.Cmp(StatePreprepared) >= 0 && c.state.Cmp(StateCommitted) < 0) {
+		// commit need proposal which was set in the PREPREPARED state, in other state can jump directly to the Confirm state.
+		c.setState(StateCommitted)
 		c.commit()
-
 	}
 
 	return nil
@@ -122,9 +123,10 @@ func (c *core) acceptCommit(msg *message, src atlas.Validator) error {
 		return errFailedDecodeConfirm
 	}
 
-	if commit.Digest != c.current.Preprepare.Proposal.SealHash(c.backend) {
-		logger.Warn("Inconsistent subjects between EXPECT and proposal", "expected", c.current.Preprepare.Proposal.SealHash(c.backend), "got", commit.Digest)
-		return errInconsistentSubject
+	if err := c.backend.CheckSignature(commit.Payload, c.valSet.GetProposer().PublicKey().Serialize(), commit.Signature); err == errInvalidSignature {
+		logger.Error("Leader give a commit with invalid signature")
+		c.sendNextRoundChange()
+		return errInvalidSignature
 	}
 
 	signPayload, err := c.verifySignPayload(&commit, c.valSet)
@@ -138,9 +140,14 @@ func (c *core) acceptCommit(msg *message, src atlas.Validator) error {
 		return err
 	}
 
-	if bitmap.CountEnabled() < c.QuorumSize() {
-		return errNotSatisfyQuorum
+	var sign bls.Sign
+	if err := sign.Deserialize(signPayload.Signature); err != nil {
+		logger.Error("Failed to deserialize signature", "err", err)
+		return err
 	}
+
+	c.current.aggregatedConfirmSig = &sign
+	c.current.confirmBitmap = bitmap
 
 	return nil
 }
