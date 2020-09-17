@@ -37,19 +37,17 @@ func newRoundState(view *atlas.View, validatorSet atlas.ValidatorSet, lockedHash
 	confirmBitmap, _ := bls_cosi.NewMask(pubKeys, nil)
 
 	return &roundState{
-		round:                      view.Round,
-		sequence:                   view.Sequence,
-		Preprepare:                 preprepare,
-		lockedHash:                 lockedHash,
-		mu:                         new(sync.RWMutex),
-		pendingRequest:             pendingRequest,
-		hasBadProposal:             hasBadProposal,
-		aggregatedPrepareSig:       &bls.Sign{},
-		aggregatedPreparePublicKey: &bls.PublicKey{},
-		prepareBitmap:              prepareBitmap,
-		aggregatedConfirmSig:       &bls.Sign{},
-		aggregatedConfirmPublicKey: &bls.PublicKey{},
-		confirmBitmap:              confirmBitmap,
+		round:                view.Round,
+		sequence:             view.Sequence,
+		Preprepare:           preprepare,
+		lockedHash:           lockedHash,
+		mu:                   new(sync.RWMutex),
+		pendingRequest:       pendingRequest,
+		hasBadProposal:       hasBadProposal,
+		aggregatedPrepareSig: &bls.Sign{},
+		prepareBitmap:        prepareBitmap,
+		aggregatedConfirmSig: &bls.Sign{},
+		confirmBitmap:        confirmBitmap,
 	}
 }
 
@@ -66,12 +64,10 @@ type roundState struct {
 	mu             *sync.RWMutex
 	hasBadProposal func(hash common.Hash) bool
 
-	aggregatedPrepareSig       *bls.Sign
-	aggregatedPreparePublicKey *bls.PublicKey
-	prepareBitmap              *bls_cosi.Mask
-	aggregatedConfirmSig       *bls.Sign
-	aggregatedConfirmPublicKey *bls.PublicKey
-	confirmBitmap              *bls_cosi.Mask
+	aggregatedPrepareSig *bls.Sign
+	prepareBitmap        *bls_cosi.Mask
+	aggregatedConfirmSig *bls.Sign
+	confirmBitmap        *bls_cosi.Mask
 }
 
 func (s *roundState) GetPrepareSize() int {

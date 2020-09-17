@@ -338,6 +338,16 @@ func (c *Config) instanceDir() string {
 	return filepath.Join(c.DataDir, c.name())
 }
 
+// Annotation return node's description
+func (c *Config) Annotation() string {
+	if c.P2P.Annotation != "" {
+		return c.P2P.Annotation
+	}
+
+	privateKey := c.NodeKey()
+	return crypto.PubkeyToAddress(privateKey.PublicKey).Hex()
+}
+
 // NodeKey retrieves the currently configured private key of the node, checking
 // first any manually set key, falling back to the one found in the configured
 // data folder. If no key can be found, a new one is generated.

@@ -410,6 +410,7 @@ func (c *IstanbulConfig) String() string {
 
 // AtlasConfig is the consensus engine configs for Istanbul based sealing.
 type AtlasConfig struct {
+	RequestTimeout uint64   `json:"requestTimeout"`           // The timeout for each Atlas round in milliseconds.
 	Period         uint64   `json:"period"`                   // Number of seconds between blocks to enforce
 	Epoch          uint64   `json:"epoch"`                    // Epoch length to reset votes and checkpoint
 	ProposerPolicy uint64   `json:"policy"`                   // The policy for proposer selection
@@ -431,6 +432,8 @@ func (c *ChainConfig) String() string {
 		engine = c.Clique
 	case c.Istanbul != nil:
 		engine = c.Istanbul
+	case c.Atlas != nil:
+		engine = c.Atlas
 	default:
 		engine = "unknown"
 	}

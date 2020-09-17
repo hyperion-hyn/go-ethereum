@@ -31,6 +31,10 @@ import (
 	"text/template"
 	"time"
 
+	pcsclite "github.com/gballet/go-libpcsclite"
+	"github.com/hyperion-hyn/bls/ffi/go/bls"
+	"gopkg.in/urfave/cli.v1"
+
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
@@ -40,6 +44,8 @@ import (
 	atlasBackend "github.com/ethereum/go-ethereum/consensus/atlas/backend"
 	"github.com/ethereum/go-ethereum/consensus/clique"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
+	"github.com/ethereum/go-ethereum/consensus/istanbul"
+	istanbulBackend "github.com/ethereum/go-ethereum/consensus/istanbul/backend"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/vm"
@@ -66,9 +72,6 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/netutil"
 	"github.com/ethereum/go-ethereum/params"
 	whisper "github.com/ethereum/go-ethereum/whisper/whisperv6"
-	pcsclite "github.com/gballet/go-libpcsclite"
-	"github.com/hyperion-hyn/bls/ffi/go/bls"
-	cli "gopkg.in/urfave/cli.v1"
 )
 
 func init() {
@@ -603,6 +606,10 @@ var (
 		Name:  "nodekeyhex",
 		Usage: "P2P node key as hex (for testing)",
 	}
+	NodeAnnotationFlag = cli.StringFlag{
+		Name:  "node.annotaion",
+		Usage: "node annotation",
+	}
 	SignerKeyFileFlag = cli.StringFlag{
 		Name:  "signerkey",
 		Usage: "signer key file",
@@ -800,10 +807,11 @@ func MakeDataDir(ctx *cli.Context) string {
 // method returns nil and an emphemeral key is to be generated.
 func setNodeKey(ctx *cli.Context, cfg *p2p.Config) {
 	var (
-		hex  = ctx.GlobalString(NodeKeyHexFlag.Name)
-		file = ctx.GlobalString(NodeKeyFileFlag.Name)
-		key  *ecdsa.PrivateKey
-		err  error
+		hex        = ctx.GlobalString(NodeKeyHexFlag.Name)
+		file       = ctx.GlobalString(NodeKeyFileFlag.Name)
+		annotation = ctx.GlobalString(NodeAnnotationFlag.Name)
+		key        *ecdsa.PrivateKey
+		err        error
 	)
 	switch {
 	case file != "" && hex != "":
@@ -819,6 +827,8 @@ func setNodeKey(ctx *cli.Context, cfg *p2p.Config) {
 		}
 		cfg.PrivateKey = key
 	}
+
+	cfg.Annotation = annotation
 }
 
 // setSignerKey creates a signer key from set command line flags, either loading it
@@ -1914,6 +1924,18 @@ func MakeChain(ctx *cli.Context, stack *node.Node, readOnly bool) (chain *core.B
 	var engine consensus.Engine
 	if config.Clique != nil {
 		engine = clique.New(config.Clique, chainDb)
+	} else if config.Istanbul != nil {
+		// for IBFT
+		istanbulConfig := istanbul.DefaultConfig
+		if config.Istanbul.Epoch != 0 {
+			istanbulConfig.Epoch = config.Istanbul.Epoch
+		}
+		istanbulConfig.ProposerPolicy = istanbul.ProposerPolicy(config.Istanbul.ProposerPolicy)
+		istanbulConfig.Ceil2Nby3Block = config.Istanbul.Ceil2Nby3Block
+		engine = istanbulBackend.New(istanbulConfig, stack.GetNodeKey(), chainDb)
+	} else if config.IsQuorum {
+		// for Raft
+		engine = ethash.NewFullFaker()
 	} else if config.Atlas != nil {
 		atlasConfig := atlas.DefaultConfig
 		if config.Atlas.Epoch != 0 {
@@ -1921,7 +1943,7 @@ func MakeChain(ctx *cli.Context, stack *node.Node, readOnly bool) (chain *core.B
 		}
 		atlasConfig.ProposerPolicy = atlas.ProposerPolicy(config.Atlas.ProposerPolicy)
 		atlasConfig.Ceil2Nby3Block = config.Atlas.Ceil2Nby3Block
-		engine = atlasBackend.New(atlasConfig, chainDb)
+		engine = atlasBackend.New(atlasConfig, stack.GetNodeKey(), chainDb, stack.GetAnnotation())
 	} else {
 		engine = ethash.NewFaker()
 		if !ctx.GlobalBool(FakePoWFlag.Name) {

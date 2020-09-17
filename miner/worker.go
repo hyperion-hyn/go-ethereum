@@ -286,7 +286,9 @@ func (w *worker) pendingBlock() *types.Block {
 // start sets the running status as 1 and triggers new work submitting.
 func (w *worker) start() {
 	atomic.StoreInt32(&w.running, 1)
-	if istanbul, ok := w.engine.(consensus.Istanbul); ok {
+	if engine, ok := w.engine.(consensus.EngineEx); ok {
+		engine.Start(w.chain, w.chain.CurrentBlock, w.chain.HasBadBlock)
+	} else if istanbul, ok := w.engine.(consensus.Istanbul); ok {
 		istanbul.Start(w.chain, w.chain.CurrentBlock, w.chain.HasBadBlock)
 	}
 	w.startCh <- struct{}{}
@@ -294,7 +296,9 @@ func (w *worker) start() {
 
 // stop sets the running status as 0.
 func (w *worker) stop() {
-	if istanbul, ok := w.engine.(consensus.Istanbul); ok {
+	if engine, ok := w.engine.(consensus.EngineEx); ok {
+		engine.Stop()
+	} else if istanbul, ok := w.engine.(consensus.Istanbul); ok {
 		istanbul.Stop()
 	}
 	atomic.StoreInt32(&w.running, 0)

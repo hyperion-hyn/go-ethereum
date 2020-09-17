@@ -280,10 +280,16 @@ func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, co
 		if chainConfig.Atlas.Epoch != 0 {
 			config.Atlas.Epoch = chainConfig.Atlas.Epoch
 		}
+		if chainConfig.Atlas.RequestTimeout != 0 {
+			config.Atlas.RequestTimeout = chainConfig.Atlas.RequestTimeout
+		}
+		if chainConfig.Atlas.Period != 0 {
+			config.Atlas.BlockPeriod = chainConfig.Atlas.Period
+		}
 		config.Atlas.ProposerPolicy = atlas.ProposerPolicy(chainConfig.Atlas.ProposerPolicy)
 		config.Atlas.Ceil2Nby3Block = chainConfig.Atlas.Ceil2Nby3Block
 
-		return atlasBackend.New(&config.Atlas, db)
+		return atlasBackend.New(&config.Atlas, stack.Config().NodeKey(), db, stack.Config().Annotation())
 	}
 
 	// Otherwise assume proof-of-work
@@ -448,6 +454,9 @@ func (s *Ethereum) shouldPreserve(block *types.Block) bool {
 	if _, ok := s.engine.(*clique.Clique); ok {
 		return false
 	}
+	if _, ok := s.engine.(consensus.Atlas); ok {
+		return false
+	}
 	return s.isLocalBlock(block)
 }
 
@@ -455,7 +464,9 @@ func (s *Ethereum) shouldPreserve(block *types.Block) bool {
 func (s *Ethereum) SetEtherbase(etherbase common.Address) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	if _, ok := s.engine.(consensus.Istanbul); ok {
+	if _, ok := s.engine.(consensus.Atlas); ok {
+		log.Error("Cannot set etherbase in Atlas consensus")
+	} else if _, ok := s.engine.(consensus.Istanbul); ok {
 		log.Error("Cannot set etherbase in Istanbul consensus")
 		return
 	}

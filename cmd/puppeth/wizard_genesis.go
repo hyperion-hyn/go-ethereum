@@ -149,14 +149,17 @@ func (w *wizard) makeGenesis() {
 		// In the case of atlas, configure the consensus parameters
 		genesis.Difficulty = atlasBackend.DefaultDifficulty
 		genesis.Config.Atlas = &params.AtlasConfig{
+			RequestTimeout: 10 * 1000,
 			Period:         8,
 			Epoch:          30000,
 			ProposerPolicy: 0,
 			Ceil2Nby3Block: big.NewInt(0),
 		}
 		fmt.Println()
-		fmt.Println("How many seconds should blocks take? (default = 15)")
-		genesis.Config.Atlas.Period = uint64(w.readDefaultInt(15))
+		fmt.Println("How many seconds should blocks take? (default = 6)")
+		genesis.Config.Atlas.Period = uint64(w.readDefaultInt(6))
+		fmt.Println("How long request timeout ? (default = 10)")
+		genesis.Config.Atlas.RequestTimeout = uint64(w.readDefaultInt(10) * 1000)
 
 		// We also need the initial list of signers
 		fmt.Println()

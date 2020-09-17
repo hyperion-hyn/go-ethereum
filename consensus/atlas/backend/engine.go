@@ -19,7 +19,6 @@ package backend
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"math"
 
@@ -192,7 +191,7 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 	}
 
 	// Ensure that the coinbase is valid
-	if header.Nonce != (emptyNonce) && !bytes.Equal(header.Nonce[:], nonceAuthVote) && !bytes.Equal(header.Nonce[:], nonceDropVote) {
+	if header.Nonce != (emptyNonce) {
 		return errInvalidNonce
 	}
 	// Ensure that the mix digest is zero as we don't have fork protection currently
@@ -336,18 +335,14 @@ func verifySignature(valSet atlas.ValidatorSet, hash []byte, signature []byte, b
 		return errInvalidCommittedSeals
 	}
 
-	var aggregatePublicKey bls.PublicKey
-	publicKeys := mask.GetPubKeyFromMask(true)
-	for _, publicKey := range publicKeys {
-		aggregatePublicKey.Add(publicKey)
-	}
+	aggregatePublicKey := mask.AggregatePublic
 
 	var sign bls.Sign
 	if err := sign.Deserialize(signature); err != nil {
 		return err
 	}
 
-	if err := sign.VerifyHash(&aggregatePublicKey, hash); err == false {
+	if ok := sign.VerifyHash(aggregatePublicKey, hash); !ok {
 		return errInvalidAggregatedSignature
 	}
 
@@ -513,10 +508,9 @@ func (sb *backend) _Seal(chain consensus.ChainReader, block *types.Block, result
 				// return the result. Otherwise, keep waiting the next hash.
 				if result != nil && block.SealHash(sb) == result.SealHash(sb) {
 					// wait for the timestamp of header, use this to adjust the block period
-					delay := time.Unix(int64(header.Time), 0).Sub(now())
-					// ATLAS(zgx): what if delay is negative?
+					delay := math.Floor(time.Unix(int64(header.Time+sb.config.BlockPeriod), 0).Sub(now()).Seconds() + 1)
 					select {
-					case <-time.After(delay):
+					case <-time.After(time.Duration(delay) * time.Second):
 					}
 					results <- result
 					return
@@ -737,15 +731,10 @@ func writeSeal(h *types.Header, seal []byte) error {
 }
 
 // WriteCommittedSeals writes the extra-data field of a block header with given committed seals.
-func WriteCommittedSeals(h *types.Header, signature []byte, publicKey []byte, bitmap []byte, valSetSize int) error {
-	fmt.Printf("length, signature: %d, public: %d, bitmap: %d\n", len(signature), len(publicKey), len(bitmap))
-	if len(signature) != types.AtlasExtraSignature || len(publicKey) != types.AtlasExtraPublicKey || len(bitmap) != types.GetMaskByteCount(valSetSize) {
+func WriteCommittedSeals(h *types.Header, signature []byte, bitmap []byte, valSetSize int) error {
+	if len(signature) != types.AtlasExtraSignature || len(bitmap) != types.GetMaskByteCount(valSetSize) {
 		return errInvalidCommittedSeals
 	}
-
-	fmt.Printf("signature: %v\n", signature)
-	fmt.Printf("publicKey: %v\n", publicKey)
-	fmt.Printf("bitmap: %v\n", bitmap)
 
 	atlasExtra, err := types.ExtractAtlasExtra(h)
 	if err != nil {

@@ -17,6 +17,7 @@
 package backend
 
 import (
+	"crypto/ecdsa"
 	"math/big"
 	"sync"
 	"time"
@@ -48,7 +49,7 @@ var (
 )
 
 // New creates an Ethereum backend for Atlas core engine.
-func New(config *atlas.Config, db ethdb.Database) consensus.Atlas {
+func New(config *atlas.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database, annotation string) consensus.Atlas {
 	// Allocate the snapshot caches and create the engine
 	recents, _ := lru.NewARC(inmemorySnapshots)
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
@@ -57,7 +58,9 @@ func New(config *atlas.Config, db ethdb.Database) consensus.Atlas {
 	backend := &backend{
 		config:         config,
 		atlasEventMux:  new(event.TypeMux),
-		logger:         log.New(),
+		address:        crypto.PubkeyToAddress(privateKey.PublicKey),
+		annotation:     annotation,
+		logger:         log.New("annotation", annotation),
 		db:             db,
 		commitCh:       make(chan *types.Block, 1),
 		recents:        recents,
@@ -82,6 +85,7 @@ type backend struct {
 	atlasEventMux *event.TypeMux
 
 	address    common.Address       // Signer's account address
+	annotation string               // Signer's annotation
 	signer     common.Address       // Signer's id (address format)
 	signHashFn consensus.SignHashFn // Sign function to authorize hashes with
 	lock       sync.RWMutex         // Protects the signer fields
@@ -122,6 +126,10 @@ func (sb *backend) CalcDifficulty(chain consensus.ChainHeaderReader, time uint64
 // Address implements atlas.Backend.Address
 func (sb *backend) Address() common.Address {
 	return sb.address
+}
+
+func (sb *backend) Annotation() string {
+	return sb.annotation
 }
 
 // Signer implements atlas.Backend.Signer
@@ -176,7 +184,7 @@ func (sb *backend) Gossip(valSet atlas.ValidatorSet, payload []byte) error {
 }
 
 // Commit implements atlas.Backend.Commit
-func (sb *backend) Commit(proposal atlas.Proposal, signature []byte, publicKey []byte, bitmap []byte) error {
+func (sb *backend) Commit(proposal atlas.Proposal, signature []byte, bitmap []byte) error {
 	// ATLAS(zgx): should save signature and bitmap into db, proposal is a sealed block.
 	// Check if the proposal is a valid block
 	block := &types.Block{}
@@ -192,7 +200,7 @@ func (sb *backend) Commit(proposal atlas.Proposal, signature []byte, publicKey [
 
 	lastProposal, _ := sb.LastProposal()
 	valSetSize := sb.Validators(lastProposal).Size()
-	err := WriteCommittedSeals(h, signature, publicKey, bitmap, valSetSize)
+	err := WriteCommittedSeals(h, signature, bitmap, valSetSize)
 	if err != nil {
 		return err
 	}
@@ -289,8 +297,14 @@ func (sb *backend) CheckSignature(data []byte, pubKey []byte, sig []byte) error 
 }
 
 // HasPropsal implements atlas.Backend.HashBlock
-func (sb *backend) HasPropsal(hash common.Hash, number *big.Int) bool {
-	return sb.chain.GetHeader(hash, number.Uint64()) != nil
+func (sb *backend) HasPropsal(sealhash common.Hash, number *big.Int) bool {
+	header := sb.chain.GetHeaderByNumber(number.Uint64())
+	if header == nil {
+		return false
+	}
+
+	val := sb.SealHash(header)
+	return val == sealhash
 }
 
 // GetProposer implements atlas.Backend.GetProposer
@@ -355,4 +369,5 @@ func (c *backend) Authorize(signer common.Address, signHashFn consensus.SignHash
 
 	c.signer = signer
 	c.signHashFn = signHashFn
+	c.logger = log.New("annotation", c.annotation, "signer", c.signer)
 }

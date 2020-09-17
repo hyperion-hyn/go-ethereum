@@ -30,6 +30,9 @@ type Backend interface {
 	// Address returns the owner's address
 	Address() common.Address
 
+	// Annotation returns signer's annotation
+	Annotation() string
+
 	// Signer returns the signer's id (address format)
 	Signer() common.Address
 
@@ -47,7 +50,7 @@ type Backend interface {
 
 	// Commit delivers an approved proposal to backend.
 	// The delivered proposal will be put into blockchain.
-	Commit(proposal Proposal, signature []byte, publicKey []byte, bitmap []byte) error
+	Commit(proposal Proposal, signature []byte, bitmap []byte) error
 
 	// Verify verifies the proposal. If a consensus.ErrFutureBlock error is returned,
 	// the time difference of the proposal and current time is also returned.
