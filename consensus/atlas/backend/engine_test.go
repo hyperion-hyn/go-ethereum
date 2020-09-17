@@ -47,13 +47,14 @@ import (
 // block by one node. Otherwise, if n is larger than 1, we have to generate
 // other fake events to process Atlas.
 func newBlockChain(n int) (*core.BlockChain, *backend, []*bls.SecretKey) {
-	genesis, _, signerKeys := getGenesisAndKeys(n)
+	genesis, privateKeys, signerKeys := getGenesisAndKeys(n)
 	memDB := rawdb.NewMemoryDatabase()
 	config := atlas.DefaultConfig
 	// Use the first key as private key
-	b, _ := New(config, memDB).(*backend)
-
+	privateKey := privateKeys[0]
 	signerKey := signerKeys[0]
+
+	b, _ := New(config, privateKey, memDB).(*backend)
 	signer := crypto.PubkeyToSigner(signerKey.GetPublicKey())
 	signHashFn := func(account accounts.Account, hash common.Hash) (signature []byte, publicKey []byte, mask []byte, err error) {
 		secrectKey := signerKey
@@ -61,7 +62,7 @@ func newBlockChain(n int) (*core.BlockChain, *backend, []*bls.SecretKey) {
 
 		return sign.Serialize(), secrectKey.GetPublicKey().Serialize(), nil, nil
 	}
-	b.Authorize(signer, signHashFn)
+	b.Authorize(signer, signHashFn, "")
 
 	genesis.MustCommit(memDB)
 	blockchain, err := core.NewBlockChain(memDB, nil, genesis.Config, b, vm.Config{}, nil, nil)

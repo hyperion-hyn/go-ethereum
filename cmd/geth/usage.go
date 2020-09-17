@@ -168,6 +168,9 @@ var AppHelpFlagGroups = []flags.FlagGroup{
 			utils.NetrestrictFlag,
 			utils.NodeKeyFileFlag,
 			utils.NodeKeyHexFlag,
+			utils.NodeAnnotationFlag,
+			utils.SignerKeyFileFlag,
+			utils.SignerKeyHexFlag,
 		},
 	},
 	{

@@ -289,7 +289,7 @@ func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, co
 		config.Atlas.ProposerPolicy = atlas.ProposerPolicy(chainConfig.Atlas.ProposerPolicy)
 		config.Atlas.Ceil2Nby3Block = chainConfig.Atlas.Ceil2Nby3Block
 
-		return atlasBackend.New(&config.Atlas, db)
+		return atlasBackend.New(&config.Atlas, stack.Config().NodeKey(), db)
 	}
 
 	// Otherwise assume proof-of-work
@@ -510,7 +510,8 @@ func (s *Ethereum) StartMining(threads int) error {
 				log.Error("Etherbase account unavailable locally", "err", err)
 				return fmt.Errorf("signer missing: %v", err)
 			}
-			clique.Authorize(eb, wallet.SignData)
+			annotation := s.ctx.Config().Annotation()
+			clique.Authorize(eb, wallet.SignData, annotation)
 		}
 
 		if atlas, ok := s.engine.(consensus.EngineEx); ok {
@@ -524,7 +525,8 @@ func (s *Ethereum) StartMining(threads int) error {
 				return sign.Serialize(), secrectKey.GetPublicKey().Serialize(), nil, nil
 			}
 
-			atlas.Authorize(signer, signFn)
+			annotation := s.ctx.Config().Annotation()
+			atlas.Authorize(signer, signFn, annotation)
 		}
 
 		// If mining is started, we can disable the transaction rejection mechanism
