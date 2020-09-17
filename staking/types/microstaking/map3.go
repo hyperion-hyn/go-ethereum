@@ -85,14 +85,14 @@ func (n *Map3Node_) SanityCheck(maxPubKeyAllowed int) error {
 	return nil
 }
 
-func (n *Map3Node_) ToSimplifiedMap3Node() *SimplifiedMap3Node {
-	return &SimplifiedMap3Node{
+func (n *Map3Node_) ToPlainMap3Node() *PlainMap3Node {
+	return &PlainMap3Node{
 		Map3Address:     n.Map3Address,
 		OperatorAddress: n.OperatorAddress,
-		NodeKeys: func() []SimplifiedNodeKey {
-			var nodeKeys []SimplifiedNodeKey
+		NodeKeys: func() []BLSPublicKey_ {
+			var nodeKeys []BLSPublicKey_
 			for _, nodeKey := range n.NodeKeys.Keys {
-				nodeKeys = append(nodeKeys, nodeKey.Key)
+				nodeKeys = append(nodeKeys, *nodeKey)
 			}
 			return nodeKeys
 		}(),
@@ -107,9 +107,9 @@ func (n *Map3Node_) ToSimplifiedMap3Node() *SimplifiedMap3Node {
 	}
 }
 
-func (n *Map3NodeWrapper_) ToSimplifiedMap3NodeWrapper() *SimplifiedMap3NodeWrapper {
-	return &SimplifiedMap3NodeWrapper{
-		Map3Node: *n.Map3Node.ToSimplifiedMap3Node(),
+func (n *Map3NodeWrapper_) ToPlainMap3NodeWrapper() *PlainMap3NodeWrapper {
+	return &PlainMap3NodeWrapper{
+		Map3Node: *n.Map3Node.ToPlainMap3Node(),
 		Microdelegations: func() []Microdelegation_ {
 			var delegations []Microdelegation_
 			for _, key := range n.Microdelegations.Keys {
@@ -397,32 +397,28 @@ func UpdateMap3NodeFromEditMsg(map3Node *Map3Node_, edit *EditMap3Node) error {
 	return nil
 }
 
-type SimplifiedNodeKey = [48]uint8
-
-type SimplifiedMap3Node struct {
-	Map3Address     common.Address      `json:"Map3Address"`
-	OperatorAddress common.Address      `json:"OperatorAddress"`
-	NodeKeys        []SimplifiedNodeKey `json:"NodeKeys"`
-	Commission      Commission_         `json:"Commission"`
-	Description     Description_        `json:"Description"`
-	CreationHeight  *big.Int            `json:"CreationHeight"`
-	Age             common.Dec          `json:"Age"`
-	Status          uint8               `json:"Status"`
-	PendingEpoch    *big.Int            `json:"PendingEpoch"`
-	ActivationEpoch *big.Int            `json:"ActivationEpoch"`
-	ReleaseEpoch    common.Dec          `json:"ReleaseEpoch"`
+type PlainMap3Node struct {
+	Map3Address     common.Address  `json:"Map3Address"`
+	OperatorAddress common.Address  `json:"OperatorAddress"`
+	NodeKeys        []BLSPublicKey_ `json:"NodeKeys"`
+	Commission      Commission_     `json:"Commission"`
+	Description     Description_    `json:"Description"`
+	CreationHeight  *big.Int        `json:"CreationHeight"`
+	Age             common.Dec      `json:"Age"`
+	Status          uint8           `json:"Status"`
+	PendingEpoch    *big.Int        `json:"PendingEpoch"`
+	ActivationEpoch *big.Int        `json:"ActivationEpoch"`
+	ReleaseEpoch    common.Dec      `json:"ReleaseEpoch"`
 }
 
-func (n *SimplifiedMap3Node) ToMap3Node() *Map3Node_ {
+func (n *PlainMap3Node) ToMap3Node() *Map3Node_ {
 	return &Map3Node_{
 		Map3Address:     n.Map3Address,
 		OperatorAddress: n.OperatorAddress,
 		NodeKeys: func() BLSPublicKeys_ {
 			nodeKeys := NewEmptyBLSKeys()
 			for _, nodeKey := range n.NodeKeys {
-				nodeKeys.Keys = append(nodeKeys.Keys, &BLSPublicKey_{
-					Key: nodeKey,
-				})
+				nodeKeys.Keys = append(nodeKeys.Keys, &nodeKey)
 			}
 			return nodeKeys
 		}(),
@@ -437,8 +433,8 @@ func (n *SimplifiedMap3Node) ToMap3Node() *Map3Node_ {
 	}
 }
 
-type SimplifiedMap3NodeWrapper struct {
-	Map3Node               SimplifiedMap3Node `json:"Map3Node"`
+type PlainMap3NodeWrapper struct {
+	Map3Node               PlainMap3Node      `json:"Map3Node"`
 	Microdelegations       []Microdelegation_ `json:"Microdelegations"`
 	RedelegationReference  common.Address     `json:"RedelegationReference"`
 	AccumulatedReward      *big.Int           `json:"AccumulatedReward"`
@@ -446,7 +442,7 @@ type SimplifiedMap3NodeWrapper struct {
 	TotalPendingDelegation *big.Int           `json:"TotalPendingDelegation"`
 }
 
-func (n *SimplifiedMap3NodeWrapper) ToMap3NodeWrapper() *Map3NodeWrapper_ {
+func (n *PlainMap3NodeWrapper) ToMap3NodeWrapper() *Map3NodeWrapper_ {
 	return &Map3NodeWrapper_{
 		Map3Node: *n.Map3Node.ToMap3Node(),
 		Microdelegations: func() MicrodelegationMap_ {

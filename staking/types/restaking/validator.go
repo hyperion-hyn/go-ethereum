@@ -150,8 +150,8 @@ func (v *Validator_) SanityCheck(maxSlotKeyAllowed int) error {
 	return nil
 }
 
-func (v *Validator_) ToSimplifiedValidator() *SimplifiedValidator {
-	return &SimplifiedValidator{
+func (v *Validator_) ToPlainValidator() *PlainValidator {
+	return &PlainValidator{
 		ValidatorAddress: v.ValidatorAddress,
 		OperatorAddresses: func() []common.Address {
 			var operators []common.Address
@@ -160,10 +160,10 @@ func (v *Validator_) ToSimplifiedValidator() *SimplifiedValidator {
 			}
 			return operators
 		}(),
-		SlotPubKeys: func() []SimplifiedBLSPublicKey {
-			var pubKeys []SimplifiedBLSPublicKey
+		SlotPubKeys: func() []BLSPublicKey_ {
+			var pubKeys []BLSPublicKey_
 			for _, pubKey := range v.SlotPubKeys.Keys {
-				pubKeys = append(pubKeys, pubKey.Key)
+				pubKeys = append(pubKeys, *pubKey)
 			}
 			return pubKeys
 		}(),
@@ -199,9 +199,9 @@ func (s *Storage_Validator_) LoadFully() (*Validator_, error) {
 	return &des, nil
 }
 
-func (v *ValidatorWrapper_) ToSimplifiedValidatorWrapper() *SimplifiedValidatorWrapper {
-	return &SimplifiedValidatorWrapper{
-		Validator: *v.Validator.ToSimplifiedValidator(),
+func (v *ValidatorWrapper_) ToPlainValidatorWrapper() *PlainValidatorWrapper {
+	return &PlainValidatorWrapper{
+		Validator: *v.Validator.ToPlainValidator(),
 		Redelegations: func() []Redelegation_ {
 			var redelegations []Redelegation_
 			for _, key := range v.Redelegations.Keys {
@@ -428,21 +428,19 @@ func UpdateValidatorFromEditMsg(validator *Validator_, edit *EditValidator) erro
 	return nil
 }
 
-type SimplifiedBLSPublicKey = [48]uint8
-
-type SimplifiedValidator struct {
-	ValidatorAddress     common.Address           `json:"ValidatorAddress"`
-	OperatorAddresses    []common.Address         `json:"OperatorAddresses"`
-	SlotPubKeys          []SimplifiedBLSPublicKey `json:"SlotPubKeys"`
-	LastEpochInCommittee *big.Int                 `json:"LastEpochInCommittee"`
-	MaxTotalDelegation   *big.Int                 `json:"MaxTotalDelegation"`
-	Status               uint8                    `json:"Status"`
-	Commission           Commission_              `json:"Commission"`
-	Description          Description_             `json:"Description"`
-	CreationHeight       *big.Int                 `json:"CreationHeight"`
+type PlainValidator struct {
+	ValidatorAddress     common.Address   `json:"ValidatorAddress"`
+	OperatorAddresses    []common.Address `json:"OperatorAddresses"`
+	SlotPubKeys          []BLSPublicKey_  `json:"SlotPubKeys"`
+	LastEpochInCommittee *big.Int         `json:"LastEpochInCommittee"`
+	MaxTotalDelegation   *big.Int         `json:"MaxTotalDelegation"`
+	Status               uint8            `json:"Status"`
+	Commission           Commission_      `json:"Commission"`
+	Description          Description_     `json:"Description"`
+	CreationHeight       *big.Int         `json:"CreationHeight"`
 }
 
-func (v *SimplifiedValidator) ToValidator() *Validator_ {
+func (v *PlainValidator) ToValidator() *Validator_ {
 	return &Validator_{
 		ValidatorAddress: v.ValidatorAddress,
 		OperatorAddresses: func() AddressSet_ {
@@ -455,9 +453,7 @@ func (v *SimplifiedValidator) ToValidator() *Validator_ {
 		SlotPubKeys: func() BLSPublicKeys_ {
 			pubKeys := NewEmptyBLSKeys()
 			for _, pubKey := range v.SlotPubKeys {
-				pubKeys.Keys = append(pubKeys.Keys, &BLSPublicKey_{
-					Key: pubKey,
-				})
+				pubKeys.Keys = append(pubKeys.Keys, &pubKey)
 			}
 			return pubKeys
 		}(),
@@ -470,16 +466,16 @@ func (v *SimplifiedValidator) ToValidator() *Validator_ {
 	}
 }
 
-type SimplifiedValidatorWrapper struct {
-	Validator                 SimplifiedValidator `json:"Validator"`
-	Redelegations             []Redelegation_     `json:"Redelegations"`
-	Counters                  Counters_           `json:"Counters"`
-	BlockReward               BigInt              `json:"BlockReward"`
-	TotalDelegation           BigInt              `json:"TotalDelegation"`
-	TotalDelegationByOperator BigInt              `json:"TotalDelegationByOperator"`
+type PlainValidatorWrapper struct {
+	Validator                 PlainValidator  `json:"Validator"`
+	Redelegations             []Redelegation_ `json:"Redelegations"`
+	Counters                  Counters_       `json:"Counters"`
+	BlockReward               BigInt          `json:"BlockReward"`
+	TotalDelegation           BigInt          `json:"TotalDelegation"`
+	TotalDelegationByOperator BigInt          `json:"TotalDelegationByOperator"`
 }
 
-func (v *SimplifiedValidatorWrapper) ToValidatorWrapper() *ValidatorWrapper_ {
+func (v *PlainValidatorWrapper) ToValidatorWrapper() *ValidatorWrapper_ {
 	return &ValidatorWrapper_{
 		Validator: *v.Validator.ToValidator(),
 		Redelegations: func() RedelegationMap_ {

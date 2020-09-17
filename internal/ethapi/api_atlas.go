@@ -51,7 +51,7 @@ func (s *PublicRestakingAPI) GetValidatorInformation(
 		return nil, err
 	}
 
-	validatorWrapperRPC := validatorWrapper.ToSimplifiedValidatorWrapper()
+	validatorWrapperRPC := validatorWrapper.ToPlainValidatorWrapper()
 	encodeBytes, err := rlp.EncodeToBytes(&validatorWrapperRPC)
 	if err != nil {
 		return nil, err
@@ -96,7 +96,7 @@ func (s *PublicRestakingAPI) GetValidatorInformationAtEpoch(ctx context.Context,
 		return nil, err
 	}
 
-	validatorWrapperRPC := validatorWrapper.ToSimplifiedValidatorWrapper()
+	validatorWrapperRPC := validatorWrapper.ToPlainValidatorWrapper()
 	encodeBytes, err := rlp.EncodeToBytes(&validatorWrapperRPC)
 	if err != nil {
 		return nil, err
