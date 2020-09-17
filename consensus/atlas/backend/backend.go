@@ -127,6 +127,10 @@ func (sb *backend) Address() common.Address {
 	return sb.address
 }
 
+func (sb *backend) Annotation() string {
+	return sb.annotation
+}
+
 // Signer implements atlas.Backend.Signer
 func (sb *backend) Signer() common.Address {
 	return sb.signer
@@ -365,4 +369,5 @@ func (c *backend) Authorize(signer common.Address, signHashFn consensus.SignHash
 	c.annotation = annotation
 	c.signer = signer
 	c.signHashFn = signHashFn
+	c.logger = log.New("annotation", c.Annotation())
 }

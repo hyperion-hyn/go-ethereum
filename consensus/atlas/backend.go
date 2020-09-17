@@ -30,6 +30,9 @@ type Backend interface {
 	// Address returns the owner's address
 	Address() common.Address
 
+	// Annotation returns signer's annotation
+	Annotation() string
+
 	// Signer returns the signer's id (address format)
 	Signer() common.Address
 
