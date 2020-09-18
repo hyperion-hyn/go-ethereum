@@ -41,6 +41,8 @@ type Engine interface {
 	IsCurrentProposal(blockHash common.Hash) bool
 
 	Authorize()
+
+	GetLockedHash() common.Hash
 }
 
 type State uint64

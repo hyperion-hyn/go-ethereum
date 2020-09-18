@@ -435,3 +435,11 @@ func (c *core) getValidatorPublicKey(signer common.Address, valSet atlas.Validat
 func (c *core) Authorize() {
 	c.logger = log.New("annotation", c.backend.Annotation(), "signer", c.backend.Signer())
 }
+
+func (c *core) GetLockedHash() common.Hash {
+	if c.current != nil {
+		return c.current.GetLockedHash()
+	} else {
+		return common.Hash{}
+	}
+}
