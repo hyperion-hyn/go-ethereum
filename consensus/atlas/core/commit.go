@@ -91,12 +91,14 @@ func (c *core) handleCommit(msg *message, src atlas.Validator) error {
 
 	// Commit the proposal once we have enough CONFIRM signature and we are not in the Confirm state.
 	//
-	// If we already have a proposal, we may have chance to speed up the consensus process
+	// If we already have a proposal in PREPREPARED state, we may have chance to speed up the consensus process
 	// by committing the proposal without PREPARE messages.
 	if c.current.confirmBitmap.CountEnabled() >= c.QuorumSize() && (c.state.Cmp(StatePreprepared) >= 0 && c.state.Cmp(StateCommitted) < 0) {
 		// commit need proposal which was set in the PREPREPARED state, in other state can jump directly to the Confirm state.
 		c.setState(StateCommitted)
 		c.commit()
+	} else {
+		c.sendNextRoundChange()
 	}
 
 	return nil

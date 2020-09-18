@@ -39,6 +39,8 @@ type Engine interface {
 	// pending request is populated right at the preprepare stage so this would give us the earliest verification
 	// to avoid any race condition of coming propagated blocks
 	IsCurrentProposal(blockHash common.Hash) bool
+
+	Authorize()
 }
 
 type State uint64
