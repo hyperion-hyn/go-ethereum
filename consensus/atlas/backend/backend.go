@@ -363,11 +363,12 @@ func (sb *backend) Close() error {
 
 // Authorize injects a private key into the consensus engine to mint new blocks
 // with.
-func (c *backend) Authorize(signer common.Address, signHashFn consensus.SignHashFn) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
+func (sb *backend) Authorize(signer common.Address, signHashFn consensus.SignHashFn) {
+	sb.lock.Lock()
+	defer sb.lock.Unlock()
 
-	c.signer = signer
-	c.signHashFn = signHashFn
-	c.logger = log.New("annotation", c.annotation, "signer", c.signer)
+	sb.signer = signer
+	sb.signHashFn = signHashFn
+	sb.logger = log.New("annotation", sb.annotation, "signer", sb.signer)
+	sb.core.Authorize()
 }
