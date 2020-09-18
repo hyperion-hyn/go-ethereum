@@ -89,6 +89,7 @@ func TestMap3NodeWrapperBuilder(t *testing.T) {
 			SetCreationHeight(test.creationHeight).
 			SetAge(test.age).
 			SetStatus(test.status).
+			SetPendingEpoch(test.pendingEpoch).
 			SetActivationEpoch(test.activationEpoch).
 			SetReleaseEpoch(test.releaseEpoch).
 			AddMicrodelegation(test.microdelegation).
