@@ -5,10 +5,6 @@ import (
 	"math/big"
 )
 
-const (
-	PendingDelegationLockPeriodInEpoch = 7
-)
-
 // NewMicrodelegation creates a new microdelegation object
 func NewMicrodelegation(delegator common.Address, amount *big.Int, unlockedEpoch common.Dec, pending bool) Microdelegation_ {
 	d := Microdelegation_{
@@ -36,7 +32,7 @@ func NewMicrodelegationMap() MicrodelegationMap_ {
 	}
 }
 
-func (s *Storage_PendingDelegation_) AddAmount(amount, epoch *big.Int) {
+func (s *Storage_PendingDelegation_) AddAmount(amount *big.Int) {
 	amt := s.Amount().Value()
 	amt = amt.Add(amt, amount)
 	s.Amount().SetValue(amt)
