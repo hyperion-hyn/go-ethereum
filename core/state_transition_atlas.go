@@ -161,7 +161,7 @@ func (st *StateTransition) verifyAndApplyCreateValidatorTx(verifier StakingVerif
 		return err
 	}
 	saveNewValidatorToPool(verified.NewValidator, st.state.ValidatorPool())
-	return verified.Participant.postCreateValidator(msg.OperatorAddress, verified.NewRedelegation)
+	return verified.Participant.postCreateValidator(verified.NewValidator.Validator.ValidatorAddress, verified.NewRedelegation)
 }
 
 func (st *StateTransition) verifyAndApplyEditValidatorTx(verifier StakingVerifier, msg *restaking.EditValidator, signer common.Address) error {

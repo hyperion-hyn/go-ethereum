@@ -329,7 +329,7 @@ func defaultExpCreatedMap3Node() microstaking.Map3NodeWrapper_ {
 		SetCreationHeight(big.NewInt(defaultBlockNumber)).
 		SetPendingEpoch(big.NewInt(defaultEpoch)).
 		AddMicrodelegation(microstaking.NewMicrodelegation(createOperatorAddr, twoHundredKOnes,
-			common.NewDec(defaultEpoch).Add(common.NewDec(microstaking.PendingDelegationLockPeriodInEpoch)), true)).
+			common.NewDec(defaultEpoch).Add(microstaking.PendingLockInEpoch), true)).
 		Build()
 	return *v
 }
@@ -862,7 +862,7 @@ func TestVerifyUnmicrodelegateMsg(t *testing.T) {
 				stateDB:      makeDefaultStateForUnmicrodelegate(t),
 				chainContext: makeFakeChainContextForStake(t),
 				blockNum:     big.NewInt(defaultBlockNumber),
-				epoch:        big.NewInt(defaultEpoch),
+				epoch:        big.NewInt(defaultEpoch + 1),
 				msg:          defaultMsgUnmicrodelegate(),
 				signer:       map3OperatorAddr,
 			},
@@ -874,7 +874,7 @@ func TestVerifyUnmicrodelegateMsg(t *testing.T) {
 				stateDB:      nil,
 				chainContext: makeFakeChainContextForStake(t),
 				blockNum:     big.NewInt(defaultBlockNumber),
-				epoch:        big.NewInt(defaultEpoch),
+				epoch:        big.NewInt(defaultEpoch + 1),
 				msg:          defaultMsgUnmicrodelegate(),
 				signer:       map3OperatorAddr,
 			},
@@ -886,7 +886,7 @@ func TestVerifyUnmicrodelegateMsg(t *testing.T) {
 				stateDB:      makeDefaultStateForUnmicrodelegate(t),
 				chainContext: nil,
 				blockNum:     big.NewInt(defaultBlockNumber),
-				epoch:        big.NewInt(defaultEpoch),
+				epoch:        big.NewInt(defaultEpoch + 1),
 				msg:          defaultMsgUnmicrodelegate(),
 				signer:       map3OperatorAddr,
 			},
@@ -898,7 +898,7 @@ func TestVerifyUnmicrodelegateMsg(t *testing.T) {
 				stateDB:      makeDefaultStateForUnmicrodelegate(t),
 				chainContext: makeFakeChainContextForStake(t),
 				blockNum:     nil,
-				epoch:        big.NewInt(defaultEpoch),
+				epoch:        big.NewInt(defaultEpoch + 1),
 				msg:          defaultMsgUnmicrodelegate(),
 				signer:       map3OperatorAddr,
 			},
@@ -922,7 +922,7 @@ func TestVerifyUnmicrodelegateMsg(t *testing.T) {
 				stateDB:      makeDefaultStateForUnmicrodelegate(t),
 				chainContext: makeFakeChainContextForStake(t),
 				blockNum:     big.NewInt(defaultBlockNumber),
-				epoch:        big.NewInt(defaultEpoch),
+				epoch:        big.NewInt(defaultEpoch + 1),
 				msg: func() microstaking.Unmicrodelegate {
 					m := defaultMsgUnmicrodelegate()
 					m.Amount = big.NewInt(-1)
@@ -938,7 +938,7 @@ func TestVerifyUnmicrodelegateMsg(t *testing.T) {
 				stateDB:      makeDefaultStateForUnmicrodelegate(t),
 				chainContext: makeFakeChainContextForStake(t),
 				blockNum:     big.NewInt(defaultBlockNumber),
-				epoch:        big.NewInt(defaultEpoch),
+				epoch:        big.NewInt(defaultEpoch + 1),
 				msg:          defaultMsgUnmicrodelegate(),
 				signer:       makeTestAddr("invalid delegator"),
 			},
@@ -950,7 +950,7 @@ func TestVerifyUnmicrodelegateMsg(t *testing.T) {
 				stateDB:      makeDefaultStateForUnmicrodelegate(t),
 				chainContext: makeFakeChainContextForStake(t),
 				blockNum:     big.NewInt(defaultBlockNumber),
-				epoch:        big.NewInt(defaultEpoch),
+				epoch:        big.NewInt(defaultEpoch + 1),
 				msg: func() microstaking.Unmicrodelegate {
 					msg := defaultMsgUnmicrodelegate()
 					msg.Map3NodeAddress = makeTestAddr("addr not in chain")
@@ -966,7 +966,7 @@ func TestVerifyUnmicrodelegateMsg(t *testing.T) {
 				stateDB:      makeDefaultStateForUnmicrodelegate(t),
 				chainContext: makeFakeChainContextForStake(t),
 				blockNum:     big.NewInt(defaultBlockNumber),
-				epoch:        big.NewInt(defaultEpoch),
+				epoch:        big.NewInt(defaultEpoch + 1),
 				msg: func() microstaking.Unmicrodelegate {
 					msg := defaultMsgUnmicrodelegate()
 					msg.Map3NodeAddress = map3NodeAddr2
@@ -982,7 +982,7 @@ func TestVerifyUnmicrodelegateMsg(t *testing.T) {
 				stateDB:      makeDefaultStateForUnmicrodelegate(t),
 				chainContext: makeFakeChainContextForStake(t),
 				blockNum:     big.NewInt(defaultBlockNumber),
-				epoch:        big.NewInt(defaultEpoch),
+				epoch:        big.NewInt(defaultEpoch + 1),
 				msg: func() microstaking.Unmicrodelegate {
 					msg := defaultMsgUnmicrodelegate()
 					msg.DelegatorAddress = makeTestAddr("addr not in chain")
@@ -998,7 +998,7 @@ func TestVerifyUnmicrodelegateMsg(t *testing.T) {
 				stateDB:      makeDefaultStateForUnmicrodelegate(t),
 				chainContext: makeFakeChainContextForStake(t),
 				blockNum:     big.NewInt(defaultBlockNumber),
-				epoch:        big.NewInt(defaultEpoch),
+				epoch:        big.NewInt(defaultEpoch + 1),
 				msg: func() microstaking.Unmicrodelegate {
 					msg := defaultMsgUnmicrodelegate()
 					msg.Amount = big.NewInt(0).Add(oneMill, common.Big1)
@@ -1014,7 +1014,7 @@ func TestVerifyUnmicrodelegateMsg(t *testing.T) {
 				stateDB:      makeDefaultStateForUnmicrodelegate(t),
 				chainContext: makeFakeChainContextForStake(t),
 				blockNum:     big.NewInt(defaultBlockNumber),
-				epoch:        big.NewInt(defaultEpoch - 1),
+				epoch:        big.NewInt(defaultEpoch),
 				msg:          defaultMsgUnmicrodelegate(),
 				signer:       map3OperatorAddr,
 			},
@@ -1025,7 +1025,7 @@ func TestVerifyUnmicrodelegateMsg(t *testing.T) {
 			args: args{
 				stateDB:      makeDefaultStateForUnmicrodelegate(t),
 				chainContext: makeFakeChainContextForStake(t),
-				epoch:        big.NewInt(defaultEpoch),
+				epoch:        big.NewInt(defaultEpoch + 1),
 				blockNum:     big.NewInt(defaultBlockNumber),
 				msg: func() microstaking.Unmicrodelegate {
 					m := defaultMsgUnmicrodelegate()
@@ -1113,7 +1113,7 @@ func TestVerifyCollectMicordelRewardsMsg(t *testing.T) {
 					m.DelegatorAddress = operatorAddr2
 					return m
 				}(),
-				signer:  operatorAddr2,
+				signer: operatorAddr2,
 			},
 			wantErr: errNoRewardsToCollect,
 		},

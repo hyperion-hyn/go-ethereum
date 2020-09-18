@@ -25,6 +25,7 @@ var (
 
 var (
 	Map3NodeLockDurationInEpoch = common.NewDec(180)
+	PendingLockInEpoch          = common.NewDec(7)
 )
 
 type Map3Status byte
@@ -152,7 +153,6 @@ func (s *Storage_Map3NodeWrapper_) SubTotalPendingDelegation(amount *big.Int) {
 	s.TotalPendingDelegation().SetValue(totalPendingDelegation)
 }
 
-// TODO ATLAS  weight average
 func (s *Storage_Map3NodeWrapper_) AddMicrodelegation(delegator common.Address, amount *big.Int,
 	pending bool, epoch *big.Int) (isNewDelegator bool) {
 	isExist := s.Microdelegations().Contain(delegator)
@@ -163,7 +163,18 @@ func (s *Storage_Map3NodeWrapper_) AddMicrodelegation(delegator common.Address, 
 	}
 	md, _ := s.Microdelegations().Get(delegator)
 	if pending {
-		md.PendingDelegation().AddAmount(amount, epoch)
+		// new epoch = ((current epoch - last epoch) * last amount + 7 * new amount) / total amount
+		lastAmt := md.PendingDelegation().Amount().Value()
+		lastEpoch := md.PendingDelegation().UnlockedEpoch().Value()
+		delta := common.NewDecFromBigInt(epoch).Sub(lastEpoch)
+		if delta.IsNegative() {
+			delta = common.ZeroDec()
+		}
+		newEpoch := delta.MulInt(lastAmt).Add(PendingLockInEpoch.MulInt(amount))
+		newEpoch = newEpoch.QuoInt(big.NewInt(0).Add(lastAmt, amount))
+		md.PendingDelegation().UnlockedEpoch().SetValue(newEpoch)
+
+		md.PendingDelegation().AddAmount(amount)
 		s.AddTotalDelegation(amount)
 	} else {
 		md.AddAmount(amount)
@@ -343,11 +354,9 @@ func CreateMap3NodeFromNewMsg(msg *CreateMap3Node, map3Address common.Address, b
 		SetCreationHeight(blockNum).
 		SetStatus(Pending).
 		SetPendingEpoch(epoch).
-		AddMicrodelegation(NewMicrodelegation(
-			msg.OperatorAddress, msg.Amount,
-			common.NewDecFromBigInt(epoch).Add(common.NewDec(PendingDelegationLockPeriodInEpoch)),
-			true,
-		)).Build()
+		AddMicrodelegation(NewMicrodelegation(msg.OperatorAddress, msg.Amount,
+			common.NewDecFromBigInt(epoch).Add(PendingLockInEpoch), true)).
+		Build()
 	return n, nil
 }
 

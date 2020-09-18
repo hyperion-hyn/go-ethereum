@@ -356,7 +356,7 @@ func (verifier StakingVerifier) VerifyUnmicrodelegateMsg(stateDB vm.StateDB, cha
 		return errInsufficientBalanceToUnmicrodelegate
 	}
 
-	if p.UnlockedEpoch().Value().GT(common.NewDecFromBigInt(epoch)) {
+	if p.UnlockedEpoch().Value().GTE(common.NewDecFromBigInt(epoch)) {
 		return errMicrodelegationStillLocked
 	}
 
