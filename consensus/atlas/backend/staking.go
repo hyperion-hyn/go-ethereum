@@ -336,7 +336,7 @@ func ballotResult(
 			"cannot read shard state %v", parentHeader.Epoch,
 		)
 	}
-	reader := availability.CommitBitmapReader{Header: header}
+	reader := availability.CommitBitmapReader{Header: parentHeader}
 	_, payable, missing, err := availability.BallotResult(reader, parentCommittee)
 	return parentCommittee, payable, missing, err
 }
