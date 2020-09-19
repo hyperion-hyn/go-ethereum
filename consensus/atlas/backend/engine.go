@@ -496,11 +496,8 @@ func (sb *backend) _Seal(chain consensus.ChainReader, block *types.Block, result
 	go func() {
 		// get the proposed block hash and clear it if the seal() is completed.
 		sb.sealMu.Lock()
-		// ATLAS(zgx): what is the purpose of proposedBlockHash, can we ignore it in FBFT?
-		sb.proposedBlockHash = sb.SealHash(block.Header())
 
 		defer func() {
-			sb.proposedBlockHash = common.Hash{}
 			sb.sealMu.Unlock()
 		}()
 		// post block into Atlas engine
@@ -512,15 +509,13 @@ func (sb *backend) _Seal(chain consensus.ChainReader, block *types.Block, result
 			case result := <-sb.commitCh:
 				// if the block hash and the hash from channel are the same,
 				// return the result. Otherwise, keep waiting the next hash.
-				if result != nil && block.SealHash(sb) == result.SealHash(sb) {
-					// wait for the timestamp of header, use this to adjust the block period
-					delay := math.Floor(time.Unix(int64(header.Time+sb.config.BlockPeriod), 0).Sub(now()).Seconds() + 1)
-					select {
-					case <-time.After(time.Duration(delay) * time.Second):
-					}
-					results <- result
-					return
+				// wait for the timestamp of header, use this to adjust the block period
+				delay := math.Floor(time.Unix(int64(header.Time+sb.config.BlockPeriod), 0).Sub(now()).Seconds() + 1)
+				select {
+				case <-time.After(time.Duration(delay) * time.Second):
 				}
+				results <- result
+				return
 			case <-stop:
 				results <- nil
 				return

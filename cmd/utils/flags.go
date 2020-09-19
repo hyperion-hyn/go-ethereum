@@ -607,7 +607,7 @@ var (
 		Usage: "P2P node key as hex (for testing)",
 	}
 	NodeAnnotationFlag = cli.StringFlag{
-		Name:  "node.annotaion",
+		Name:  "node.annotation",
 		Usage: "node annotation",
 	}
 	SignerKeyFileFlag = cli.StringFlag{

@@ -103,23 +103,14 @@ func (c *core) handlePreprepare(msg *message, src atlas.Validator) error {
 
 	// Here is about to accept the PRE-PREPARE
 	if c.state == StateAcceptRequest {
-		// Send ROUND CHANGE if the locked proposal and the received proposal are different
-		if c.current.IsHashLocked() {
-			if preprepare.Proposal.SealHash(c.backend) != c.current.GetLockedHash() {
-				// Send round change
-				c.sendNextRoundChange()
-			}
-		} else {
-			// Either
-			//   1. the locked proposal and the received proposal match
-			//   2. we have no locked proposal
-			if err := c.acceptPreprepare(&preprepare); err != nil {
-				return err
-			}
-			c.setState(StatePreprepared)
-			c.current.LockHash()
-			c.sendPrepare()
+		//   1. the locked proposal and the received proposal match
+		//   2. we have no locked proposal
+		if err := c.acceptPreprepare(&preprepare); err != nil {
+			return err
 		}
+		c.setState(StatePreprepared)
+		c.current.LockHash()
+		c.sendPrepare()
 	}
 
 	return nil

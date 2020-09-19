@@ -73,6 +73,7 @@ func (c *core) handleExpect(msg *message, src atlas.Validator) error {
 	}
 
 	// Here is about to accept the EXPECT message
+	// validator in Preprepared state, leader in Prepared state
 	if c.state == StatePreprepared || c.state == StatePrepared {
 		// Send ROUND CHANGE if the locked proposal and the received proposal are different
 		if expect.Digest == c.current.GetLockedHash() {
