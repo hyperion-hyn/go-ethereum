@@ -34,12 +34,13 @@ func handleMap3AndAtlasStaking(chain consensus.ChainReader, header *types.Header
 		if err != nil {
 			return nil, err
 		}
-		for _, addr := range curComm.StakedValidators().Addrs {
-			if err := availability.ComputeAndMutateEPOSStatus(
-				chain, stateDB, addr, header.Epoch,
-			); err != nil {
-				return nil, err
-			}
+		// TODO(ATLAS): disable status change temporarily
+		for _, _ = range curComm.StakedValidators().Addrs {
+			//if err := availability.ComputeAndMutateEPOSStatus(
+			//	chain, stateDB, addr, header.Epoch,
+			//); err != nil {
+			//	return nil, err
+			//}
 		}
 
 		// TODO(ATLAS): renew map3 node and unmicrodelegate and unredelegate
