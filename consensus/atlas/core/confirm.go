@@ -78,9 +78,10 @@ func (c *core) handleConfirm(msg *message, src atlas.Validator) error {
 		return err
 	}
 
-	// Change to Confirm state if we've received enough Expect messages or it is locked
-	// and we are in earlier state before Expect state.
-	if c.current.GetConfirmSize() >= c.QuorumSize() {
+	// Change to Confirm state if we've received enough Expect messages
+	// and we are in Expected state to provent validator send CONFIRM messages
+	// to pass by Prepared and Expected state
+	if c.current.GetConfirmSize() >= c.QuorumSize() && c.state.Cmp(StateExpected) == 0 {
 		c.setState(StateConfirmed)
 		c.sendCommit()
 	}

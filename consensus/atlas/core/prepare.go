@@ -79,8 +79,7 @@ func (c *core) handlePrepare(msg *message, src atlas.Validator) error {
 
 	// Change to PREPARE state if we've received enough PREPARE messages or it is locked
 	// and we are in earlier state before Expect state.
-	if ((c.current.IsHashLocked() && prepare.Digest == c.current.GetLockedHash()) || c.current.GetPrepareSize() >= c.QuorumSize()) &&
-		c.state.Cmp(StatePrepared) < 0 {
+	if c.current.GetPrepareSize() >= c.QuorumSize() && c.state.Cmp(StatePreprepared) == 0 {
 		c.setState(StatePrepared)
 		c.sendExpect()
 	}

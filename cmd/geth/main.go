@@ -137,6 +137,7 @@ var (
 		utils.NetrestrictFlag,
 		utils.NodeKeyFileFlag,
 		utils.NodeKeyHexFlag,
+		utils.NodeAnnotationFlag,
 		utils.SignerKeyFileFlag,
 		utils.SignerKeyHexFlag,
 		utils.DNSDiscoveryFlag,

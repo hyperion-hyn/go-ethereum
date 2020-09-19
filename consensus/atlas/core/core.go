@@ -332,6 +332,7 @@ func (c *core) newRoundChangeTimer() {
 	}
 
 	c.roundChangeTimer = time.AfterFunc(timeout, func() {
+		c.logger.Debug("timeout", "timeout", timeout, "round", c.current.round.Uint64())
 		c.sendEvent(timeoutEvent{})
 	})
 }
@@ -429,4 +430,16 @@ func (c *core) getValidatorPublicKey(signer common.Address, valSet atlas.Validat
 		return nil, errInvalidSigner
 	}
 	return pubKey, nil
+}
+
+func (c *core) Authorize() {
+	c.logger = log.New("annotation", c.backend.Annotation(), "signer", c.backend.Signer())
+}
+
+func (c *core) GetLockedHash() common.Hash {
+	if c.current != nil {
+		return c.current.GetLockedHash()
+	} else {
+		return common.Hash{}
+	}
 }
