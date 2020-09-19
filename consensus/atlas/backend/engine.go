@@ -426,7 +426,7 @@ func (sb *backend) Finalize(chain consensus.ChainHeaderReader, header *types.Hea
 
 func (sb *backend) _Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header) {
-	chainReader := chain.(consensus.ChainReader) // ATLAS
+	chainReader := chain.(consensus.ChainReader)                 // ATLAS
 	_, _ = handleMap3AndAtlasStaking(chainReader, header, state) // ATLAS
 
 	// No block rewards in Atlas, so the state remains as is and uncles are dropped
@@ -609,7 +609,8 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		return snap, nil
 	}
 
-	stateDB, err := chain.StateAt(hash)
+	root := chain.GetHeaderByNumber(number).Root
+	stateDB, err := chain.StateAt(root)
 	if err != nil {
 		return nil, err
 	}
