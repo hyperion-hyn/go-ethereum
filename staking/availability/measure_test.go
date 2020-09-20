@@ -527,8 +527,8 @@ func (th *testHeader) Number() *big.Int {
 	return th.number
 }
 
-func (th *testHeader) LastCommitBitmap() []byte {
-	return th.lastCommitBitmap
+func (th *testHeader) LastCommitBitmap() ([]byte, error) {
+	return th.lastCommitBitmap, nil
 }
 
 
