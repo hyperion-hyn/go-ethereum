@@ -6,7 +6,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/staking/availability"
 	"github.com/ethereum/go-ethereum/staking/effective"
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	"github.com/pkg/errors"
@@ -46,7 +45,10 @@ type CandidateOrder struct {
 // NewEPoSRound runs a fresh computation of EPoS using
 // latest data always
 func NewEPoSRound(epoch *big.Int, stakedReader DataProvider) (*CompletedEPoSRound, error) {
-	lastEpoch := big.NewInt(0).Sub(epoch, common.Big1)
+	var lastEpoch *big.Int
+	if epoch.Uint64() != 0 {
+		lastEpoch = big.NewInt(0).Sub(epoch, common.Big1)
+	}
 	eligibleCandidate, err := prepareOrders(stakedReader, lastEpoch)
 	if err != nil {
 		return nil, err
@@ -95,13 +97,15 @@ func prepareOrders(stakedReader DataProvider, lastEpoch *big.Int) (map[common.Ad
 			return nil, err
 		}
 		// snapshot of validator at the beginning of the given epoch
-		// ATLAS todo
-		snapshot, err := stakedReader.ReadValidatorAtEpochOrCurrentBlock(lastEpoch, candidates[i])
-		if err != nil {
-			return nil, err
-		}
-		if !IsEligibleForEPoSAuction(snapshot, validator, lastEpoch) {
-			continue
+		if lastEpoch != nil { // current epoch is genesis epoch if last epoch is nil
+			// ATLAS(TODO): read validator snapshot at creation height if not found at the last epoch
+			snapshot, err := stakedReader.ReadValidatorAtEpochOrCurrentBlock(lastEpoch, candidates[i])
+			if err != nil {
+				return nil, err
+			}
+			if !IsEligibleForEPoSAuction(snapshot, validator, lastEpoch) {
+				continue
+			}
 		}
 
 		validatorStake := validator.TotalDelegation().Value()
@@ -133,16 +137,17 @@ func IsEligibleForEPoSAuction(snapshot, validator *restaking.Storage_ValidatorWr
 	// NumBlocksToSign, making this condition to be true when the validator is actually not in committee
 	//if snapshot.Counters.NumBlocksToSign.Cmp(validator.Counters.NumBlocksToSign) != 0 {
 
+	// TODO(ATLAS): disable signing rate check temporarily
 	// Check whether the validator is in current committee
-	if validator.Validator().LastEpochInCommittee().Value().Cmp(lastEpoch) == 0 {
-		// validator was in last epoch's committee
-		// validator with below-threshold signing activity won't be considered for next epoch
-		// and their status will be turned to inactive in FinalizeNewBlock
-		computed := availability.ComputeCurrentSigning(snapshot, validator)
-		if computed.IsBelowThreshold {
-			return false
-		}
-	}
+	//if validator.Validator().LastEpochInCommittee().Value().Cmp(lastEpoch) == 0 {
+	//	// validator was in last epoch's committee
+	//	// validator with below-threshold signing activity won't be considered for next epoch
+	//	// and their status will be turned to inactive in FinalizeNewBlock
+	//	computed := availability.ComputeCurrentSigning(snapshot, validator)
+	//	if computed.IsBelowThreshold {
+	//		return false
+	//	}
+	//}
 	// For validators who were not in last epoch's committee
 	// or for those who were and signed enough blocks,
 	// the decision is based on the status
