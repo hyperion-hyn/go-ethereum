@@ -15,6 +15,11 @@ import (
 
 var seed = rand.New(rand.NewSource(99))
 
+const (
+	ARRAY_LIMITATION = 10
+	MAP_LIMITATION   = 10
+)
+
 type Visitor struct {
 	Path       string
 	File       *ast.File
@@ -144,30 +149,24 @@ func (v Visitor) Visit(node ast.Node) ast.Visitor {
 		name := n.Names[0].Name
 		retval := NewVisitor(fmt.Sprintf("%s.%s()", v.Path, name), v)
 		typeName := n.Type.(*ast.Ident).Name
-		typ, ok := v.File.Scope.Objects[typeName]
-		if ok {
-			ast.Walk(retval, typ.Decl.(*ast.TypeSpec))
-		} else {
-			statement := fmt.Sprintf("%s.SetValue(%v)", v.Path, getRandomValue(typeName))
-			*v.Statements = append(*v.Statements, statement)
-		}
-		return retval
+		typ, _ := v.File.Scope.Objects[typeName]
+		ast.Walk(retval, typ.Decl.(*ast.TypeSpec))
+		return v
 
 	case *ast.ArrayType:
 		var length int
 		var isFixedSize bool
 		if n.Len == nil {
 			// slice, limit to 65535, anyone can increase this limitation
-			length = 65535
+			length = ARRAY_LIMITATION
 			isFixedSize = false
 		} else {
 			// array
 			length, _ = strconv.Atoi(n.Len.(*ast.BasicLit).Value)
 			isFixedSize = true
 		}
-		retval := NewVisitor(fmt.Sprintf("%s.Get(%d)", v.Path, length), v)
 
-		typeName, typ, isBasicType := getType(n.Elt, v.File)
+		typeName, typ, _ := getType(n.Elt, v.File)
 
 		if isFixedSize && typeName == "Uint8" {
 			// fixed-size bytes
@@ -177,30 +176,23 @@ func (v Visitor) Visit(node ast.Node) ast.Visitor {
 			}
 			statement := fmt.Sprintf("%s.SetValue(%v)", v.Path, fmt.Sprintf("[%d]byte{%s}", length, strings.Join(items, ",")))
 			*v.Statements = append(*v.Statements, statement)
-		} else if !isBasicType {
-			ast.Walk(retval, typ.Decl.(*ast.TypeSpec))
 		} else {
-			if isFixedSize {
-				statement := fmt.Sprintf("%s.Get(%d).SetValue(%v)", v.Path, length, getRandomValue(fmt.Sprintf("%s", typeName)))
-				*v.Statements = append(*v.Statements, statement)
-			} else {
-				statement := fmt.Sprintf("%s.Get(%d).SetValue(%v)", v.Path, length, getRandomValue(fmt.Sprintf("%s", typeName)))
-				*v.Statements = append(*v.Statements, statement)
+			for i := 0; i < length; i++ {
+				retval := NewVisitor(fmt.Sprintf("%s.Get(%d)", v.Path, i), v)
+				ast.Walk(retval, typ.Decl.(*ast.TypeSpec))
 			}
+			return v
 		}
 
-		return retval
+		return v
 
 	case *ast.MapType:
-		keyTypeName, _, isBasicType := getType(n.Key, v.File)
-		keyValue := getRandomValue(keyTypeName)
-		retval := NewVisitor(fmt.Sprintf("%s.Get(%s)", v.Path, keyValue), v)
-		valueTypeName, typ, isBasicType := getType(n.Value, v.File)
-		if !isBasicType {
-			ast.Walk(retval, typ.Decl.(*ast.TypeSpec))
-		} else {
-			statement := fmt.Sprintf("%s.Get(%s).SetValue(%v)", v.Path, keyValue, getRandomValue(valueTypeName))
-			*v.Statements = append(*v.Statements, statement)
+		keyTypeName, _, _ := getType(n.Key, v.File)
+		for i := 0; i < MAP_LIMITATION; i++ {
+			keyValue := getRandomValue(keyTypeName)
+			visitor := NewVisitor(fmt.Sprintf("%s.Get(%s)", v.Path, keyValue), v)
+			_, typ, _ := getType(n.Value, v.File)
+			ast.Walk(visitor, typ.Decl.(*ast.TypeSpec))
 		}
 		return v
 
