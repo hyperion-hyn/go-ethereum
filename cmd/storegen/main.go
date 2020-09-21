@@ -124,7 +124,42 @@ func init() {
 		aliasFlag,
 	}
 	app.Action = utils.MigrateFlags(abigen)
+	app.Commands = []cli.Command{
+		commandGenerate,
+		commandVerify,
+	}
 	cli.CommandHelpTemplate = flags.OriginCommandHelpTemplate
+}
+
+var commandGenerate = cli.Command{
+	Name:      "generate",
+	Usage:     "generate new keyfile",
+	ArgsUsage: "[ <keyfile> ]",
+	Description: `
+Generate a new keyfile.
+
+If you want to encrypt an existing private key, it can be specified by setting
+--privatekey with the location of the file containing the private key.
+`,
+	Flags: []cli.Flag{
+		storeFlag,
+		abiFlag,
+		binFlag,
+		typeFlag,
+		jsonFlag,
+		solFlag,
+		solcFlag,
+		vyFlag,
+		vyperFlag,
+		excFlag,
+		pkgFlag,
+		outFlag,
+		langFlag,
+		aliasFlag,
+	},
+	Action: func(ctx *cli.Context) error {
+		return utils.MigrateFlags(abigen)(ctx)
+	},
 }
 
 func abigen(c *cli.Context) error {

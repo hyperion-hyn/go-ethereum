@@ -1,0 +1,210 @@
+package verifier
+
+import (
+	"encoding/hex"
+	"fmt"
+	"go/ast"
+	"math/big"
+	"math/rand"
+	"regexp"
+	"strconv"
+	"strings"
+
+	"github.com/ethereum/go-ethereum/crypto"
+)
+
+var seed = rand.New(rand.NewSource(99))
+
+type Visitor struct {
+	Path       string
+	File       *ast.File
+	Statements *[]string
+}
+
+func NewVisitor(path string, visitor Visitor) Visitor {
+	retval := Visitor{
+		Path:       path,
+		File:       visitor.File,
+		Statements: visitor.Statements,
+	}
+	return retval
+}
+
+func IsBasicType(typeName string) bool {
+	switch typeName {
+	case "Address":
+		return true
+	case "Int8", "Int16", "Int32", "Int64", "Int256",
+		"Uint8", "Uint16", "Uint32", "Uint64", "Uint256":
+		return true
+	case "BigInt":
+		return true
+	case "Bytes",
+		"Bytes1", "Bytes2", "Bytes3", "Bytes4", "Bytes5", "Bytes6", "Bytes7", "Bytes8", "Bytes9", "Bytes10",
+		"Bytes11", "Bytes12", "Bytes13", "Bytes14", "Bytes15", "Bytes16", "Bytes17", "Bytes18", "Bytes19", "Bytes110",
+		"Bytes21", "Bytes22", "Bytes23", "Bytes24", "Bytes25", "Bytes26", "Bytes27", "Bytes28", "Bytes29", "Bytes210",
+		"Bytes31", "Bytes32":
+		return true
+	case "String":
+		return true
+	case "Bool":
+		return true
+	case "Decimal":
+		return true
+	default:
+		return false
+	}
+}
+func getType(expr ast.Expr, File *ast.File) (typeName string, typ *ast.Object, isBasicType bool) {
+	switch t := expr.(type) {
+	case *ast.StarExpr:
+		typeName = t.X.(*ast.Ident).Name
+	case *ast.Ident:
+		typeName = t.Name
+	case *ast.SelectorExpr:
+		typeName = fmt.Sprintf("%s.%s", t.X.(*ast.Ident).Name, t.Sel.Name)
+	default:
+		panic("unhandled")
+	}
+
+	typ, _ = File.Scope.Objects[typeName]
+	isBasicType = IsBasicType(typeName)
+	return typeName, typ, isBasicType
+}
+
+func getRandomValue(typeName string) string {
+	switch typeName {
+	case "Address":
+		privateKey, _ := crypto.GenerateKey()
+		addr := crypto.PubkeyToAddress(privateKey.PublicKey)
+
+		return fmt.Sprintf(`common.HexToAddress("%s")`, addr.String())
+	case "Int8", "Int16", "Int32", "Int64", "Int256",
+		"Uint8", "Uint16", "Uint32", "Uint64", "Uint256":
+		re := regexp.MustCompile("(?:Int|Uint)([0-9])*")
+		matches := re.FindAllStringSubmatch(typeName, -1)
+		m := matches[0]
+		length, _ := strconv.Atoi(m[1])
+		mask := 1 << (length - 1)
+		val := rand.Intn(mask) & mask
+		return fmt.Sprintf("%v", val)
+	case "BigInt":
+		val := big.NewInt(0)
+		val.Rand(seed, new(big.Int).Lsh(big.NewInt(1), 48))
+		return fmt.Sprintf(`func() *big.Int { v, _ := big.NewInt(0).SetString("%s", 16); return v}()`, val.String())
+	case "Bytes":
+		return fmt.Sprintf("HOW TO ??")
+	case "Bytes1", "Bytes2", "Bytes3", "Bytes4", "Bytes5", "Bytes6", "Bytes7", "Bytes8", "Bytes9", "Bytes10",
+		"Bytes11", "Bytes12", "Bytes13", "Bytes14", "Bytes15", "Bytes16", "Bytes17", "Bytes18", "Bytes19", "Bytes20",
+		"Bytes21", "Bytes22", "Bytes23", "Bytes24", "Bytes25", "Bytes26", "Bytes27", "Bytes28", "Bytes29", "Bytes30",
+		"Bytes31", "Bytes32":
+		re := regexp.MustCompile("Bytes([0-9])*")
+		matches := re.FindAllStringSubmatch(typeName, -1)
+		m := matches[0]
+		length, _ := strconv.Atoi(m[1])
+		items := make([]string, length)
+		for idx, _ := range items {
+			items[idx] = fmt.Sprintf("0x%x", rand.Intn(255)&0xFF)
+		}
+
+		return fmt.Sprintf("[%d]byte{%s}", length, strings.Join(items, ","))
+	case "String":
+		privateKey, _ := crypto.GenerateKey()
+		return fmt.Sprintf(`"%s"`, hex.EncodeToString(crypto.FromECDSA(privateKey)))
+	case "Bool":
+		n := rand.Intn(2)
+		var flag bool
+		if n == 0 {
+			flag = false
+		} else {
+			flag = true
+		}
+		return fmt.Sprintf("%v", flag)
+	case "Decimal":
+		val := big.NewInt(0)
+		val = val.Rand(seed, big.NewInt(0).Lsh(big.NewInt(1), 48))
+		return fmt.Sprintf(`func() common.Dec { v, _ := big.NewInt(0).SetString("%s", 16); d := common.NewDecFromBigIntWithPrec(v, 18); return d}()`, val.String())
+	default:
+		return "Unknown"
+	}
+}
+
+func (v Visitor) Visit(node ast.Node) ast.Visitor {
+	switch n := node.(type) {
+	case *ast.TypeSpec:
+		isBasicType := IsBasicType(n.Name.Name)
+		if !isBasicType {
+			return v
+		}
+		statement := fmt.Sprintf("%s.SetValue(%v)", v.Path, getRandomValue(n.Name.Name))
+		*v.Statements = append(*v.Statements, statement)
+		return nil
+
+	case *ast.Field:
+		name := n.Names[0].Name
+		retval := NewVisitor(fmt.Sprintf("%s.%s()", v.Path, name), v)
+		typeName := n.Type.(*ast.Ident).Name
+		typ, ok := v.File.Scope.Objects[typeName]
+		if ok {
+			ast.Walk(retval, typ.Decl.(*ast.TypeSpec))
+		} else {
+			statement := fmt.Sprintf("%s.SetValue(%v)", v.Path, getRandomValue(typeName))
+			*v.Statements = append(*v.Statements, statement)
+		}
+		return retval
+
+	case *ast.ArrayType:
+		var length int
+		var isFixedSize bool
+		if n.Len == nil {
+			// slice, limit to 65535, anyone can increase this limitation
+			length = 65535
+			isFixedSize = false
+		} else {
+			// array
+			length, _ = strconv.Atoi(n.Len.(*ast.BasicLit).Value)
+			isFixedSize = true
+		}
+		retval := NewVisitor(fmt.Sprintf("%s.Get(%d)", v.Path, length), v)
+
+		typeName, typ, isBasicType := getType(n.Elt, v.File)
+
+		if isFixedSize && typeName == "Uint8" {
+			// fixed-size bytes
+			items := make([]string, length)
+			for idx, _ := range items {
+				items[idx] = fmt.Sprintf("0x%x", rand.Intn(255)&0xFF)
+			}
+			statement := fmt.Sprintf("%s.SetValue(%v)", v.Path, fmt.Sprintf("[%d]byte{%s}", length, strings.Join(items, ",")))
+			*v.Statements = append(*v.Statements, statement)
+		} else if !isBasicType {
+			ast.Walk(retval, typ.Decl.(*ast.TypeSpec))
+		} else {
+			if isFixedSize {
+				statement := fmt.Sprintf("%s.Get(%d).SetValue(%v)", v.Path, length, getRandomValue(fmt.Sprintf("%s", typeName)))
+				*v.Statements = append(*v.Statements, statement)
+			} else {
+				statement := fmt.Sprintf("%s.Get(%d).SetValue(%v)", v.Path, length, getRandomValue(fmt.Sprintf("%s", typeName)))
+				*v.Statements = append(*v.Statements, statement)
+			}
+		}
+
+		return retval
+
+	case *ast.MapType:
+		keyTypeName, _, isBasicType := getType(n.Key, v.File)
+		keyValue := getRandomValue(keyTypeName)
+		retval := NewVisitor(fmt.Sprintf("%s.Get(%s)", v.Path, keyValue), v)
+		valueTypeName, typ, isBasicType := getType(n.Value, v.File)
+		if !isBasicType {
+			ast.Walk(retval, typ.Decl.(*ast.TypeSpec))
+		} else {
+			statement := fmt.Sprintf("%s.Get(%s).SetValue(%v)", v.Path, keyValue, getRandomValue(valueTypeName))
+			*v.Statements = append(*v.Statements, statement)
+		}
+		return v
+
+	default:
+		return v
+	}
+}
