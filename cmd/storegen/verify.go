@@ -107,7 +107,7 @@ func main() {
 		if i == 0 {
 			last = hash
 		}
-
+		rand.Shuffle(len(cases), func(i, j int) { cases[i], cases[j] = cases[j], cases[i] })
 		if hash != last {
 			log.Fatal("hash do not match, last: %v, %d: %v", last, i, hash)
 		}
