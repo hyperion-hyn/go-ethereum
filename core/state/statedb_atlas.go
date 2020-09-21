@@ -78,7 +78,7 @@ func (s *StateDB) AddRedelegationReward(snapshot *restaking.Storage_ValidatorWra
 			if !ok {
 				return errors.Wrap(errRedelegationNotExist, "missing delegation for reward distribution")
 			}
-			curDelegation.AddAmount(rewardInt)
+			curDelegation.AddReward(rewardInt)
 			rewardPool.Sub(rewardPool, rewardInt)
 		}
 	}
