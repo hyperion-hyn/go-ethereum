@@ -16,8 +16,8 @@ import (
 var seed = rand.New(rand.NewSource(99))
 
 const (
-	ARRAY_LIMITATION = 10
-	MAP_LIMITATION   = 10
+	ARRAY_LIMITATION = 1
+	MAP_LIMITATION   = 1
 )
 
 type Visitor struct {
@@ -77,6 +77,27 @@ func getType(expr ast.Expr, File *ast.File) (typeName string, typ *ast.Object, i
 	return typeName, typ, isBasicType
 }
 
+func getRandomBytes(n int) []byte {
+	retval := make([]byte, n)
+	for i := 0; i < n; i++ {
+		retval[i] = byte(rand.Intn(255) & 255)
+	}
+	return retval
+}
+
+func BytesToString(data []byte, fixed bool) string {
+	items := make([]string, len(data))
+	for i, v := range data {
+		items[i] = fmt.Sprintf("0x%x", v)
+	}
+
+	length := ""
+	if fixed {
+		length = fmt.Sprintf("%d", len(data))
+	}
+	return fmt.Sprintf("[%s]byte{%s}", length, strings.Join(items, ","))
+}
+
 func getRandomValue(typeName string) string {
 	switch typeName {
 	case "Address":
@@ -90,15 +111,18 @@ func getRandomValue(typeName string) string {
 		matches := re.FindAllStringSubmatch(typeName, -1)
 		m := matches[0]
 		length, _ := strconv.Atoi(m[1])
-		mask := 1 << (length - 1)
-		val := rand.Intn(mask) & mask
+
+		privateKey, _ := crypto.GenerateKey()
+		data := crypto.FromECDSA(privateKey)
+		val := big.NewInt(0).And(big.NewInt(0).SetBytes(data), big.NewInt(0).Sub(big.NewInt(0).Lsh(big.NewInt(1), uint(length)), big.NewInt(1)))
 		return fmt.Sprintf("%v", val)
 	case "BigInt":
-		val := big.NewInt(0)
-		val.Rand(seed, new(big.Int).Lsh(big.NewInt(1), 48))
-		return fmt.Sprintf(`func() *big.Int { v, _ := big.NewInt(0).SetString("%s", 16); return v}()`, val.String())
+		privateKey, _ := crypto.GenerateKey()
+		return fmt.Sprintf(`func() *big.Int { v, _ := big.NewInt(0).SetString("%s", 16); return v}()`, hex.EncodeToString(crypto.FromECDSA(privateKey)))
 	case "Bytes":
-		return fmt.Sprintf("HOW TO ??")
+		privateKey, _ := crypto.GenerateKey()
+		data := crypto.FromECDSA(privateKey)
+		return BytesToString(data, false)
 	case "Bytes1", "Bytes2", "Bytes3", "Bytes4", "Bytes5", "Bytes6", "Bytes7", "Bytes8", "Bytes9", "Bytes10",
 		"Bytes11", "Bytes12", "Bytes13", "Bytes14", "Bytes15", "Bytes16", "Bytes17", "Bytes18", "Bytes19", "Bytes20",
 		"Bytes21", "Bytes22", "Bytes23", "Bytes24", "Bytes25", "Bytes26", "Bytes27", "Bytes28", "Bytes29", "Bytes30",
@@ -107,12 +131,7 @@ func getRandomValue(typeName string) string {
 		matches := re.FindAllStringSubmatch(typeName, -1)
 		m := matches[0]
 		length, _ := strconv.Atoi(m[1])
-		items := make([]string, length)
-		for idx, _ := range items {
-			items[idx] = fmt.Sprintf("0x%x", rand.Intn(255)&0xFF)
-		}
-
-		return fmt.Sprintf("[%d]byte{%s}", length, strings.Join(items, ","))
+		return BytesToString(getRandomBytes(length), true)
 	case "String":
 		privateKey, _ := crypto.GenerateKey()
 		return fmt.Sprintf(`"%s"`, hex.EncodeToString(crypto.FromECDSA(privateKey)))
@@ -170,11 +189,8 @@ func (v Visitor) Visit(node ast.Node) ast.Visitor {
 
 		if isFixedSize && typeName == "Uint8" {
 			// fixed-size bytes
-			items := make([]string, length)
-			for idx, _ := range items {
-				items[idx] = fmt.Sprintf("0x%x", rand.Intn(255)&0xFF)
-			}
-			statement := fmt.Sprintf("%s.SetValue(%v)", v.Path, fmt.Sprintf("[%d]byte{%s}", length, strings.Join(items, ",")))
+			val := BytesToString(getRandomBytes(length), true)
+			statement := fmt.Sprintf("%s.SetValue(%s)", v.Path, val)
 			*v.Statements = append(*v.Statements, statement)
 		} else {
 			for i := 0; i < length; i++ {
