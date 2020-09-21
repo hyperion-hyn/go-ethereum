@@ -34,6 +34,11 @@ var (
 		Usage: "map elements count",
 		Value: 1,
 	}
+	runFlag = cli.IntFlag{
+		Name:  "run",
+		Usage: "run count",
+		Value: 100,
+	}
 )
 
 var commandVerify = cli.Command{
@@ -49,6 +54,7 @@ Verify generated wrapper file.
 		pkgFlag,
 		arrayFlag,
 		mapFlag,
+		runFlag,
 	},
 	Action: func(ctx *cli.Context) error {
 		return verify(ctx)
@@ -99,7 +105,7 @@ func applyStatements(statements []UpdateFn) common.Hash {
 	return hash
 }
 
-const COUNT = 100
+const COUNT = {{.Run}}
 func main() {
 	last := common.Hash{}
 	for i := 0; i < COUNT; i++ {
@@ -127,6 +133,7 @@ func verify(c *cli.Context) error {
 	pkg := c.String(pkgFlag.Name)
 	arrayLimitation := c.Int(arrayFlag.Name)
 	mapLimitation := c.Int(mapFlag.Name)
+	runCount := c.Int(runFlag.Name)
 
 	var fout *os.File
 	if output == "-" || output == "" {
@@ -180,10 +187,12 @@ func verify(c *cli.Context) error {
 		Cases   string
 		Package string
 		Imports string
+		Run     int
 	}{
 		Cases:   strings.Join(Cases, ",\n"),
 		Package: pkg,
 		Imports: imports,
+		Run:     runCount,
 	}
 
 	funcs := map[string]interface{}{}
