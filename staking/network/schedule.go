@@ -8,7 +8,7 @@ import (
 
 var (
 	MinSelfDelegation = common.NewDecWithPrec(20, 2) // 20%
-	MinDelegation     = common.NewDecWithPrec(1, 3)  // 1%
+	MinDelegation     = common.NewDecWithPrec(1, 3)  // 0.1%
 
 	baseStakingRequirement = common.NewDec(550000).MulInt64(params.Ether)
 )
