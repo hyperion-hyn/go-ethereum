@@ -6,16 +6,11 @@ import (
 	"math/big"
 )
 
-const (
-	Million = 1000000
-)
-
 var (
 	MinSelfDelegation = common.NewDecWithPrec(20, 2) // 20%
-	MinDelegation     = common.NewDecWithPrec(1, 2)  // 1%
+	MinDelegation     = common.NewDecWithPrec(1, 3)  // 1%
 
-	// TODO(ATLAS): how many?
-	baseStakingRequirement = common.NewDecFromBigInt(new(big.Int).Mul(big.NewInt(params.Ether), big.NewInt(Million)))
+	baseStakingRequirement = common.NewDec(550000).MulInt64(params.Ether)
 )
 
 type Map3NodeStakingScheduler struct {
