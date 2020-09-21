@@ -24,6 +24,16 @@ var (
 		Name:  "output",
 		Usage: "output file",
 	}
+	arrayFlag = cli.IntFlag{
+		Name:  "array",
+		Usage: "array elements count",
+		Value: 1,
+	}
+	mapFlag = cli.IntFlag{
+		Name:  "map",
+		Usage: "map elements count",
+		Value: 1,
+	}
 )
 
 var commandVerify = cli.Command{
@@ -37,6 +47,8 @@ Verify generated wrapper file.
 	Flags: []cli.Flag{
 		outputFlag,
 		pkgFlag,
+		arrayFlag,
+		mapFlag,
 	},
 	Action: func(ctx *cli.Context) error {
 		return verify(ctx)
@@ -113,6 +125,8 @@ var cases = []UpdateFn{
 func verify(c *cli.Context) error {
 	output := c.String(outputFlag.Name)
 	pkg := c.String(pkgFlag.Name)
+	arrayLimitation := c.Int(arrayFlag.Name)
+	mapLimitation := c.Int(mapFlag.Name)
 
 	var fout *os.File
 	if output == "-" || output == "" {
@@ -150,6 +164,8 @@ func verify(c *cli.Context) error {
 		Path:       "storage",
 		File:       f,
 		Statements: &Statements,
+		ArrayLimit: arrayLimitation,
+		MapLimit:   mapLimitation,
 	}
 	ast.Walk(visitor, global.Decl.(*ast.TypeSpec))
 

@@ -15,15 +15,12 @@ import (
 
 var seed = rand.New(rand.NewSource(99))
 
-const (
-	ARRAY_LIMITATION = 1
-	MAP_LIMITATION   = 1
-)
-
 type Visitor struct {
 	Path       string
 	File       *ast.File
 	Statements *[]string
+	ArrayLimit int
+	MapLimit   int
 }
 
 func NewVisitor(path string, visitor Visitor) Visitor {
@@ -31,6 +28,8 @@ func NewVisitor(path string, visitor Visitor) Visitor {
 		Path:       path,
 		File:       visitor.File,
 		Statements: visitor.Statements,
+		ArrayLimit: visitor.ArrayLimit,
+		MapLimit:   visitor.MapLimit,
 	}
 	return retval
 }
@@ -177,7 +176,7 @@ func (v Visitor) Visit(node ast.Node) ast.Visitor {
 		var isFixedSize bool
 		if n.Len == nil {
 			// slice, limit to 65535, anyone can increase this limitation
-			length = ARRAY_LIMITATION
+			length = v.ArrayLimit
 			isFixedSize = false
 		} else {
 			// array
@@ -204,7 +203,7 @@ func (v Visitor) Visit(node ast.Node) ast.Visitor {
 
 	case *ast.MapType:
 		keyTypeName, _, _ := getType(n.Key, v.File)
-		for i := 0; i < MAP_LIMITATION; i++ {
+		for i := 0; i < v.MapLimit; i++ {
 			keyValue := getRandomValue(keyTypeName)
 			visitor := NewVisitor(fmt.Sprintf("%s.Get(%s)", v.Path, keyValue), v)
 			_, typ, _ := getType(n.Value, v.File)
