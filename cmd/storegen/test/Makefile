@@ -9,8 +9,8 @@ STORAGEDIR = .
 BINDIR = .
 SOURCES = $(filter-out %/Migrations.sol, $(wildcard $(SOURCEDIR)/*.sol))
 OBJECTS = $(patsubst $(SOURCEDIR)/%.sol, $(BUILDDIR)/%.json, $(SOURCES))
-ABIS = $(patsubst $(BUILDDIR)/%.json, $(ABIDIR)/%_abi_test.go, $(OBJECTS))
-STORAGES = $(patsubst $(BUILDDIR)/%.json, $(STORAGEDIR)/%_storage_test.go, $(OBJECTS))
+ABIS = $(patsubst $(BUILDDIR)/%.json, $(ABIDIR)/%_abi.go, $(OBJECTS))
+STORAGES = $(patsubst $(BUILDDIR)/%.json, $(STORAGEDIR)/%_storage.go, $(OBJECTS))
 
 all: generator build-contract test
 
@@ -29,11 +29,11 @@ $(BUILDDIR)/%.json: $(SOURCEDIR)/%.sol
         | jq '.contracts[] | {"abi": (.abi | fromjson), "bytecode": .bin, "deployedBytecode": ."bin-runtime", "storage-layout": (."storage-layout" | fromjson) }' \
         > $@
 
-$(ABIDIR)/%_abi_test.go: $(BUILDDIR)/%.json abigen
+$(ABIDIR)/%_abi.go: $(BUILDDIR)/%.json abigen
 	cat $< | jq '.abi' | ./abigen --abi - --pkg test --type $(patsubst %.json, %, $(notdir $<))Wrapper --out $@
 
-$(STORAGEDIR)/%_storage_test.go: $(BUILDDIR)/%.json storegen
-	cat $< | jq '."storage-layout"' | ./storegen --storage-layout - --pkg test --out ./map3pool_storage_test.go
+$(STORAGEDIR)/%_storage.go: $(BUILDDIR)/%.json storegen
+	cat $< | jq '."storage-layout"' | ./storegen --storage-layout - --pkg test --out ./map3pool_storage.go
 
 test:
 	go test -v -count=1 ./
