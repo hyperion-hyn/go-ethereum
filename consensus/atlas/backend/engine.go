@@ -608,9 +608,11 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		snap := s.(*Snapshot)
 		return snap, nil
 	}
-
-	root := chain.GetHeaderByNumber(number).Root
-	stateDB, err := chain.StateAt(root)
+	header := chain.GetHeaderByNumber(number)
+	if header == nil {
+		return nil, consensus.ErrUnknownAncestor
+	}
+	stateDB, err := chain.StateAt(header.Root)
 	if err != nil {
 		return nil, err
 	}
