@@ -46,10 +46,18 @@ func (ec *Client) GetEpochLastBlockNum(ctx context.Context, epoch uint64) (uint6
 	return result, err
 }
 
-func (ec *Client) GetCommitteeAtEpoch(ctx context.Context, epoch uint64) ([]common.Address, error) {
-	var result []common.Address
-	err := ec.c.CallContext(ctx, &result, "eth_getCommitteeAtEpoch", epoch)
-	return result, err
+func (ec *Client) GetCommitteeAtEpoch(ctx context.Context, epoch uint64) (*restaking.Committee_, error) {
+	var bytes hexutil.Bytes
+	err := ec.c.CallContext(ctx, &bytes, "eth_getCommitteeAtEpoch", epoch)
+	if err != nil {
+		return nil, err
+	}
+	var committee restaking.Committee_
+	err = rlp.DecodeBytes(bytes, &committee)
+	if err != nil {
+		return nil, err
+	}
+	return &committee, err
 }
 
 func (ec *Client) GetValidatorInformationAtEpoch(

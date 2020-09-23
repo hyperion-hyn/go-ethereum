@@ -39,3 +39,19 @@ func TestGetValidatorInformation(t *testing.T) {
 	fmt.Printf("got validator :%v", validator.Validator.ValidatorAddress.Hex())
 
 }
+
+func TestGetCommitteeAtEpoch(t *testing.T) {
+	client, err := ethclient.Dial("http://localhost:8545")
+	if err != nil {
+		fmt.Printf("%v", err)
+	}
+
+	committee, err := client.GetCommitteeAtEpoch(context.Background(), 0)
+	if err != nil {
+		fmt.Printf("%v", err)
+	}
+	fmt.Printf("got committee :%v \n", committee)
+	for _, slot := range committee.Slots.Entrys {
+		fmt.Printf("effective stake: %v \n", slot.EffectiveStake)
+	}
+}
