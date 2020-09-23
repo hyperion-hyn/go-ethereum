@@ -120,12 +120,16 @@ func (s *StateDB) IncrementValidatorNonce() {
 }
 
 func (s *StateDB) AddTxFee(blockNum, fee *big.Int) {
+	total := s.TxFee(blockNum)
+	total = big.NewInt(0).Add(total, fee)
+	s.SetTxFee(blockNum, total)
+}
+
+func (s *StateDB) SetTxFee(blockNum *big.Int, fee *big.Int) {
 	if s.GetNonce(txFeeStorageAddress) == 0 {
 		s.SetNonce(txFeeStorageAddress, 1)
 	}
-	total := s.TxFee(blockNum)
-	total = big.NewInt(0).Add(total, fee)
-	s.SetState(txFeeStorageAddress, common.BigToHash(blockNum), common.BigToHash(total))
+	s.SetState(txFeeStorageAddress, common.BigToHash(blockNum), common.BigToHash(fee))
 }
 
 func (s *StateDB) TxFee(blockNum *big.Int) *big.Int {

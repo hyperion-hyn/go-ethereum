@@ -254,9 +254,12 @@ func accumulateRewardsAndCountSigs(
 		return network.EmptyPayout, nil
 	}
 
+	// calculate total reward
 	blockReward := network.CalcBlockReward(header.Number, bc.Config())
-	lastBlockFee := state.TxFee(big.NewInt(0).Sub(header.Number, common.Big1))
+	lastBlockNum := big.NewInt(0).Sub(header.Number, common.Big1)
+	lastBlockFee := state.TxFee(lastBlockNum)
 	totalReward := big.NewInt(0).Add(blockReward, lastBlockFee)
+	state.SetTxFee(lastBlockNum, common.Big0)
 
 	// If too much is staked, then possible to have negative reward,
 	// not an error, just a possible economic situation, hence we return
