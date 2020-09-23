@@ -264,7 +264,7 @@ func accumulateRewardsAndCountSigs(
 		return network.EmptyPayout, nil
 	}
 
-	newRewards, payouts := big.NewInt(0), []reward.Payout{}
+	payouts := []reward.Payout{}
 	comm, payable, missing, err := ballotResult(bc, header) // for last block
 	if err != nil {
 		return network.EmptyPayout, err
@@ -290,20 +290,26 @@ func accumulateRewardsAndCountSigs(
 		voterShare := voter.OverallPercent
 		allSignersShare = allSignersShare.Add(voterShare)
 	}
+
 	totalRewardDec := common.NewDecFromBigInt(totalReward)
-	for member := range payable.Entrys {
-		// TODO Give out whatever leftover to the last voter/handle
+	rewardPool := big.NewInt(0).Set(totalReward)
+	for i := len(payable.Entrys) - 1; i >= 0; i-- {
 		// what to do about share of those that didn't sign
-		blsKey := payable.Entrys[member].BLSPublicKey
+		blsKey := payable.Entrys[i].BLSPublicKey
 		voter := votingPower.Voters[blsKey]
 		snapshot, err := bc.ReadValidatorAtEpoch(comm.Epoch, voter.EarningAccount)
 		if err != nil {
 			return network.EmptyPayout, err
 		}
-		due := totalRewardDec.Mul(
-			voter.OverallPercent.Quo(allSignersShare),
-		).RoundInt()
-		newRewards.Add(newRewards, due)
+
+		var due *big.Int
+		if i == 0 {	// Give out whatever leftover to the first voter/handle
+			due = big.NewInt(0).Set(rewardPool)
+		} else {
+			due = totalRewardDec.Mul(
+				voter.OverallPercent.Quo(allSignersShare),
+			).RoundInt()
+		}
 
 		shares, err := lookupDelegatorShares(comm.Epoch, snapshot)
 		if err != nil {
@@ -317,8 +323,9 @@ func accumulateRewardsAndCountSigs(
 			NewlyEarned: due,
 			EarningKey:  voter.Identity,
 		})
+		rewardPool.Sub(rewardPool, due)
 	}
-	return network.NewStakingEraRewardForRound(newRewards, missing, payouts), nil
+	return network.NewStakingEraRewardForRound(totalReward, missing, payouts), nil
 }
 
 func ballotResult(
