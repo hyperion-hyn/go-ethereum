@@ -18,6 +18,7 @@ package core
 
 import (
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/staking/network"
 	"math"
 	"math/big"
 
@@ -270,7 +271,8 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	if st.evm.Coinbase != emptyAddress {
 		st.state.AddBalance(st.evm.Coinbase, fee)
 	} else {
-		st.state.AddTxFee(st.evm.BlockNumber, fee)
+		pool := network.NewRewardPool(st.state)
+		pool.AddTxFeeAsReward(st.evm.BlockNumber, fee)
 	}
 
 	return &ExecutionResult{

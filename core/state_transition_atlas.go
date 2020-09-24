@@ -147,7 +147,8 @@ func (st *StateTransition) StakingTransitionDb() (*ExecutionResult, error) {
 	if st.evm.Coinbase != emptyAddress {
 		st.state.AddBalance(st.evm.Coinbase, fee)
 	} else {
-		st.state.AddTxFee(st.evm.BlockNumber, fee)
+		pool := network.NewRewardPool(st.state)
+		pool.AddTxFeeAsReward(st.evm.BlockNumber, fee)
 	}
 
 	return &ExecutionResult{
