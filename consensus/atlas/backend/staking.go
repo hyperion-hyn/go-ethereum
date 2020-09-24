@@ -259,9 +259,8 @@ func accumulateRewardsAndCountSigs(
 	pool := network.NewRewardPool(state)
 	totalReward := pool.TakeReward(lastBlockNum, bc.Config())
 
-	// If too much is staked, then possible to have negative reward,
-	// not an error, just a possible economic situation, hence we return
-	if totalReward.Sign() == -1 { // negative
+	// no reward
+	if totalReward.Sign() <= 0 {
 		return network.EmptyPayout, nil
 	}
 
