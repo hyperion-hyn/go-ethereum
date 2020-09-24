@@ -69,8 +69,6 @@ type StateDB interface {
 	ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) error
 
 	// ATLAS
-	AddTxFee(blockNum, fee *big.Int)
-	TxFee(blockNum *big.Int) *big.Int
 	ValidatorPool() *restaking.Storage_ValidatorPool_
 	ValidatorByAddress(validatorAddress common.Address) (*restaking.Storage_ValidatorWrapper_, error)
 	AddRedelegationReward(snapshot *restaking.Storage_ValidatorWrapper_, reward *big.Int, shareLookup map[common.Address]common.Dec) error
