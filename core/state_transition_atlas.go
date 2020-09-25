@@ -142,9 +142,8 @@ func (st *StateTransition) StakingTransitionDb() (*ExecutionResult, error) {
 	}
 	st.refundGas()
 
-	emptyAddress := common.Address{}
 	fee := new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)
-	if st.evm.Coinbase != emptyAddress {
+	if st.evm.Coinbase != network.RewardStorageAddress {
 		st.state.AddBalance(st.evm.Coinbase, fee)
 	} else {
 		pool := network.NewRewardPool(st.state)

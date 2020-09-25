@@ -54,7 +54,7 @@ type StateTransition struct {
 	data       []byte
 	state      vm.StateDB
 	evm        *vm.EVM
-	bc         ChainContext	// ATLAS
+	bc         ChainContext // ATLAS
 }
 
 // Message represents a message sent to a contract.
@@ -69,7 +69,7 @@ type Message interface {
 	Nonce() uint64
 	CheckNonce() bool
 	Data() []byte
-	Type() types.TransactionType	// ATLAS
+	Type() types.TransactionType // ATLAS
 }
 
 // ExecutionResult includes all output after executing given evm
@@ -266,9 +266,8 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	st.refundGas()
 
 	// ATLAS
-	emptyAddress := common.Address{}
 	fee := new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)
-	if st.evm.Coinbase != emptyAddress {
+	if st.evm.Coinbase != network.RewardStorageAddress {
 		st.state.AddBalance(st.evm.Coinbase, fee)
 	} else {
 		pool := network.NewRewardPool(st.state)

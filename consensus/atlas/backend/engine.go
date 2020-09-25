@@ -19,6 +19,7 @@ package backend
 import (
 	"bytes"
 	"errors"
+	"github.com/ethereum/go-ethereum/staking/network"
 	"io"
 	"math"
 
@@ -117,7 +118,7 @@ var (
 // block, which may be different from the header's coinbase if a consensus
 // engine is based on signatures.
 func (sb *backend) Author(header *types.Header) (common.Address, error) {
-	return common.Address{}, nil
+	return network.RewardStorageAddress, nil
 }
 
 // Signers extracts all the addresses who have signed the given header
@@ -426,8 +427,11 @@ func (sb *backend) Finalize(chain consensus.ChainHeaderReader, header *types.Hea
 
 func (sb *backend) _Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header) {
-	chainReader := chain.(consensus.ChainReader)                 // ATLAS
-	_, _ = handleMap3AndAtlasStaking(chainReader, header, state) // ATLAS
+	chainReader := chain.(consensus.ChainReader)                    // ATLAS
+	_, err := handleMap3AndAtlasStaking(chainReader, header, state) // ATLAS
+	if err != nil {
+		sb.logger.Error("staking err", "err", err)
+	}
 
 	// No block rewards in Atlas, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))

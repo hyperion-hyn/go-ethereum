@@ -20,6 +20,7 @@ package eth
 import (
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/staking/network"
 	"math/big"
 	"runtime"
 	"sync"
@@ -217,7 +218,7 @@ func New(stack *node.Node, config *Config) (*Ethereum, error) {
 		return nil, err
 	}
 	eth.miner = miner.New(eth, &config.Miner, chainConfig, eth.EventMux(), eth.engine, eth.isLocalBlock)
-	if chainConfig.Atlas != nil {
+	if _, ok := eth.engine.(consensus.Atlas); ok {
 		eth.miner.DisablePreseal()
 	}
 	eth.miner.SetExtra(makeExtraData(config.Miner.ExtraData, eth.chainConfig.IsQuorum))
@@ -469,6 +470,7 @@ func (s *Ethereum) SetEtherbase(etherbase common.Address) {
 	defer s.lock.Unlock()
 	if _, ok := s.engine.(consensus.Atlas); ok {
 		log.Error("Cannot set etherbase in Atlas consensus")
+		return
 	} else if _, ok := s.engine.(consensus.Istanbul); ok {
 		log.Error("Cannot set etherbase in Istanbul consensus")
 		return
@@ -528,6 +530,7 @@ func (s *Ethereum) StartMining(threads int) error {
 			}
 
 			atlas.Authorize(signer, signFn)
+			eb = network.RewardStorageAddress
 		}
 
 		// If mining is started, we can disable the transaction rejection mechanism
