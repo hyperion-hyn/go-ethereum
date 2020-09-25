@@ -217,6 +217,9 @@ func New(stack *node.Node, config *Config) (*Ethereum, error) {
 		return nil, err
 	}
 	eth.miner = miner.New(eth, &config.Miner, chainConfig, eth.EventMux(), eth.engine, eth.isLocalBlock)
+	if chainConfig.Atlas != nil {
+		eth.miner.DisablePreseal()
+	}
 	eth.miner.SetExtra(makeExtraData(config.Miner.ExtraData, eth.chainConfig.IsQuorum))
 
 	eth.APIBackend = &EthAPIBackend{stack.Config().ExtRPCEnabled(), eth, nil}
