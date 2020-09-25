@@ -18,13 +18,16 @@ type AtlasConfig struct {
 
 func (c *AtlasConfig) IsLastBlock(blockNum uint64) bool {
 	if blockNum == 0 {
-		return false
+		return true
 	}
 	blocks := c.BlocksPerEpoch
 	return blockNum%blocks == 0
 }
 
 func (c *AtlasConfig) IsFirstBlock(blockNum uint64) bool {
+	if blockNum == 0 {
+		return true
+	}
 	blocks := c.BlocksPerEpoch
 	return blockNum%blocks == 1
 }

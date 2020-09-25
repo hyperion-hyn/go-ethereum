@@ -1,147 +1,205 @@
 package params
 
-import "testing"
-
-func TestAtlasConfig_EpochByBlock(t *testing.T) {
-	type fields struct {
-		Period         uint64
-		BlocksPerEpoch uint64
-	}
-	type args struct {
-		blockNum uint64
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   uint64
-	}{
-		// TODO(ATLAS): Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := &AtlasConfig{
-				Period:         tt.fields.Period,
-				BlocksPerEpoch: tt.fields.BlocksPerEpoch,
-			}
-			if got := c.EpochByBlock(tt.args.blockNum); got != tt.want {
-				t.Errorf("EpochByBlock() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestAtlasConfig_EpochFirstBlock(t *testing.T) {
-	type fields struct {
-		Period         uint64
-		BlocksPerEpoch uint64
-	}
-	type args struct {
-		epochNum uint64
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   uint64
-	}{
-		// TODO(ATLAS): Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := &AtlasConfig{
-				Period:         tt.fields.Period,
-				BlocksPerEpoch: tt.fields.BlocksPerEpoch,
-			}
-			if got := c.EpochFirstBlock(tt.args.epochNum); got != tt.want {
-				t.Errorf("EpochFirstBlock() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestAtlasConfig_EpochLastBlock(t *testing.T) {
-	type fields struct {
-		Period         uint64
-		BlocksPerEpoch uint64
-	}
-	type args struct {
-		epochNum uint64
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   uint64
-	}{
-		// TODO(ATLAS): Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := &AtlasConfig{
-				Period:         tt.fields.Period,
-				BlocksPerEpoch: tt.fields.BlocksPerEpoch,
-			}
-			if got := c.EpochLastBlock(tt.args.epochNum); got != tt.want {
-				t.Errorf("EpochLastBlock() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
+import (
+	"fmt"
+	"testing"
+)
 
 func TestAtlasConfig_IsFirstBlock(t *testing.T) {
-	type fields struct {
-		Period         uint64
-		BlocksPerEpoch uint64
-	}
-	type args struct {
-		blockNum uint64
-	}
 	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   bool
+		BlocksPerEpoch uint64
+		blockNum       uint64
+		want           bool
 	}{
-		// TODO(ATLAS): Add test cases.
+		{
+			BlocksPerEpoch: 15,
+			blockNum:       0,
+			want:           true,
+		},
+		{
+			BlocksPerEpoch: 15,
+			blockNum:       1,
+			want:           true,
+		},
+		{
+			BlocksPerEpoch: 15,
+			blockNum:       2,
+			want:           false,
+		},
+		{
+			BlocksPerEpoch: 15,
+			blockNum:       15,
+			want:           false,
+		},
+		{
+			BlocksPerEpoch: 15,
+			blockNum:       16,
+			want:           true,
+		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for i, tt := range tests {
+		t.Run(fmt.Sprintf("Case-%v", i), func(t *testing.T) {
 			c := &AtlasConfig{
-				Period:         tt.fields.Period,
-				BlocksPerEpoch: tt.fields.BlocksPerEpoch,
+				BlocksPerEpoch: tt.BlocksPerEpoch,
 			}
-			if got := c.IsFirstBlock(tt.args.blockNum); got != tt.want {
-				t.Errorf("IsFirstBlock() = %v, want %v", got, tt.want)
+			if got := c.IsFirstBlock(tt.blockNum); got != tt.want {
+				t.Errorf("IsLastBlock() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
 func TestAtlasConfig_IsLastBlock(t *testing.T) {
-	type fields struct {
-		Period         uint64
-		BlocksPerEpoch uint64
-	}
-	type args struct {
-		blockNum uint64
-	}
 	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   bool
+		BlocksPerEpoch uint64
+		blockNum       uint64
+		want           bool
 	}{
-		// TODO(ATLAS): Add test cases.
+		{
+			BlocksPerEpoch: 15,
+			blockNum:       0,
+			want:           true,
+		},
+		{
+			BlocksPerEpoch: 15,
+			blockNum:       1,
+			want:           false,
+		},
+		{
+			BlocksPerEpoch: 15,
+			blockNum:       15,
+			want:           true,
+		},
+		{
+			BlocksPerEpoch: 15,
+			blockNum:       16,
+			want:           false,
+		},
+		{
+			BlocksPerEpoch: 15,
+			blockNum:       30,
+			want:           true,
+		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for i, tt := range tests {
+		t.Run(fmt.Sprintf("Case-%v", i), func(t *testing.T) {
 			c := &AtlasConfig{
-				Period:         tt.fields.Period,
-				BlocksPerEpoch: tt.fields.BlocksPerEpoch,
+				BlocksPerEpoch: tt.BlocksPerEpoch,
 			}
-			if got := c.IsLastBlock(tt.args.blockNum); got != tt.want {
+			if got := c.IsLastBlock(tt.blockNum); got != tt.want {
 				t.Errorf("IsLastBlock() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestAtlasConfig_EpochLastBlock(t *testing.T) {
+	tests := []struct {
+		BlocksPerEpoch uint64
+		epochNum       uint64
+		want           uint64
+	}{
+		{
+			BlocksPerEpoch: 15,
+			epochNum:       0,
+			want:           0,
+		},
+		{
+			BlocksPerEpoch: 15,
+			epochNum:       1,
+			want:           15,
+		},
+		{
+			BlocksPerEpoch: 15,
+			epochNum:       2,
+			want:           30,
+		},
+	}
+	for i, tt := range tests {
+		t.Run(fmt.Sprintf("Case-%v", i), func(t *testing.T) {
+			c := &AtlasConfig{
+				BlocksPerEpoch: tt.BlocksPerEpoch,
+			}
+			if got := c.EpochLastBlock(tt.epochNum); got != tt.want {
+				t.Errorf("EpochLastBlock() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestAtlasConfig_EpochFirstBlock(t *testing.T) {
+	tests := []struct {
+		BlocksPerEpoch uint64
+		epochNum       uint64
+		want           uint64
+	}{
+		{
+			BlocksPerEpoch: 15,
+			epochNum:       0,
+			want:           0,
+		},
+		{
+			BlocksPerEpoch: 15,
+			epochNum:       1,
+			want:           1,
+		},
+		{
+			BlocksPerEpoch: 15,
+			epochNum:       2,
+			want:           16,
+		},
+	}
+	for i, tt := range tests {
+		t.Run(fmt.Sprintf("Case-%v", i), func(t *testing.T) {
+			c := &AtlasConfig{
+				BlocksPerEpoch: tt.BlocksPerEpoch,
+			}
+			if got := c.EpochFirstBlock(tt.epochNum); got != tt.want {
+				t.Errorf("EpochFirstBlock() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestAtlasConfig_EpochByBlock(t *testing.T) {
+	tests := []struct {
+		BlocksPerEpoch uint64
+		blockNum       uint64
+		want           uint64
+	}{
+		{
+			BlocksPerEpoch: 15,
+			blockNum:       0,
+			want:           0,
+		},
+		{
+			BlocksPerEpoch: 15,
+			blockNum:       1,
+			want:           1,
+		},
+		{
+			BlocksPerEpoch: 15,
+			blockNum:       15,
+			want:           1,
+		},
+		{
+			BlocksPerEpoch: 15,
+			blockNum:       16,
+			want:           2,
+		},
+		{
+			BlocksPerEpoch: 15,
+			blockNum:       31,
+			want:           3,
+		},
+	}
+	for i, tt := range tests {
+		t.Run(fmt.Sprintf("Case-%v", i), func(t *testing.T) {
+			c := &AtlasConfig{
+				BlocksPerEpoch: tt.BlocksPerEpoch,
+			}
+			if got := c.EpochByBlock(tt.blockNum); got != tt.want {
+				t.Errorf("EpochByBlock() = %v, want %v", got, tt.want)
 			}
 		})
 	}
