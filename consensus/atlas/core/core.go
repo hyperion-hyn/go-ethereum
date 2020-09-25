@@ -343,7 +343,7 @@ func (c *core) checkValidatorSignature(hash common.Hash, sig []byte, pubKey []by
 
 func (c *core) QuorumSize() int {
 	c.logger.Trace("Confirmation Formula used ceil(2N/3)")
-	return int(math.Ceil(float64(2*c.valSet.Size()) / 3))
+	return int(math.Floor(float64(2*c.valSet.Size())/3)) + 1
 }
 
 // PrepareCommittedSeal returns a committed seal for the given hash
