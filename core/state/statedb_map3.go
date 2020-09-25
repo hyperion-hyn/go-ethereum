@@ -11,7 +11,7 @@ import (
 var (
 	errMap3NodeNotExist = errors.New("map3 node does not exist")
 
-	map3StorageAddress = common.BigToAddress(common.Big2) // TODO(ATLAS): what address?
+	map3StorageAddress = common.HexToAddress("0x6a7ad21ff076440e39020e289debdcb309e12c23")
 )
 
 func (s *StateDB) Map3NodePool() *microstaking.Storage_Map3NodePool_ {
