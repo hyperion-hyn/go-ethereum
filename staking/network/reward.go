@@ -17,7 +17,7 @@ var (
 	// EmptyPayout ..
 	EmptyPayout = noReward{}
 
-	rewardStorageAddress = common.BigToAddress(common.Big3)
+	rewardStorageAddress = common.HexToAddress("0xa886e52baada7a1a5200f75fcf5f82b3fabea707")
 	blockRewardHashKey   = common.BigToHash(common.Big0)
 )
 

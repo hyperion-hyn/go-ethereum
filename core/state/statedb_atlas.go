@@ -12,8 +12,7 @@ var (
 	ErrValidatorNotExist    = errors.New("staking validator does not exist")
 	errRedelegationNotExist = errors.New("redelegation does not exist")
 
-	validatorStorageAddress = common.BigToAddress(common.Big1) // TODO(ATLAS): what address?
-	txFeeStorageAddress = common.BigToAddress(common.Big3)
+	validatorStorageAddress = common.HexToAddress("0x69270f88069d56dc62bd62b0b9f2b302a2b820a8")
 )
 
 func (s *StateDB) ValidatorPool() *restaking.Storage_ValidatorPool_ {
@@ -117,21 +116,4 @@ func (s *StateDB) AddRedelegationReward(snapshot *restaking.Storage_ValidatorWra
 
 func (s *StateDB) IncrementValidatorNonce() {
 	s.SetNonce(validatorStorageAddress, s.GetNonce(validatorStorageAddress)+1)
-}
-
-func (s *StateDB) AddTxFee(blockNum, fee *big.Int) {
-	total := s.TxFee(blockNum)
-	total = big.NewInt(0).Add(total, fee)
-	s.SetTxFee(blockNum, total)
-}
-
-func (s *StateDB) SetTxFee(blockNum *big.Int, fee *big.Int) {
-	if s.GetNonce(txFeeStorageAddress) == 0 {
-		s.SetNonce(txFeeStorageAddress, 1)
-	}
-	s.SetState(txFeeStorageAddress, common.BigToHash(blockNum), common.BigToHash(fee))
-}
-
-func (s *StateDB) TxFee(blockNum *big.Int) *big.Int {
-	return s.GetState(txFeeStorageAddress, common.BigToHash(blockNum)).Big()
 }
