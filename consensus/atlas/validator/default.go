@@ -71,7 +71,7 @@ func newDefaultSet(validators []atlas.Validator, policy atlas.ProposerPolicy) *d
 		valSet.validators[i] = validator
 	}
 	// sort validator
-	sort.Sort(valSet.validators)
+	//sort.Sort(valSet.validators)
 	// init proposer
 	if valSet.Size() > 0 {
 		valSet.proposer = valSet.GetByIndex(0)
