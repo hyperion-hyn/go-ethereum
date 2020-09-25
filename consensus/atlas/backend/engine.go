@@ -510,9 +510,9 @@ func (sb *backend) _Seal(chain consensus.ChainReader, block *types.Block, result
 				// if the block hash and the hash from channel are the same,
 				// return the result. Otherwise, keep waiting the next hash.
 				// wait for the timestamp of header, use this to adjust the block period
-				delay := math.Floor(time.Unix(int64(header.Time+sb.config.BlockPeriod), 0).Sub(now()).Seconds() + 1)
+				delay := time.Unix(int64(header.Time+sb.config.BlockPeriod), 0).Sub(now())
 				select {
-				case <-time.After(time.Duration(delay) * time.Second):
+				case <-time.After(delay):
 				}
 				results <- result
 				return
