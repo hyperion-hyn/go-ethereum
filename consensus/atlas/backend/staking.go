@@ -57,7 +57,7 @@ func handleMap3AndAtlasStaking(chain consensus.ChainReader, header *types.Header
 
 	payout, err := accumulateRewardsAndCountSigs(chain, stateDB, header)
 	if err != nil {
-		return nil, errors.New("cannot pay block reward")
+		return nil, errors.Wrap(err, "cannot pay block reward")
 	}
 	// TODO(ATLAS): slash
 
