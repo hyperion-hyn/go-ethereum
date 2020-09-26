@@ -84,6 +84,7 @@ func (c *core) handleExpect(msg *message, src atlas.Validator) error {
 			c.sendConfirm()
 		} else {
 			// Send round change
+			logger.Warn("state error", "send next round", "currentView", c.currentView())
 			c.sendNextRoundChange()
 		}
 	}
