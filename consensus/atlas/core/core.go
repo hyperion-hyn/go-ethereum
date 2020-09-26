@@ -332,7 +332,7 @@ func (c *core) newRoundChangeTimer() {
 	}
 
 	c.roundChangeTimer = time.AfterFunc(timeout, func() {
-		c.logger.Debug("timeout", "timeout", timeout, "round", c.current.round.Uint64())
+		c.logger.Debug("send timeout event", "timeout", timeout, "round", c.current.round.Uint64())
 		c.sendEvent(timeoutEvent{})
 	})
 }
