@@ -53,7 +53,7 @@ func (e Map3Status) String() string {
 }
 
 // SanityCheck checks basic requirements of a validator
-func (n *Map3Node_) SanityCheck(maxPubKeyAllowed int) error {
+func (n *Map3Node_) SanityCheck(maxPubKeyAllowed int, selfProportion *common.Dec) error {
 	if err := n.Description.EnsureLength(); err != nil {
 		return err
 	}
@@ -70,8 +70,10 @@ func (n *Map3Node_) SanityCheck(maxPubKeyAllowed int) error {
 		)
 	}
 
-	if err := n.Commission.SanityCheck(); err != nil {
-		return err
+	if selfProportion != nil {
+		if err := n.Commission.SanityCheck(tenPercent, common.MinDec(*selfProportion, twentyPercent)); err != nil {
+			return err
+		}
 	}
 
 	allKeys := map[string]struct{}{}

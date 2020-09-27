@@ -23,6 +23,7 @@ var (
 	errMicrodelegationStillLocked           = errors.New("microdelegation still locked")
 	errTerminateMap3NodeNotAllowed          = errors.New("not allow to terminate map3 node")
 	errSelfDelegationTooSmall               = errors.New("self delegation amount too small")
+	errEditTerminatedMap3NodeNotAllowed		= errors.New("not allow to edit terminated map3 node")
 
 	errInvalidMap3NodeStatusToRestake = errors.New("invalid map3 node status to restake")
 	errMap3NodeAlreadyRestaking       = errors.New("map3 node already restaked")
@@ -178,10 +179,11 @@ func (verifier StakingVerifier) VerifyCreateMap3NodeMsg(stateDB vm.StateDB, chai
 		return nil, errInsufficientBalanceForStake
 	}
 
-	_, minSelf, _ := network.LatestMap3StakingRequirement(blockNum, chainContext.Config())
+	minTotal, minSelf, _ := network.LatestMap3StakingRequirement(blockNum, chainContext.Config())
 	if minSelf.Cmp(msg.Amount) > 0 {
 		return nil, errSelfDelegationTooSmall
 	}
+	percent := common.NewDecFromInt(msg.Amount).QuoInt(minTotal)
 
 	// create map3 node
 	map3Address := crypto.CreateAddress(signer, stateDB.GetNonce(signer))
@@ -189,15 +191,19 @@ func (verifier StakingVerifier) VerifyCreateMap3NodeMsg(stateDB vm.StateDB, chai
 	if err != nil {
 		return nil, err
 	}
-	if err := node.Map3Node.SanityCheck(microstaking.MaxPubKeyAllowed); err != nil {
+	if err := node.Map3Node.SanityCheck(microstaking.MaxPubKeyAllowed, &percent); err != nil {
 		return nil, err
 	}
 	return node, nil
 }
 
-func (verifier StakingVerifier) VerifyEditMap3NodeMsg(stateDB vm.StateDB, epoch, blockNum *big.Int, msg *microstaking.EditMap3Node, signer common.Address) error {
+func (verifier StakingVerifier) VerifyEditMap3NodeMsg(stateDB vm.StateDB, chainContext ChainContext, epoch, blockNum *big.Int,
+	msg *microstaking.EditMap3Node, signer common.Address) error {
 	if stateDB == nil {
 		return errStateDBIsMissing
+	}
+	if chainContext == nil {
+		return errChainContextMissing
 	}
 	if epoch == nil {
 		return errEpochMissing
@@ -229,10 +235,14 @@ func (verifier StakingVerifier) VerifyEditMap3NodeMsg(stateDB vm.StateDB, epoch,
 		return err
 	}
 
+	if node.Status == uint8(microstaking.Terminated) {
+		return errEditTerminatedMap3NodeNotAllowed
+	}
+
 	if err := microstaking.UpdateMap3NodeFromEditMsg(node, msg); err != nil {
 		return err
 	}
-	if err := node.SanityCheck(microstaking.MaxPubKeyAllowed); err != nil {
+	if err := node.SanityCheck(microstaking.MaxPubKeyAllowed, nil); err != nil {
 		return err
 	}
 	return nil
@@ -335,18 +345,18 @@ func (verifier StakingVerifier) VerifyUnmicrodelegateMsg(stateDB vm.StateDB, cha
 		return errInvalidSigner
 	}
 
-	wrapper, err := stateDB.Map3NodeByAddress(msg.Map3NodeAddress)
+	node, err := stateDB.Map3NodeByAddress(msg.Map3NodeAddress)
 	if err != nil {
 		return err
 	}
 
 	// TODO(ATLAS): only pending status
-	status := wrapper.Map3Node().Status().Value()
+	status := node.Map3Node().Status().Value()
 	if status != uint8(microstaking.Pending) {
 		return errUnmicrodelegateNotAllowed
 	}
 
-	md, ok := wrapper.Microdelegations().Get(msg.DelegatorAddress)
+	md, ok := node.Microdelegations().Get(msg.DelegatorAddress)
 	if !ok {
 		return errMicrodelegationNotExist
 	}
@@ -360,12 +370,15 @@ func (verifier StakingVerifier) VerifyUnmicrodelegateMsg(stateDB vm.StateDB, cha
 		return errMicrodelegationStillLocked
 	}
 
-	if wrapper.IsOperator(msg.DelegatorAddress) {
+	if node.IsOperator(msg.DelegatorAddress) {
 		amt := big.NewInt(0).Sub(p.Amount().Value(), msg.Amount)
-		total := amt.Add(amt, md.Amount().Value())
+		self := amt.Add(amt, md.Amount().Value())
 
-		_, minSelf, _ := network.LatestMap3StakingRequirement(blockNum, chainContext.Config())
-		if minSelf.Cmp(total) > 0 {
+		minTotal, minSelf, _ := network.LatestMap3StakingRequirement(blockNum, chainContext.Config())
+		percent := common.NewDecFromInt(self).QuoInt(minTotal)
+		commissionRate := node.Map3Node().Commission().Rate().Value()
+
+		if minSelf.Cmp(self) > 0 || percent.LT(commissionRate) {
 			return errSelfDelegationTooSmall
 		}
 	}

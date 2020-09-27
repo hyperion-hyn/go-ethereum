@@ -6,28 +6,24 @@ import (
 )
 
 var (
-	errInvalidCommissionRate = errors.New("commission rate should be a value ranging from 0.0 to 1.0")
+	errCommissionRateNil = errors.New("commission rate cannot be nil")
 )
 
 var (
-	hundredPercent = common.OneDec()
-	zeroPercent    = common.ZeroDec()
+	tenPercent    = common.NewDecWithPrec(1, 1) // 10%
+	twentyPercent = common.NewDecWithPrec(2, 1) // 20%
 )
 
-func (c *Commission_) SanityCheck() error {
+func (c *Commission_) SanityCheck(minCommissionRate, maxCommissionRate common.Dec) error {
 	if c.Rate.IsNil() || c.RateForNextPeriod.IsNil() {
-		return errors.Wrap(errInvalidCommissionRate, "rate can not be nil")
+		return errCommissionRateNil
 	}
 
-	if c.Rate.LT(zeroPercent) || c.Rate.GT(hundredPercent) {
-		return errors.Wrapf(
-			errInvalidCommissionRate, "rate:%s", c.Rate.String(),
-		)
+	if c.Rate.LT(minCommissionRate) || c.Rate.GT(maxCommissionRate) {
+		return errors.Errorf("commission rate should be a value ranging from %v to %v, rate:%s", minCommissionRate, maxCommissionRate, c.Rate.String())
 	}
-	if c.RateForNextPeriod.LT(zeroPercent) || c.RateForNextPeriod.GT(hundredPercent) {
-		return errors.Wrapf(
-			errInvalidCommissionRate, "rate for next period:%s", c.RateForNextPeriod.String(),
-		)
+	if c.RateForNextPeriod.LT(minCommissionRate) || c.RateForNextPeriod.GT(maxCommissionRate) {
+		return errors.Errorf("commission rate should be a value ranging from %v to %v, rate:%s", minCommissionRate, maxCommissionRate, c.RateForNextPeriod.String())
 	}
 	return nil
 }

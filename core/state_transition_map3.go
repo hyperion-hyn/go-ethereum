@@ -22,7 +22,7 @@ func (st *StateTransition) verifyAndApplyCreateMap3NodeTx(verifier StakingVerifi
 }
 
 func (st *StateTransition) verifyAndApplyEditMap3NodeTx(verifier StakingVerifier, msg *microstaking.EditMap3Node, signer common.Address) error {
-	if err := verifier.VerifyEditMap3NodeMsg(st.state, st.evm.EpochNumber, st.evm.BlockNumber, msg, signer); err != nil {
+	if err := verifier.VerifyEditMap3NodeMsg(st.state, st.bc, st.evm.EpochNumber, st.evm.BlockNumber, msg, signer); err != nil {
 		return err
 	}
 	nodePool := st.state.Map3NodePool()

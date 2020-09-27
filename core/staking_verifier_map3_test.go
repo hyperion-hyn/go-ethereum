@@ -484,8 +484,9 @@ func TestVerifyEditMap3NodeMsg(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			verifier, _ := NewStakingVerifier(makeFakeChainContextForStake(t))
-			err := verifier.VerifyEditMap3NodeMsg(tt.args.stateDB, tt.args.epoch, tt.args.blockNum, &tt.args.msg, tt.args.signer)
+			ctx := makeFakeChainContextForStake(t)
+			verifier, _ := NewStakingVerifier(ctx)
+			err := verifier.VerifyEditMap3NodeMsg(tt.args.stateDB, ctx, tt.args.epoch, tt.args.blockNum, &tt.args.msg, tt.args.signer)
 			if assErr := assertError(err, tt.wantErr); assErr != nil {
 				t.Errorf("Test - %v: %v", tt.name, err)
 			}

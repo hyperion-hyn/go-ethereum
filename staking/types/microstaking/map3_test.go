@@ -20,12 +20,11 @@ var (
 
 	oneMill = new(big.Int).Mul(big.NewInt(2000000), big.NewInt(1e18))
 
-	nilRate      = common.Dec{}
-	negativeRate = common.NewDec(-1)
-	zeroRate     = common.ZeroDec()
-	halfRate     = common.NewDecWithPrec(5, 1)
-	oneRate      = common.NewDec(1)
-	invalidRate  = common.NewDec(2)
+	nilRate           = common.Dec{}
+	negativeRate      = common.NewDec(-1)
+	tenPercentRate    = common.NewDecWithPrec(1, 1)
+	twentyPercentRate = common.NewDecWithPrec(2, 1)
+	invalidRate       = common.NewDec(2)
 )
 
 var (
@@ -46,8 +45,8 @@ var (
 	}
 
 	validCommissionRates = Commission_{
-		Rate:              halfRate,
-		RateForNextPeriod: halfRate,
+		Rate:              twentyPercentRate,
+		RateForNextPeriod: twentyPercentRate,
 		UpdateHeight:      big.NewInt(10),
 	}
 )
@@ -55,56 +54,74 @@ var (
 func TestMap3Node_SanityCheck(t *testing.T) {
 	tests := []struct {
 		editMap3Node func(*Map3Node_)
+		percent      *common.Dec
 		expErr       error
 	}{
 		{
-			func(n *Map3Node_) {},
-			nil,
+			editMap3Node: func(n *Map3Node_) {},
+			percent:      &twentyPercentRate,
 		},
 		{
-			func(n *Map3Node_) { n.Description = invalidDescription },
-			errors.New("exceed maximum name length"),
+			editMap3Node: func(n *Map3Node_) { n.Description = invalidDescription },
+			percent:      &twentyPercentRate,
+			expErr:       errors.New("exceed maximum name length"),
 		},
 		{
-			func(n *Map3Node_) { n.NodeKeys.Keys = n.NodeKeys.Keys[:0] },
-			errNeedAtLeastOneSlotKey,
+			editMap3Node: func(n *Map3Node_) { n.NodeKeys.Keys = n.NodeKeys.Keys[:0] },
+			percent:      &twentyPercentRate,
+			expErr:       errNeedAtLeastOneSlotKey,
 		},
 		{
-			func(n *Map3Node_) {
+			editMap3Node: func(n *Map3Node_) {
 				n.NodeKeys = NewEmptyBLSKeys()
 				n.NodeKeys.Keys = append(n.NodeKeys.Keys, &blsPubSigPairs[0].pub, &blsPubSigPairs[1].pub)
 			},
-			ErrExcessiveBLSKeys,
+			percent: &twentyPercentRate,
+			expErr:  ErrExcessiveBLSKeys,
 		},
 		{
-			func(n *Map3Node_) { n.Commission.Rate = nilRate },
-			errInvalidCommissionRate,
+			editMap3Node: func(n *Map3Node_) { n.Commission.Rate = nilRate },
+			percent:      &twentyPercentRate,
+			expErr:       errCommissionRateNil,
 		},
 		{
-			func(n *Map3Node_) { n.Commission.Rate = negativeRate },
-			errInvalidCommissionRate,
+			editMap3Node: func(n *Map3Node_) { n.Commission.Rate = negativeRate },
+			percent:      &twentyPercentRate,
+			expErr:       errors.Errorf("commission rate should be a value ranging from %v to %v", tenPercentRate, twentyPercent),
 		},
 		{
-			func(n *Map3Node_) { n.Commission.Rate = invalidRate },
-			errInvalidCommissionRate,
+			editMap3Node: func(n *Map3Node_) { n.Commission.Rate = invalidRate },
+			percent:      &twentyPercentRate,
+			expErr:       errors.Errorf("commission rate should be a value ranging from %v to %v", tenPercentRate, twentyPercent),
 		},
 		{
-			func(n *Map3Node_) { n.Commission.RateForNextPeriod = nilRate },
-			errInvalidCommissionRate,
+			editMap3Node: func(n *Map3Node_) {},
+			percent: func() *common.Dec {
+				dec := common.NewDecWithPrec(15, 2)
+				return &dec
+			}(),
+			expErr:       errors.Errorf("commission rate should be a value ranging from %v to %v", tenPercentRate, common.NewDecWithPrec(15, 2)),
 		},
 		{
-			func(n *Map3Node_) { n.Commission.RateForNextPeriod = negativeRate },
-			errInvalidCommissionRate,
+			editMap3Node: func(n *Map3Node_) { n.Commission.RateForNextPeriod = nilRate },
+			percent:      &twentyPercentRate,
+			expErr:       errCommissionRateNil,
 		},
 		{
-			func(n *Map3Node_) { n.Commission.RateForNextPeriod = invalidRate },
-			errInvalidCommissionRate,
+			editMap3Node: func(n *Map3Node_) { n.Commission.RateForNextPeriod = negativeRate },
+			percent:      &twentyPercentRate,
+			expErr:       errors.Errorf("commission rate should be a value ranging from %v to %v", tenPercentRate, twentyPercent),
+		},
+		{
+			editMap3Node: func(n *Map3Node_) { n.Commission.RateForNextPeriod = invalidRate },
+			percent:      &twentyPercentRate,
+			expErr:       errors.Errorf("commission rate should be a value ranging from %v to %v", tenPercentRate, twentyPercent),
 		},
 	}
 	for i, test := range tests {
 		n := makeMap3Node()
 		test.editMap3Node(&n)
-		err := n.SanityCheck(MaxPubKeyAllowed)
+		err := n.SanityCheck(MaxPubKeyAllowed, test.percent)
 		if assErr := assertError(err, test.expErr); assErr != nil {
 			t.Errorf("Test %v: %v", i, assErr)
 		}
@@ -330,7 +347,7 @@ func makeCreateMap3Node() CreateMap3Node {
 	return CreateMap3Node{
 		OperatorAddress: addr,
 		Description:     desc,
-		Commission:      halfRate,
+		Commission:      twentyPercentRate,
 		NodePubKey:      blsPubSigPairs[0].pub,
 		NodeKeySig:      blsPubSigPairs[0].sig,
 		Amount:          oneMill,

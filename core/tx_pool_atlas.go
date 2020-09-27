@@ -77,7 +77,7 @@ func (pool *TxPool) validateStakingTx(tx *types.Transaction) error {
 		if err := rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return err
 		}
-		return verifier.VerifyEditMap3NodeMsg(pool.currentState, pendingEpoch, pendingBlockNumber, stkMsg, msg.From())
+		return verifier.VerifyEditMap3NodeMsg(pool.currentState, chainContext, pendingEpoch, pendingBlockNumber, stkMsg, msg.From())
 	case types.TerminateMap3:
 		stkMsg := &microstaking.TerminateMap3Node{}
 		if err := rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
