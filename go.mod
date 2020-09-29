@@ -21,6 +21,7 @@ require (
 	github.com/dop251/goja v0.0.0-20200219165308-d1232e640a87
 	github.com/edsrzf/mmap-go v1.0.0
 	github.com/fatih/color v1.7.0
+	github.com/fjl/gencodec v0.0.0-20191126094850-e283372f291f // indirect
 	github.com/fjl/memsize v0.0.0-20180929194037-2a09253e352a
 	github.com/gballet/go-libpcsclite v0.0.0-20190607065134-2772fd86a8ff
 	github.com/go-ole/go-ole v1.2.1 // indirect

@@ -63,7 +63,7 @@ type txdata struct {
 	Hash *common.Hash `json:"hash" rlp:"-"`
 
 	// ATLAS: staking tx
-	Type		 TransactionType	// Default: normal tx
+	Type TransactionType `json:"type" gencodec:"required"` // Default: normal tx
 }
 
 type txdataMarshaling struct {
@@ -75,6 +75,7 @@ type txdataMarshaling struct {
 	V            *hexutil.Big
 	R            *hexutil.Big
 	S            *hexutil.Big
+	Type         TransactionType
 }
 
 func NewTransaction(nonce uint64, to common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *Transaction {
@@ -241,7 +242,7 @@ func (tx *Transaction) AsMessage(s Signer) (Message, error) {
 		amount:     tx.data.Amount,
 		data:       tx.data.Payload,
 		checkNonce: true,
-		txType:     tx.data.Type,		// ATLAS
+		txType:     tx.data.Type, // ATLAS
 	}
 
 	var err error
@@ -421,7 +422,7 @@ type Message struct {
 	gasPrice   *big.Int
 	data       []byte
 	checkNonce bool
-	txType     TransactionType	// ATLAS
+	txType     TransactionType // ATLAS
 }
 
 func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, checkNonce bool) Message {
