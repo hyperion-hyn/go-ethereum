@@ -14,7 +14,6 @@ import (
 	"github.com/ethereum/go-ethereum/staking/availability"
 	"github.com/ethereum/go-ethereum/staking/committee"
 	"github.com/ethereum/go-ethereum/staking/network"
-	"github.com/ethereum/go-ethereum/staking/types/microstaking"
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	"github.com/pkg/errors"
 	"golang.org/x/sync/singleflight"
@@ -43,9 +42,8 @@ func handleMap3AndAtlasStaking(chain consensus.ChainReader, header *types.Header
 			//}
 		}
 
-		// TODO(ATLAS): renew map3 node and unmicrodelegate and unredelegate
-		// TODO(ATLAS): reset renewal config
-		if err := checkAndActivateMap3Nodes(chain, header, stateDB.Map3NodePool()); err != nil {
+		// renew map3 node and unmicrodelegate and unredelegate
+		if err := renewAndActivateMap3Nodes(chain, header, stateDB); err != nil {
 			return nil, err
 		}
 
@@ -70,8 +68,6 @@ func handleMap3AndAtlasStaking(chain consensus.ChainReader, header *types.Header
 			return nil, err
 		}
 
-		// TODO(ATLAS): payout microdelegation and reward
-
 		// Need to be after accumulateRewardsAndCountSigs because unredelegation may release
 		releaser, err := UndelegationReleaserFactory{}.Create(stateDB, chain.Config())
 		if err != nil {
@@ -80,21 +76,59 @@ func handleMap3AndAtlasStaking(chain consensus.ChainReader, header *types.Header
 		if err := payoutUnredelegations(header, stateDB, releaser); err != nil {
 			return nil, err
 		}
+
+		// TODO(ATLAS): payout microdelegation and reward
 	}
 	return payout, nil
 }
 
-func checkAndActivateMap3Nodes(chain consensus.ChainReader, header *types.Header, nodePool *microstaking.Storage_Map3NodePool_) error {
+func renewAndActivateMap3Nodes(chain consensus.ChainReader, header *types.Header, stateDB *state.StateDB) error {
 	requireTotal, requireSelf, _ := network.LatestMap3StakingRequirement(header.Number, chain.Config())
 	var addrs []common.Address
-	for _, nodeAddr := range nodePool.Nodes().AllKeys() {
-		node, ok := nodePool.Nodes().Get(nodeAddr)
+	map3NodePool := stateDB.Map3NodePool()
+	curEpoch := header.Epoch
+	for _, nodeAddr := range map3NodePool.Nodes().AllKeys() {
+		node, ok := map3NodePool.Nodes().Get(nodeAddr)
 		if !ok {
 			log.Error("map3 node should exist", "map3 address", nodeAddr.String())
 			continue
 		}
-		if node.CanActivateMap3Node(requireTotal, requireSelf) {
-			if err := node.ActivateMap3Node(header.Epoch); err != nil {
+
+		if node.CanRelease(curEpoch) {
+			nodeAge := node.Map3Node().CalculateNodeAge(header.Number, chain.Config().Atlas)
+			node.Map3Node().Age().SetValue(nodeAge)
+
+			isRenewed, amt, err := node.UnmicrodelegateIfNotRenewed(curEpoch)
+			if err != nil {
+				return err
+			}
+			if isRenewed {
+				err := node.Pend(curEpoch)
+				if err != nil {
+					return err
+				}
+				if node.CanActivate(requireTotal, requireSelf) {
+					if err := node.Activate(curEpoch); err != nil {
+						return err
+					}
+				}
+
+				if node.IsAlreadyRestaking() {
+					validatorAddr := node.RestakingReference().ValidatorAddress().Value()
+					validator, err := stateDB.ValidatorByAddress(validatorAddr)
+					if err != nil {
+						return err
+					}
+					validator.Undelegate(nodeAddr, curEpoch, amt)
+				}
+			} else {
+				node.Terminate()
+			}
+			continue
+		}
+
+		if node.CanActivate(requireTotal, requireSelf) {
+			if err := node.Activate(curEpoch); err != nil {
 				return err
 			}
 		}

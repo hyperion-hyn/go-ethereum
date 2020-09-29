@@ -37,13 +37,10 @@ func (st *StateTransition) verifyAndApplyTerminateMap3NodeTx(verifier StakingVer
 	}
 	node, _ := st.state.Map3NodeByAddress(msg.Map3NodeAddress)
 	allDelegators := node.Microdelegations().AllKeys()
-	if err := ReleaseMicrodelegationFromMap3Node(st.state, node, allDelegators); err != nil {
+	if err := releaseMicrodelegationFromMap3Node(st.state, node, allDelegators); err != nil {
 		return err
 	}
-	// update node state
-	node.Map3Node().Status().SetValue(uint8(microstaking.Terminated))
-	node.Map3Node().ActivationEpoch().Clear()
-	node.Map3Node().ReleaseEpoch().Clear()
+	node.Terminate()
 	return nil
 }
 
@@ -86,6 +83,29 @@ func (st *StateTransition) verifyAndApplyCollectMicrodelRewardsTx(verifier Staki
 	}
 	map3NodePool := st.state.Map3NodePool()
 	return payoutMicrodelegationRewards(st.state, map3NodePool, msg.DelegatorAddress)
+}
+
+func (st *StateTransition) verifyAndApplyRenewMap3NodeTx(verifier StakingVerifier, msg *microstaking.RenewMap3Node, signer common.Address) error {
+	blockNum, epoch := st.evm.BlockNumber, st.evm.EpochNumber
+	if err := verifier.VerifyRenewMap3NodeMsg(st.state, st.bc, blockNum, epoch, msg, signer); err != nil {
+		return err
+	}
+
+	node, _ := st.state.Map3NodeByAddress(msg.Map3NodeAddress)
+	md, _ := node.Microdelegations().Get(msg.DelegatorAddress)
+	status := microstaking.NotRenewed
+	if msg.IsRenew {
+		status = microstaking.Renewed
+	}
+	md.Renewal().Save(&microstaking.Renewal_{
+		Status:       uint8(status),
+		UpdateHeight: st.evm.BlockNumber,
+	})
+
+	if !msg.NewCommissionRate.IsNil() {
+		node.Map3Node().Commission().RateForNextPeriod().SetValue(msg.NewCommissionRate)
+	}
+	return nil
 }
 
 /**
@@ -157,7 +177,8 @@ func payoutMicrodelegationRewards(stateDB vm.StateDB, map3NodePool *microstaking
 	return totalRewards, nil
 }
 
-func ReleaseMicrodelegationFromMap3Node(stateDB vm.StateDB, node *microstaking.Storage_Map3NodeWrapper_,
+// TODO(ATLAS): terminate and Release delegation?
+func releaseMicrodelegationFromMap3Node(stateDB vm.StateDB, node *microstaking.Storage_Map3NodeWrapper_,
 	delegatorsToBeReleased []common.Address) error {
 	totalToReduce, totalPendingToReduce := big.NewInt(0), big.NewInt(0)
 	for _, delegator := range delegatorsToBeReleased {
@@ -207,7 +228,6 @@ func LookupMicrodelegationShares(node *microstaking.Storage_Map3NodeWrapper_) (m
 
 	return shares, nil
 }
-
 
 type map3NodeAsParticipant struct {
 	stateDB vm.StateDB

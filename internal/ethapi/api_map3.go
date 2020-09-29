@@ -36,7 +36,7 @@ func (s *PublicMicroStakingAPI) GetAllMap3NodeAddresses(
 func (s *PublicMicroStakingAPI) GetMap3NodeInformation(
 	ctx context.Context, map3NodeAddress common.Address, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
 
-	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
+	state, header, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if state == nil || err != nil {
 		return nil, err
 	}
@@ -52,6 +52,8 @@ func (s *PublicMicroStakingAPI) GetMap3NodeInformation(
 	}
 
 	nodeWrapperRPC := nodeWrapper.ToPlainMap3NodeWrapper()
+	nodeWrapperRPC.Map3Node.Age = storageNodeWrapper.Map3Node().CalculateNodeAge(header.Number, s.b.ChainConfig().Atlas)
+
 	encodeBytes, err := rlp.EncodeToBytes(&nodeWrapperRPC)
 	if err != nil {
 		return nil, err
@@ -61,7 +63,6 @@ func (s *PublicMicroStakingAPI) GetMap3NodeInformation(
 
 func (s *PublicMicroStakingAPI) GetMap3NodeDelegation(
 	ctx context.Context, map3NodeAddress common.Address, delegatorAddress common.Address, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
-
 	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if state == nil || err != nil {
 		return nil, err
@@ -71,11 +72,8 @@ func (s *PublicMicroStakingAPI) GetMap3NodeDelegation(
 	if err != nil {
 		return nil, err
 	}
-
 	storageMicrodelegation, ok := storageNodeWrapper.Microdelegations().Get(delegatorAddress)
-
 	if ok {
-
 		microDelegation, err := storageMicrodelegation.Load()
 		if err != nil {
 			return nil, err

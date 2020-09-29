@@ -69,7 +69,7 @@ struct Microdelegation_ {
 }
 
 struct Renewal_ {
-    bool IsRenew;
+    byte Status;
     uint256 UpdateHeight;
 }
 

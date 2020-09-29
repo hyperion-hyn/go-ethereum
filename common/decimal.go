@@ -209,17 +209,19 @@ func MustNewDecFromStr(s string) Dec {
 
 //______________________________________________________________________________________________
 //nolint
-func (d Dec) IsNil() bool       { return d.I == nil }                 // is decimal nil
-func (d Dec) IsZero() bool      { return (d.I).Sign() == 0 }          // is equal to zero
-func (d Dec) IsNegative() bool  { return (d.I).Sign() == -1 }         // is negative
-func (d Dec) IsPositive() bool  { return (d.I).Sign() == 1 }          // is positive
-func (d Dec) Equal(d2 Dec) bool { return (d.I).Cmp(d2.I) == 0 }       // equal decimals
-func (d Dec) GT(d2 Dec) bool    { return (d.I).Cmp(d2.I) > 0 }        // greater than
-func (d Dec) GTE(d2 Dec) bool   { return (d.I).Cmp(d2.I) >= 0 }       // greater than or equal
-func (d Dec) LT(d2 Dec) bool    { return (d.I).Cmp(d2.I) < 0 }        // less than
-func (d Dec) LTE(d2 Dec) bool   { return (d.I).Cmp(d2.I) <= 0 }       // less than or equal
-func (d Dec) Neg() Dec          { return Dec{new(big.Int).Neg(d.I)} } // reverse the decimal sign
-func (d Dec) Abs() Dec          { return Dec{new(big.Int).Abs(d.I)} } // absolute value
+func (d Dec) IsNil() bool           { return d.I == nil }                 // is decimal nil
+func (d Dec) IsZero() bool          { return (d.I).Sign() == 0 }          // is equal to zero
+func (d Dec) IsNegative() bool      { return (d.I).Sign() == -1 }         // is negative
+func (d Dec) IsPositive() bool      { return (d.I).Sign() == 1 }          // is positive
+func (d Dec) Equal(d2 Dec) bool     { return (d.I).Cmp(d2.I) == 0 }       // equal decimals
+func (d Dec) GT(d2 Dec) bool        { return (d.I).Cmp(d2.I) > 0 }        // greater than
+func (d Dec) GTE(d2 Dec) bool       { return (d.I).Cmp(d2.I) >= 0 }       // greater than or equal
+func (d Dec) LT(d2 Dec) bool        { return (d.I).Cmp(d2.I) < 0 }        // less than
+func (d Dec) LTE(d2 Dec) bool       { return (d.I).Cmp(d2.I) <= 0 }       // less than or equal
+func (d Dec) BT(from, to Dec) bool  { return d.GT(from) && d.LT(to) }     // between
+func (d Dec) BTE(from, to Dec) bool { return d.GTE(from) && d.LTE(to) }   // between or equal
+func (d Dec) Neg() Dec              { return Dec{new(big.Int).Neg(d.I)} } // reverse the decimal sign
+func (d Dec) Abs() Dec              { return Dec{new(big.Int).Abs(d.I)} } // absolute value
 
 // BigInt returns a copy of the underlying big.Int.
 func (d Dec) BigInt() *big.Int {

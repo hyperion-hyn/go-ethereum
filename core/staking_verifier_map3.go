@@ -23,7 +23,11 @@ var (
 	errMicrodelegationStillLocked           = errors.New("microdelegation still locked")
 	errTerminateMap3NodeNotAllowed          = errors.New("not allow to terminate map3 node")
 	errSelfDelegationTooSmall               = errors.New("self delegation amount too small")
-	errEditTerminatedMap3NodeNotAllowed		= errors.New("not allow to edit terminated map3 node")
+	errEditTerminatedMap3NodeNotAllowed     = errors.New("not allow to edit terminated map3 node")
+	errMap3NodeRenewalNotAllowed            = errors.New("not allow to renew map3 node")
+	errChangeRenewalDecisionNotAllowed      = errors.New("not allow to change renewal decision")
+	errCommissionUpdateNotAllow             = errors.New("not allow to update commission by non-operator")
+	errMap3NodeNotRenewalAnyMore            = errors.New("map3 node not renewal any more")
 
 	errInvalidMap3NodeStatusToRestake = errors.New("invalid map3 node status to restake")
 	errMap3NodeAlreadyRestaking       = errors.New("map3 node already restaked")
@@ -43,7 +47,7 @@ func (m map3VerifierForRestaking) VerifyForCreatingValidator(stateDB vm.StateDB,
 		return nil, errInvalidSigner
 	}
 
-	if node.Map3Node().Status().Value() != uint8(microstaking.Active) {
+	if !node.Map3Node().AtStatus(microstaking.Active) {
 		return nil, errInvalidMap3NodeStatusToRestake
 	}
 
@@ -63,7 +67,7 @@ func (m map3VerifierForRestaking) VerifyForEditingValidator(stateDB vm.StateDB, 
 		return nil, errInvalidSigner
 	}
 
-	if node.Map3Node().Status().Value() != uint8(microstaking.Active) {
+	if !node.Map3Node().AtStatus(microstaking.Active) {
 		return nil, errInvalidMap3NodeStatusToRestake
 	}
 
@@ -82,7 +86,7 @@ func (m map3VerifierForRestaking) VerifyForRedelegating(stateDB vm.StateDB, msg 
 		return nil, errInvalidSigner
 	}
 
-	if node.Map3Node().Status().Value() != uint8(microstaking.Active) {
+	if !node.Map3Node().AtStatus(microstaking.Active) {
 		return nil, errInvalidMap3NodeStatusToRestake
 	}
 
@@ -102,7 +106,7 @@ func (m map3VerifierForRestaking) VerifyForUnredelegating(stateDB vm.StateDB, ms
 		return nil, errInvalidSigner
 	}
 
-	if node.Map3Node().Status().Value() != uint8(microstaking.Active) {
+	if !node.Map3Node().AtStatus(microstaking.Active) {
 		return nil, errInvalidMap3NodeStatusToRestake
 	}
 
@@ -122,7 +126,7 @@ func (m map3VerifierForRestaking) VerifyForCollectingReward(stateDB vm.StateDB, 
 		return nil, errInvalidSigner
 	}
 
-	if node.Map3Node().Status().Value() != uint8(microstaking.Active) {
+	if !node.Map3Node().AtStatus(microstaking.Active) {
 		return nil, errInvalidMap3NodeStatusToRestake
 	}
 
@@ -267,7 +271,7 @@ func (verifier StakingVerifier) VerifyTerminateMap3NodeMsg(stateDB vm.StateDB, e
 		return errInvalidMap3NodeOperator
 	}
 
-	if node.Map3Node().Status().Value() != uint8(microstaking.Pending) {
+	if !node.Map3Node().AtStatus(microstaking.Pending) {
 		return errTerminateMap3NodeNotAllowed
 	}
 
@@ -302,13 +306,12 @@ func (verifier StakingVerifier) VerifyMicrodelegateMsg(stateDB vm.StateDB, chain
 		return errNegativeAmount
 	}
 
-	wrapper, err := stateDB.Map3NodeByAddress(msg.Map3NodeAddress)
+	node, err := stateDB.Map3NodeByAddress(msg.Map3NodeAddress)
 	if err != nil {
 		return err
 	}
 
-	status := wrapper.Map3Node().Status().Value()
-	if status != uint8(microstaking.Pending) {
+	if !node.Map3Node().AtStatus(microstaking.Pending) {
 		return errInvalidNodeStatusForDelegation
 	}
 
@@ -324,7 +327,7 @@ func (verifier StakingVerifier) VerifyMicrodelegateMsg(stateDB vm.StateDB, chain
 	return nil
 }
 
-func (verifier StakingVerifier) VerifyUnmicrodelegateMsg(stateDB vm.StateDB, chainContext ChainContext, blockNum *big.Int, epoch *big.Int,
+func (verifier StakingVerifier) VerifyUnmicrodelegateMsg(stateDB vm.StateDB, chainContext ChainContext, blockNum, epoch *big.Int,
 	msg *microstaking.Unmicrodelegate, signer common.Address) error {
 	if stateDB == nil {
 		return errStateDBIsMissing
@@ -351,8 +354,7 @@ func (verifier StakingVerifier) VerifyUnmicrodelegateMsg(stateDB vm.StateDB, cha
 	}
 
 	// TODO(ATLAS): only pending status
-	status := node.Map3Node().Status().Value()
-	if status != uint8(microstaking.Pending) {
+	if !node.Map3Node().AtStatus(microstaking.Pending) {
 		return errUnmicrodelegateNotAllowed
 	}
 
@@ -416,6 +418,86 @@ func (verifier StakingVerifier) VerifyCollectMicrostakingRewardsMsg(stateDB vm.S
 
 	if totalReward.Int64() == 0 {
 		return errNoRewardsToCollect
+	}
+	return nil
+}
+
+func (verifier StakingVerifier) VerifyRenewMap3NodeMsg(stateDB vm.StateDB, chainContext ChainContext, blockNum, epoch *big.Int,
+	msg *microstaking.RenewMap3Node, signer common.Address) error {
+	if stateDB == nil {
+		return errStateDBIsMissing
+	}
+	if chainContext == nil {
+		return errChainContextMissing
+	}
+	if epoch == nil {
+		return errEpochMissing
+	}
+	if blockNum == nil {
+		return errBlockNumMissing
+	}
+	if msg.DelegatorAddress != signer {
+		return errInvalidSigner
+	}
+
+	node, err := stateDB.Map3NodeByAddress(msg.Map3NodeAddress)
+	if err != nil {
+		return err
+	}
+	if !node.Map3Node().AtStatus(microstaking.Active) {
+		return errMap3NodeRenewalNotAllowed
+	}
+
+	md, ok := node.Microdelegations().Get(msg.DelegatorAddress)
+	if !ok {
+		return errMicrodelegationNotExist
+	}
+
+	if !md.Renewal().AtStatus(microstaking.Undecided) {
+		return errChangeRenewalDecisionNotAllowed
+	}
+
+	curEpoch := common.NewDecFromBigInt(epoch)
+	releaseEpoch := node.Map3Node().ReleaseEpoch().Value()
+	if node.IsOperator(msg.DelegatorAddress) {
+		// within the penultimate 7 epochs
+		intervalFrom := releaseEpoch.Sub(common.NewDec(2*microstaking.RenewalTimeWindowInEpoch-1))
+		intervalTo := releaseEpoch.Sub(common.NewDec(7))
+		if !curEpoch.BTE(intervalFrom, intervalTo) {
+			return errMap3NodeRenewalNotAllowed
+		}
+
+		// self delegation proportion
+		minTotal, _, _ := network.LatestMap3StakingRequirement(blockNum, chainContext.Config())
+		percent := common.NewDecFromInt(md.Amount().Value()).QuoInt(minTotal)
+
+		node, err := node.Map3Node().Load()
+		if err != nil {
+			return err
+		}
+		node.Commission.RateForNextPeriod = msg.NewCommissionRate
+		return node.SanityCheck(1, &percent)
+	} else {
+		if !msg.NewCommissionRate.IsNil() {
+			return errCommissionUpdateNotAllow
+		}
+
+		mdByOperator, ok := node.Microdelegations().Get(node.Map3Node().OperatorAddress().Value())
+		if !ok {
+			return errMicrodelegationNotExist
+		}
+
+		if mdByOperator.Renewal().AtStatus(microstaking.NotRenewed) {
+			return errMap3NodeNotRenewalAnyMore
+		}
+
+		// the last 7 epoch
+		startEpoch := releaseEpoch.Sub(common.NewDec(microstaking.RenewalTimeWindowInEpoch-1))
+		if mdByOperator.Renewal().AtStatus(microstaking.Undecided) {
+			if !curEpoch.GTE(startEpoch) {
+				return errMap3NodeRenewalNotAllowed
+			}
+		}
 	}
 	return nil
 }

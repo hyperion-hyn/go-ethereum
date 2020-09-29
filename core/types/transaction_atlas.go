@@ -26,6 +26,7 @@ const (
 	Microdelegate
 	Unmicrodelegate
 	CollectMicrostakingRewards
+	RenewMap3Node
 )
 
 func NewStakingTransaction(nonce uint64, gasLimit uint64, gasPrice *big.Int, data []byte, txType TransactionType) *Transaction {

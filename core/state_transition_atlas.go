@@ -136,7 +136,13 @@ func (st *StateTransition) StakingTransitionDb() (*ExecutionResult, error) {
 			return nil, err
 		}
 		_, err = st.verifyAndApplyCollectMicrodelRewardsTx(verifier, stkMsg, msg.From())
-		// TODO: Add log for reward ?
+		// TODO(ATLAS): Add log for reward ?
+	case types.RenewMap3Node:
+		stkMsg := &microstaking.RenewMap3Node{}
+		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
+			return nil, err
+		}
+		err = st.verifyAndApplyRenewMap3NodeTx(verifier, stkMsg, msg.From())
 	default:
 		return nil, ErrInvalidStakingKind
 	}
@@ -190,7 +196,7 @@ func (st *StateTransition) verifyAndApplyUnredelegateTx(verifier StakingVerifier
 	}
 
 	validator, _ := st.state.ValidatorByAddress(msg.ValidatorAddress)
-	validator.Undelegate(msg.DelegatorAddress, st.evm.EpochNumber)
+	validator.Undelegate(msg.DelegatorAddress, st.evm.EpochNumber, nil)
 
 	// TODO: need 20%? change state to inactive?
 	return nil

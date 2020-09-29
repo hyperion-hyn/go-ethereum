@@ -5,6 +5,18 @@ import (
 	"math/big"
 )
 
+type RenewalStatus byte
+
+const (
+	Undecided RenewalStatus = iota
+	NotRenewed
+	Renewed
+)
+
+const (
+	RenewalTimeWindowInEpoch = 7
+)
+
 // NewMicrodelegation creates a new microdelegation object
 func NewMicrodelegation(delegator common.Address, amount *big.Int, unlockedEpoch common.Dec, pending bool) Microdelegation_ {
 	d := Microdelegation_{
@@ -42,6 +54,10 @@ func (s *Storage_PendingDelegation_) SubAmount(amount *big.Int) {
 	amt := s.Amount().Value()
 	amt = amt.Sub(amt, amount)
 	s.Amount().SetValue(amt)
+}
+
+func (s *Storage_Renewal_) AtStatus(status RenewalStatus) bool {
+	return s.Status().Value() == uint8(status)
 }
 
 // Storage_Microdelegation_

@@ -3,6 +3,7 @@ package microstaking
 import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/params"
 	common2 "github.com/ethereum/go-ethereum/staking/types/common"
 	"github.com/pkg/errors"
 	"math/big"
@@ -108,6 +109,38 @@ func (n *Map3Node_) ToPlainMap3Node() *PlainMap3Node {
 		ActivationEpoch: n.ActivationEpoch,
 		ReleaseEpoch:    n.ReleaseEpoch,
 	}
+}
+
+func (s *Storage_Map3Node_) AtStatus(status Map3Status) bool {
+	return s.Status().Value() == uint8(status)
+}
+
+func (s *Storage_Map3Node_) CalculateNodeAge(blockNum *big.Int, config *params.AtlasConfig) common.Dec {
+	blockNumUint := blockNum.Uint64()
+	curAge := s.Age().Value()
+	if blockNumUint == 0 {
+		return curAge
+	}
+
+	epoch := config.EpochByBlock(blockNumUint)
+	if !config.IsLastBlock(blockNumUint) && epoch > 0 {
+		epoch--
+	}
+	epochBigInt := big.NewInt(int64(epoch))
+	if s.AtStatus(Pending) {
+		duration := new(big.Int).Sub(epochBigInt, s.PendingEpoch().Value())
+		if duration.Sign() > 0 {
+			curAge = curAge.Sub(common.NewDec(2).MulInt(duration))
+		}
+		curAge = common.MaxDec(curAge, common.ZeroDec())
+	} else if s.AtStatus(Active) {
+		duration := new(big.Int).Sub(epochBigInt, s.ActivationEpoch().Value())
+		if duration.Sign() > 0 {
+			curAge = curAge.Add(common.NewDecFromInt(duration))
+		}
+		curAge = common.MinDec(curAge, common.NewDec(500))
+	}
+	return curAge
 }
 
 func (n *Map3NodeWrapper_) ToPlainMap3NodeWrapper() *PlainMap3NodeWrapper {
@@ -222,7 +255,61 @@ func (s *Storage_Map3NodeWrapper_) Unmicrodelegate(delegator common.Address, amo
 	return common.Big0, true
 }
 
-func (s *Storage_Map3NodeWrapper_) CanActivateMap3Node(requireTotal, requireSelf *big.Int) bool {
+func (s *Storage_Map3NodeWrapper_) UnmicrodelegateIfNotRenewed(epoch *big.Int) (isRenewed bool, NotRenewedAmount *big.Int, err error) {
+
+	operator := s.Map3Node().OperatorAddress().Value()
+	delegationOfOperator, ok := s.Microdelegations().Get(operator)
+	if !ok {
+		return false, nil, errMicrodelegationNotExist
+	}
+
+	total := big.NewInt(0)
+	NotRenewedByOperator := delegationOfOperator.Renewal().AtStatus(NotRenewed)
+	for _, delegator := range s.Microdelegations().AllKeys() {
+		delegation, ok := s.Microdelegations().Get(delegator)
+		if !ok {
+			return false, nil, errMicrodelegationNotExist
+		}
+
+		if NotRenewedByOperator || delegation.Renewal().AtStatus(NotRenewed) {
+			// Unmicrodelegate
+			amt := delegation.Amount().Value()
+			delegation.Amount().Clear()
+			delegation.Undelegation().Save(&Undelegation_{
+				Amount: amt,
+				Epoch:  epoch,
+			})
+			s.SubTotalDelegation(amt)
+			total.Add(total, amt)
+		}
+	}
+	return !NotRenewedByOperator, total, nil
+}
+
+func (s *Storage_Map3NodeWrapper_) Pend(epoch *big.Int) error {
+	// update status
+	s.Map3Node().PendingEpoch().SetValue(epoch)
+	s.Map3Node().ActivationEpoch().Clear()
+	s.Map3Node().ReleaseEpoch().Clear()
+
+	// pending delegation
+	for _, delegator := range s.Microdelegations().AllKeys() {
+		delegation, ok := s.Microdelegations().Get(delegator)
+		if !ok {
+			return errMicrodelegationNotExist
+		}
+
+		amt := delegation.Amount().Value()
+		if amt.Sign() > 0 {
+			s.AddMicrodelegation(delegator, amt, true, epoch)
+			s.SubTotalDelegation(amt)
+			delegation.Amount().Clear()
+		}
+	}
+	return nil
+}
+
+func (s *Storage_Map3NodeWrapper_) CanActivate(requireTotal, requireSelf *big.Int) bool {
 	if s.Map3Node().Status().Value() != uint8(Pending) {
 		return false
 	}
@@ -244,7 +331,7 @@ func (s *Storage_Map3NodeWrapper_) CanActivateMap3Node(requireTotal, requireSelf
 	return false
 }
 
-func (s *Storage_Map3NodeWrapper_) ActivateMap3Node(epoch *big.Int) error {
+func (s *Storage_Map3NodeWrapper_) Activate(epoch *big.Int) error {
 	// change pending delegation
 	for _, delegator := range s.Microdelegations().AllKeys() {
 		delegation, ok := s.Microdelegations().Get(delegator)
@@ -260,14 +347,24 @@ func (s *Storage_Map3NodeWrapper_) ActivateMap3Node(epoch *big.Int) error {
 	s.TotalPendingDelegation().SetValue(common.Big0)
 
 	// update state
-	status := s.Map3Node().Status().Value()
-	if status == uint8(Pending) {
-		time := common.OneDec().Mul(Map3NodeLockDurationInEpoch)
-		s.Map3Node().ReleaseEpoch().SetValue(time)
+	if s.Map3Node().AtStatus(Pending) {
+		releaseEpoch := common.NewDecFromInt(epoch).Add(Map3NodeLockDurationInEpoch)
+		s.Map3Node().ReleaseEpoch().SetValue(releaseEpoch)
 	}
 	s.Map3Node().Status().SetValue(uint8(Active))
 	s.Map3Node().ActivationEpoch().SetValue(epoch)
 	return nil
+}
+
+func (s *Storage_Map3NodeWrapper_) CanRelease(epoch *big.Int) bool {
+	releaseAt := s.Map3Node().ReleaseEpoch().Value().TruncateInt()
+	return releaseAt.Cmp(epoch) <= 0
+}
+
+func (s *Storage_Map3NodeWrapper_) Terminate() {
+	s.Map3Node().Status().SetValue(uint8(Terminated))
+	s.Map3Node().ActivationEpoch().Clear()
+	s.Map3Node().ReleaseEpoch().Clear()
 }
 
 func (s *Storage_Map3NodeWrapper_) LoadFully() (*Map3NodeWrapper_, error) {

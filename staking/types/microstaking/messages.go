@@ -40,7 +40,7 @@ type Microdelegate struct {
 
 // Unmicrodelegate - type for removing delegation responsibility
 type Unmicrodelegate struct {
-	DelegatorAddress common.Address `json:"delegator_address"`
+	DelegatorAddress common.Address `json:"delegator-address"`
 	Map3NodeAddress  common.Address `json:"map3node-address"`
 	Amount           *big.Int       `json:"amount"`
 }
@@ -48,4 +48,12 @@ type Unmicrodelegate struct {
 // CollectRewards - type for collecting token rewards
 type CollectRewards struct {
 	DelegatorAddress common.Address `json:"delegator-address"`
+}
+
+type RenewMap3Node struct {
+	Map3NodeAddress  common.Address `json:"map3node-address"`
+	DelegatorAddress common.Address `json:"delegator_address"`
+	IsRenew          bool           `json:"is-renew"`
+	// just for map3 operator
+	NewCommissionRate common.Dec `json:"new-commission-rate"`
 }

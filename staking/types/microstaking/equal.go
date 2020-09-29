@@ -186,8 +186,8 @@ func checkUndelegationEqual(ud1, ud2 Undelegation_) error {
 }
 
 func checkRenewalEqual(r1, r2 Renewal_) error {
-	if r1.IsRenew != r2.IsRenew {
-		return fmt.Errorf(".IsRenew not equal: %v / %v", r1.IsRenew, r2.IsRenew)
+	if r1.Status != r2.Status {
+		return fmt.Errorf(".Status not equal: %v / %v", r1.Status, r2.Status)
 	}
 	if err := checkBigIntEqual(r1.UpdateHeight, r2.UpdateHeight); err != nil {
 		return fmt.Errorf(".UpdateHeight %v", err)
