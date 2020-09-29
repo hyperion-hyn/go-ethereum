@@ -1155,6 +1155,7 @@ func RPCMarshalHeader(head *types.Header) map[string]interface{} {
 		"timestamp":        hexutil.Uint64(head.Time),
 		"transactionsRoot": head.TxHash,
 		"receiptsRoot":     head.ReceiptHash,
+		"epoch":            head.Epoch, //ATLAS
 	}
 }
 
@@ -1231,6 +1232,8 @@ type RPCTransaction struct {
 	V                *hexutil.Big    `json:"v"`
 	R                *hexutil.Big    `json:"r"`
 	S                *hexutil.Big    `json:"s"`
+	// ATLAS: staking tx
+	Type types.TransactionType `json:"type"` // Default: normal tx
 }
 
 // newRPCTransaction returns a transaction that will serialize to the RPC
@@ -1255,6 +1258,7 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 		V:        (*hexutil.Big)(v),
 		R:        (*hexutil.Big)(r),
 		S:        (*hexutil.Big)(s),
+		Type:     tx.Type(), //ATLAS
 	}
 	if blockHash != (common.Hash{}) {
 		result.BlockHash = &blockHash
