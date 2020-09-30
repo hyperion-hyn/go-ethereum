@@ -161,6 +161,7 @@ var AppHelpFlagGroups = []flags.FlagGroup{
 			utils.DNSDiscoveryFlag,
 			utils.ListenPortFlag,
 			utils.MaxPeersFlag,
+			utils.DialRatioFlag,
 			utils.MaxPendingPeersFlag,
 			utils.NATFlag,
 			utils.NoDiscoverFlag,

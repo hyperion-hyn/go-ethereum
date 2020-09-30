@@ -50,6 +50,11 @@ type NodeConfig struct {
 	// set to zero, then only the configured static and trusted peers can connect.
 	MaxPeers int
 
+	// DialRatio controls the ratio of inbound to dialed connections.
+	// Example: a DialRatio of 2 allows 1/2 of connections to be dialed.
+	// Setting DialRatio to zero defaults it to 2.
+	DialRatio int
+
 	// EthereumEnabled specifies whether the node should run the Ethereum protocol.
 	EthereumEnabled bool
 
@@ -83,6 +88,7 @@ type NodeConfig struct {
 var defaultNodeConfig = &NodeConfig{
 	BootstrapNodes:        FoundationBootnodes(),
 	MaxPeers:              25,
+	DialRatio:             2,
 	EthereumEnabled:       true,
 	EthereumNetworkID:     1,
 	EthereumDatabaseCache: 16,
@@ -108,6 +114,9 @@ func NewNode(datadir string, config *NodeConfig) (stack *Node, _ error) {
 	if config.MaxPeers == 0 {
 		config.MaxPeers = defaultNodeConfig.MaxPeers
 	}
+	if config.DialRatio == 0 {
+		config.DialRatio = defaultNodeConfig.DialRatio
+	}
 	if config.BootstrapNodes == nil || config.BootstrapNodes.Size() == 0 {
 		config.BootstrapNodes = defaultNodeConfig.BootstrapNodes
 	}
@@ -129,6 +138,7 @@ func NewNode(datadir string, config *NodeConfig) (stack *Node, _ error) {
 			ListenAddr:       ":0",
 			NAT:              nat.Any(),
 			MaxPeers:         config.MaxPeers,
+			DialRatio:        config.DialRatio,
 		},
 	}
 
