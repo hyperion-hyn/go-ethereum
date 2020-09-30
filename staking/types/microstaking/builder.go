@@ -74,10 +74,10 @@ func (b *Map3NodeWrapperBuilder) SetReleaseEpoch(releaseEpoch common.Dec) *Map3N
 
 func (b *Map3NodeWrapperBuilder) AddMicrodelegation(microdelegation Microdelegation_) *Map3NodeWrapperBuilder {
 	b.wrapper.Microdelegations.Put(microdelegation.DelegatorAddress, microdelegation)
-	if microdelegation.Amount.Cmp(common.Big0) > 0 {
+	if microdelegation.Amount.Sign() > 0 {
 		b.wrapper.TotalDelegation.Add(b.wrapper.TotalDelegation, microdelegation.Amount)
 	}
-	if microdelegation.PendingDelegation.Amount.Cmp(common.Big0) > 0 {
+	if microdelegation.PendingDelegation.Amount.Sign() > 0 {
 		b.wrapper.TotalPendingDelegation.Add(b.wrapper.TotalPendingDelegation, microdelegation.PendingDelegation.Amount)
 	}
 	return b

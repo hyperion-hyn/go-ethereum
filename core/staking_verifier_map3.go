@@ -408,7 +408,7 @@ func (verifier StakingVerifier) VerifyCollectMicrostakingRewardsMsg(stateDB vm.S
 			return err
 		}
 		if micro, ok := node.Microdelegations().Get(signer); ok {
-			if micro.Reward().Value().Cmp(common.Big0) > 0 {
+			if micro.Reward().Value().Sign() > 0 {
 				totalReward.Add(totalReward, micro.Reward().Value())
 			}
 		} else {
@@ -416,7 +416,7 @@ func (verifier StakingVerifier) VerifyCollectMicrostakingRewardsMsg(stateDB vm.S
 		}
 	}
 
-	if totalReward.Int64() == 0 {
+	if totalReward.Sign() == 0 {
 		return errNoRewardsToCollect
 	}
 	return nil

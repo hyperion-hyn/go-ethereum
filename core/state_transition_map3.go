@@ -165,7 +165,7 @@ func payoutMicrodelegationRewards(stateDB vm.StateDB, map3NodePool *microstaking
 
 		if micro, ok := node.Microdelegations().Get(delegator); ok {
 			r := micro.Reward().Value()
-			if r.Cmp(common.Big0) > 0 {
+			if r.Sign() > 0 {
 				totalRewards = totalRewards.Add(totalRewards, r)
 				micro.Reward().Clear()
 			}
@@ -258,7 +258,7 @@ type RewardToMap3Node struct {
 
 func (handler RewardToMap3Node) HandleReward(redelegation *restaking.Storage_Redelegation_, epoch *big.Int) (*big.Int, error) {
 	reward := redelegation.Reward().Value()
-	if reward.Cmp(common.Big0) == 0 {
+	if reward.Sign() == 0 {
 		return common.Big0, nil
 	}
 	map3Address := redelegation.DelegatorAddress().Value()

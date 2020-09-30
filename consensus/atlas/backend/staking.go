@@ -248,7 +248,7 @@ func payoutUnmicrodelegations(header *types.Header, stateDB *state.StateDB) erro
 				return errMicrodelegationNotExist
 			}
 
-			if md.CanReleaseAt(nowEpoch) {
+			if md.CanReleaseUndelegationAt(nowEpoch) {
 				// payout unmicrodelegation
 				amt := md.Undelegation().Amount().Value()
 				completed := md.Amount().Value().Sign() == 0 &&
@@ -290,7 +290,7 @@ func payoutUnredelegations(header *types.Header, stateDB *state.StateDB, release
 				return errRedelegationNotExist
 			}
 
-			if redelegation.CanReleaseAt(nowEpoch) {
+			if redelegation.CanReleaseUndelegationAt(nowEpoch) {
 				completed, err := releaser.Release(redelegation, validatorAddr, nowEpoch)
 				if err != nil {
 					return err

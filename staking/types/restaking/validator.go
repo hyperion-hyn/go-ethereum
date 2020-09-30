@@ -329,7 +329,7 @@ func (s *Storage_ValidatorWrapperMap_) Put(key common.Address, validator *Valida
 }
 
 func (s *Storage_ValidatorWrapperMap_) Contain(key common.Address) bool {
-	return s.Map().Get(key).Index().Value().Cmp(common.Big0) > 0
+	return s.Map().Get(key).Index().Value().Sign() > 0
 }
 
 func (s *Storage_ValidatorWrapperMap_) Get(key common.Address) (*Storage_ValidatorWrapper_, bool) {
