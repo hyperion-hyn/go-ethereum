@@ -198,7 +198,7 @@ func (st *StateTransition) verifyAndApplyUnredelegateTx(verifier StakingVerifier
 	validator, _ := st.state.ValidatorByAddress(msg.ValidatorAddress)
 	validator.Undelegate(msg.DelegatorAddress, st.evm.EpochNumber, nil)
 
-	// TODO: need 20%? change state to inactive?
+	// TODO(ATLAS): need 20%? change state to inactive?
 	return nil
 }
 

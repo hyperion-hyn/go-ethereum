@@ -20,6 +20,10 @@ import (
 	"math/big"
 )
 
+var (
+	releaserFactory = UndelegationReleaserFactory{}
+)
+
 // ATLAS
 func handleMap3AndAtlasStaking(chain consensus.ChainReader, header *types.Header, stateDB *state.StateDB) (reward.Reader, error) {
 	isNewEpoch := chain.Config().Atlas.IsFirstBlock(header.Number.Uint64())
@@ -69,15 +73,16 @@ func handleMap3AndAtlasStaking(chain consensus.ChainReader, header *types.Header
 		}
 
 		// Need to be after accumulateRewardsAndCountSigs because unredelegation may release
-		releaser, err := UndelegationReleaserFactory{}.Create(stateDB, chain.Config())
+		releaser, err := releaserFactory.Create(stateDB, chain.Config())
 		if err != nil {
 			return nil, err
 		}
 		if err := payoutUnredelegations(header, stateDB, releaser); err != nil {
 			return nil, err
 		}
-
-		// TODO(ATLAS): payout microdelegation and reward
+		if err := payoutUnmicrodelegations(header, stateDB); err != nil {
+			return nil, err
+		}
 	}
 	return payout, nil
 }
@@ -86,7 +91,7 @@ func renewAndActivateMap3Nodes(chain consensus.ChainReader, header *types.Header
 	requireTotal, requireSelf, _ := network.LatestMap3StakingRequirement(header.Number, chain.Config())
 	var addrs []common.Address
 	map3NodePool := stateDB.Map3NodePool()
-	curEpoch := header.Epoch
+	nowEpoch := header.Epoch
 	for _, nodeAddr := range map3NodePool.Nodes().AllKeys() {
 		node, ok := map3NodePool.Nodes().Get(nodeAddr)
 		if !ok {
@@ -94,21 +99,21 @@ func renewAndActivateMap3Nodes(chain consensus.ChainReader, header *types.Header
 			continue
 		}
 
-		if node.CanRelease(curEpoch) {
+		if node.CanReleaseAt(nowEpoch) {
 			nodeAge := node.Map3Node().CalculateNodeAge(header.Number, chain.Config().Atlas)
 			node.Map3Node().Age().SetValue(nodeAge)
 
-			isRenewed, amt, err := node.UnmicrodelegateIfNotRenewed(curEpoch)
+			isRenewed, amt, err := node.UnmicrodelegateIfNotRenewed(nowEpoch)
 			if err != nil {
 				return err
 			}
 			if isRenewed {
-				err := node.Pend(curEpoch)
+				err := node.Pend(nowEpoch)
 				if err != nil {
 					return err
 				}
 				if node.CanActivate(requireTotal, requireSelf) {
-					if err := node.Activate(curEpoch); err != nil {
+					if err := node.Activate(nowEpoch); err != nil {
 						return err
 					}
 				}
@@ -119,7 +124,8 @@ func renewAndActivateMap3Nodes(chain consensus.ChainReader, header *types.Header
 					if err != nil {
 						return err
 					}
-					validator.Undelegate(nodeAddr, curEpoch, amt)
+					validator.Undelegate(nodeAddr, nowEpoch, amt)
+					// TODO(ATLAS): need 20%? change state to inactive?
 				}
 			} else {
 				node.Terminate()
@@ -128,7 +134,7 @@ func renewAndActivateMap3Nodes(chain consensus.ChainReader, header *types.Header
 		}
 
 		if node.CanActivate(requireTotal, requireSelf) {
-			if err := node.Activate(curEpoch); err != nil {
+			if err := node.Activate(nowEpoch); err != nil {
 				return err
 			}
 		}
@@ -186,7 +192,7 @@ func (u undelegationToBalance) Release(redelegation *restaking.Storage_Redelegat
 	redelegation.Undelegation().Clear()
 
 	// return reward if redelgation is empty
-	if amt := redelegation.Amount().Value(); amt.Cmp(common.Big0) == 0 {
+	if amt := redelegation.Amount().Value(); amt.Sign() == 0 {
 		_, err := u.rewardHandler.HandleReward(redelegation, epoch)
 		if err != nil {
 			return false, err
@@ -207,7 +213,7 @@ func (u undelegationToMap3Node) Release(redelegation *restaking.Storage_Redelega
 	redelegation.Undelegation().Clear()
 
 	// return reward if redelgation is empty
-	if amt := redelegation.Amount().Value(); amt.Cmp(common.Big0) == 0 {
+	if amt := redelegation.Amount().Value(); amt.Sign() == 0 {
 		_, err := u.rewardHandler.HandleReward(redelegation, epoch)
 		if err != nil {
 			return false, err
@@ -225,6 +231,46 @@ func (u undelegationToMap3Node) Release(redelegation *restaking.Storage_Redelega
 	return false, nil
 }
 
+func payoutUnmicrodelegations(header *types.Header, stateDB *state.StateDB) error {
+	nowEpoch := header.Epoch
+	map3Nodes := stateDB.Map3NodePool().Nodes()
+	// Payout undelegated/unlocked tokens
+	for _, map3Addr := range map3Nodes.AllKeys() {
+		node, ok := map3Nodes.Get(map3Addr)
+		if !ok {
+			return errMap3NodeNotExist
+		}
+
+		var toBeRemoved []common.Address
+		for _, delegator := range node.Microdelegations().AllKeys() {
+			md, ok := node.Microdelegations().Get(delegator)
+			if !ok {
+				return errMicrodelegationNotExist
+			}
+
+			if md.CanReleaseAt(nowEpoch) {
+				// payout unmicrodelegation
+				amt := md.Undelegation().Amount().Value()
+				completed := md.Amount().Value().Sign() == 0 &&
+					md.PendingDelegation().Amount().Value().Sign() == 0
+				if completed {
+					amt.Add(amt, md.Reward().Value())
+					toBeRemoved = append(toBeRemoved, delegator)
+				} else {
+					md.Undelegation().Clear()
+				}
+				stateDB.AddBalance(delegator, amt)
+			}
+		}
+
+		for _, delegator := range toBeRemoved {
+			node.Microdelegations().Remove(delegator)
+			stateDB.Map3NodePool().RemoveDelegationIndex(delegator, map3Addr)
+		}
+	}
+	log.Info("paid out unmicrodelegations", "epoch", nowEpoch.Uint64(), "block-number", header.Number.Uint64())
+	return nil
+}
 
 // Withdraw unlocked tokens to the delegators' accounts
 func payoutUnredelegations(header *types.Header, stateDB *state.StateDB, releaser UndelegationReleaser) error {
@@ -259,7 +305,7 @@ func payoutUnredelegations(header *types.Header, stateDB *state.StateDB, release
 			validator.Redelegations().Remove(delegator)
 		}
 	}
-	log.Info("paid out delegations", "epoch", nowEpoch.Uint64(), "block-number", header.Number.Uint64())
+	log.Info("paid out unredelegations", "epoch", nowEpoch.Uint64(), "block-number", header.Number.Uint64())
 	return nil
 }
 

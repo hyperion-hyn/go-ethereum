@@ -391,7 +391,7 @@ func assertMap3NodeAlignCreateMap3Node(n Map3Node_, cn CreateMap3Node, blockNum 
 	if n.PendingEpoch.Cmp(epoch) != 0 {
 		return fmt.Errorf("pending epoch not equal")
 	}
-	if n.ActivationEpoch.Cmp(common.Big0) != 0 {
+	if n.ActivationEpoch.Sign() != 0 {
 		return fmt.Errorf("activation epoch not equal to 0")
 	}
 	if !n.ReleaseEpoch.IsZero() {

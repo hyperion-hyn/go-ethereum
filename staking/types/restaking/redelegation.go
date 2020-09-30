@@ -73,7 +73,7 @@ func (s *Storage_Redelegation_) AddAmount(amount *big.Int) {
 }
 
 func (s *Storage_Redelegation_) CanReleaseAt(epoch *big.Int) bool {
-	return s.Undelegation().Amount().Value().Cmp(common.Big0) > 0 && s.Undelegation().Epoch().Value().Cmp(epoch) >= 0
+	return s.Undelegation().Amount().Value().Sign() > 0 && s.Undelegation().Epoch().Value().Cmp(epoch) <= 0
 }
 
 // Storage_RedelegationMap_
@@ -103,7 +103,7 @@ func (s *Storage_RedelegationMap_) Put(key common.Address, redelegation *Redeleg
 }
 
 func (s *Storage_RedelegationMap_) Contain(key common.Address) bool {
-	return s.Map().Get(key).Index().Value().Cmp(common.Big0) > 0
+	return s.Map().Get(key).Index().Value().Sign() > 0
 }
 
 func (s *Storage_RedelegationMap_) Get(key common.Address) (*Storage_Redelegation_, bool) {

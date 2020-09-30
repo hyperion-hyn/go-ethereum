@@ -242,15 +242,14 @@ func (s *Storage_Map3NodeWrapper_) Unmicrodelegate(delegator common.Address, amo
 		s.SubTotalPendingDelegation(amount)
 		toReturn = big.NewInt(0).Set(amount)
 
-		if md.Amount().Value().Uint64() == 0 &&
-			md.Undelegation().Amount().Value().Uint64() == 0 &&
-			md.PendingDelegation().Amount().Value().Uint64() == 0 {
-
+		completed = md.Amount().Value().Sign() == 0 &&
+			md.Undelegation().Amount().Value().Sign() == 0 &&
+			md.PendingDelegation().Amount().Value().Sign() == 0
+		if completed {
 			toReturn = toReturn.Add(toReturn, md.Reward().Value())
 			s.Microdelegations().Remove(delegator)
-			return toReturn, true
 		}
-		return toReturn, false
+		return toReturn, completed
 	}
 	return common.Big0, true
 }
@@ -356,7 +355,7 @@ func (s *Storage_Map3NodeWrapper_) Activate(epoch *big.Int) error {
 	return nil
 }
 
-func (s *Storage_Map3NodeWrapper_) CanRelease(epoch *big.Int) bool {
+func (s *Storage_Map3NodeWrapper_) CanReleaseAt(epoch *big.Int) bool {
 	releaseAt := s.Map3Node().ReleaseEpoch().Value().TruncateInt()
 	return releaseAt.Cmp(epoch) <= 0
 }
@@ -414,7 +413,7 @@ func (s *Storage_Map3NodeWrapperMap_) Put(key common.Address, map3Node *Map3Node
 }
 
 func (s *Storage_Map3NodeWrapperMap_) Contain(key common.Address) bool {
-	return s.Map().Get(key).Index().Value().Cmp(common.Big0) > 0
+	return s.Map().Get(key).Index().Value().Sign() > 0
 }
 
 func (s *Storage_Map3NodeWrapperMap_) Get(key common.Address) (*Storage_Map3NodeWrapper_, bool) {
