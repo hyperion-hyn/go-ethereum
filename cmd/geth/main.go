@@ -115,6 +115,7 @@ var (
 		utils.CacheNoPrefetchFlag,
 		utils.ListenPortFlag,
 		utils.MaxPeersFlag,
+		utils.DialRatioFlag,
 		utils.MaxPendingPeersFlag,
 		utils.MiningEnabledFlag,
 		utils.MinerThreadsFlag,
