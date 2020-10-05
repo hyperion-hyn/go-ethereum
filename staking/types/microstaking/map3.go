@@ -255,7 +255,6 @@ func (s *Storage_Map3NodeWrapper_) Unmicrodelegate(delegator common.Address, amo
 }
 
 func (s *Storage_Map3NodeWrapper_) UnmicrodelegateIfNotRenewed(epoch *big.Int) (isRenewed bool, NotRenewedAmount *big.Int, err error) {
-
 	operator := s.Map3Node().OperatorAddress().Value()
 	delegationOfOperator, ok := s.Microdelegations().Get(operator)
 	if !ok {
@@ -285,7 +284,7 @@ func (s *Storage_Map3NodeWrapper_) UnmicrodelegateIfNotRenewed(epoch *big.Int) (
 	return !NotRenewedByOperator, total, nil
 }
 
-func (s *Storage_Map3NodeWrapper_) Pend(epoch *big.Int) error {
+func (s *Storage_Map3NodeWrapper_) PendAndClearRenewal(epoch *big.Int) error {
 	// update status
 	s.Map3Node().PendingEpoch().SetValue(epoch)
 	s.Map3Node().ActivationEpoch().Clear()
@@ -304,6 +303,7 @@ func (s *Storage_Map3NodeWrapper_) Pend(epoch *big.Int) error {
 			s.SubTotalDelegation(amt)
 			delegation.Amount().Clear()
 		}
+		delegation.Renewal().Clear()
 	}
 	return nil
 }

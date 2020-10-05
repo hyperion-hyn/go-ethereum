@@ -47,6 +47,7 @@ var (
 		RateForNextPeriod: defaultCommissionRate,
 		UpdateHeight:      big.NewInt(10),
 	}
+	newCommissionRate = pointTwoDec
 )
 
 func TestCheckMap3DuplicatedFields(t *testing.T) {
@@ -397,11 +398,8 @@ func TestVerifyEditMap3NodeMsg(t *testing.T) {
 				stateDB:  makeStateDBForMicrostaking(t),
 				epoch:    big.NewInt(defaultEpoch),
 				blockNum: big.NewInt(defaultBlockNumber),
-				msg: func() microstaking.EditMap3Node {
-					msg := defaultMsgEditMap3Node()
-					return msg
-				}(),
-				signer: makeTestAddr("invalid operator"),
+				msg:      defaultMsgEditMap3Node(),
+				signer:   makeTestAddr("invalid operator"),
 			},
 			wantErr: errInvalidSigner,
 		},
@@ -1226,4 +1224,323 @@ func updateStateMap3Nodes(sdb *state.StateDB, ws []*microstaking.Map3NodeWrapper
 		}
 	}
 	return nil
+}
+
+func TestVerifyRenewMap3NodeMsg(t *testing.T) {
+	type args struct {
+		stateDB       vm.StateDB
+		chainContext  ChainContext
+		blockNum      *big.Int
+		epoch         *big.Int
+		msg           microstaking.RenewMap3Node
+		signer        common.Address
+		renewalStatus microstaking.RenewalStatus
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr error
+	}{
+		{
+			name: "renew map3 node by operator",
+			args: args{
+				stateDB:      makeStateDBForRenewingMap3Node(t),
+				chainContext: makeFakeChainContextForStake(t),
+				epoch:        big.NewInt(172),
+				blockNum:     big.NewInt(defaultBlockNumber),
+				msg:          defaultMsgRenewMap3Node(map3OperatorAddr, true),
+				signer:       map3OperatorAddr,
+			},
+			wantErr: nil,
+		},
+		{
+			name: "renew map3 node by delegator",
+			args: args{
+				stateDB:       makeStateDBForRenewingMap3Node(t),
+				chainContext:  makeFakeChainContextForStake(t),
+				blockNum:      big.NewInt(defaultBlockNumber),
+				epoch:         big.NewInt(179),
+				msg:           defaultMsgRenewMap3Node(delegatorAddr, false),
+				signer:        delegatorAddr,
+				renewalStatus: microstaking.Renewed,
+			},
+			wantErr: nil,
+		},
+		{
+			name: "state db nil",
+			args: args{
+				stateDB:      nil,
+				chainContext: makeFakeChainContextForStake(t),
+				epoch:        big.NewInt(172),
+				blockNum:     big.NewInt(defaultBlockNumber),
+				msg:          defaultMsgRenewMap3Node(map3OperatorAddr, true),
+				signer:       map3OperatorAddr,
+			},
+			wantErr: errStateDBIsMissing,
+		},
+		{
+			name: "chain context nil",
+			args: args{
+				stateDB:      makeStateDBForRenewingMap3Node(t),
+				chainContext: nil,
+				epoch:        big.NewInt(172),
+				blockNum:     big.NewInt(defaultBlockNumber),
+				msg:          defaultMsgRenewMap3Node(map3OperatorAddr, true),
+				signer:       map3OperatorAddr,
+			},
+			wantErr: errChainContextMissing,
+		},
+		{
+			name: "epoch nil",
+			args: args{
+				stateDB:      makeStateDBForRenewingMap3Node(t),
+				chainContext: makeFakeChainContextForStake(t),
+				epoch:        nil,
+				blockNum:     big.NewInt(defaultBlockNumber),
+				msg:          defaultMsgRenewMap3Node(map3OperatorAddr, true),
+				signer:       map3OperatorAddr,
+			},
+			wantErr: errEpochMissing,
+		},
+		{
+			name: "block number nil",
+			args: args{
+				stateDB:      makeStateDBForRenewingMap3Node(t),
+				chainContext: makeFakeChainContextForStake(t),
+				epoch:        big.NewInt(172),
+				blockNum:     nil,
+				msg:          defaultMsgRenewMap3Node(map3OperatorAddr, true),
+				signer:       map3OperatorAddr,
+			},
+			wantErr: errBlockNumMissing,
+		},
+		{
+			name: "invalid signer",
+			args: args{
+				stateDB:      makeStateDBForRenewingMap3Node(t),
+				chainContext: makeFakeChainContextForStake(t),
+				epoch:        big.NewInt(172),
+				blockNum:     big.NewInt(defaultBlockNumber),
+				msg:          defaultMsgRenewMap3Node(map3OperatorAddr, true),
+				signer:       makeTestAddr("invalid operator"),
+			},
+			wantErr: errInvalidSigner,
+		},
+		{
+			name: "map3 node not exist",
+			args: args{
+				stateDB:      makeStateDBForRenewingMap3Node(t),
+				chainContext: makeFakeChainContextForStake(t),
+				epoch:        big.NewInt(172),
+				blockNum:     big.NewInt(defaultBlockNumber),
+				msg: func() microstaking.RenewMap3Node {
+					msg := defaultMsgRenewMap3Node(map3OperatorAddr, true)
+					msg.Map3NodeAddress = makeTestAddr("addr not in chain")
+					return msg
+				}(),
+				signer: map3OperatorAddr,
+			},
+			wantErr: errMap3NodeNotExist,
+		},
+		{
+			name: "map3 node inactive",
+			args: args{
+				stateDB:      makeStateDBForRenewingMap3Node(t),
+				chainContext: makeFakeChainContextForStake(t),
+				epoch:        big.NewInt(172),
+				blockNum:     big.NewInt(defaultBlockNumber),
+				msg: func() microstaking.RenewMap3Node {
+					msg := defaultMsgRenewMap3Node(map3OperatorAddr2, true)
+					msg.Map3NodeAddress = map3NodeAddr2
+					return msg
+				}(),
+				signer: map3OperatorAddr2,
+			},
+			wantErr: errMap3NodeRenewalNotAllowed,
+		},
+		{
+			name: "microdelegation not exist",
+			args: args{
+				stateDB:      makeStateDBForRenewingMap3Node(t),
+				chainContext: makeFakeChainContextForStake(t),
+				epoch:        big.NewInt(172),
+				blockNum:     big.NewInt(defaultBlockNumber),
+				msg: func() microstaking.RenewMap3Node {
+					msg := defaultMsgRenewMap3Node(map3OperatorAddr, true)
+					msg.DelegatorAddress = makeTestAddr("addr not in chain")
+					return msg
+				}(),
+				signer: makeTestAddr("addr not in chain"),
+			},
+			wantErr: errMicrodelegationNotExist,
+		},
+		{
+			name: "map3 node not time to renew",
+			args: args{
+				stateDB:      makeStateDBForRenewingMap3Node(t),
+				chainContext: makeFakeChainContextForStake(t),
+				epoch:        big.NewInt(171),
+				blockNum:     big.NewInt(defaultBlockNumber),
+				msg:          defaultMsgRenewMap3Node(map3OperatorAddr, true),
+				signer:       map3OperatorAddr,
+			},
+			wantErr: errMap3NodeRenewalNotAllowed,
+		},
+		{
+			name: "map3 node not renewed by operator",
+			args: args{
+				stateDB:      makeStateDBForRenewingMap3Node(t),
+				chainContext: makeFakeChainContextForStake(t),
+				epoch:        big.NewInt(172),
+				blockNum:     big.NewInt(defaultBlockNumber),
+				msg: func() microstaking.RenewMap3Node {
+					msg := defaultMsgRenewMap3Node(map3OperatorAddr, true)
+					msg.IsRenew = false
+					return msg
+				}(),
+				signer: map3OperatorAddr,
+			},
+			wantErr: nil,
+		},
+		{
+			name: "new commission nil",
+			args: args{
+				stateDB:      makeStateDBForRenewingMap3Node(t),
+				chainContext: makeFakeChainContextForStake(t),
+				epoch:        big.NewInt(172),
+				blockNum:     big.NewInt(defaultBlockNumber),
+				msg: func() microstaking.RenewMap3Node {
+					msg := defaultMsgRenewMap3Node(map3OperatorAddr, true)
+					msg.NewCommissionRate = common.Dec{}
+					return msg
+				}(),
+				signer: map3OperatorAddr,
+			},
+			wantErr: errors.New("commission rate cannot be nil"),
+		},
+		{
+			name: "new commission too large",
+			args: args{
+				stateDB:      makeStateDBForRenewingMap3Node(t),
+				chainContext: makeFakeChainContextForStake(t),
+				epoch:        big.NewInt(172),
+				blockNum:     big.NewInt(defaultBlockNumber),
+				msg: func() microstaking.RenewMap3Node {
+					msg := defaultMsgRenewMap3Node(map3OperatorAddr, true)
+					msg.NewCommissionRate = oneDec
+					return msg
+				}(),
+				signer: map3OperatorAddr,
+			},
+			wantErr: errors.New("commission rate should be a value ranging from"),
+		},
+		{
+			name: "change commission by delegator",
+			args: args{
+				stateDB:      makeStateDBForRenewingMap3Node(t),
+				chainContext: makeFakeChainContextForStake(t),
+				epoch:        big.NewInt(179),
+				blockNum:     big.NewInt(defaultBlockNumber),
+				msg: func() microstaking.RenewMap3Node {
+					msg := defaultMsgRenewMap3Node(delegatorAddr, false)
+					msg.NewCommissionRate = newCommissionRate
+					return msg
+				}(),
+				signer:        delegatorAddr,
+				renewalStatus: microstaking.Renewed,
+			},
+			wantErr: errCommissionUpdateNotAllow,
+		},
+		{
+			name: "map3 node not renewed any more",
+			args: args{
+				stateDB:       makeStateDBForRenewingMap3Node(t),
+				chainContext:  makeFakeChainContextForStake(t),
+				epoch:         big.NewInt(179),
+				blockNum:      big.NewInt(defaultBlockNumber),
+				msg:           defaultMsgRenewMap3Node(delegatorAddr, false),
+				signer:        delegatorAddr,
+				renewalStatus: microstaking.NotRenewed,
+			},
+			wantErr: errMap3NodeNotRenewalAnyMore,
+		},
+		{
+			name: "map3 node renewal undecided",
+			args: args{
+				stateDB:       makeStateDBForRenewingMap3Node(t),
+				chainContext:  makeFakeChainContextForStake(t),
+				epoch:         big.NewInt(178),
+				blockNum:      big.NewInt(defaultBlockNumber),
+				msg:           defaultMsgRenewMap3Node(delegatorAddr, false),
+				signer:        delegatorAddr,
+				renewalStatus: microstaking.Undecided,
+			},
+			wantErr: errMap3NodeRenewalNotAllowed,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.args.renewalStatus != microstaking.Undecided {
+				node, err := tt.args.stateDB.Map3NodeByAddress(tt.args.msg.Map3NodeAddress)
+				if err != nil {
+					t.Fatal(err)
+				}
+				md, ok := node.Microdelegations().Get(node.Map3Node().OperatorAddress().Value())
+				if !ok {
+					t.Fatal("microdelegation not exist")
+				}
+				md.Renewal().Save(&microstaking.Renewal_{
+					Status:       uint8(tt.args.renewalStatus),
+					UpdateHeight: big.NewInt(defaultBlockNumber),
+				})
+			}
+			verifier, _ := NewStakingVerifier(tt.args.chainContext)
+			err := verifier.VerifyRenewMap3NodeMsg(tt.args.stateDB, tt.args.chainContext, tt.args.blockNum, tt.args.epoch, &tt.args.msg, tt.args.signer)
+			if assErr := assertError(err, tt.wantErr); assErr != nil {
+				t.Errorf("Test - %v: %v", tt.name, err)
+			}
+		})
+	}
+}
+
+func makeStateDBForRenewingMap3Node(t *testing.T) vm.StateDB {
+	sdb := makeStateDBForMicrostaking(t)
+	if err := delegateToMap3Node(sdb, map3NodeAddr, delegatorAddr, twoHundredKOnes); err != nil {
+		t.Fatal(err)
+	}
+	if err := activateMap3NodeForAddr(sdb, map3NodeAddr); err != nil {
+		t.Fatal(err)
+	}
+	sdb.IntermediateRoot(true)
+	return sdb
+}
+
+func delegateToMap3Node(sdb vm.StateDB, nodeAddr, delegator common.Address, amount *big.Int) error {
+	node, err := sdb.Map3NodeByAddress(nodeAddr)
+	if err != nil {
+		return err
+	}
+	node.AddMicrodelegation(delegator, amount, true, big.NewInt(defaultEpoch))
+	return nil
+}
+
+func activateMap3NodeForAddr(sdb vm.StateDB, nodeAddr common.Address) error {
+	node, err := sdb.Map3NodeByAddress(nodeAddr)
+	if err != nil {
+		return err
+	}
+	return node.Activate(big.NewInt(defaultEpoch))
+}
+
+func defaultMsgRenewMap3Node(signer common.Address, isOperator bool) microstaking.RenewMap3Node {
+	msg := microstaking.RenewMap3Node{
+		Map3NodeAddress:  map3NodeAddr,
+		DelegatorAddress: signer,
+		IsRenew:          true,
+	}
+	if isOperator {
+		msg.NewCommissionRate = newCommissionRate
+	}
+	return msg
 }

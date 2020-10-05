@@ -467,16 +467,19 @@ func (verifier StakingVerifier) VerifyRenewMap3NodeMsg(stateDB vm.StateDB, chain
 			return errMap3NodeRenewalNotAllowed
 		}
 
-		// self delegation proportion
-		minTotal, _, _ := network.LatestMap3StakingRequirement(blockNum, chainContext.Config())
-		percent := common.NewDecFromInt(md.Amount().Value()).QuoInt(minTotal)
+		if msg.IsRenew {
+			// self delegation proportion
+			minTotal, _, _ := network.LatestMap3StakingRequirement(blockNum, chainContext.Config())
+			percent := common.NewDecFromInt(md.Amount().Value()).QuoInt(minTotal)
 
-		node, err := node.Map3Node().Load()
-		if err != nil {
-			return err
+			node, err := node.Map3Node().Load()
+			if err != nil {
+				return err
+			}
+
+			node.Commission.RateForNextPeriod = msg.NewCommissionRate
+			return node.SanityCheck(microstaking.MaxPubKeyAllowed, &percent)
 		}
-		node.Commission.RateForNextPeriod = msg.NewCommissionRate
-		return node.SanityCheck(1, &percent)
 	} else {
 		if !msg.NewCommissionRate.IsNil() {
 			return errCommissionUpdateNotAllow
