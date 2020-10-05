@@ -101,7 +101,6 @@ func (st *StateTransition) StakingTransitionDb() (*ExecutionResult, error) {
 			return nil, err
 		}
 		_, err = st.verifyAndApplyCollectRedelRewardTx(verifier, stkMsg, msg.From())
-		// TODO: Add log for reward ?
 	case types.CreateMap3:
 		stkMsg := &microstaking.CreateMap3Node{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
@@ -139,7 +138,6 @@ func (st *StateTransition) StakingTransitionDb() (*ExecutionResult, error) {
 			return nil, err
 		}
 		_, err = st.verifyAndApplyCollectMicrodelRewardsTx(verifier, stkMsg, msg.From())
-		// TODO(ATLAS): Add log for reward ?
 	case types.RenewMap3Node:
 		stkMsg := &microstaking.RenewMap3Node{}
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
@@ -211,7 +209,19 @@ func (st *StateTransition) verifyAndApplyCollectRedelRewardTx(verifier StakingVe
 		return network.NoReward, err
 	}
 	validator, _ := st.state.ValidatorByAddress(msg.ValidatorAddress)
-	return payoutRedelegationReward(validator, msg.DelegatorAddress, verified.Participant.rewardHandler(), st.evm.EpochNumber)
+	reward, err := payoutRedelegationReward(validator, msg.DelegatorAddress, verified.Participant.rewardHandler(), st.evm.EpochNumber)
+	if err != nil {
+		return network.NoReward, err
+	}
+
+	// Add log if everything is good
+	st.state.AddLog(&types.Log{
+		Address:     msg.DelegatorAddress,
+		Topics:      []common.Hash{restaking.CollectRewardTopic},
+		Data:        reward.Bytes(),
+		BlockNumber: st.evm.BlockNumber.Uint64(),
+	})
+	return reward, nil
 }
 
 func saveNewValidatorToPool(wrapper *restaking.ValidatorWrapper_, validatorPool *restaking.Storage_ValidatorPool_) {

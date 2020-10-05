@@ -2,6 +2,7 @@ package core
 
 import (
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/staking/network"
@@ -81,8 +82,18 @@ func (st *StateTransition) verifyAndApplyCollectMicrodelRewardsTx(verifier Staki
 	if err := verifier.VerifyCollectMicrostakingRewardsMsg(st.state, msg, signer); err != nil {
 		return network.NoReward, err
 	}
-	map3NodePool := st.state.Map3NodePool()
-	return payoutMicrodelegationRewards(st.state, map3NodePool, msg.DelegatorAddress)
+	totalReward, err := payoutMicrodelegationRewards(st.state, st.state.Map3NodePool(), msg.DelegatorAddress)
+	if err != nil {
+		return network.NoReward, err
+	}
+	// Add log if everything is good
+	st.state.AddLog(&types.Log{
+		Address:     msg.DelegatorAddress,
+		Topics:      []common.Hash{microstaking.CollectRewardsTopic},
+		Data:        totalReward.Bytes(),
+		BlockNumber: st.evm.BlockNumber.Uint64(),
+	})
+	return totalReward, nil
 }
 
 func (st *StateTransition) verifyAndApplyRenewMap3NodeTx(verifier StakingVerifier, msg *microstaking.RenewMap3Node, signer common.Address) error {
