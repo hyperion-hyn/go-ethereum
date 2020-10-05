@@ -20,7 +20,6 @@ import (
 	"math"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/staking/network"
 
@@ -268,7 +267,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	st.refundGas()
 
 	// ATLAS
-	if _, ok := st.bc.Engine().(consensus.Atlas); ok {
+	if st.evm.ChainConfig().Atlas != nil {
 		// fee should not be given to evm.Coinbase directly, it should be distributed between validators.
 		fee := new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)
 		pool := network.NewRewardPool(st.state)

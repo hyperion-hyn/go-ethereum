@@ -165,11 +165,6 @@ func New(stack *node.Node, config *Config) (*Ethereum, error) {
 		eth.etherbase = crypto.PubkeyToAddress(stack.Config().NodeKey().PublicKey)
 	}
 
-	if chainConfig.Atlas != nil {
-		// force to etherbase to empty address for Atlas
-		eth.etherbase = common.Address{}
-	}
-
 	if !config.SkipBcVersionCheck {
 		if bcVersion != nil && *bcVersion > core.BlockChainVersion {
 			return nil, fmt.Errorf("database version is v%d, Geth %s only supports v%d", *bcVersion, params.VersionWithMeta, core.BlockChainVersion)
