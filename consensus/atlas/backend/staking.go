@@ -108,7 +108,7 @@ func renewAndActivateMap3Nodes(chain consensus.ChainReader, header *types.Header
 				return err
 			}
 			if isRenewed {
-				err := node.PendAndClearRenewal(nowEpoch)
+				err := node.RenewAndPend(nowEpoch)
 				if err != nil {
 					return err
 				}

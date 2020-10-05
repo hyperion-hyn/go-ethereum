@@ -284,11 +284,15 @@ func (s *Storage_Map3NodeWrapper_) UnmicrodelegateIfNotRenewed(epoch *big.Int) (
 	return !NotRenewedByOperator, total, nil
 }
 
-func (s *Storage_Map3NodeWrapper_) PendAndClearRenewal(epoch *big.Int) error {
+func (s *Storage_Map3NodeWrapper_) RenewAndPend(epoch *big.Int) error {
 	// update status
 	s.Map3Node().PendingEpoch().SetValue(epoch)
 	s.Map3Node().ActivationEpoch().Clear()
 	s.Map3Node().ReleaseEpoch().Clear()
+
+	// new commission
+	newCommission := s.Map3Node().Commission().RateForNextPeriod().Value()
+	s.Map3Node().Commission().Rate().SetValue(newCommission)
 
 	// pending delegation
 	for _, delegator := range s.Microdelegations().AllKeys() {
