@@ -49,7 +49,7 @@ var DefaultConfig = Config{
 	P2P: p2p.Config{
 		ListenAddr: ":30303",
 		MaxPeers:   50,
-		DialRatio:  2,
+		DialRatio:  3,
 		NAT:        nat.Any(),
 	},
 }
