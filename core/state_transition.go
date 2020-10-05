@@ -17,10 +17,11 @@
 package core
 
 import (
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/staking/network"
 	"math"
 	"math/big"
+
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/staking/network"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/vm"
@@ -266,12 +267,13 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	st.refundGas()
 
 	// ATLAS
-	fee := new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)
-	if st.evm.Coinbase != network.RewardStorageAddress {
-		st.state.AddBalance(st.evm.Coinbase, fee)
-	} else {
+	if st.evm.ChainConfig().Atlas != nil {
+		// fee should not be given to evm.Coinbase directly, it should be distributed between validators.
+		fee := new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)
 		pool := network.NewRewardPool(st.state)
 		pool.AddTxFeeAsReward(st.evm.BlockNumber, fee)
+	} else {
+		st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
 	}
 
 	return &ExecutionResult{

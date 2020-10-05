@@ -1246,6 +1246,7 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	if ctx.GlobalIsSet(DialRatioFlag.Name) {
 		cfg.DialRatio = ctx.GlobalInt(DialRatioFlag.Name)
 	}
+	log.Info("The ratio of inbound to dialed connections", "ratio", cfg.DialRatio)
 	if !(lightClient || lightServer) {
 		lightPeers = 0
 	}
