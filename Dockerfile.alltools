@@ -7,12 +7,14 @@ RUN apk add --no-cache make gcc musl-dev linux-headers git \
     pkgconf g++ gmp-dev openssl-dev
 
 ADD ./go.* /go-ethereum/
-ADD ./third_party/bls/go.* /go-ethereum/third_party/bls/
-ADD ./third_party/mcl/go.* /go-ethereum/third_party/mcl/
-RUN cd /go-ethereum && go mod vendor
+RUN mkdir -p /go-ethereum/third_party/mcl /go-ethereum/third_party/bls && \
+    (cd /go-ethereum/third_party/mcl && go mod init github.com/hyperion-hyn/mcl) && \
+    (cd /go-ethereum/third_party/bls && go mod init github.com/hyperion-hyn/bls) && \
+    (cd /go-ethereum && go mod download)
 
 ADD . /go-ethereum
-RUN --mount=type=cache,target=/root/.cache/go-build ( cd /go-ethereum && make clean && make third_party && make all )
+RUN cd /go-ethereum && make clean
+RUN --mount=type=cache,target=/root/.cache/go-build ( cd /go-ethereum && make third_party && make all )
 
 # Pull all binaries into a second stage deploy alpine container
 FROM alpine:latest
