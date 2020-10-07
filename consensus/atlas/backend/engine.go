@@ -19,7 +19,6 @@ package backend
 import (
 	"bytes"
 	"errors"
-	"github.com/ethereum/go-ethereum/staking/network"
 	"io"
 	"math"
 
@@ -118,7 +117,7 @@ var (
 // block, which may be different from the header's coinbase if a consensus
 // engine is based on signatures.
 func (sb *backend) Author(header *types.Header) (common.Address, error) {
-	return network.RewardStorageAddress, nil
+	return common.Address{}, nil
 }
 
 // Signers extracts all the addresses who have signed the given header

@@ -183,11 +183,11 @@ func (verifier StakingVerifier) VerifyCreateMap3NodeMsg(stateDB vm.StateDB, chai
 		return nil, errInsufficientBalanceForStake
 	}
 
-	minTotal, minSelf, _ := network.LatestMap3StakingRequirement(blockNum, chainContext.Config())
-	if minSelf.Cmp(msg.Amount) > 0 {
+	requireTotal, requireSelf, _ := network.LatestMicrostakingRequirement(blockNum, chainContext.Config())
+	if requireSelf.Cmp(msg.Amount) > 0 {
 		return nil, errSelfDelegationTooSmall
 	}
-	percent := common.NewDecFromInt(msg.Amount).QuoInt(minTotal)
+	percent := common.NewDecFromInt(msg.Amount).QuoInt(requireTotal)
 
 	// create map3 node
 	map3Address := crypto.CreateAddress(signer, stateDB.GetNonce(signer))
@@ -320,8 +320,8 @@ func (verifier StakingVerifier) VerifyMicrodelegateMsg(stateDB vm.StateDB, chain
 		return errInsufficientBalanceForStake
 	}
 
-	_, _, minDel := network.LatestMap3StakingRequirement(blockNum, chainContext.Config())
-	if minDel.Cmp(msg.Amount) > 0 {
+	_, _, requireDel := network.LatestMicrostakingRequirement(blockNum, chainContext.Config())
+	if requireDel.Cmp(msg.Amount) > 0 {
 		return errDelegationTooSmall
 	}
 	return nil
@@ -376,11 +376,11 @@ func (verifier StakingVerifier) VerifyUnmicrodelegateMsg(stateDB vm.StateDB, cha
 		amt := big.NewInt(0).Sub(p.Amount().Value(), msg.Amount)
 		self := amt.Add(amt, md.Amount().Value())
 
-		minTotal, minSelf, _ := network.LatestMap3StakingRequirement(blockNum, chainContext.Config())
-		percent := common.NewDecFromInt(self).QuoInt(minTotal)
+		requireTotal, requireSelf, _ := network.LatestMicrostakingRequirement(blockNum, chainContext.Config())
+		percent := common.NewDecFromInt(self).QuoInt(requireTotal)
 		commissionRate := node.Map3Node().Commission().Rate().Value()
 
-		if minSelf.Cmp(self) > 0 || percent.LT(commissionRate) {
+		if requireSelf.Cmp(self) > 0 || percent.LT(commissionRate) {
 			return errSelfDelegationTooSmall
 		}
 	}
@@ -469,8 +469,8 @@ func (verifier StakingVerifier) VerifyRenewMap3NodeMsg(stateDB vm.StateDB, chain
 
 		if msg.IsRenew {
 			// self delegation proportion
-			minTotal, _, _ := network.LatestMap3StakingRequirement(blockNum, chainContext.Config())
-			percent := common.NewDecFromInt(md.Amount().Value()).QuoInt(minTotal)
+			requireTotal, _, _ := network.LatestMicrostakingRequirement(blockNum, chainContext.Config())
+			percent := common.NewDecFromInt(md.Amount().Value()).QuoInt(requireTotal)
 
 			node, err := node.Map3Node().Load()
 			if err != nil {

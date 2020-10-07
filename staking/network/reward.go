@@ -17,7 +17,7 @@ var (
 	// EmptyPayout ..
 	EmptyPayout = noReward{}
 
-	RewardStorageAddress = common.HexToAddress("0xa886e52baada7a1a5200f75fcf5f82b3fabea707")
+	rewardStorageAddress = common.HexToAddress("0xa886e52baada7a1a5200f75fcf5f82b3fabea707")
 	blockRewardHashKey   = common.BigToHash(common.Big0)
 )
 
@@ -82,7 +82,7 @@ type RewardPool struct {
 func (p *RewardPool) AddTxFeeAsReward(blockHeight, fee *big.Int) {
 	total := p.TxFeeAsReward(blockHeight)
 	total.Add(total, fee)
-	p.state.SetState(RewardStorageAddress, common.BigToHash(blockHeight), common.BigToHash(total))
+	p.state.SetState(rewardStorageAddress, common.BigToHash(blockHeight), common.BigToHash(total))
 }
 
 func (p *RewardPool) TakeReward(blockHeight *big.Int, config *params.ChainConfig) *big.Int {
@@ -96,13 +96,13 @@ func (p *RewardPool) TakeReward(blockHeight *big.Int, config *params.ChainConfig
 
 	// remove reward from pool
 	remaining.Sub(remaining, blockReward)
-	p.state.SetState(RewardStorageAddress, blockRewardHashKey, common.BigToHash(remaining))
-	p.state.SetState(RewardStorageAddress, common.BigToHash(blockHeight), common.BigToHash(common.Big0))
+	p.state.SetState(rewardStorageAddress, blockRewardHashKey, common.BigToHash(remaining))
+	p.state.SetState(rewardStorageAddress, common.BigToHash(blockHeight), common.BigToHash(common.Big0))
 	return totalReward
 }
 
 func (p *RewardPool) TxFeeAsReward(blockHeight *big.Int) *big.Int {
-	return p.state.GetState(RewardStorageAddress, common.BigToHash(blockHeight)).Big()
+	return p.state.GetState(rewardStorageAddress, common.BigToHash(blockHeight)).Big()
 }
 
 func (p *RewardPool) BlockReward(blockHeight *big.Int, config *params.ChainConfig) *big.Int {
@@ -112,7 +112,7 @@ func (p *RewardPool) BlockReward(blockHeight *big.Int, config *params.ChainConfi
 
 func (p *RewardPool) calcBlockReward(blockHeight *big.Int, config *params.ChainConfig) (*big.Int, *big.Int) {
 	blockReward := big.NewInt(0)
-	remaining := p.state.GetState(RewardStorageAddress, blockRewardHashKey).Big()
+	remaining := p.state.GetState(rewardStorageAddress, blockRewardHashKey).Big()
 	if remaining.Sign() > 0 {
 		if blockHeight.Cmp(common.Big0) == 0 {
 			blockReward.Set(BaseBlockReward)
