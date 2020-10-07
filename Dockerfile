@@ -14,7 +14,7 @@ RUN mkdir -p /go-ethereum/third_party/mcl /go-ethereum/third_party/bls && \
 
 ADD . /go-ethereum
 RUN cd /go-ethereum && make clean
-RUN --mount=type=cache,target=/root/.cache/go-build ( cd /go-ethereum && make third_party && make geth )
+RUN --mount=type=cache,target=/root/.cache/go-build ( cd /go-ethereum && go mod vendor && make third_party && make geth )
 
 # Pull Geth into a second stage deploy alpine container
 FROM alpine:latest
