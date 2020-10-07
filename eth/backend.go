@@ -20,7 +20,6 @@ package eth
 import (
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/staking/network"
 	"math/big"
 	"runtime"
 	"sync"
@@ -161,8 +160,8 @@ func New(stack *node.Node, config *Config) (*Ethereum, error) {
 	}
 	log.Info("Initialising Ethereum protocol", "versions", ProtocolVersions, "network", config.NetworkId, "dbversion", dbVer)
 
-	// force to set the istanbul etherbase to node key address
 	if chainConfig.Istanbul != nil {
+		// force to set the istanbul etherbase to node key address
 		eth.etherbase = crypto.PubkeyToAddress(stack.Config().NodeKey().PublicKey)
 	}
 
@@ -530,7 +529,6 @@ func (s *Ethereum) StartMining(threads int) error {
 			}
 
 			atlas.Authorize(signer, signFn)
-			eb = network.RewardStorageAddress
 		}
 
 		// If mining is started, we can disable the transaction rejection mechanism

@@ -894,9 +894,13 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 
 	// Only set the coinbase if our consensus engine is running (avoid spurious block rewards)
 	if w.isRunning() {
-		if w.coinbase == (common.Address{}) {
-			log.Error("Refusing to mine without etherbase")
-			return
+		if _, ok := w.chain.Engine().(consensus.Atlas); ok {
+			// w.coinbase is useless in Atlas engine
+		} else {
+			if w.coinbase == (common.Address{}) {
+				log.Error("Refusing to mine without etherbase")
+				return
+			}
 		}
 		header.Coinbase = w.coinbase
 	}

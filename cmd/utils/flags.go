@@ -583,6 +583,11 @@ var (
 		Usage: "Maximum number of network peers (network disabled if set to 0)",
 		Value: node.DefaultConfig.P2P.MaxPeers,
 	}
+	DialRatioFlag = cli.IntFlag{
+		Name:  "dialratio",
+		Usage: "the ratio of maxpeers to dialed connections",
+		Value: node.DefaultConfig.P2P.DialRatio,
+	}
 	MaxPendingPeersFlag = cli.IntFlag{
 		Name:  "maxpendpeers",
 		Usage: "Maximum number of pending connection attempts (defaults used if set to 0)",
@@ -1238,6 +1243,10 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 			cfg.MaxPeers = lightPeers
 		}
 	}
+	if ctx.GlobalIsSet(DialRatioFlag.Name) {
+		cfg.DialRatio = ctx.GlobalInt(DialRatioFlag.Name)
+	}
+	log.Info("The ratio of inbound to dialed connections", "ratio", cfg.DialRatio)
 	if !(lightClient || lightServer) {
 		lightPeers = 0
 	}

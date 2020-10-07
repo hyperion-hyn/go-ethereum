@@ -1,7 +1,13 @@
 package core
 
 import (
+	"math"
+	"math/big"
+
+	"github.com/pkg/errors"
+
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
@@ -9,9 +15,6 @@ import (
 	"github.com/ethereum/go-ethereum/staking/network"
 	"github.com/ethereum/go-ethereum/staking/types/microstaking"
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
-	"github.com/pkg/errors"
-	"math"
-	"math/big"
 )
 
 var (
@@ -142,12 +145,12 @@ func (st *StateTransition) StakingTransitionDb() (*ExecutionResult, error) {
 	}
 	st.refundGas()
 
-	fee := new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)
-	if st.evm.Coinbase != network.RewardStorageAddress {
-		st.state.AddBalance(st.evm.Coinbase, fee)
-	} else {
+	if _, ok := st.bc.Engine().(consensus.Atlas); ok {
+		fee := new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)
 		pool := network.NewRewardPool(st.state)
 		pool.AddTxFeeAsReward(st.evm.BlockNumber, fee)
+	} else {
+		st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
 	}
 
 	return &ExecutionResult{
