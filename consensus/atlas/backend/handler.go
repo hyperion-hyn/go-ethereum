@@ -58,13 +58,14 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 	defer sb.coreMu.Unlock()
 
 	if msg.Code == AtlasMsg {
-		if !sb.coreStarted {
-			return true, atlas.ErrStoppedEngine
-		}
-
 		data, hash, err := sb.decode(msg)
 		if err != nil {
 			return true, errDecodeFailed
+		}
+		if !sb.coreStarted {
+			err := sb.Gossip(nil, data)
+			return true, err
+			//return true, atlas.ErrStoppedEngine
 		}
 
 		// Mark peer's message
