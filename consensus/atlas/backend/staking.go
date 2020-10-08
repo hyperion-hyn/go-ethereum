@@ -88,7 +88,7 @@ func handleMap3AndAtlasStaking(chain consensus.ChainReader, header *types.Header
 }
 
 func renewAndActivateMap3Nodes(chain consensus.ChainReader, header *types.Header, stateDB *state.StateDB) error {
-	requireTotal, requireSelf, _ := network.LatestMap3StakingRequirement(header.Number, chain.Config())
+	requireTotal, requireSelf, _ := network.LatestMicrostakingRequirement(header.Number, chain.Config())
 	var addrs []common.Address
 	map3NodePool := stateDB.Map3NodePool()
 	nowEpoch := header.Epoch
