@@ -1010,6 +1010,7 @@ func (w *worker) commit(uncles []*types.Header, interval func(), update bool, st
 	s := w.current.state.Copy()
 	block, err := w.engine.FinalizeAndAssemble(w.chain, w.current.header, s, w.current.txs, uncles, receipts)
 	if err != nil {
+		log.Error("FinalizeAndAssemble Error", "err", err) //ATLAS
 		return err
 	}
 	if w.isRunning() {

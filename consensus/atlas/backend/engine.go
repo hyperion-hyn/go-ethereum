@@ -453,6 +453,7 @@ func (sb *backend) _FinalizeAndAssemble(chain consensus.ChainReader, header *typ
 	chainReader := chain.(consensus.ChainReader)
 	_, err := handleMap3AndAtlasStaking(chainReader, header, state)
 	if err != nil {
+		sb.logger.Error("handleMap3AndAtlasStaking", "err", err)
 		return nil, err
 	}
 	// ATLAS - END
