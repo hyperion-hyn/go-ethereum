@@ -512,12 +512,25 @@ func (sb *backend) _Seal(chain consensus.ChainReader, block *types.Block, result
 			case result := <-sb.commitCh:
 				// if the block hash and the hash from channel are the same,
 				// return the result. Otherwise, keep waiting the next hash.
-				// wait for the timestamp of header, use this to adjust the block period
-				delay := time.Unix(int64(header.Time+sb.config.BlockPeriod), 0).Sub(now())
-				select {
-				case <-time.After(delay):
+				// ATLAS:
+				//  *WARNING*: when a new block was received, worker will commit new work,
+				//  which will interrupt previous Seal and begin a new Seal.
+				//  if only consume ONE block here and quit, COMMIT messages will pile up and
+				//  wait on sending block to commit channel, and hang in handleEvents. then
+				//  no more events will be handled.
+				//  to make it work and prevent hang in handleEvents, keeping consumming blocks
+				//  from commit channel here is necessary.
+				if result != nil && sb.SealHash(block.Header()) == sb.SealHash(result.Header()) {
+					// wait for the timestamp of header, use this to adjust the block period
+					delay := time.Unix(int64(header.Time+sb.config.BlockPeriod), 0).Sub(now())
+					select {
+					case <-time.After(delay):
+					}
+					results <- result
+				} else {
+					// ATLAS: keeping consumming blocks from commit channel is necessary
+					//  to prevent hang in handleEvents.
 				}
-				results <- result
 				return
 			case <-stop:
 				results <- nil
