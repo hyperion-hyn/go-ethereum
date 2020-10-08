@@ -361,7 +361,7 @@ func (s *Storage_Map3NodeWrapper_) Activate(epoch *big.Int) error {
 
 func (s *Storage_Map3NodeWrapper_) CanReleaseAt(epoch *big.Int) bool {
 	releaseAt := s.Map3Node().ReleaseEpoch().Value().TruncateInt()
-	return releaseAt.Cmp(epoch) <= 0
+	return s.Map3Node().AtStatus(Active) && releaseAt.Cmp(epoch) <= 0
 }
 
 func (s *Storage_Map3NodeWrapper_) Terminate() {
