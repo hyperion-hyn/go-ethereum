@@ -1,12 +1,12 @@
 package restaking
 
 import (
+	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rlp"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/hyperion-hyn/bls/ffi/go/bls"
 	"golang.org/x/crypto/sha3"
-	"golang.org/x/sync/singleflight"
-	"time"
 )
 
 // BLSPublicKeys ..
@@ -94,7 +94,7 @@ func (s *Storage_Slots_) Remove(index int) {
 		s.Set(index, lastOne)
 	}
 	s.Entrys().Get(length - 1).Clear() //remove lastOne
-	s.Entrys().Resize(length - 1)	//resize length
+	s.Entrys().Resize(length - 1)      //resize length
 }
 
 func (s *Storage_Slots_) Push(slot *Slot_) {
@@ -102,36 +102,29 @@ func (s *Storage_Slots_) Push(slot *Slot_) {
 	s.Set(length, slot)
 }
 
-
 var (
-	blsKeyCache singleflight.Group
+	blsKeyCache, _ = lru.New(3)
 )
 
 func lookupBLSPublicKeys(c *Committee_) ([]*bls.PublicKey, error) {
-	key := c.Hash().Hex()
-	results, err, _ := blsKeyCache.Do(
-		key, func() (interface{}, error) {
-			slice := make([]*bls.PublicKey, len(c.Slots.Entrys))
-			for j := range c.Slots.Entrys {
-				committerKey := &bls.PublicKey{}
-				if err := c.Slots.Entrys[j].BLSPublicKey.ToLibBLSPublicKey(
-					committerKey,
-				); err != nil {
-					return nil, err
-				}
-				slice[j] = committerKey
-			}
-			// Only made once
-			go func() {
-				time.Sleep(25 * time.Minute)
-				blsKeyCache.Forget(key)
-			}()
-			return slice, nil
-		},
-	)
-	if err != nil {
-		return nil, err
+	key := fmt.Sprintf("blskeys-%v", c.Hash().Hex())
+	if k, ok := blsKeyCache.Get(key); ok {
+		return k.([]*bls.PublicKey), nil
 	}
 
-	return results.([]*bls.PublicKey), nil
+	keys := make([]*bls.PublicKey, len(c.Slots.Entrys))
+	for j := range c.Slots.Entrys {
+		committerKey := &bls.PublicKey{}
+		if err := c.Slots.Entrys[j].BLSPublicKey.ToLibBLSPublicKey(
+			committerKey,
+		); err != nil {
+			return nil, err
+		}
+		keys[j] = committerKey
+	}
+
+	// Put in cache
+	blsKeyCache.Add(key, keys)
+
+	return keys, nil
 }
