@@ -402,18 +402,16 @@ func (s *Storage_Map3NodeWrapperMap_) AllKeys() []common.Address {
 
 func (s *Storage_Map3NodeWrapperMap_) Put(key common.Address, map3Node *Map3NodeWrapper_) {
 	if s.Contain(key) {
+		s.Map().Get(key).Entry().Clear() // TODO(ATLAS): not supported
 		s.Map().Get(key).Entry().Save(map3Node)
 	} else {
-		keysLength := s.Keys().Length()
+		length := s.Keys().Length()
 		//set keys
-		s.Keys().Get(keysLength).SetValue(key)
+		s.Keys().Get(length).SetValue(key)
 		//set map
-		sValidatorWrapper := s.Map().Get(key)
-		//set map entity
-		sValidatorWrapperEntity := sValidatorWrapper.Entry()
-		sValidatorWrapperEntity.Save(map3Node)
-		//set map index
-		sValidatorWrapper.Index().SetValue(big.NewInt(0).Add(big.NewInt(int64(keysLength)), common.Big1)) //because index start with 1
+		entry := s.Map().Get(key)
+		entry.Index().SetValue(big.NewInt(int64(length + 1))) // because index start with 1
+		entry.Entry().Save(map3Node)
 	}
 }
 

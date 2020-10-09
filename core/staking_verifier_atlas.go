@@ -81,14 +81,6 @@ func (s tokenHolderVerifier) VerifyForCollectingReward(stateDB vm.StateDB, msg *
 	if msg.DelegatorAddress != signer {
 		return nil, errInvalidSigner
 	}
-
-	validator, err := stateDB.ValidatorByAddress(msg.ValidatorAddress)
-	if err != nil {
-		return nil, err
-	}
-	if !validator.Redelegations().Contain(msg.DelegatorAddress) {
-		return nil, errRedelegationNotExist
-	}
 	return &tokenHolder{stateDB: stateDB, holderAddress: signer}, nil
 }
 

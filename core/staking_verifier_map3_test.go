@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	common2 "github.com/ethereum/go-ethereum/staking/types/common"
 	"github.com/ethereum/go-ethereum/staking/types/microstaking"
+	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	"github.com/pkg/errors"
 	"math/big"
 	"testing"
@@ -1543,4 +1544,371 @@ func defaultMsgRenewMap3Node(signer common.Address, isOperator bool) microstakin
 		msg.NewCommissionRate = newCommissionRate
 	}
 	return msg
+}
+
+func Test_map3VerifierForRestaking_VerifyForCreatingValidator(t *testing.T) {
+	tests := []struct {
+		name    string
+		stateDB vm.StateDB
+		msg     restaking.CreateValidator
+		signer  common.Address
+		wantErr error
+	}{
+		{
+			name:    "create validator successfully",
+			stateDB: makeStateDBForMap3Verifier(t),
+			msg: restaking.CreateValidator{
+				OperatorAddress: map3NodeAddr,
+			},
+			signer:  map3OperatorAddr,
+			wantErr: nil,
+		},
+		{
+			name:    "map3 node not exist",
+			stateDB: makeStateDBForMap3Verifier(t),
+			msg: restaking.CreateValidator{
+				OperatorAddress: makeTestAddr("invalid addr"),
+			},
+			signer:  map3OperatorAddr,
+			wantErr: errMap3NodeNotExist,
+		},
+		{
+			name:    "invalid signer",
+			stateDB: makeStateDBForMap3Verifier(t),
+			msg: restaking.CreateValidator{
+				OperatorAddress: map3NodeAddr,
+			},
+			signer:  makeTestAddr("invalid addr"),
+			wantErr: errInvalidSigner,
+		},
+		{
+			name:    "map3 node in pending status",
+			stateDB: makeStateDBForMap3Verifier(t),
+			msg: restaking.CreateValidator{
+				OperatorAddress: map3NodeAddr2,
+			},
+			signer:  map3OperatorAddr2,
+			wantErr: errInvalidMap3NodeStatusToRestake,
+		},
+		{
+			name:    "map3 node already restaked",
+			stateDB: makeStateDBForMap3Verifier(t),
+			msg: restaking.CreateValidator{
+				OperatorAddress: map3NodeAddr3,
+			},
+			signer:  map3OperatorAddr3,
+			wantErr: errMap3NodeAlreadyRestaking,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := map3VerifierForRestaking{}
+			_, err := m.VerifyForCreatingValidator(tt.stateDB, &tt.msg, tt.signer)
+			if err := assertError(tt.wantErr, err); err != nil {
+				t.Errorf("VerifyForCreatingValidator() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+		})
+	}
+}
+
+func Test_map3VerifierForRestaking_VerifyForEditingValidator(t *testing.T) {
+	tests := []struct {
+		name    string
+		stateDB vm.StateDB
+		msg     restaking.EditValidator
+		signer  common.Address
+		wantErr error
+	}{
+		{
+			name:    "edit validator successfully",
+			stateDB: makeStateDBForMap3Verifier(t),
+			msg: restaking.EditValidator{
+				ValidatorAddress: validatorAddr,
+				OperatorAddress:  map3NodeAddr3,
+			},
+			signer:  map3OperatorAddr3,
+			wantErr: nil,
+		},
+		{
+			name:    "map3 node not exist",
+			stateDB: makeStateDBForMap3Verifier(t),
+			msg: restaking.EditValidator{
+				ValidatorAddress: validatorAddr,
+				OperatorAddress:  makeTestAddr("invalid addr"),
+			},
+			signer:  map3OperatorAddr3,
+			wantErr: errMap3NodeNotExist,
+		},
+		{
+			name:    "invalid signer",
+			stateDB: makeStateDBForMap3Verifier(t),
+			msg: restaking.EditValidator{
+				ValidatorAddress: validatorAddr,
+				OperatorAddress:  map3NodeAddr3,
+			},
+			signer:  makeTestAddr("invalid addr"),
+			wantErr: errInvalidSigner,
+		},
+		{
+			name:    "map3 node in pending status",
+			stateDB: makeStateDBForMap3Verifier(t),
+			msg: restaking.EditValidator{
+				OperatorAddress: map3NodeAddr2,
+			},
+			signer:  map3OperatorAddr2,
+			wantErr: errInvalidMap3NodeStatusToRestake,
+		},
+		{
+			name:    "invalid validator address",
+			stateDB: makeStateDBForMap3Verifier(t),
+			msg: restaking.EditValidator{
+				ValidatorAddress: makeTestAddr("invalid addr"),
+				OperatorAddress:  map3NodeAddr3,
+			},
+			signer:  map3OperatorAddr3,
+			wantErr: errInvalidValidatorAddress,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := map3VerifierForRestaking{}
+			_, err := m.VerifyForEditingValidator(tt.stateDB, &tt.msg, tt.signer)
+			if err := assertError(tt.wantErr, err); err != nil {
+				t.Errorf("VerifyForEditingValidator() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+		})
+	}
+}
+
+func Test_map3VerifierForRestaking_VerifyForRedelegating(t *testing.T) {
+	tests := []struct {
+		name    string
+		stateDB vm.StateDB
+		msg     restaking.Redelegate
+		signer  common.Address
+		wantErr error
+	}{
+		{
+			name:    "redelegate successfully",
+			stateDB: makeStateDBForMap3Verifier(t),
+			msg: restaking.Redelegate{
+				DelegatorAddress: map3NodeAddr,
+			},
+			signer:  map3OperatorAddr,
+			wantErr: nil,
+		},
+		{
+			name:    "map3 node not exist",
+			stateDB: makeStateDBForMap3Verifier(t),
+			msg: restaking.Redelegate{
+				DelegatorAddress: makeTestAddr("invalid addr"),
+			},
+			signer:  map3OperatorAddr,
+			wantErr: errMap3NodeNotExist,
+		},
+		{
+			name:    "invalid signer",
+			stateDB: makeStateDBForMap3Verifier(t),
+			msg: restaking.Redelegate{
+				DelegatorAddress: map3NodeAddr,
+			},
+			signer:  makeTestAddr("invalid addr"),
+			wantErr: errInvalidSigner,
+		},
+		{
+			name:    "map3 node in pending status",
+			stateDB: makeStateDBForMap3Verifier(t),
+			msg: restaking.Redelegate{
+				DelegatorAddress: map3NodeAddr2,
+			},
+			signer:  map3OperatorAddr2,
+			wantErr: errInvalidMap3NodeStatusToRestake,
+		},
+		{
+			name:    "map3 node already restaked",
+			stateDB: makeStateDBForMap3Verifier(t),
+			msg: restaking.Redelegate{
+				DelegatorAddress: map3NodeAddr3,
+			},
+			signer:  map3OperatorAddr3,
+			wantErr: errMap3NodeAlreadyRestaking,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := map3VerifierForRestaking{}
+			_, err := m.VerifyForRedelegating(tt.stateDB, &tt.msg, tt.signer)
+			if err := assertError(tt.wantErr, err); err != nil {
+				t.Errorf("VerifyForRedelegating() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+		})
+	}
+}
+
+func Test_map3VerifierForRestaking_VerifyForUnredelegating(t *testing.T) {
+	tests := []struct {
+		name    string
+		stateDB vm.StateDB
+		msg     restaking.Unredelegate
+		signer  common.Address
+		wantErr error
+	}{
+		{
+			name:    "unredelegate successfully",
+			stateDB: makeStateDBForMap3Verifier(t),
+			msg: restaking.Unredelegate{
+				ValidatorAddress: validatorAddr,
+				DelegatorAddress: map3NodeAddr3,
+			},
+			signer:  map3OperatorAddr3,
+			wantErr: nil,
+		},
+		{
+			name:    "map3 node not exist",
+			stateDB: makeStateDBForMap3Verifier(t),
+			msg: restaking.Unredelegate{
+				ValidatorAddress: validatorAddr,
+				DelegatorAddress: makeTestAddr("invalid addr"),
+			},
+			signer:  map3OperatorAddr3,
+			wantErr: errMap3NodeNotExist,
+		},
+		{
+			name:    "invalid signer",
+			stateDB: makeStateDBForMap3Verifier(t),
+			msg: restaking.Unredelegate{
+				ValidatorAddress: validatorAddr,
+				DelegatorAddress: map3NodeAddr3,
+			},
+			signer:  makeTestAddr("invalid addr"),
+			wantErr: errInvalidSigner,
+		},
+		{
+			name:    "map3 node in pending status",
+			stateDB: makeStateDBForMap3Verifier(t),
+			msg: restaking.Unredelegate{
+				DelegatorAddress: map3NodeAddr2,
+			},
+			signer:  map3OperatorAddr2,
+			wantErr: errInvalidMap3NodeStatusToRestake,
+		},
+		{
+			name:    "invalid validator address",
+			stateDB: makeStateDBForMap3Verifier(t),
+			msg: restaking.Unredelegate{
+				ValidatorAddress: makeTestAddr("invalid addr"),
+				DelegatorAddress: map3NodeAddr3,
+			},
+			signer:  map3OperatorAddr3,
+			wantErr: errInvalidValidatorAddress,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := map3VerifierForRestaking{}
+			_, err := m.VerifyForUnredelegating(tt.stateDB, &tt.msg, tt.signer)
+			if err := assertError(tt.wantErr, err); err != nil {
+				t.Errorf("VerifyForUnredelegating() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+		})
+	}
+}
+
+func Test_map3VerifierForRestaking_VerifyForCollectingReward(t *testing.T) {
+	tests := []struct {
+		name    string
+		stateDB vm.StateDB
+		msg     restaking.CollectReward
+		signer  common.Address
+		wantErr error
+	}{
+		{
+			name:    "collectReward successfully",
+			stateDB: makeStateDBForMap3Verifier(t),
+			msg: restaking.CollectReward{
+				ValidatorAddress: validatorAddr,
+				DelegatorAddress: map3NodeAddr3,
+			},
+			signer:  map3OperatorAddr3,
+			wantErr: nil,
+		},
+		{
+			name:    "map3 node not exist",
+			stateDB: makeStateDBForMap3Verifier(t),
+			msg: restaking.CollectReward{
+				ValidatorAddress: validatorAddr,
+				DelegatorAddress: makeTestAddr("invalid addr"),
+			},
+			signer:  map3OperatorAddr3,
+			wantErr: errMap3NodeNotExist,
+		},
+		{
+			name:    "invalid signer",
+			stateDB: makeStateDBForMap3Verifier(t),
+			msg: restaking.CollectReward{
+				ValidatorAddress: validatorAddr,
+				DelegatorAddress: map3NodeAddr3,
+			},
+			signer:  makeTestAddr("invalid addr"),
+			wantErr: errInvalidSigner,
+		},
+		{
+			name:    "map3 node in pending status",
+			stateDB: makeStateDBForMap3Verifier(t),
+			msg: restaking.CollectReward{
+				DelegatorAddress: map3NodeAddr2,
+			},
+			signer:  map3OperatorAddr2,
+			wantErr: errInvalidMap3NodeStatusToRestake,
+		},
+		{
+			name:    "invalid validator address",
+			stateDB: makeStateDBForMap3Verifier(t),
+			msg: restaking.CollectReward{
+				ValidatorAddress: makeTestAddr("invalid addr"),
+				DelegatorAddress: map3NodeAddr3,
+			},
+			signer:  map3OperatorAddr3,
+			wantErr: errInvalidValidatorAddress,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := map3VerifierForRestaking{}
+			_, err := m.VerifyForCollectingReward(tt.stateDB, &tt.msg, tt.signer)
+			if err := assertError(tt.wantErr, err); err != nil {
+				t.Errorf("VerifyForCollectingReward() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+		})
+	}
+}
+
+func makeStateDBForMap3Verifier(t *testing.T) vm.StateDB {
+	sdb, err := newTestStateDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	buildMap3Node := func(map3Addr, operator common.Address, status microstaking.Map3Status) *microstaking.Map3NodeWrapper_ {
+		return microstaking.NewMap3NodeWrapperBuilder().
+			SetMap3Address(map3Addr).
+			SetOperatorAddress(operator).
+			SetStatus(status).Build()
+	}
+	node1 := buildMap3Node(map3NodeAddr, map3OperatorAddr, microstaking.Active)
+	node2 := buildMap3Node(map3NodeAddr2, map3OperatorAddr2, microstaking.Pending)
+	node3 := buildMap3Node(map3NodeAddr3, map3OperatorAddr3, microstaking.Active)
+	node3.RestakingReference.ValidatorAddress = validatorAddr
+	sdb.Map3NodePool().Nodes().Put(map3NodeAddr, node1)
+	sdb.IncrementMap3NodeNonce()
+	sdb.Map3NodePool().Nodes().Put(map3NodeAddr2, node2)
+	sdb.IncrementMap3NodeNonce()
+	sdb.Map3NodePool().Nodes().Put(map3NodeAddr3, node3)
+	sdb.IncrementMap3NodeNonce()
+	sdb.Commit(true)
+	return sdb
 }

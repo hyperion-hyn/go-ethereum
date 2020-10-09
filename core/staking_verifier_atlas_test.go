@@ -28,6 +28,7 @@ const (
 	validatorIndex  = 0
 	validatorIndex2 = 7
 	delegatorIndex  = 6
+	delegatorIndex2 = 8
 )
 
 var (
@@ -40,24 +41,21 @@ var (
 	operatorAddr        = makeTestAddr(fmt.Sprint("op", validatorIndex))
 	operatorAddr2       = makeTestAddr(fmt.Sprint("op", validatorIndex2))
 	delegatorAddr       = makeTestAddr(delegatorIndex)
+	delegatorAddr2      = makeTestAddr(delegatorIndex2)
 )
 
 var (
 	oneBig          = big.NewInt(1e18)
-	fiveKOnes       = new(big.Int).Mul(big.NewInt(5000), oneBig)
 	tenKOnes        = new(big.Int).Mul(big.NewInt(10000), oneBig)
 	twelveKOnes     = new(big.Int).Mul(big.NewInt(12000), oneBig)
-	fifteenKOnes    = new(big.Int).Mul(big.NewInt(15000), oneBig)
 	twentyKOnes     = new(big.Int).Mul(big.NewInt(20000), oneBig)
 	twentyFiveKOnes = new(big.Int).Mul(big.NewInt(25000), oneBig)
 	thirtyKOnes     = new(big.Int).Mul(big.NewInt(30000), oneBig)
 	millionOnes     = new(big.Int).Mul(big.NewInt(1000000), oneBig)
 
-	negRate           = common.NewDecWithPrec(-1, 10)
 	pointOneDec       = common.NewDecWithPrec(1, 1)
 	pointTwoDec       = common.NewDecWithPrec(2, 1)
 	pointFiveDec      = common.NewDecWithPrec(5, 1)
-	pointSevenDec     = common.NewDecWithPrec(7, 1)
 	pointEightFiveDec = common.NewDecWithPrec(85, 2)
 	pointNineDec      = common.NewDecWithPrec(9, 1)
 	oneDec            = common.OneDec()
@@ -67,7 +65,6 @@ var (
 
 const (
 	defaultEpoch           = 5
-	defaultNextEpoch       = 6
 	defaultSnapBlockNumber = 90
 	defaultBlockNumber     = 100
 	defaultNonce           = 5
@@ -1125,4 +1122,211 @@ func assertError(got, expect error) error {
 		return fmt.Errorf("unexpected error [%v] / [%v]", got, expect)
 	}
 	return nil
+}
+
+func Test_tokenHolderVerifier_VerifyForCreatingValidator(t *testing.T) {
+	tests := []struct {
+		stateDB vm.StateDB
+		msg     restaking.CreateValidator
+		signer  common.Address
+		wantErr error
+	}{
+		{
+			stateDB: makeStateDBForTokenHolderVerifier(t),
+			msg: restaking.CreateValidator{
+				OperatorAddress: operatorAddr,
+			},
+			signer:  operatorAddr,
+			wantErr: nil,
+		},
+		{
+			stateDB: makeStateDBForTokenHolderVerifier(t),
+			msg: restaking.CreateValidator{
+				OperatorAddress: operatorAddr,
+			},
+			signer:  makeTestAddr("invalid addr"),
+			wantErr: errInvalidSigner,
+		},
+		{
+			stateDB: makeStateDBForTokenHolderVerifier(t),
+			msg: restaking.CreateValidator{
+				OperatorAddress: operatorAddr2,
+			},
+			signer:  operatorAddr2,
+			wantErr: errInsufficientBalanceForStake,
+		},
+	}
+	for i, tt := range tests {
+		t.Run(fmt.Sprintf("Test Case-%v", i), func(t *testing.T) {
+			s := tokenHolderVerifier{}
+			_, err := s.VerifyForCreatingValidator(tt.stateDB, &tt.msg, tt.signer)
+			if err := assertError(tt.wantErr, err); err != nil {
+				t.Errorf("VerifyForCreatingValidator() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+		})
+	}
+}
+
+func Test_tokenHolderVerifier_VerifyForEditingValidator(t *testing.T) {
+	tests := []struct {
+		stateDB vm.StateDB
+		msg     restaking.EditValidator
+		signer  common.Address
+		wantErr error
+	}{
+		{
+			stateDB: makeStateDBForTokenHolderVerifier(t),
+			msg: restaking.EditValidator{
+				OperatorAddress: operatorAddr,
+			},
+			signer:  operatorAddr,
+			wantErr: nil,
+		},
+		{
+			stateDB: makeStateDBForTokenHolderVerifier(t),
+			msg: restaking.EditValidator{
+				OperatorAddress: operatorAddr,
+			},
+			signer:  makeTestAddr("invalid addr"),
+			wantErr: errInvalidSigner,
+		},
+	}
+	for i, tt := range tests {
+		t.Run(fmt.Sprintf("Test Case-%v", i), func(t *testing.T) {
+			s := tokenHolderVerifier{}
+			_, err := s.VerifyForEditingValidator(tt.stateDB, &tt.msg, tt.signer)
+			if err := assertError(tt.wantErr, err); err != nil {
+				t.Errorf("VerifyForEditingValidator() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+		})
+	}
+}
+
+func Test_tokenHolderVerifier_VerifyForRedelegating(t *testing.T) {
+	tests := []struct {
+		stateDB vm.StateDB
+		msg     restaking.Redelegate
+		signer  common.Address
+		wantErr error
+	}{
+		{
+			stateDB: makeStateDBForTokenHolderVerifier(t),
+			msg: restaking.Redelegate{
+				DelegatorAddress: delegatorAddr,
+			},
+			signer:  delegatorAddr,
+			wantErr: nil,
+		},
+		{
+			stateDB: makeStateDBForTokenHolderVerifier(t),
+			msg: restaking.Redelegate{
+				DelegatorAddress: delegatorAddr,
+			},
+			signer:  makeTestAddr("invalid addr"),
+			wantErr: errInvalidSigner,
+		},
+		{
+			stateDB: makeStateDBForTokenHolderVerifier(t),
+			msg: restaking.Redelegate{
+				DelegatorAddress: delegatorAddr2,
+			},
+			signer:  delegatorAddr2,
+			wantErr: errInsufficientBalanceForStake,
+		},
+	}
+	for i, tt := range tests {
+		t.Run(fmt.Sprintf("Test Case-%v", i), func(t *testing.T) {
+			s := tokenHolderVerifier{}
+			_, err := s.VerifyForRedelegating(tt.stateDB, &tt.msg, tt.signer)
+			if err := assertError(tt.wantErr, err); err != nil {
+				t.Errorf("VerifyForRedelegating() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+		})
+	}
+}
+
+func Test_tokenHolderVerifier_VerifyForUnredelegating(t *testing.T) {
+	tests := []struct {
+		stateDB vm.StateDB
+		msg     restaking.Unredelegate
+		signer  common.Address
+		wantErr error
+	}{
+		{
+			stateDB: makeStateDBForTokenHolderVerifier(t),
+			msg: restaking.Unredelegate{
+				DelegatorAddress: delegatorAddr,
+			},
+			signer:  delegatorAddr,
+			wantErr: nil,
+		},
+		{
+			stateDB: makeStateDBForTokenHolderVerifier(t),
+			msg: restaking.Unredelegate{
+				DelegatorAddress: delegatorAddr,
+			},
+			signer:  makeTestAddr("invalid addr"),
+			wantErr: errInvalidSigner,
+		},
+	}
+	for i, tt := range tests {
+		t.Run(fmt.Sprintf("Test Case-%v", i), func(t *testing.T) {
+			s := tokenHolderVerifier{}
+			_, err := s.VerifyForUnredelegating(tt.stateDB, &tt.msg, tt.signer)
+			if err := assertError(tt.wantErr, err); err != nil {
+				t.Errorf("VerifyForUnredelegating() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+		})
+	}
+}
+
+func Test_tokenHolderVerifier_VerifyForCollectingReward(t *testing.T) {
+	tests := []struct {
+		stateDB vm.StateDB
+		msg     restaking.CollectReward
+		signer  common.Address
+		wantErr error
+	}{
+		{
+			stateDB: makeStateDBForTokenHolderVerifier(t),
+			msg: restaking.CollectReward{
+				DelegatorAddress: delegatorAddr,
+			},
+			signer:  delegatorAddr,
+			wantErr: nil,
+		},
+		{
+			stateDB: makeStateDBForTokenHolderVerifier(t),
+			msg: restaking.CollectReward{
+				DelegatorAddress: delegatorAddr,
+			},
+			signer:  makeTestAddr("invalid addr"),
+			wantErr: errInvalidSigner,
+		},
+	}
+	for i, tt := range tests {
+		t.Run(fmt.Sprintf("Test Case-%v", i), func(t *testing.T) {
+			s := tokenHolderVerifier{}
+			_, err := s.VerifyForCollectingReward(tt.stateDB, &tt.msg, tt.signer)
+			if err := assertError(tt.wantErr, err); err != nil {
+				t.Errorf("VerifyForCollectingReward() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+		})
+	}
+}
+
+func makeStateDBForTokenHolderVerifier(t *testing.T) vm.StateDB {
+	sdb, err := newTestStateDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	sdb.AddBalance(operatorAddr, millionOnes)
+	sdb.AddBalance(delegatorAddr, millionOnes)
+	sdb.Commit(true)
+	return sdb
 }
