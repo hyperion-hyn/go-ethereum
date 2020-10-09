@@ -36,6 +36,9 @@ func (d *Description_) EnsureLength() error {
 			"exceed maximum name length %d %d", len(d.Name), MaxNameLength,
 		)
 	}
+	if len(d.Identity) == 0 {
+		return errors.New("empty identity")
+	}
 	if len(d.Identity) > MaxIdentityLength {
 		return errors.Errorf(
 			"exceed Maximum Length identity %d %d", len(d.Identity), MaxIdentityLength,

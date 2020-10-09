@@ -28,7 +28,7 @@ var (
 			Epoch:  common.Big2,
 		},
 		Renewal: Renewal_{
-			IsRenew:      true,
+			Status:       uint8(Renewed),
 			UpdateHeight: big.NewInt(1),
 		},
 	}

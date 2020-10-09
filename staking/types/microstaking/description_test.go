@@ -117,7 +117,7 @@ func TestDescription_EnsureLength(t *testing.T) {
 		},
 		{
 			desc:   Description_{},
-			expErr: nil,
+			expErr: errors.New("empty identity"),
 		},
 		{
 			desc: Description_{
