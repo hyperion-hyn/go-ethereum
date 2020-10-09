@@ -266,11 +266,11 @@ func (s *Storage_ValidatorWrapper_) AddRedelegation(delegator common.Address, am
 	}
 }
 
-func (s *Storage_ValidatorWrapper_) Undelegate(delegator common.Address, epoch, amount *big.Int) {
+func (s *Storage_ValidatorWrapper_) Undelegate(delegator common.Address, epoch, amountOrNil *big.Int) {
 	if redelegation, ok := s.Redelegations().Get(delegator); ok {
 		amt := redelegation.Amount().Value()
-		if amount != nil && amount.Cmp(amt) < 0 {
-			amt = amount
+		if amountOrNil != nil && amountOrNil.Cmp(amt) < 0 {
+			amt = amountOrNil
 		}
 		redelegation.Undelegation().Amount().SetValue(amt)
 		redelegation.Undelegation().Epoch().SetValue(epoch)

@@ -103,7 +103,7 @@ func renewAndActivateMap3Nodes(chain consensus.ChainReader, header *types.Header
 			nodeAge := node.Map3Node().CalculateNodeAge(header.Number, chain.Config().Atlas)
 			node.Map3Node().Age().SetValue(nodeAge)
 
-			isRenewed, amt, err := node.UnmicrodelegateIfNotRenewed(nowEpoch)
+			isRenewed, notRenewedAmt, err := node.UnmicrodelegateIfNotRenewed(nowEpoch)
 			if err != nil {
 				return err
 			}
@@ -113,19 +113,26 @@ func renewAndActivateMap3Nodes(chain consensus.ChainReader, header *types.Header
 					return err
 				}
 
+				isActive := false
 				if node.CanActivate(requireTotal, requireSelf) {
 					if err := node.Activate(nowEpoch); err != nil {
 						return err
 					}
+					isActive = true
 				}
 
-				if node.IsAlreadyRestaking() {
+				if node.IsAlreadyRestaking() && (notRenewedAmt.Sign() > 0 || !isActive) {
 					validatorAddr := node.RestakingReference().ValidatorAddress().Value()
 					validator, err := stateDB.ValidatorByAddress(validatorAddr)
 					if err != nil {
 						return err
 					}
-					validator.Undelegate(nodeAddr, nowEpoch, amt)
+
+					undelegation := notRenewedAmt
+					if !isActive {	// undelegate total amount if not active
+						undelegation = nil
+					}
+					validator.Undelegate(nodeAddr, nowEpoch, undelegation)
 					// TODO(ATLAS): need 20%? change state to inactive?
 				}
 			} else {
@@ -422,10 +429,10 @@ func ballotResult(
 	parentCommittee, err := lookupCommitteeAtEpoch(parentHeader.Epoch, bc)
 	if err != nil {
 		return nil, nil, nil, errors.Errorf(
-			"cannot read shard state %v", parentHeader.Epoch,
+			"cannot read committee at %v", parentHeader.Epoch,
 		)
 	}
-	reader := availability.CommitBitmapReader{Header: parentHeader}
+	reader := availability.CommitBitmapReader{Header: parentHeader}	// TODO(ATLAS): next block header
 	_, payable, missing, err := availability.BallotResult(reader, parentCommittee)
 	return parentCommittee, payable, missing, err
 }

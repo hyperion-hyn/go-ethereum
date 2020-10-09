@@ -210,10 +210,10 @@ func (s *Storage_Map3NodeWrapper_) AddMicrodelegation(delegator common.Address, 
 		md.PendingDelegation().UnlockedEpoch().SetValue(newEpoch)
 
 		md.PendingDelegation().AddAmount(amount)
-		s.AddTotalDelegation(amount)
+		s.AddTotalPendingDelegation(amount)
 	} else {
 		md.AddAmount(amount)
-		s.AddTotalPendingDelegation(amount)
+		s.AddTotalDelegation(amount)
 	}
 	return !isExist
 }
