@@ -289,6 +289,7 @@ func (s *Storage_Map3NodeWrapper_) RenewAndPend(epoch *big.Int) error {
 	s.Map3Node().PendingEpoch().SetValue(epoch)
 	s.Map3Node().ActivationEpoch().Clear()
 	s.Map3Node().ReleaseEpoch().Clear()
+	s.Map3Node().Status().SetValue(uint8(Pending))
 
 	// new commission
 	newCommission := s.Map3Node().Commission().RateForNextPeriod().Value()
