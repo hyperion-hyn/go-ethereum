@@ -15,8 +15,8 @@ import (
 	"github.com/ethereum/go-ethereum/staking/committee"
 	"github.com/ethereum/go-ethereum/staking/network"
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
-	"golang.org/x/sync/singleflight"
 	"math/big"
 )
 
@@ -180,7 +180,7 @@ type UndelegationReleaser interface {
 }
 
 type undelegationToBalance struct {
-	stateDB *state.StateDB
+	stateDB       *state.StateDB
 	rewardHandler core.RewardToBalance
 }
 
@@ -204,7 +204,7 @@ func (u undelegationToBalance) Release(redelegation *restaking.Storage_Redelegat
 }
 
 type undelegationToMap3Node struct {
-	stateDB *state.StateDB
+	stateDB       *state.StateDB
 	rewardHandler core.RewardToMap3Node
 }
 
@@ -384,7 +384,7 @@ func accumulateRewardsAndCountSigs(
 		}
 
 		var due *big.Int
-		if i == 0 {	// Give out whatever leftover to the first voter/handle
+		if i == 0 { // Give out whatever leftover to the first voter/handle
 			due = big.NewInt(0).Set(rewardPool)
 		} else {
 			due = totalRewardDec.Mul(
@@ -431,59 +431,48 @@ func ballotResult(
 }
 
 var (
-	votingPowerCache   singleflight.Group
-	delegateShareCache singleflight.Group
-	committeeCache     singleflight.Group
+	committeeCache, _     = lru.New(3)
+	votingPowerCache, _   = lru.New(3)
+	delegateShareCache, _ = lru.New(100)
 )
 
 func lookupCommitteeAtEpoch(epoch *big.Int, bc consensus.ChainReader) (*restaking.Committee_, error) {
-	key := epoch.String()
-	results, err, _ := committeeCache.Do(
-		key, func() (interface{}, error) {
-			// TODO: read from committee provider
-			committeeSt, err := bc.ReadCommitteeAtEpoch(epoch)
-			if err != nil {
-				return nil, err
-			}
-			comm, err := committeeSt.Load()
-			if err != nil {
-				return nil, err
-			}
+	key := fmt.Sprintf("committee-%v", epoch.String())
+	if c, ok := committeeCache.Get(key); ok {
+		return c.(*restaking.Committee_), nil
+	}
 
-			// For new calc, remove old data from 2 epochs ago
-			deleteEpoch := big.NewInt(0).Sub(epoch, big.NewInt(2))
-			deleteKey := deleteEpoch.String()
-			votingPowerCache.Forget(deleteKey)
-			return comm, nil
-		},
-	)
+	// TODO(ATLAS): read from committee provider
+	committeeSt, err := bc.ReadCommitteeAtEpoch(epoch)
 	if err != nil {
 		return nil, err
 	}
-	return results.(*restaking.Committee_), nil
+	comm, err := committeeSt.Load()
+	if err != nil {
+		return nil, err
+	}
+
+	// Put in cache
+	committeeCache.Add(key, comm)
+
+	return comm, nil
 }
 
 func lookupVotingPower(epoch *big.Int, comm *restaking.Committee_) (*votepower.Roster, error) {
-	key := epoch.String()
-	results, err, _ := votingPowerCache.Do(
-		key, func() (interface{}, error) {
-			votingPower, err := votepower.Compute(comm)
-			if err != nil {
-				return nil, err
-			}
+	key := fmt.Sprintf("votingpower-%v", epoch.String())
+	if v, ok := votingPowerCache.Get(key); ok {
+		return v.(*votepower.Roster), nil
+	}
 
-			// For new calc, remove old data from 3 epochs ago
-			deleteEpoch := big.NewInt(0).Sub(comm.Epoch, big.NewInt(3))
-			deleteKey := deleteEpoch.String()
-			votingPowerCache.Forget(deleteKey)
-
-			return votingPower, nil
-		},
-	)
+	votingPower, err := votepower.Compute(comm)
 	if err != nil {
 		return nil, err
 	}
-	return results.(*votepower.Roster), nil
+
+	// Put in cache
+	votingPowerCache.Add(key, votingPower)
+
+	return votingPower, nil
 }
 
 // Lookup or compute the shares of stake for all delegators in a validator
@@ -491,43 +480,32 @@ func lookupDelegatorShares(
 	epoch *big.Int, snapshot *restaking.Storage_ValidatorWrapper_,
 ) (map[common.Address]common.Dec, error) {
 	valAddr := snapshot.Validator().ValidatorAddress().Value()
-	key := fmt.Sprintf("%s-%s", epoch.String(), valAddr.Hex())
-
-	shares, err, _ := delegateShareCache.Do(
-		key, func() (interface{}, error) {
-			result := map[common.Address]common.Dec{}
-
-			totalDelegationDec := common.NewDecFromBigInt(snapshot.TotalDelegation().Value())
-			if totalDelegationDec.IsZero() {
-				log.Info("zero total delegation during AddReward delegation payout",
-					"validator-snapshot", valAddr.Hex())
-				return result, nil
-			}
-
-			for _, key := range snapshot.Redelegations().AllKeys() {
-				delegation, ok := snapshot.Redelegations().Get(key)
-				if !ok {
-					return nil, errValidatorNotExist
-				}
-				// NOTE percentage = <this_delegator_amount>/<total_delegation>
-				percentage := common.NewDecFromBigInt(delegation.Amount().Value()).Quo(totalDelegationDec)
-				result[delegation.DelegatorAddress().Value()] = percentage
-			}
-
-			// For new calc, remove old data from 3 epochs ago
-			deleteEpoch := big.NewInt(0).Sub(epoch, big.NewInt(3))
-			deleteKey := fmt.Sprintf("%s-%s", deleteEpoch.String(), valAddr.Hex())
-			votingPowerCache.Forget(deleteKey)
-
-			return result, nil
-		},
-	)
-	if err != nil {
-		return nil, err
+	key := fmt.Sprintf("delegatorshares-%s-%s", epoch.String(), valAddr.Hex())
+	if d, ok := delegateShareCache.Get(key); ok {
+		return d.(map[common.Address]common.Dec), nil
 	}
 
-	return shares.(map[common.Address]common.Dec), nil
+	votingPower := map[common.Address]common.Dec{}
+	totalDelegationDec := common.NewDecFromBigInt(snapshot.TotalDelegation().Value())
+	if totalDelegationDec.IsZero() {
+		log.Info("zero total delegation during AddReward delegation payout",
+			"validator-snapshot", valAddr.Hex())
+	} else {
+		for _, key := range snapshot.Redelegations().AllKeys() {
+			delegation, ok := snapshot.Redelegations().Get(key)
+			if !ok {
+				return nil, errValidatorNotExist
+			}
+			// NOTE percentage = <this_delegator_amount>/<total_delegation>
+			percentage := common.NewDecFromBigInt(delegation.Amount().Value()).Quo(totalDelegationDec)
+			votingPower[delegation.DelegatorAddress().Value()] = percentage
+		}
+	}
+
+	// Put in cache
+	delegateShareCache.Add(key, votingPower)
+
+	return votingPower, nil
 }
 
 // ATLAS - END
-
