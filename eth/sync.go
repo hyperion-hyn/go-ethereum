@@ -259,6 +259,7 @@ func (cs *chainSyncer) nextSyncOp() *chainSyncOp {
 	}
 	mode, ourTD := cs.modeAndLocalHead()
 	op := peerToSyncOp(mode, peer)
+	log.Trace("nextSyncOp", "peer", peer.ID(), "head", peer.head, "mode", mode, "op.td", op.td, "ourTD", ourTD)
 	if op.td.Cmp(ourTD) <= 0 {
 		return nil // We're in sync.
 	}
@@ -287,7 +288,7 @@ func (cs *chainSyncer) modeAndLocalHead() (downloader.SyncMode, *big.Int) {
 		}
 	}
 	// Nope, we're really full syncing
-	head := cs.pm.blockchain.CurrentHeader()
+	head := cs.pm.blockchain.CurrentBlock().Header()
 	td := cs.pm.blockchain.GetTd(head.Hash(), head.Number.Uint64())
 	return downloader.FullSync, td
 }
