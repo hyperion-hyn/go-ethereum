@@ -2467,3 +2467,9 @@ func (bc *BlockChain) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscript
 func (bc *BlockChain) SubscribeBlockProcessingEvent(ch chan<- bool) event.Subscription {
 	return bc.scope.Track(bc.blockProcFeed.Subscribe(ch))
 }
+
+// EpochOfBlock return epoch information of a block
+func (bc *BlockChain) EpochOfBlock(blockNum uint64) (epoch uint64, firstBlock uint64, lastBlock uint64) {
+	epoch, firstBlock, lastBlock = bc.Config().Atlas.EpochOfBlock(blockNum)
+	return
+}

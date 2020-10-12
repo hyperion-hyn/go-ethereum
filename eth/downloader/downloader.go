@@ -27,6 +27,7 @@ import (
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -207,6 +208,11 @@ type BlockChain interface {
 
 	// InsertReceiptChain inserts a batch of receipts into the local chain.
 	InsertReceiptChain(types.Blocks, []types.Receipts, uint64) (int, error)
+
+	// EpochOfBlock return epoch information of a block
+	EpochOfBlock(blockNum uint64) (epoch uint64, firstBlock uint64, lastBlock uint64)
+
+	Engine() consensus.Engine
 }
 
 // New creates a new downloader to fetch hashes and blocks from remote peers.
@@ -1560,6 +1566,28 @@ func (d *Downloader) processFullSyncContent() error {
 }
 
 func (d *Downloader) importBlockResults(results []*fetchResult) error {
+	if _, ok := d.blockchain.Engine().(consensus.Atlas); !ok {
+		return d._importBlockResults(results)
+	}
+
+	for i := 0; i < len(results); {
+		result := results[i]
+		cur := result.Header.Number.Uint64()
+		_, _, lastBlock := d.blockchain.EpochOfBlock(cur)
+		length := int(lastBlock - cur + 1)
+		if length > len(results)-i {
+			length = len(results) - i
+		}
+		err := d._importBlockResults(results[i : i+length])
+		if err != nil {
+			return err
+		}
+		i = i + length
+	}
+	return nil
+}
+
+func (d *Downloader) _importBlockResults(results []*fetchResult) error {
 	// Check for any early termination requests
 	if len(results) == 0 {
 		return nil
