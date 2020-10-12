@@ -102,6 +102,12 @@ func (pool *TxPool) validateStakingTx(tx *types.Transaction) error {
 			return err
 		}
 		return verifier.VerifyCollectMicrostakingRewardsMsg(pool.currentState, stkMsg, msg.From())
+	case types.RenewMap3Node:
+		stkMsg := &microstaking.RenewMap3Node{}
+		if err := rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
+			return err
+		}
+		return verifier.VerifyRenewMap3NodeMsg(pool.currentState, chainContext, pendingBlockNumber, pendingEpoch, stkMsg, msg.From())
 	}
 
 	return nil
