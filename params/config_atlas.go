@@ -50,8 +50,17 @@ func (c *AtlasConfig) EpochFirstBlock(epochNum uint64) uint64 {
 }
 
 func (c *AtlasConfig) EpochByBlock(blockNum uint64) uint64 {
-	blocks := c.BlocksPerEpoch
-	return uint64(math.Ceil(float64(blockNum) / float64(blocks)))
+	blocksPerEpoch := c.BlocksPerEpoch
+	// https://stackoverflow.com/questions/2745074/fast-ceiling-of-an-integer-division-in-c-c
+	// epoch = 1 + ((blockNum-1)/blocksPerEpoch)
+	return uint64(math.Ceil(float64(blockNum) / float64(blocksPerEpoch)))
+}
+
+func (c *AtlasConfig) EpochOfBlock(blockNum uint64) (epoch, firstBlock, lastBlock uint64) {
+	epoch = c.EpochByBlock(blockNum)
+	firstBlock = c.EpochFirstBlock(epoch)
+	lastBlock = c.EpochLastBlock(epoch)
+	return
 }
 
 func (c *AtlasConfig) String() string {
