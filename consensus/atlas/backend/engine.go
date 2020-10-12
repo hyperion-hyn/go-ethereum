@@ -524,6 +524,7 @@ func (sb *backend) _Seal(chain consensus.ChainReader, block *types.Block, result
 				if result != nil && sb.SealHash(block.Header()) == sb.SealHash(result.Header()) {
 					// wait for the timestamp of header, use this to adjust the block period
 					delay := time.Unix(int64(header.Time+sb.config.BlockPeriod), 0).Sub(now())
+					sb.logger.Debug("mine new block in future", "delay", delay)
 					select {
 					case <-time.After(delay):
 					}
@@ -625,7 +626,10 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		snap := s.(*Snapshot)
 		return snap, nil
 	}
-	header := chain.GetHeaderByNumber(number)
+	atlasConfig := chain.Config().Atlas
+	epoch := atlasConfig.EpochByBlock(number)
+	firstBlock := atlasConfig.EpochFirstBlock(epoch)
+	header := chain.GetHeaderByNumber(firstBlock)
 	if header == nil {
 		return nil, consensus.ErrUnknownAncestor
 	}
