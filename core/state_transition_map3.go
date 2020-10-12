@@ -113,8 +113,8 @@ func (st *StateTransition) verifyAndApplyRenewMap3NodeTx(verifier StakingVerifie
 		UpdateHeight: st.evm.BlockNumber,
 	})
 
-	if !msg.NewCommissionRate.IsNil() {
-		node.Map3Node().Commission().RateForNextPeriod().SetValue(msg.NewCommissionRate)
+	if msg.NewCommissionRate != nil && !msg.NewCommissionRate.IsNil() {
+		node.Map3Node().Commission().RateForNextPeriod().SetValue(*msg.NewCommissionRate)
 	}
 	return nil
 }

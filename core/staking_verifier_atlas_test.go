@@ -1063,7 +1063,7 @@ func (chain *fakeChainContext) ReadCommitteeAtEpoch(epoch *big.Int) (*restaking.
 
 func (chain *fakeChainContext) Config() *params.ChainConfig {
 	// TODO(ATLAS): restaking enable
-	return &params.ChainConfig{Atlas: &params.AtlasConfig{RestakingEnable: false}}
+	return &params.ChainConfig{Atlas: &params.AtlasConfig{RestakingEnable: false, ScalingCycle: 3600}}
 }
 
 func (chain *fakeChainContext) Database() ethdb.Database {

@@ -196,6 +196,7 @@ func TestUpdateValidatorFromPoolByMsg(t *testing.T) {
 				ev.CommissionRate = &rate
 				return ev
 			}(),
+			blockNum: big.NewInt(111),
 			identitySet: map[string]bool{
 				editDesc.Identity:  true,
 				makeIdentityStr(0): false,

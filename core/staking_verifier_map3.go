@@ -477,11 +477,13 @@ func (verifier StakingVerifier) VerifyRenewMap3NodeMsg(stateDB vm.StateDB, chain
 				return err
 			}
 
-			node.Commission.RateForNextPeriod = msg.NewCommissionRate
+			if msg.NewCommissionRate != nil && !msg.NewCommissionRate.IsNil() {
+				node.Commission.RateForNextPeriod = *msg.NewCommissionRate
+			}
 			return node.SanityCheck(microstaking.MaxPubKeyAllowed, &percent)
 		}
 	} else {
-		if !msg.NewCommissionRate.IsNil() {
+		if msg.NewCommissionRate != nil {
 			return errCommissionUpdateNotAllow
 		}
 
