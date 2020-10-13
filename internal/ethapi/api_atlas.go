@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	"math/big"
 )
 
@@ -77,6 +78,36 @@ func (s *PublicRestakingAPI) GetCommitteeAtEpoch(ctx context.Context, epoch uint
 	}
 	committee, err := committeeStorage.Load()
 	encodeBytes, err := rlp.EncodeToBytes(committee)
+	if err != nil {
+		return nil, err
+	}
+	return encodeBytes, nil
+}
+
+func (s *PublicRestakingAPI) GetCommitteeInformationAtEpoch(ctx context.Context, epoch uint64) (hexutil.Bytes, error) {
+	committeeStorage, err := s.b.ChainContext().ReadCommitteeAtEpoch(big.NewInt(int64(epoch)))
+	if err != nil {
+		return nil, err
+	}
+	committee, err := committeeStorage.Load()
+
+	slots := committee.Slots.Entrys
+
+	plainValidators := make([]restaking.PlainValidatorWrapper, 0)
+	for _, slotTemp := range slots {
+		validatorWrapperStorage, err := s.b.ChainContext().ReadValidatorAtEpoch(big.NewInt(int64(epoch)), slotTemp.EcdsaAddress)
+		if err != nil {
+			return nil, err
+		}
+		validatorWrapper, err := validatorWrapperStorage.LoadFully()
+		if err != nil {
+			return nil, err
+		}
+		validatorWrapperRPC := validatorWrapper.ToPlainValidatorWrapper()
+		plainValidators = append(plainValidators, *validatorWrapperRPC)
+	}
+
+	encodeBytes, err := rlp.EncodeToBytes(plainValidators)
 	if err != nil {
 		return nil, err
 	}
