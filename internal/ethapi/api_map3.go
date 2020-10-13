@@ -2,11 +2,17 @@ package ethapi
 
 import (
 	"context"
+	"errors"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
+	"math/big"
+)
+
+var (
+	errMicrodelegationNotExist = errors.New("microdelegation does not exist")
 )
 
 type PublicMicroStakingAPI struct {
@@ -88,4 +94,33 @@ func (s *PublicMicroStakingAPI) GetMap3NodeDelegation(
 	} else {
 		return nil, ethereum.NotFound
 	}
+}
+
+func (s *PublicMicroStakingAPI) GetAllMap3RewardByDelegatorAddress(
+	ctx context.Context, delegatorAddress common.Address, blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Big, error) {
+	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
+	if state == nil || err != nil {
+		return nil, err
+	}
+	map3NodePool := state.Map3NodePool()
+	delegationIndexMap := map3NodePool.DelegationIndexMapByDelegator().Get(delegatorAddress)
+	totalRewards := big.NewInt(0)
+	for i := 0; i < delegationIndexMap.Keys().Length(); i++ {
+		nodeAddr := delegationIndexMap.Keys().Get(i).Value()
+		node, err := state.Map3NodeByAddress(nodeAddr)
+		if err != nil {
+			return nil, err
+		}
+		if micro, ok := node.Microdelegations().Get(delegatorAddress); ok {
+			r := micro.Reward().Value()
+			if r.Sign() > 0 {
+				totalRewards = totalRewards.Add(totalRewards, r)
+				micro.Reward().Clear()
+			}
+		} else {
+			return nil, errMicrodelegationNotExist
+		}
+	}
+	return (*hexutil.Big)(totalRewards), nil
+
 }
