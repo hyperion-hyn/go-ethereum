@@ -55,5 +55,5 @@ type RenewMap3Node struct {
 	DelegatorAddress common.Address `json:"delegator_address"`
 	IsRenew          bool           `json:"is-renew"`
 	// just for map3 operator
-	NewCommissionRate *common.Dec `json:"new-commission-rate"`
+	NewCommissionRate *common.Dec `json:"new-commission-rate" rlp:"nil"`
 }
