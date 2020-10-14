@@ -185,4 +185,5 @@ type EngineEx interface {
 // Atlas is a consensus engine
 type Atlas interface {
 	EngineEx
+	VerifyCommittedSeals(chain ChainReader, header *types.Header, parents []*types.Header) error
 }

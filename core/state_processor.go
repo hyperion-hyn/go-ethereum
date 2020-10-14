@@ -65,6 +65,17 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	if p.config.DAOForkSupport && p.config.DAOForkBlock != nil && p.config.DAOForkBlock.Cmp(block.Number()) == 0 {
 		misc.ApplyDAOHardFork(statedb)
 	}
+
+	// ATLAS:
+	//  simplify engine.VerifyHeaders by ignore verify signature
+	//  verify signature here to ensure signature is signed by validators in validatorSet
+	if engine, ok := p.engine.(consensus.Atlas); ok {
+		err := engine.VerifyCommittedSeals(p.bc, header, nil)
+		if err != nil {
+			return nil, nil, 0, err
+		}
+	}
+
 	// Iterate over and process the individual transactions
 	for i, tx := range block.Transactions() {
 		statedb.Prepare(tx.Hash(), block.Hash(), i)
