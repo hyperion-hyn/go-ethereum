@@ -284,6 +284,10 @@ func (sb *backend) verifySigner(chain consensus.ChainReader, header *types.Heade
 	return nil
 }
 
+func (sb *backend) VerifyCommittedSeals(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
+	return sb.verifyCommittedSeals(chain, header, parents)
+}
+
 // verifyCommittedSeals checks whether every committed seal is signed by one of the parent's validators
 func (sb *backend) verifyCommittedSeals(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
 	number := header.Number.Uint64()
