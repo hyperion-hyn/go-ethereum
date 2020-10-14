@@ -60,6 +60,22 @@ func (ec *Client) GetCommitteeAtEpoch(ctx context.Context, epoch uint64) (*resta
 	return &committee, err
 }
 
+func (ec *Client) GetCommitteeInformationAtEpoch(ctx context.Context, epoch uint64) ([]restaking.PlainValidatorWrapper, error) {
+	var bytes hexutil.Bytes
+
+	err := ec.c.CallContext(ctx, &bytes, "eth_getCommitteeInformationAtEpoch", epoch)
+	if err != nil {
+		return nil, err
+	}
+	var validators []restaking.PlainValidatorWrapper
+
+	err = rlp.DecodeBytes(bytes, &validators)
+	if err != nil {
+		return nil, err
+	}
+	return validators, err
+}
+
 func (ec *Client) GetValidatorInformationAtEpoch(
 	ctx context.Context, validatorAddress common.Address, epoch uint64) (*restaking.PlainValidatorWrapper, error) {
 
