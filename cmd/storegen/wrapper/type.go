@@ -177,8 +177,22 @@ func newType(t string, definition Type, types map[string]Type) (typ abi.Type, er
 				typ.Elem = embeddedType
 			}
 		} else {
-			typ.T = abi.ArrayTy
-			typ.Size = varSize
+			if cType.T == abi.UintTy && cType.Size == 8 {
+				if varSize == 1 {
+					typ.T = abi.UintTy
+					typ.Size = 8
+					typ.SetStringKind("uint8")
+				} else if varSize <= 32 {
+					typ.T = abi.FixedBytesTy
+					typ.Size = varSize
+				} else {
+					typ.T = abi.ArrayTy
+					typ.Size = varSize
+				}
+			} else {
+				typ.T = abi.ArrayTy
+				typ.Size = varSize
+			}
 		}
 
 	case "mapping":
