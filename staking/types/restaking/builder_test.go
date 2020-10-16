@@ -152,7 +152,7 @@ func makeNonZeroValidator() Validator_ {
 func makeNonZeroValidatorWrapper() ValidatorWrapper_ {
 	w := ValidatorWrapper_{
 		Validator: makeNonZeroValidator(),
-		Redelegations: func() RedelegationMap_ {
+		Redelegations: func() IterableRedelegationMap_ {
 			m := NewRedelegationMap()
 			m.Put(nonZeroDelegation.DelegatorAddress, nonZeroDelegation)
 			m.Put(zeroDelegation.DelegatorAddress, zeroDelegation)

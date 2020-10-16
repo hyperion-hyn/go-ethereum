@@ -202,7 +202,7 @@ func (verifier StakingVerifier) VerifyEditValidatorMsg(stateDB vm.StateDB, chain
 	if !wrapperSt.IsOperator(msg.OperatorAddress) {
 		return nil, errInvalidValidatorOperator
 	}
-	validator, err := wrapperSt.Validator().LoadFully()
+	validator, err := wrapperSt.Validator().Load()
 	if err != nil {
 		return nil, err
 	}

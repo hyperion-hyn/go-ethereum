@@ -104,7 +104,7 @@ func TestSaveNewValidatorToPool(t *testing.T) {
 			tt.ctx.makeStateAndValidator(t)
 			saveNewValidatorToPool(tt.ctx.newValidator, tt.ctx.validatorPool)
 			v, _ := tt.ctx.stateDB.ValidatorByAddress(tt.ctx.validatorAddr)
-			got, _ := v.LoadFully()
+			got, _ := v.Load()
 			exp, _ := tt.ctx.newValidator.Copy()
 			if err := restaking.CheckValidatorWrapperEqual(*got, *exp); err != nil {
 				t.Errorf("Test - %v: %v", tt.name, err)
@@ -230,7 +230,7 @@ func TestUpdateValidatorFromPoolByMsg(t *testing.T) {
 			validatorPool := stateDB.ValidatorPool()
 			validatorSt, _ := stateDB.ValidatorByAddress(tt.msg.ValidatorAddress)
 
-			exp, _ := validatorSt.Validator().LoadFully()
+			exp, _ := validatorSt.Validator().Load()
 			_ = restaking.UpdateValidatorFromEditMsg(exp, &tt.msg)
 			if tt.blockNum != nil {
 				exp.Commission.UpdateHeight = tt.blockNum
@@ -238,7 +238,7 @@ func TestUpdateValidatorFromPoolByMsg(t *testing.T) {
 
 			updateValidatorFromPoolByMsg(validatorSt, validatorPool, &tt.msg, tt.blockNum)
 			v, _ := stateDB.ValidatorByAddress(tt.msg.ValidatorAddress)
-			got, _ := v.Validator().LoadFully()
+			got, _ := v.Validator().Load()
 
 			if err := restaking.CheckValidatorEqual(*got, *exp); err != nil {
 				t.Errorf("Test - %v: %v", tt.name, err)

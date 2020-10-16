@@ -419,7 +419,7 @@ func assertValidatorAlignCreateValidator(v Validator_, cv CreateValidator, block
 	if v.ValidatorAddress != validatorAddr {
 		return fmt.Errorf("validator address not equal")
 	}
-	if _, ok := v.OperatorAddresses.Set[cv.OperatorAddress]; !ok {
+	if _, ok := v.OperatorAddresses.Map[cv.OperatorAddress]; !ok {
 		return fmt.Errorf("operator address not equal")
 	}
 	if len(v.SlotPubKeys.Keys) != 1 {

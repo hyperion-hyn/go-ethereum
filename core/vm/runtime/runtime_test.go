@@ -18,6 +18,8 @@ package runtime
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	"math/big"
 	"os"
 	"strings"
@@ -244,6 +246,26 @@ func (d *dummyChain) GetHeader(h common.Hash, n uint64) *types.Header {
 	//parentHash := common.Hash{byte(n - 1)}
 	//fmt.Printf("GetHeader(%x, %d) => header with parent %x\n", h, n, parentHash)
 	return fakeHeader(n, parentHash)
+}
+
+func (d *dummyChain) Database() ethdb.Database {
+	panic("implement me")
+}
+
+func (d *dummyChain) ReadValidatorAtEpoch(b *big.Int, address common.Address) (*restaking.Storage_ValidatorWrapper_, error) {
+	panic("implement me")
+}
+
+func (d *dummyChain) ReadValidatorAtEpochOrCurrentBlock(b *big.Int, address common.Address) (*restaking.Storage_ValidatorWrapper_, error) {
+	panic("implement me")
+}
+
+func (d *dummyChain) ReadCommitteeAtEpoch(epoch *big.Int) (*restaking.Storage_Committee_, error) {
+	panic("implement me")
+}
+
+func (d *dummyChain) Config() *params.ChainConfig {
+	panic("implement me")
 }
 
 // TestBlockhash tests the blockhash operation. It's a bit special, since it internally

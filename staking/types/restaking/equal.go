@@ -80,20 +80,20 @@ func checkValidatorEqual(v1, v2 Validator_) error {
 	return nil
 }
 
-func checkAddressSetEqual(a1, a2 AddressSet_) error {
+func checkAddressSetEqual(a1, a2 IterableAddressSet_) error {
 	if len(a1.Keys) != len(a2.Keys) {
 		return fmt.Errorf(".len of keys not equal: %v / %v", len(a1.Keys), len(a2.Keys))
 	}
-	if len(a1.Set) != len(a2.Set) {
-		return fmt.Errorf(".len of set not equal: %v / %v", len(a1.Set), len(a2.Set))
+	if len(a1.Map) != len(a2.Map) {
+		return fmt.Errorf(".len of map not equal: %v / %v", len(a1.Map), len(a2.Map))
 	}
 	for i := range a1.Keys {
 		if *(a1.Keys[i]) != *(a2.Keys[i]) {
 			return fmt.Errorf("[%v] not equal in array: %x / %x", i, a1.Keys[i], a2.Keys[i])
 		}
 		k := *(a1.Keys[i])
-		if *(a1.Set[k]) != *(a2.Set[k]) {
-			return fmt.Errorf("[%v] not equal in set: %x / %x", k, a1.Keys[i], a2.Keys[i])
+		if *(a1.Map[k]) != *(a2.Map[k]) {
+			return fmt.Errorf("[%v] not equal in map: %x / %x", k, a1.Map[k], a2.Map[k])
 		}
 	}
 	return nil
@@ -153,7 +153,7 @@ func checkCommissionRateEqual(cr1, cr2 CommissionRates_) error {
 	return nil
 }
 
-func checkRedelegationMapEqual(ds1, ds2 RedelegationMap_) error {
+func checkRedelegationMapEqual(ds1, ds2 IterableRedelegationMap_) error {
 	if len(ds1.Keys) != len(ds2.Keys) {
 		return fmt.Errorf(".len not equal: %v / %v", len(ds1.Keys), len(ds2.Keys))
 	}

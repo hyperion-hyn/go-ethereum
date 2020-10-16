@@ -47,7 +47,7 @@ func (s *PublicRestakingAPI) GetValidatorInformation(
 	if err != nil {
 		return nil, err
 	}
-	validatorWrapper, err := storageValidatorWarpper.LoadFully()
+	validatorWrapper, err := storageValidatorWarpper.Load()
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func (s *PublicRestakingAPI) GetCommitteeInformationAtEpoch(ctx context.Context,
 		if err != nil {
 			return nil, err
 		}
-		validatorWrapper, err := validatorWrapperStorage.LoadFully()
+		validatorWrapper, err := validatorWrapperStorage.Load()
 		if err != nil {
 			return nil, err
 		}
@@ -121,7 +121,7 @@ func (s *PublicRestakingAPI) GetValidatorInformationAtEpoch(ctx context.Context,
 		return nil, err
 	}
 
-	validatorWrapper, err := validatorWrapperStorage.LoadFully()
+	validatorWrapper, err := validatorWrapperStorage.Load()
 	if err != nil {
 		return nil, err
 	}
