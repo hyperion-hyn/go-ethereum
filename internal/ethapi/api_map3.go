@@ -52,7 +52,7 @@ func (s *PublicMicroStakingAPI) GetMap3NodeInformation(
 		return nil, err
 	}
 
-	nodeWrapper, err := storageNodeWrapper.LoadFully()
+	nodeWrapper, err := storageNodeWrapper.Load()
 	if err != nil {
 		return nil, err
 	}

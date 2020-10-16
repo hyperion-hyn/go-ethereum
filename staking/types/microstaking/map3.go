@@ -371,27 +371,8 @@ func (s *Storage_Map3NodeWrapper_) Terminate() {
 	s.Map3Node().ReleaseEpoch().Clear()
 }
 
-func (s *Storage_Map3NodeWrapper_) LoadFully() (*Map3NodeWrapper_, error) {
-	s.Map3Node().load()
-	if _, err := s.Microdelegations().LoadFully(); err != nil {
-		return nil, err
-	}
-	s.RestakingReference().load()
-	s.AccumulatedReward().Value()
-	s.TotalDelegation().Value()
-	s.TotalPendingDelegation().Value()
-
-	// copy
-	src := s.obj
-	des := Map3NodeWrapper_{}
-	if err := deepCopy(src, &des); err != nil {
-		return nil, err
-	}
-	return &des, nil
-}
-
-// Storage_ValidatorWrapperMap_
-func (s *Storage_Map3NodeWrapperMap_) AllKeys() []common.Address {
+// Storage_IterableMap3NodeWrapperMap_
+func (s *Storage_IterableMap3NodeWrapperMap_) AllKeys() []common.Address {
 	addressSlice := make([]common.Address, 0)
 	addressLength := s.Keys().Length()
 	for i := 0; i < addressLength; i++ {
@@ -400,7 +381,7 @@ func (s *Storage_Map3NodeWrapperMap_) AllKeys() []common.Address {
 	return addressSlice
 }
 
-func (s *Storage_Map3NodeWrapperMap_) Put(key common.Address, map3Node *Map3NodeWrapper_) {
+func (s *Storage_IterableMap3NodeWrapperMap_) Put(key common.Address, map3Node *Map3NodeWrapper_) {
 	if s.Contain(key) {
 		s.Map().Get(key).Entry().Clear() // TODO(ATLAS): not supported
 		s.Map().Get(key).Entry().Save(map3Node)
@@ -415,11 +396,11 @@ func (s *Storage_Map3NodeWrapperMap_) Put(key common.Address, map3Node *Map3Node
 	}
 }
 
-func (s *Storage_Map3NodeWrapperMap_) Contain(key common.Address) bool {
+func (s *Storage_IterableMap3NodeWrapperMap_) Contain(key common.Address) bool {
 	return s.Map().Get(key).Index().Value().Sign() > 0
 }
 
-func (s *Storage_Map3NodeWrapperMap_) Get(key common.Address) (*Storage_Map3NodeWrapper_, bool) {
+func (s *Storage_IterableMap3NodeWrapperMap_) Get(key common.Address) (*Storage_Map3NodeWrapper_, bool) {
 	if s.Contain(key) {
 		return s.Map().Get(key).Entry(), true
 	}
@@ -556,7 +537,7 @@ type PlainMap3NodeWrapper struct {
 func (n *PlainMap3NodeWrapper) ToMap3NodeWrapper() *Map3NodeWrapper_ {
 	return &Map3NodeWrapper_{
 		Map3Node: *n.Map3Node.ToMap3Node(),
-		Microdelegations: func() MicrodelegationMap_ {
+		Microdelegations: func() IterableMicrodelegationMap_ {
 			delegations := NewMicrodelegationMap()
 			for _, delegation := range n.Microdelegations {
 				delegations.Put(delegation.DelegatorAddress, delegation)

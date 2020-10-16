@@ -128,7 +128,7 @@ func checkCommissionEqual(c1, c2 Commission_) error {
 	return nil
 }
 
-func checkMicrodelegationMapEqual(ds1, ds2 MicrodelegationMap_) error {
+func checkMicrodelegationMapEqual(ds1, ds2 IterableMicrodelegationMap_) error {
 	if len(ds1.Keys) != len(ds2.Keys) {
 		return fmt.Errorf(".len not equal: %v / %v", len(ds1.Keys), len(ds2.Keys))
 	}

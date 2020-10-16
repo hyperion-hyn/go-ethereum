@@ -78,7 +78,7 @@ struct MicrodelegationMapEntry_ {
     uint256 Index;
 }
 
-struct MicrodelegationMap_ {
+struct IterableMicrodelegationMap_ {
     address[] Keys;
     mapping (address => MicrodelegationMapEntry_) Map;
 }
@@ -90,7 +90,7 @@ struct RestakingReference_ {
 // Map3NodeWrapper contains map3 node, its micro-delegation information
 struct Map3NodeWrapper_ {
     Map3Node_ Map3Node;
-    MicrodelegationMap_ Microdelegations;
+    IterableMicrodelegationMap_ Microdelegations;
     RestakingReference_ RestakingReference;
     uint256 AccumulatedReward; // All the rewarded accumulated so far
     uint256 TotalDelegation;
@@ -102,7 +102,7 @@ struct Map3NodeWrapperMapEntry_ {
     uint256 Index;
 }
 
-struct Map3NodeWrapperMap_ {
+struct IterableMap3NodeWrapperMap_ {
     address[] Keys;
     mapping (address => Map3NodeWrapperMapEntry_) Map;
 }
@@ -123,7 +123,7 @@ struct DelegationIndexMap_ {
 }
 
 struct Map3NodePool_ {
-    Map3NodeWrapperMap_ Nodes;
+    IterableMap3NodeWrapperMap_ Nodes;
     mapping (address => DelegationIndexMap_) DelegationIndexMapByDelegator;
     mapping (string => bool) NodeKeySet;
     mapping (string => bool) DescriptionIdentitySet;

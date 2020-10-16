@@ -135,20 +135,3 @@ func (s *Storage_IterableRedelegationMap_) Remove(key common.Address) {
 	s.Keys().Resize(length - 1)
 	entry.Clear()
 }
-
-func (s *Storage_IterableRedelegationMap_) LoadFully() (*IterableRedelegationMap_, error) {
-	s.Keys().load()
-	length := s.Keys().Length()
-	for i := 0; i < length; i++ {
-		k := s.Keys().Get(i).Value()
-		s.Map().Get(k).load()
-	}
-
-	// copy
-	src := s.obj
-	des := IterableRedelegationMap_{}
-	if err := deepCopy(src, &des); err != nil {
-		return nil, err
-	}
-	return &des, nil
-}
