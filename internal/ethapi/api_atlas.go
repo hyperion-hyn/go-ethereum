@@ -37,27 +37,27 @@ func (s *PublicRestakingAPI) GetAllValidatorAddresses(
 }
 
 func (s *PublicRestakingAPI) GetValidatorInformation(
-	ctx context.Context, validatorAddress common.Address, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
+	ctx context.Context, validatorAddress common.Address, blockNrOrHash rpc.BlockNumberOrHash) (restaking.PlainValidatorWrapper, error) {
 	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if state == nil || err != nil {
-		return nil, err
+		return restaking.PlainValidatorWrapper{}, err
 
 	}
 	storageValidatorWarpper, err := state.ValidatorByAddress(validatorAddress)
 	if err != nil {
-		return nil, err
+		return restaking.PlainValidatorWrapper{}, err
 	}
 	validatorWrapper, err := storageValidatorWarpper.LoadFully()
 	if err != nil {
-		return nil, err
+		return restaking.PlainValidatorWrapper{}, err
 	}
 
 	validatorWrapperRPC := validatorWrapper.ToPlainValidatorWrapper()
-	encodeBytes, err := rlp.EncodeToBytes(&validatorWrapperRPC)
-	if err != nil {
-		return nil, err
-	}
-	return encodeBytes, nil
+	//encodeBytes, err := rlp.EncodeToBytes(&validatorWrapperRPC)
+	//if err != nil {
+	//	return nil, err
+	//}
+	return *validatorWrapperRPC, nil
 }
 
 func (s *PublicRestakingAPI) GetEpochFirstBlockNum(ctx context.Context, epoch uint64) uint64 {

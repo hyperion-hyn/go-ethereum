@@ -18,14 +18,10 @@ func (ec *Client) GetAllValidatorAddresses(ctx context.Context, blockNumber *big
 func (ec *Client) GetValidatorInformation(
 	ctx context.Context, validatorAddress common.Address, blockNumber *big.Int) (*restaking.PlainValidatorWrapper, error) {
 
-	var bytes hexutil.Bytes
-
-	err := ec.c.CallContext(ctx, &bytes, "eth_getValidatorInformation", validatorAddress, toBlockNumArg(blockNumber))
-	if err != nil {
-		return nil, err
-	}
+	//var bytes hexutil.Bytes
 	var validator restaking.PlainValidatorWrapper
-	err = rlp.DecodeBytes(bytes, &validator)
+
+	err := ec.c.CallContext(ctx, &validator, "eth_getValidatorInformation", validatorAddress, toBlockNumArg(blockNumber))
 	if err != nil {
 		return nil, err
 	}
