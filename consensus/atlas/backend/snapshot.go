@@ -186,12 +186,9 @@ func (s *Snapshot) apply(config *atlas.Config, chain consensus.ChainReader, head
 			snap.Votes = nil
 			snap.Tally = make(map[common.Address]Tally)
 		}
-
-		stateDB, err := chain.StateAt(header.Root)
-		if err != nil {
-			return nil, err
-		}
-		validators, err := getValidators(stateDB, MaxValidatorCount)
+		atlasConfig := chain.Config().Atlas
+		epoch := atlasConfig.EpochByBlock(number)
+		validators, err := getValidators(chain, epoch)
 		if err != nil {
 			return nil, err
 		}

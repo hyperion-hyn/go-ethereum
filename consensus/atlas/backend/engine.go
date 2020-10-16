@@ -529,11 +529,11 @@ func (sb *backend) _Seal(chain consensus.ChainReader, block *types.Block, result
 					case <-time.After(delay):
 					}
 					results <- result
+					return
 				} else {
 					// ATLAS: keeping consumming blocks from commit channel is necessary
 					//  to prevent hang in handleEvents.
 				}
-				return
 			case <-stop:
 				results <- nil
 				return
@@ -628,16 +628,7 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 	}
 	atlasConfig := chain.Config().Atlas
 	epoch := atlasConfig.EpochByBlock(number)
-	firstBlock := atlasConfig.EpochFirstBlock(epoch)
-	header := chain.GetHeaderByNumber(firstBlock)
-	if header == nil {
-		return nil, consensus.ErrUnknownAncestor
-	}
-	stateDB, err := chain.StateAt(header.Root)
-	if err != nil {
-		return nil, err
-	}
-	validators, err := getValidators(stateDB, MaxValidatorCount)
+	validators, err := getValidators(chain, epoch)
 	if err != nil {
 		return nil, err
 	}
@@ -769,12 +760,15 @@ func WriteCommittedSealInGenesis(genesis *core.Genesis, extra []byte, signatures
 }
 
 // ATLAS(yhx): getValidators
-func getValidators(state *state.StateDB, numVal int) ([]atlas.Validator, error) {
-	committee, err := state.ValidatorPool().Committee().Load()
+func getValidators(chain consensus.ChainReader, epoch uint64) ([]atlas.Validator, error) {
+	committeeSt, err := chain.ReadCommitteeAtEpoch(big.NewInt(int64(epoch)))
 	if err != nil {
 		return nil, err
 	}
-
+	committee, err := committeeSt.Load()
+	if err != nil {
+		return nil, err
+	}
 	length := len(committee.Slots.Entrys)
 	validators := make([]atlas.Validator, length)
 	for i := 0; i < length; i++ {
