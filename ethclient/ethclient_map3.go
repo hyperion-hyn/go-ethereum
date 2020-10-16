@@ -55,3 +55,15 @@ func (ec *Client) GetAllMap3RewardByDelegatorAddress(ctx context.Context, delega
 	err := ec.c.CallContext(ctx, &result, "eth_getAllMap3RewardByDelegatorAddress", delegatorAddress, toBlockNumArg(blockNumber))
 	return (*big.Int)(&result), err
 }
+
+func (ec *Client) GetActiveMap3NodeAtEpoch(ctx context.Context, epoch uint) ([]string, error) {
+	var result []string
+	err := ec.c.CallContext(ctx, &result, "eth_getActiveMap3NodeAtEpoch", epoch)
+	return result, err
+}
+
+func (ec *Client) GetTerminatedMap3NodeAtEpoch(ctx context.Context, epoch uint) ([]string, error) {
+	var result []string
+	err := ec.c.CallContext(ctx, &result, "eth_getTerminatedMap3NodeAtEpoch", epoch)
+	return result, err
+}

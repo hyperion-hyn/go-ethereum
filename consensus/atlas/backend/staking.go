@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/atlas/backend/reward"
 	"github.com/ethereum/go-ethereum/consensus/atlas/backend/votepower"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
@@ -89,9 +90,10 @@ func handleMap3AndAtlasStaking(chain consensus.ChainReader, header *types.Header
 
 func renewAndActivateMap3Nodes(chain consensus.ChainReader, header *types.Header, stateDB *state.StateDB) error {
 	requireTotal, requireSelf, _ := network.LatestMicrostakingRequirement(header.Number, chain.Config())
-	var addrs []common.Address
 	map3NodePool := stateDB.Map3NodePool()
 	nowEpoch := header.Epoch
+	var activeNodeAddrs []common.Address
+	var terminatedNodeAddrs []common.Address
 	for _, nodeAddr := range map3NodePool.Nodes().AllKeys() {
 		node, ok := map3NodePool.Nodes().Get(nodeAddr)
 		if !ok {
@@ -119,6 +121,7 @@ func renewAndActivateMap3Nodes(chain consensus.ChainReader, header *types.Header
 						return err
 					}
 					isActive = true
+					activeNodeAddrs = append(activeNodeAddrs, nodeAddr)
 				}
 
 				if node.IsAlreadyRestaking() && (notRenewedAmt.Sign() > 0 || !isActive) {
@@ -129,7 +132,7 @@ func renewAndActivateMap3Nodes(chain consensus.ChainReader, header *types.Header
 					}
 
 					undelegation := notRenewedAmt
-					if !isActive {	// undelegate total amount if not active
+					if !isActive { // undelegate total amount if not active
 						undelegation = nil
 					}
 					validator.Undelegate(nodeAddr, nowEpoch, undelegation)
@@ -137,6 +140,7 @@ func renewAndActivateMap3Nodes(chain consensus.ChainReader, header *types.Header
 				}
 			} else {
 				node.Terminate()
+				terminatedNodeAddrs = append(terminatedNodeAddrs, nodeAddr)
 			}
 			continue
 		}
@@ -145,9 +149,19 @@ func renewAndActivateMap3Nodes(chain consensus.ChainReader, header *types.Header
 			if err := node.Activate(nowEpoch); err != nil {
 				return err
 			}
+			activeNodeAddrs = append(activeNodeAddrs, nodeAddr)
 		}
 	}
-	log.Info("New active map3 nodes", "addresses", addrs)
+	log.Info("New active map3 nodes", "addresses", activeNodeAddrs)
+	log.Info("New terminated map3 nodes", "addresses", terminatedNodeAddrs)
+
+	// store active and terminated map3 addr to rawdb
+	batch := chain.ChainDb().NewBatch()
+	rawdb.WriteActiveMap3Nodes(batch, header.Epoch.Uint64(), activeNodeAddrs)
+	rawdb.WriteTerminatedMap3Nodes(batch, header.Epoch.Uint64(), terminatedNodeAddrs)
+	if err := batch.Write(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -432,7 +446,7 @@ func ballotResult(
 			"cannot read committee at %v", parentHeader.Epoch,
 		)
 	}
-	reader := availability.CommitBitmapReader{Header: parentHeader}	// TODO(ATLAS): next block header
+	reader := availability.CommitBitmapReader{Header: parentHeader} // TODO(ATLAS): next block header
 	_, payable, missing, err := availability.BallotResult(reader, parentCommittee)
 	return parentCommittee, payable, missing, err
 }

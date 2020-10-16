@@ -6,6 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
 	"math/big"
@@ -123,4 +124,36 @@ func (s *PublicMicroStakingAPI) GetAllMap3RewardByDelegatorAddress(
 	}
 	return (*hexutil.Big)(totalRewards), nil
 
+}
+
+func (s *PublicMicroStakingAPI) GetActiveMap3NodeAtEpoch(ctx context.Context, epoch uint64) ([]string, error) {
+	db := s.b.ChainDb()
+
+	activeMap3Addr := rawdb.ReadActiveMap3Nodes(db, epoch)
+
+	if activeMap3Addr == nil {
+		return nil, nil
+	}
+	var addrStrs []string
+
+	for _, addrTemp := range activeMap3Addr {
+		addrStrs = append(addrStrs, addrTemp.Hex())
+	}
+	return addrStrs, nil
+}
+
+func (s *PublicMicroStakingAPI) GetTerminatedMap3NodeAtEpoch(ctx context.Context, epoch uint64) ([]string, error) {
+	db := s.b.ChainDb()
+
+	terminatedMap3Addr := rawdb.ReadTerminatedMap3Nodes(db, epoch)
+
+	if terminatedMap3Addr == nil {
+		return nil, nil
+	}
+	var addrStrs []string
+
+	for _, addrTemp := range terminatedMap3Addr {
+		addrStrs = append(addrStrs, addrTemp.Hex())
+	}
+	return addrStrs, nil
 }

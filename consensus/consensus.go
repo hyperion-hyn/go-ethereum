@@ -18,6 +18,7 @@
 package consensus
 
 import (
+	"github.com/ethereum/go-ethereum/ethdb"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts"
@@ -66,6 +67,7 @@ type ChainReader interface {
 	ReadValidatorAtEpoch(epoch *big.Int, validatorAddress common.Address) (*restaking.Storage_ValidatorWrapper_, error)
 	ReadCommitteeAtEpoch(epoch *big.Int) (*restaking.Storage_Committee_, error)
 	ReadValidatorAtEpochOrCurrentBlock(*big.Int, common.Address) (*restaking.Storage_ValidatorWrapper_, error)
+	ChainDb() ethdb.Database
 }
 
 // Engine is an algorithm agnostic consensus engine.
