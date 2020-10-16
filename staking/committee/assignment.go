@@ -129,7 +129,7 @@ func IsEligibleForEPoSAuction(snapshot, validator *restaking.Storage_ValidatorWr
 
 	// TODO(ATLAS): disable signing rate check temporarily
 	// Check whether the validator is in current committee
-	if validator.Validator().LastEpochInCommittee().Value().Cmp(lastEpoch) == 0 {
+	if lastEpoch.Sign() > 0 && validator.Validator().LastEpochInCommittee().Value().Cmp(lastEpoch) == 0 {
 		// validator was in last epoch's committee
 		// validator with below-threshold signing activity won't be considered for next epoch
 		// and their status will be turned to inactive in FinalizeNewBlock
