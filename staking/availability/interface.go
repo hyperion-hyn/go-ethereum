@@ -7,11 +7,6 @@ import (
 	"math/big"
 )
 
-// Reader ..
-type Reader interface {
-	ReadValidatorAtEpoch(epoch *big.Int, validatorAddress common.Address) (*restaking.Storage_ValidatorWrapper_, error)
-}
-
 // RoundHeader is the interface of block.Header for calculating the BallotResult.
 type RoundHeader interface {
 	Number() *big.Int
@@ -21,6 +16,7 @@ type RoundHeader interface {
 // ValidatorState is the interface of state.DB
 type ValidatorState interface {
 	ValidatorByAddress(validatorAddress common.Address) (*restaking.Storage_ValidatorWrapper_, error)
+	ValidatorSnapshotByAddress(validatorAddress common.Address) (*restaking.Storage_ValidatorWrapper_, error)
 }
 
 type CommitBitmapReader struct {

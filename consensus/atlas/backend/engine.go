@@ -626,10 +626,7 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		snap := s.(*Snapshot)
 		return snap, nil
 	}
-	atlasConfig := chain.Config().Atlas
-	epoch := atlasConfig.EpochByBlock(number)
-	firstBlock := atlasConfig.EpochFirstBlock(epoch)
-	header := chain.GetHeaderByNumber(firstBlock)
+	header := chain.GetHeaderByNumber(number)
 	if header == nil {
 		return nil, consensus.ErrUnknownAncestor
 	}

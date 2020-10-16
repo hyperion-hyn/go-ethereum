@@ -66,7 +66,6 @@ type signerKind struct {
 }
 
 func bumpCount(
-	bc Reader,
 	state ValidatorState,
 	signers []signerKind,
 	stakedAddrSet map[common.Address]struct{},
@@ -103,14 +102,12 @@ func bumpCount(
 
 // IncrementValidatorSigningCounts ..
 func IncrementValidatorSigningCounts(
-	bc Reader,
 	staked *restaking.StakedSlots,
 	state ValidatorState,
 	signers, missing *restaking.Slots_,
 ) error {
 	return bumpCount(
-		bc, state, []signerKind{{false, missing}, {true, signers}},
-		staked.LookupSet,
+		state, []signerKind{{false, missing}, {true, signers}}, staked.LookupSet,
 	)
 }
 
@@ -162,10 +159,8 @@ func IsBelowSigningThreshold(quotient common.Dec) bool {
 // whenever committee selection happens in future, the
 // signing threshold is 66%
 func ComputeAndMutateEPOSStatus(
-	bc Reader,
 	state ValidatorState,
 	addr common.Address,
-	epoch *big.Int,
 ) error {
 	log.Info("begin compute for availability")
 
@@ -178,7 +173,7 @@ func ComputeAndMutateEPOSStatus(
 		return nil
 	}
 
-	snapshot, err := bc.ReadValidatorAtEpoch(epoch, addr)
+	snapshot, err := state.ValidatorSnapshotByAddress(addr)
 	if err != nil {
 		return err
 	}

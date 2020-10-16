@@ -128,6 +128,7 @@ struct Committee_ {
 
 struct ValidatorPool_ {
     IterableValidatorWrapperMap_ Validators;
+    IterableValidatorWrapperMap_ ValidatorSnapshots;
     mapping (string => bool) SlotKeySet;
     mapping (string => bool) DescriptionIdentitySet;
     Committee_ Committee;
