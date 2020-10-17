@@ -297,7 +297,14 @@ func (sb *backend) verifyCommittedSeals(chain consensus.ChainReader, header *typ
 		return errInvalidAggregatedSignature
 	}
 
-	err = verifySignature(snap.ValSet, SealHash(header).Bytes()[:], header.Signature[:], header.Bitmap[:])
+	var parent *types.Header
+	if len(parents) > 0 {
+		parent = parents[len(parents)-1]
+	} else {
+		parent = chain.GetHeader(header.ParentHash, number-1)
+	}
+
+	err = verifySignature(snap.ValSet, parent.Hash().Bytes()[:], header.Signature[:], header.Bitmap[:])
 	if err != nil {
 		return err
 	}
@@ -738,8 +745,6 @@ func AtlasRLP(header *types.Header) []byte {
 }
 
 func encodeSigHeader(w io.Writer, header *types.Header) {
-	extra := make([]byte, types.AtlasExtraVanity)
-	copy(extra[:types.AtlasExtraVanity], header.Extra[:])
 	err := rlp.Encode(w, []interface{}{
 		header.ParentHash,
 		header.UncleHash,
@@ -753,9 +758,12 @@ func encodeSigHeader(w io.Writer, header *types.Header) {
 		header.GasLimit,
 		header.GasUsed,
 		header.Time,
-		extra,
+		header.Extra,
 		header.MixDigest,
 		header.Nonce,
+		header.Epoch,
+		header.Signature,
+		header.Bitmap,
 	})
 	if err != nil {
 		panic("can't encode: " + err.Error())

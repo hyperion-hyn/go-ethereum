@@ -188,7 +188,6 @@ func (w *wizard) makeGenesis() {
 		storage.SetupValidatorsInGenesisAt(&consortiumBoard, signers)
 
 		genesis.Mixhash = types.AtlasDigest
-		genesis.ExtraData = make([]byte, types.AtlasExtraVanity)
 
 		block := genesis.ToBlock(nil)
 

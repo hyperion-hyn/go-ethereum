@@ -23,7 +23,6 @@ import (
 const (
 	AtlasMaxValidator = 128 // Maximum number of validators, type of AtlasExtra.Proposer should large enough to hold max index
 
-	AtlasExtraVanity    = 32 // Fixed number of extra-data bytes reserved for validator vanity
 	AtlasExtraPublicKey = 48 // Fixed number of extra-data bytes reverved for BLS public key
 	AtlasExtraSignature = 96 // Fixed number of extra-data bytes reverved for BLS signature
 )
