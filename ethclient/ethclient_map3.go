@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/internal/ethapi"
 	"github.com/ethereum/go-ethereum/staking/types/microstaking"
 	"math/big"
 )
@@ -51,14 +52,21 @@ func (ec *Client) GetAllMap3RewardByDelegatorAddress(ctx context.Context, delega
 	return rewardMap, err
 }
 
-func (ec *Client) GetActiveMap3NodeAtEpoch(ctx context.Context, epoch uint64) ([]string, error) {
-	var result []string
-	err := ec.c.CallContext(ctx, &result, "eth_getActiveMap3NodeAtEpoch", epoch)
-	return result, err
+func (ec *Client) GetActiveMap3NodeAtEpoch(ctx context.Context, epoch uint64) ([]ethapi.ActiveMap3Info, error) {
+	var map3Infos []ethapi.ActiveMap3Info
+
+	err := ec.c.CallContext(ctx, &map3Infos, "eth_getActiveMap3NodeAtEpoch", epoch)
+	return map3Infos, err
 }
 
 func (ec *Client) GetTerminatedMap3NodeAtEpoch(ctx context.Context, epoch uint64) ([]string, error) {
 	var result []string
 	err := ec.c.CallContext(ctx, &result, "eth_getTerminatedMap3NodeAtEpoch", epoch)
 	return result, err
+}
+
+func (ec *Client) GetMap3Requirement(ctx context.Context) (ethapi.Map3Requirement, error) {
+	var requirement ethapi.Map3Requirement
+	err := ec.c.CallContext(ctx, &requirement, "eth_getMap3Requirement")
+	return requirement, err
 }

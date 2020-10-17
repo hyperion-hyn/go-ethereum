@@ -8,7 +8,9 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/ethereum/go-ethereum/staking/network"
 	"github.com/ethereum/go-ethereum/staking/types/microstaking"
+	"math/big"
 )
 
 var (
@@ -115,23 +117,41 @@ func (s *PublicMicroStakingAPI) GetAllMap3RewardByDelegatorAddress(
 
 }
 
-func (s *PublicMicroStakingAPI) GetActiveMap3NodeAtEpoch(ctx context.Context, epoch uint64) ([]string, error) {
+func (s *PublicMicroStakingAPI) GetActiveMap3NodeAtEpoch(ctx context.Context, epoch uint64) ([]ActiveMap3Info, error) {
+	blockNum := s.b.ChainConfig().Atlas.EpochFirstBlock(epoch)
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, rpc.BlockNumber(blockNum))
+	if state == nil || err != nil {
+		return nil, err
+	}
+
 	db := s.b.ChainDb()
-
 	activeMap3Addr := rawdb.ReadActiveMap3Nodes(db, epoch)
-
 	if activeMap3Addr == nil {
 		return nil, nil
 	}
-	var addrStrs []string
-
+	var map3Infos []ActiveMap3Info
 	for _, addrTemp := range activeMap3Addr {
-		addrStrs = append(addrStrs, addrTemp.Hex())
+		map3WrapperStorage, err := state.Map3NodeByAddress(addrTemp)
+		if err != nil {
+			return nil, err
+		}
+		map3Wrapper, err := map3WrapperStorage.Load()
+		if err != nil {
+			return nil, err
+		}
+		activeMap3Infor := ActiveMap3Info{
+			Address:    addrTemp.Hex(),
+			StartEpoch: map3Wrapper.Map3Node.ActivationEpoch.Uint64(),
+			EndEpoch:   map3Wrapper.Map3Node.ReleaseEpoch,
+			Commission: map3Wrapper.Map3Node.Commission.Rate,
+		}
+		map3Infos = append(map3Infos, activeMap3Infor)
 	}
-	return addrStrs, nil
+	return map3Infos, nil
 }
 
 func (s *PublicMicroStakingAPI) GetTerminatedMap3NodeAtEpoch(ctx context.Context, epoch uint64) ([]string, error) {
+
 	db := s.b.ChainDb()
 
 	terminatedMap3Addr := rawdb.ReadTerminatedMap3Nodes(db, epoch)
@@ -145,4 +165,39 @@ func (s *PublicMicroStakingAPI) GetTerminatedMap3NodeAtEpoch(ctx context.Context
 		addrStrs = append(addrStrs, addrTemp.Hex())
 	}
 	return addrStrs, nil
+}
+
+func (s *PublicMicroStakingAPI) GetMap3Requirement(ctx context.Context) (Map3Requirement, error) {
+
+	blockNum := s.b.CurrentBlock().Header().Number
+	chainContext := s.b.ChainContext()
+	requireTotal, requireSelf, requireDel := network.LatestMicrostakingRequirement(blockNum, chainContext.Config())
+	tenPercent := common.NewDecWithPrec(1, 1)    // 10%
+	twentyPercent := common.NewDecWithPrec(2, 1) // 20%
+
+	map3Requirement := Map3Requirement{
+		RequireTotal:    requireTotal,
+		RequireSelf:     requireSelf,
+		RequireDelegate: requireDel,
+		MinCommission:   tenPercent,
+		MaxCommission:   twentyPercent,
+		Map3LockEpoch:   microstaking.Map3NodeLockDurationInEpoch,
+	}
+	return map3Requirement, nil
+}
+
+type ActiveMap3Info struct {
+	Address    string     `json:"address"`
+	StartEpoch uint64     `json:"start_epoch"`
+	EndEpoch   common.Dec `json:"end_epoch"`
+	Commission common.Dec `json:"commission"`
+}
+
+type Map3Requirement struct {
+	RequireTotal    *big.Int   `json:"requireTotal"`
+	RequireSelf     *big.Int   `json:"requireSelf"`
+	RequireDelegate *big.Int   `json:"requireDelegate"`
+	MinCommission   common.Dec `json:"minCommission"`
+	MaxCommission   common.Dec `json:"maxCommission"`
+	Map3LockEpoch   common.Dec `json:"map3LockEpoch"`
 }
