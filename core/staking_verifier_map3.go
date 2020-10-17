@@ -461,7 +461,7 @@ func (verifier StakingVerifier) VerifyRenewMap3NodeMsg(stateDB vm.StateDB, chain
 	releaseEpoch := node.Map3Node().ReleaseEpoch().Value()
 	if node.IsOperator(msg.DelegatorAddress) {
 		// within the penultimate 7 epochs
-		intervalFrom := releaseEpoch.Sub(common.NewDec(2*microstaking.RenewalTimeWindowInEpoch-1))
+		intervalFrom := releaseEpoch.Sub(common.NewDec(2*microstaking.RenewalTimeWindowInEpoch - 1))
 		intervalTo := releaseEpoch.Sub(common.NewDec(7))
 		if !curEpoch.BTE(intervalFrom, intervalTo) {
 			return errMap3NodeRenewalNotAllowed
@@ -477,11 +477,13 @@ func (verifier StakingVerifier) VerifyRenewMap3NodeMsg(stateDB vm.StateDB, chain
 				return err
 			}
 
-			node.Commission.RateForNextPeriod = msg.NewCommissionRate
+			if msg.NewCommissionRate != nil && !msg.NewCommissionRate.IsNil() {
+				node.Commission.RateForNextPeriod = *msg.NewCommissionRate
+			}
 			return node.SanityCheck(microstaking.MaxPubKeyAllowed, &percent)
 		}
 	} else {
-		if !msg.NewCommissionRate.IsNil() {
+		if msg.NewCommissionRate != nil {
 			return errCommissionUpdateNotAllow
 		}
 
@@ -495,7 +497,8 @@ func (verifier StakingVerifier) VerifyRenewMap3NodeMsg(stateDB vm.StateDB, chain
 		}
 
 		// the last 7 epoch
-		startEpoch := releaseEpoch.Sub(common.NewDec(microstaking.RenewalTimeWindowInEpoch-1))
+		//If the operator has already decided to renew, the participant can decide whether to renew before the release
+		startEpoch := releaseEpoch.Sub(common.NewDec(microstaking.RenewalTimeWindowInEpoch - 1))
 		if mdByOperator.Renewal().AtStatus(microstaking.Undecided) {
 			if !curEpoch.GTE(startEpoch) {
 				return errMap3NodeRenewalNotAllowed

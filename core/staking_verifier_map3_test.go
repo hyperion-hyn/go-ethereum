@@ -1404,22 +1404,6 @@ func TestVerifyRenewMap3NodeMsg(t *testing.T) {
 			wantErr: nil,
 		},
 		{
-			name: "new commission nil",
-			args: args{
-				stateDB:      makeStateDBForRenewingMap3Node(t),
-				chainContext: makeFakeChainContextForStake(t),
-				epoch:        big.NewInt(172),
-				blockNum:     big.NewInt(defaultBlockNumber),
-				msg: func() microstaking.RenewMap3Node {
-					msg := defaultMsgRenewMap3Node(map3OperatorAddr, true)
-					msg.NewCommissionRate = common.Dec{}
-					return msg
-				}(),
-				signer: map3OperatorAddr,
-			},
-			wantErr: errors.New("commission rate cannot be nil"),
-		},
-		{
 			name: "new commission too large",
 			args: args{
 				stateDB:      makeStateDBForRenewingMap3Node(t),
@@ -1428,7 +1412,7 @@ func TestVerifyRenewMap3NodeMsg(t *testing.T) {
 				blockNum:     big.NewInt(defaultBlockNumber),
 				msg: func() microstaking.RenewMap3Node {
 					msg := defaultMsgRenewMap3Node(map3OperatorAddr, true)
-					msg.NewCommissionRate = oneDec
+					msg.NewCommissionRate = &oneDec
 					return msg
 				}(),
 				signer: map3OperatorAddr,
@@ -1444,7 +1428,7 @@ func TestVerifyRenewMap3NodeMsg(t *testing.T) {
 				blockNum:     big.NewInt(defaultBlockNumber),
 				msg: func() microstaking.RenewMap3Node {
 					msg := defaultMsgRenewMap3Node(delegatorAddr, false)
-					msg.NewCommissionRate = newCommissionRate
+					msg.NewCommissionRate = &newCommissionRate
 					return msg
 				}(),
 				signer:        delegatorAddr,
@@ -1541,7 +1525,7 @@ func defaultMsgRenewMap3Node(signer common.Address, isOperator bool) microstakin
 		IsRenew:          true,
 	}
 	if isOperator {
-		msg.NewCommissionRate = newCommissionRate
+		msg.NewCommissionRate = &newCommissionRate
 	}
 	return msg
 }
