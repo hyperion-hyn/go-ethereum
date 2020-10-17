@@ -7,8 +7,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/ethereum/go-ethereum/staking/types/microstaking"
 	"math/big"
 )
 
@@ -41,59 +41,50 @@ func (s *PublicMicroStakingAPI) GetAllMap3NodeAddresses(
 }
 
 func (s *PublicMicroStakingAPI) GetMap3NodeInformation(
-	ctx context.Context, map3NodeAddress common.Address, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
+	ctx context.Context, map3NodeAddress common.Address, blockNrOrHash rpc.BlockNumberOrHash) (microstaking.PlainMap3NodeWrapper, error) {
 
 	state, header, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if state == nil || err != nil {
-		return nil, err
+		return microstaking.PlainMap3NodeWrapper{}, err
 	}
 
 	storageNodeWrapper, err := state.Map3NodeByAddress(map3NodeAddress)
 	if err != nil {
-		return nil, err
+		return microstaking.PlainMap3NodeWrapper{}, err
 	}
 
 	nodeWrapper, err := storageNodeWrapper.LoadFully()
 	if err != nil {
-		return nil, err
+		return microstaking.PlainMap3NodeWrapper{}, err
 	}
 
 	nodeWrapperRPC := nodeWrapper.ToPlainMap3NodeWrapper()
 	nodeWrapperRPC.Map3Node.Age = storageNodeWrapper.Map3Node().CalculateNodeAge(header.Number, s.b.ChainConfig().Atlas)
 
-	encodeBytes, err := rlp.EncodeToBytes(&nodeWrapperRPC)
-	if err != nil {
-		return nil, err
-	}
-	return encodeBytes, nil
+	return *nodeWrapperRPC, nil
 }
 
 func (s *PublicMicroStakingAPI) GetMap3NodeDelegation(
-	ctx context.Context, map3NodeAddress common.Address, delegatorAddress common.Address, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
+	ctx context.Context, map3NodeAddress common.Address, delegatorAddress common.Address, blockNrOrHash rpc.BlockNumberOrHash) (microstaking.Microdelegation_, error) {
 	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if state == nil || err != nil {
-		return nil, err
+		return microstaking.Microdelegation_{}, err
 	}
 
 	storageNodeWrapper, err := state.Map3NodeByAddress(map3NodeAddress)
 	if err != nil {
-		return nil, err
+		return microstaking.Microdelegation_{}, err
 	}
 	storageMicrodelegation, ok := storageNodeWrapper.Microdelegations().Get(delegatorAddress)
 	if ok {
 		microDelegation, err := storageMicrodelegation.Load()
 		if err != nil {
-			return nil, err
+			return microstaking.Microdelegation_{}, err
 		}
-
-		encodeBytes, err := rlp.EncodeToBytes(microDelegation)
-		if err != nil {
-			return nil, err
-		}
-		return encodeBytes, nil
+		return *microDelegation, nil
 
 	} else {
-		return nil, ethereum.NotFound
+		return microstaking.Microdelegation_{}, ethereum.NotFound
 	}
 }
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/staking/types/microstaking"
 	"math/big"
 )
@@ -18,14 +17,8 @@ func (ec *Client) GetAllMap3NodeAddresses(ctx context.Context, blockNumber *big.
 func (ec *Client) GetMap3NodeInformation(
 	ctx context.Context, map3NodeAddress common.Address, blockNumber *big.Int) (*microstaking.PlainMap3NodeWrapper, error) {
 
-	var bytes hexutil.Bytes
-
-	err := ec.c.CallContext(ctx, &bytes, "eth_getMap3NodeInformation", map3NodeAddress, toBlockNumArg(blockNumber))
-	if err != nil {
-		return nil, err
-	}
 	var map3Node microstaking.PlainMap3NodeWrapper
-	err = rlp.DecodeBytes(bytes, &map3Node)
+	err := ec.c.CallContext(ctx, &map3Node, "eth_getMap3NodeInformation", map3NodeAddress, toBlockNumArg(blockNumber))
 	if err != nil {
 		return nil, err
 	}
@@ -36,14 +29,8 @@ func (ec *Client) GetMap3NodeInformation(
 func (ec *Client) GetMap3NodeDelegation(
 	ctx context.Context, map3NodeAddress common.Address, delegatorAddress common.Address, blockNumber *big.Int) (*microstaking.Microdelegation_, error) {
 
-	var bytes hexutil.Bytes
-
-	err := ec.c.CallContext(ctx, &bytes, "eth_getMap3NodeDelegation", map3NodeAddress, delegatorAddress, toBlockNumArg(blockNumber))
-	if err != nil {
-		return nil, err
-	}
 	var redelegation microstaking.Microdelegation_
-	err = rlp.DecodeBytes(bytes, &redelegation)
+	err := ec.c.CallContext(ctx, &redelegation, "eth_getMap3NodeDelegation", map3NodeAddress, delegatorAddress, toBlockNumArg(blockNumber))
 	if err != nil {
 		return nil, err
 	}
