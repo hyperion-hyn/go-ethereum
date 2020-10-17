@@ -28,6 +28,7 @@ import (
 	"github.com/hyperion-hyn/bls/ffi/go/bls"
 
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/rawdb"
 	bls_cosi "github.com/ethereum/go-ethereum/crypto/bls"
 
 	lru "github.com/hashicorp/golang-lru"
@@ -124,18 +125,13 @@ func (sb *backend) Author(header *types.Header) (common.Address, error) {
 // It will extract for each seal who signed it, regardless of if the seal is
 // repeated
 func (sb *backend) Signers(header *types.Header) ([]atlas.Validator, error) {
-	extra, err := types.ExtractAtlasExtra(header)
-	if err != nil {
-		return []atlas.Validator{}, err
-	}
-
 	number := header.Number.Uint64()
 	snap, err := sb.snapshot(sb.chain, number-1, header.ParentHash, nil)
 	if err != nil {
 		return []atlas.Validator{}, err
 	}
 
-	signers, err := getSigners(snap.ValSet, extra.AggBitmap[:])
+	signers, err := getSigners(snap.ValSet, header.Bitmap[:])
 	if err != nil {
 		return nil, err
 	}
@@ -181,11 +177,6 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 	// Don't waste time checking blocks from the future
 	if header.Time > uint64(now().Unix()) {
 		return consensus.ErrFutureBlock
-	}
-
-	// Ensure that the extra data format is satisfied
-	if _, err := types.ExtractAtlasExtra(header); err != nil {
-		return errInvalidExtraDataFormat
 	}
 
 	// Ensure that the coinbase is valid
@@ -302,20 +293,11 @@ func (sb *backend) verifyCommittedSeals(chain consensus.ChainReader, header *typ
 		return err
 	}
 
-	extra, err := types.ExtractAtlasExtra(header)
-	if err != nil {
-		return err
-	}
-	// The length of Confirm seals should be larger than 0
-	if len(extra.AggSignature) == 0 || len(extra.AggBitmap) == 0 {
-		return errEmptyCommittedSeals
-	}
-
-	if len(extra.AggSignature) != types.AtlasExtraSignature || len(extra.AggBitmap) != types.GetMaskByteCount(snap.ValSet.Size()) {
+	if len(header.Signature) != types.AtlasExtraSignature || len(header.Bitmap) != types.GetMaskByteCount(snap.ValSet.Size()) {
 		return errInvalidAggregatedSignature
 	}
 
-	err = verifySignature(snap.ValSet, SealHash(header).Bytes()[:], extra.AggSignature[:], extra.AggBitmap[:])
+	err = verifySignature(snap.ValSet, SealHash(header).Bytes()[:], header.Signature[:], header.Bitmap[:])
 	if err != nil {
 		return err
 	}
@@ -403,6 +385,17 @@ func (sb *backend) _Prepare(chain consensus.ChainReader, header *types.Header) e
 	if err != nil {
 		return err
 	}
+
+	lastCommits := rawdb.ReadLastCommits(chain.ChainDb(), number-1)
+	if len(lastCommits) != types.AtlasExtraSignature+types.GetMaskByteCount(snap.ValSet.Size()) {
+		return errInvalidSignature
+	}
+
+	// set header's signature and bitmap
+	header.Signature = make([]byte, types.AtlasExtraSignature)
+	header.Bitmap = make([]byte, types.GetMaskByteCount(snap.ValSet.Size()))
+	copy(header.Signature[:], lastCommits[:types.AtlasExtraSignature])
+	copy(header.Bitmap[:], lastCommits[types.AtlasExtraSignature:])
 
 	extra, err := prepareExtra(header, snap.validators())
 	if err != nil {
@@ -504,8 +497,10 @@ func (sb *backend) _Seal(chain consensus.ChainReader, block *types.Block, result
 	go func() {
 		// get the proposed block hash and clear it if the seal() is completed.
 		sb.sealMu.Lock()
+		sb.proposedBlockHash = block.Hash()
 
 		defer func() {
+			sb.proposedBlockHash = common.Hash{}
 			sb.sealMu.Unlock()
 		}()
 		// post block into Atlas engine
@@ -525,7 +520,7 @@ func (sb *backend) _Seal(chain consensus.ChainReader, block *types.Block, result
 				//  no more events will be handled.
 				//  to make it work and prevent hang in handleEvents, keeping consumming blocks
 				//  from commit channel here is necessary.
-				if result != nil && sb.SealHash(block.Header()) == sb.SealHash(result.Header()) {
+				if result != nil && block.Hash() == result.Hash() {
 					// wait for the timestamp of header, use this to adjust the block period
 					delay := time.Unix(int64(header.Time+sb.config.BlockPeriod), 0).Sub(now())
 					sb.logger.Debug("mine new block in future", "delay", delay)
@@ -550,20 +545,6 @@ func (sb *backend) _Seal(chain consensus.ChainReader, block *types.Block, result
 // update timestamp and signature of the block based on its number of transactions
 func (sb *backend) updateBlock(parent *types.Header, block *types.Block) (*types.Block, error) {
 	header := block.Header()
-
-	// sign the hash
-	seal, _, _, err := sb.SignHash(SealHash(header))
-
-	if err != nil {
-		return nil, err
-	}
-
-	// WARNING: call sb.snapshot(sb.chain, number-1, header.ParentHash, nil)) will cause TestVerifyHeaders fail.
-
-	err = writeSeal(header, seal)
-	if err != nil {
-		return nil, err
-	}
 
 	return block.WithSeal(header), nil
 }
@@ -659,20 +640,9 @@ func (sb *backend) SealHash(header *types.Header) common.Hash {
 func prepareExtra(header *types.Header, vals []atlas.Validator) ([]byte, error) {
 	var buf bytes.Buffer
 
-	// compensate the lack bytes if header.Extra is not enough AtlasExtraVanity bytes.
-	if len(header.Extra) < types.AtlasExtraVanity {
-		header.Extra = append(header.Extra, bytes.Repeat([]byte{0x00}, types.AtlasExtraVanity-len(header.Extra))...)
-	}
-	buf.Write(header.Extra[:types.AtlasExtraVanity])
+	buf.Write(header.Extra[:])
 
-	ist := &types.AtlasExtra{}
-
-	payload, err := rlp.EncodeToBytes(&ist)
-	if err != nil {
-		return nil, err
-	}
-
-	return append(buf.Bytes(), payload...), nil
+	return append(buf.Bytes(), []byte{}...), nil
 }
 
 // writeSeal writes the extra-data field of the given header with the given seals.
@@ -682,20 +652,9 @@ func writeSeal(h *types.Header, seal []byte) error {
 		return errInvalidSignature
 	}
 
-	atlasExtra, err := types.ExtractAtlasExtra(h)
-	if err != nil {
-		return err
-	}
+	copy(h.Signature[:], seal)
+	copy(h.Bitmap, []byte{})
 
-	copy(atlasExtra.AggSignature[:], seal)
-	atlasExtra.AggBitmap = []byte{}
-
-	payload, err := rlp.EncodeToBytes(&atlasExtra)
-	if err != nil {
-		return err
-	}
-
-	h.Extra = append(h.Extra[:types.AtlasExtraVanity], payload...)
 	return nil
 }
 
@@ -705,46 +664,13 @@ func WriteCommittedSeals(h *types.Header, signature []byte, bitmap []byte, valSe
 		return errInvalidCommittedSeals
 	}
 
-	atlasExtra, err := types.ExtractAtlasExtra(h)
-	if err != nil {
-		return err
-	}
+	copy(h.Signature[:], signature[:])
+	copy(h.Bitmap[:], bitmap)
 
-	copy(atlasExtra.AggSignature[:], signature)
-	atlasExtra.AggBitmap = bitmap
-
-	payload, err := rlp.EncodeToBytes(&atlasExtra)
-	if err != nil {
-		return err
-	}
-
-	h.Extra = append(h.Extra[:types.AtlasExtraVanity], payload...)
 	return nil
 }
 
-func WriteCommittedSealsAsExtra(extra []byte, signature []byte, publicKey []byte, bitmap []byte, valSetSize int) ([]byte, error) {
-	if len(signature) != types.AtlasExtraSignature || len(publicKey) != types.AtlasExtraPublicKey || len(bitmap) != types.GetMaskByteCount(valSetSize) {
-		return nil, errInvalidCommittedSeals
-	}
-
-	extraData := make([]byte, len(extra))
-	copy(extraData, extra)
-
-	atlasExtra := &types.AtlasExtra{}
-
-	copy(atlasExtra.AggSignature[:], signature)
-	atlasExtra.AggBitmap = bitmap
-
-	payload, err := rlp.EncodeToBytes(&atlasExtra)
-	if err != nil {
-		return nil, err
-	}
-
-	extraData = append(extraData[:types.AtlasExtraVanity], payload...)
-	return extraData, nil
-}
-
-func WriteCommittedSealInGenesis(genesis *core.Genesis, extra []byte, signatures []*bls.Sign, publicKeys []*bls.PublicKey) error {
+func WriteCommittedSealInGenesis(genesis *core.Genesis, header *types.Header, signatures []*bls.Sign, publicKeys []*bls.PublicKey) error {
 	mask, err := bls_cosi.NewMask(publicKeys, nil)
 	if err != nil {
 		return err
@@ -763,12 +689,10 @@ func WriteCommittedSealInGenesis(genesis *core.Genesis, extra []byte, signatures
 		sign.Add(signatures[i])
 	}
 
-	data, err := WriteCommittedSealsAsExtra(extra, sign.Serialize(), publicKey.Serialize(), mask.Mask(), len(publicKeys))
-	if err != nil {
-		return err
-	}
+	genesis.LastCommits = make([]byte, types.AtlasExtraSignature+types.GetMaskByteCount(len(publicKeys)))
+	copy(genesis.LastCommits[:types.AtlasExtraSignature], sign.Serialize())
+	copy(genesis.LastCommits[types.AtlasExtraSignature:], mask.Mask())
 
-	genesis.ExtraData = data
 	return nil
 }
 

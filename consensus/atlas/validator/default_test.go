@@ -72,25 +72,73 @@ func generateValidators(count int) ([]atlas.Validator, error) {
 }
 
 func testNewValidatorSet(t *testing.T) {
-	const ValCnt = 100
-	validators, err := generateValidators(ValCnt)
-	if err != nil {
-		t.Errorf("failed to new a validator: %v", err)
+	{
+		const ValCnt = 2
+		validators, err := generateValidators(ValCnt)
+		if err != nil {
+			t.Errorf("failed to new a validator: %v", err)
+		}
+
+		sort.Slice(validators, func(i, j int) bool {
+			return bytes.Compare(validators[i].Signer().Bytes(), validators[j].Signer().Bytes()) == 1
+		})
+
+		if bytes.Compare(validators[0].Signer().Bytes(), validators[1].Signer().Bytes()) != 1 {
+			t.Errorf("validators should be in descending order")
+		}
+		if err != nil {
+			t.Errorf("failed to new a validator: %v", err)
+		}
+		valSet := newDefaultSet(validators, atlas.RoundRobin)
+		if valSet == nil {
+			t.Errorf("the format of validator set is invalid")
+			t.FailNow()
+		}
+
+		// check size
+		if size := valSet.Size(); size != ValCnt {
+			t.Errorf("the size of validator set is wrong: have %v, want 2", size)
+		}
+		// test get by index
+		if val := valSet.GetByIndex(uint64(0)); !reflect.DeepEqual(val, validators[0]) {
+			t.Errorf("validator mismatch: have %v, want %v", val, validators[0])
+		}
+		// test get by invalid index
+		if val := valSet.GetByIndex(uint64(2)); val != nil {
+			t.Errorf("validator mismatch: have %v, want nil", val)
+		}
+		// test get by address
+		if _, val := valSet.GetBySigner(validators[0].Signer()); !reflect.DeepEqual(val, validators[0]) {
+			t.Errorf("validator mismatch: have %v, want %v", val, validators[0])
+		}
 	}
 
+	// test get by invalid address
 	// Create ValidatorSet
-	valSet := NewSet(validators, atlas.RoundRobin)
-	if valSet == nil {
-		t.Errorf("the validator byte array cannot be parsed")
-		t.FailNow()
-	}
+	{
+		const ValCnt = 100
+		validators, err := generateValidators(ValCnt)
+		if err != nil {
+			t.Errorf("failed to new a validator: %v", err)
+		}
 
-	// Check validators sorting: should be in ascending order
-	for i := 0; i < ValCnt-1; i++ {
-		val := valSet.GetByIndex(uint64(i))
-		nextVal := valSet.GetByIndex(uint64(i + 1))
-		if bytes.Compare(val.Signer().Bytes(), nextVal.Signer().Bytes()) >= 0 {
-			t.Errorf("validator set is not sorted in ascending order")
+		sort.Slice(validators, func(i, j int) bool {
+			return bytes.Compare(validators[i].Signer().Bytes(), validators[j].Signer().Bytes()) == -1
+		})
+
+		valSet := NewSet(validators, atlas.RoundRobin)
+		if valSet == nil {
+			t.Errorf("the validator byte array cannot be parsed")
+			t.FailNow()
+		}
+
+		// Check validators sorting: should be in ascending order
+		for i := 0; i < ValCnt-1; i++ {
+			val := valSet.GetByIndex(uint64(i))
+			nextVal := valSet.GetByIndex(uint64(i + 1))
+			if bytes.Compare(val.Signer().Bytes(), nextVal.Signer().Bytes()) >= 0 {
+				t.Errorf("validator set is not sorted in ascending order")
+			}
 		}
 	}
 }
@@ -104,7 +152,7 @@ func testNormalValSet(t *testing.T) {
 		return bytes.Compare(validators[i].Signer().Bytes(), validators[j].Signer().Bytes()) == 1
 	})
 
-	if bytes.Compare(validators[0].Signer().Bytes(), validators[1].Signer().Bytes()) < 1 {
+	if bytes.Compare(validators[0].Signer().Bytes(), validators[1].Signer().Bytes()) != 1 {
 		t.Errorf("validators should be in descending order")
 	}
 	if err != nil {
@@ -121,7 +169,7 @@ func testNormalValSet(t *testing.T) {
 		t.Errorf("the size of validator set is wrong: have %v, want 2", size)
 	}
 	// test get by index
-	if val := valSet.GetByIndex(uint64(0)); !reflect.DeepEqual(val, validators[1]) {
+	if val := valSet.GetByIndex(uint64(0)); !reflect.DeepEqual(val, validators[0]) {
 		t.Errorf("validator mismatch: have %v, want %v", val, validators[1])
 	}
 	// test get by invalid index
@@ -138,8 +186,8 @@ func testNormalValSet(t *testing.T) {
 		t.Errorf("validator mismatch: have %v, want nil", val)
 	}
 
-	val1 := validators[1]
-	val2 := validators[0]
+	val1 := validators[0]
+	val2 := validators[1]
 
 	// test get proposer
 	if val := valSet.GetProposer(); !reflect.DeepEqual(val, val1) {
@@ -203,7 +251,7 @@ func testAddAndRemoveValidator(t *testing.T) {
 	}
 
 	for i, v := range valSet.List() {
-		expected := validators[len(validators)-1-i]
+		expected := validators[i]
 		if v.Signer() != expected.Signer() {
 			t.Errorf("the order of validators is wrong: have %v, want %v", v.Signer().Hex(), expected.Signer().Hex())
 		}
@@ -237,8 +285,8 @@ func testStickyProposer(t *testing.T) {
 		return bytes.Compare(validators[i].Signer().Bytes(), validators[j].Signer().Bytes()) == 1
 	})
 
-	val1 := validators[1]
-	val2 := validators[0]
+	val1 := validators[0]
+	val2 := validators[1]
 
 	valSet := newDefaultSet(validators, atlas.Sticky)
 

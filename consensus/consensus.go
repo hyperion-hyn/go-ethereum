@@ -24,6 +24,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -66,6 +67,7 @@ type ChainReader interface {
 	ReadValidatorAtEpoch(epoch *big.Int, validatorAddress common.Address) (*restaking.Storage_ValidatorWrapper_, error)
 	ReadCommitteeAtEpoch(epoch *big.Int) (*restaking.Storage_Committee_, error)
 	ReadValidatorAtEpochOrCurrentBlock(*big.Int, common.Address) (*restaking.Storage_ValidatorWrapper_, error)
+	ChainDb() ethdb.Database
 }
 
 // Engine is an algorithm agnostic consensus engine.

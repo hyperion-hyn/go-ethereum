@@ -41,12 +41,10 @@ func newTestRoundState(view *atlas.View, validatorSet atlas.ValidatorSet) *round
 		hasBadProposal: func(hash common.Hash) bool {
 			return false
 		},
-		aggregatedPrepareSig:       &bls.Sign{},
-		aggregatedPreparePublicKey: &bls.PublicKey{},
-		prepareBitmap:              prepareBitmap,
-		aggregatedConfirmSig:       &bls.Sign{},
-		aggregatedConfirmPublicKey: &bls.PublicKey{},
-		confirmBitmap:              confirmBitmap,
+		aggregatedPrepareSig: &bls.Sign{},
+		prepareBitmap:        prepareBitmap,
+		aggregatedConfirmSig: &bls.Sign{},
+		confirmBitmap:        confirmBitmap,
 	}
 }
 
@@ -67,7 +65,7 @@ func TestLockHash(t *testing.T) {
 	}
 
 	// Lock
-	expected := atlas.SealHash(rs.Proposal().Header())
+	expected := rs.Proposal().Hash()
 	rs.LockHash()
 	if expected != rs.GetLockedHash() {
 		t.Errorf("error mismatch: have %v, want %v", rs.GetLockedHash(), expected)

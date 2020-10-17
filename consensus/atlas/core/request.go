@@ -26,11 +26,11 @@ func (c *core) handleRequest(request *atlas.Request) error {
 			logger.Warn("invalid request")
 			return err
 		}
-		logger.Warn("unexpected request", "err", err, "number", request.Proposal.Number(), "hash", request.Proposal.SealHash(c.backend))
+		logger.Warn("unexpected request", "err", err, "number", request.Proposal.Number(), "hash", request.Proposal.Hash())
 		return err
 	}
 
-	logger.Trace("handleRequest", "number", request.Proposal.Number(), "hash", request.Proposal.SealHash(c.backend))
+	logger.Trace("handleRequest", "number", request.Proposal.Number(), "hash", request.Proposal.Hash())
 
 	// ATLAS(zgx): only msg come from proposer is acceptable.
 
@@ -63,7 +63,7 @@ func (c *core) checkRequestMsg(request *atlas.Request) error {
 func (c *core) storeRequestMsg(request *atlas.Request) {
 	logger := c.logger.New("state", c.state)
 
-	logger.Trace("Store future request", "number", request.Proposal.Number(), "hash", request.Proposal.SealHash(c.backend))
+	logger.Trace("Store future request", "number", request.Proposal.Number(), "hash", request.Proposal.Hash())
 
 	c.pendingRequestsMu.Lock()
 	defer c.pendingRequestsMu.Unlock()
@@ -86,14 +86,14 @@ func (c *core) processPendingRequests() {
 		err := c.checkRequestMsg(r)
 		if err != nil {
 			if err == errFutureMessage {
-				c.logger.Trace("Stop processing request", "number", r.Proposal.Number(), "hash", r.Proposal.SealHash(c.backend))
+				c.logger.Trace("Stop processing request", "number", r.Proposal.Number(), "hash", r.Proposal.Hash())
 				c.pendingRequests.Push(m, prio)
 				break
 			}
-			c.logger.Trace("Skip the pending request", "number", r.Proposal.Number(), "hash", r.Proposal.SealHash(c.backend), "err", err)
+			c.logger.Trace("Skip the pending request", "number", r.Proposal.Number(), "hash", r.Proposal.Hash(), "err", err)
 			continue
 		}
-		c.logger.Trace("Post pending request", "number", r.Proposal.Number(), "hash", r.Proposal.SealHash(c.backend))
+		c.logger.Trace("Post pending request", "number", r.Proposal.Number(), "hash", r.Proposal.Hash())
 
 		go c.sendEvent(atlas.RequestEvent{
 			Proposal: r.Proposal,

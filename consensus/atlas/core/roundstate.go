@@ -95,7 +95,7 @@ func (s *roundState) Subject() *atlas.Subject {
 			Round:    new(big.Int).Set(s.round),
 			Sequence: new(big.Int).Set(s.sequence),
 		},
-		Digest:  atlas.SealHash(s.Preprepare.Proposal.Header()),
+		Digest:  s.Preprepare.Proposal.Hash(),
 		Payload: []byte{},
 	}
 }
@@ -165,7 +165,7 @@ func (s *roundState) LockHash() {
 	defer s.mu.Unlock()
 
 	if s.Preprepare != nil {
-		s.lockedHash = atlas.SealHash(s.Preprepare.Proposal.Header())
+		s.lockedHash = s.Preprepare.Proposal.Hash()
 	}
 }
 

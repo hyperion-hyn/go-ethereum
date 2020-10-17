@@ -206,7 +206,7 @@ func (w *wizard) makeGenesis() {
 			}
 		}
 
-		hashdata := atlasBackend.SealHash(block.Header())
+		hashdata := block.Hash()
 		publicKeys := make([]*bls.PublicKey, len(signers))
 		for i := 0; i < len(signers); i++ {
 			publicKeys[i] = signers[i].PublicKey
@@ -223,10 +223,10 @@ func (w *wizard) makeGenesis() {
 		fmt.Printf("header %#v\n", block.Header())
 		header := block.Header()
 
-		if err := atlasBackend.WriteCommittedSealInGenesis(genesis, header.Extra, signatures, publicKeys); err != nil {
+		// ATLAS(fix):
+		if err := atlasBackend.WriteCommittedSealInGenesis(genesis, header, signatures, publicKeys); err != nil {
 			fmt.Println("failed to write committed seals, %v", err)
 		}
-		copy(genesis.ExtraData[:], header.Extra[:])
 
 		genesis.Alloc[common.HexToAddress(atlasBackend.CONSORTIUM_BOARD)] = consortiumBoard
 	}

@@ -46,15 +46,16 @@ var errGenesisNoConfig = errors.New("genesis has no chain configuration")
 // Genesis specifies the header fields, state of a genesis block. It also defines hard
 // fork switch-over blocks through the chain configuration.
 type Genesis struct {
-	Config     *params.ChainConfig `json:"config"`
-	Nonce      uint64              `json:"nonce"`
-	Timestamp  uint64              `json:"timestamp"`
-	ExtraData  []byte              `json:"extraData"`
-	GasLimit   uint64              `json:"gasLimit"   gencodec:"required"`
-	Difficulty *big.Int            `json:"difficulty" gencodec:"required"`
-	Mixhash    common.Hash         `json:"mixHash"`
-	Coinbase   common.Address      `json:"coinbase"`
-	Alloc      GenesisAlloc        `json:"alloc"      gencodec:"required"`
+	Config      *params.ChainConfig `json:"config"`
+	Nonce       uint64              `json:"nonce"`
+	Timestamp   uint64              `json:"timestamp"`
+	ExtraData   []byte              `json:"extraData"`
+	GasLimit    uint64              `json:"gasLimit"   gencodec:"required"`
+	Difficulty  *big.Int            `json:"difficulty" gencodec:"required"`
+	Mixhash     common.Hash         `json:"mixHash"`
+	Coinbase    common.Address      `json:"coinbase"`
+	Alloc       GenesisAlloc        `json:"alloc"      gencodec:"required"`
+	LastCommits []byte              `json:"lastCommits"`
 
 	// These fields are used for consensus tests. Please don't use them
 	// in actual genesis blocks.
@@ -315,6 +316,7 @@ func (g *Genesis) Commit(db ethdb.Database) (*types.Block, error) {
 	rawdb.WriteHeadFastBlockHash(db, block.Hash())
 	rawdb.WriteHeadHeaderHash(db, block.Hash())
 	rawdb.WriteChainConfig(db, block.Hash(), config)
+	rawdb.WriteLastCommits(db, block.NumberU64(), g.LastCommits)
 	return block, nil
 }
 

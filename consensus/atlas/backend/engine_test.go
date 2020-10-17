@@ -332,7 +332,7 @@ func TestSealCommitted(t *testing.T) {
 	}()
 
 	finalBlock := <-resultCh
-	if finalBlock.SealHash(engine) != expectedBlock.SealHash(engine) {
+	if finalBlock.Hash() != expectedBlock.Hash() {
 		t.Errorf("hash mismatch: have %v, want %v", finalBlock.Hash(), expectedBlock.Hash())
 	}
 }
