@@ -260,7 +260,7 @@ func (p map3NodeAsParticipant) postRedelegate(validator common.Address, amount *
 }
 
 func (p map3NodeAsParticipant) rewardHandler() RestakingRewardHandler {
-	return &RewardToMap3Node{}
+	return &RewardToMap3Node{p.stateDB}
 }
 
 type RewardToMap3Node struct {

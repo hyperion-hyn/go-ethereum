@@ -133,7 +133,7 @@ func (m map3VerifierForRestaking) VerifyForCollectingReward(stateDB vm.StateDB, 
 	if node.RestakingReference().ValidatorAddress().Value() != msg.ValidatorAddress {
 		return nil, errInvalidValidatorAddress
 	}
-	return &map3NodeAsParticipant{node: node}, nil
+	return &map3NodeAsParticipant{stateDB: stateDB, node: node}, nil
 }
 
 func checkMap3DuplicatedFields(state vm.StateDB, identity string, keys microstaking.BLSPublicKeys_) error {
