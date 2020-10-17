@@ -610,7 +610,8 @@ func (s *Storage_{{.Name}}) Clear() {
 {{else if eq .Name "Decimal"}}
 	s.SetValue(common.NewDecFromBigIntWithPrec(big.NewInt(0), common.Precision))
 {{else if match .Name "Bytes([1-9]|[12][0-9]|3[0-2])" }}
-	rv := bytes.Repeat([]byte{0x00}, s.numberOfBytes)
+	var rv [{{.SolKind.Size}}]byte
+	copy(rv[:], bytes.Repeat([]byte{0x00}, {{.SolKind.Size}}))
 	s.SetValue(rv)
 {{else}}
 	UNSUPPORTED {{.Name}} {{.Type}}
@@ -645,17 +646,44 @@ func (s *Storage_{{ $typeName }}) Save(obj *{{ $typeName }}) {
 }
 
 func (s *Storage_{{ $typeName }}) Clear() {
-	{{- range $field := .Fields}}
+	{{- if isIterableMap .}}
+	for i := s.Keys().Length() - 1; i >= 0; i-- {
+		key := s.Keys().Get(i).Value()
+		s.Map().Get(key).Clear()
+	}
+	s.Keys().Clear()
+	{{- else}}
+		{{- range $field := .Fields}}
 	s.{{$field.Name}}().Clear()
+		{{- end}}
 	{{- end}}
 }
 
 func (s *Storage_{{ $typeName }}) load() *{{ $typeName }} {
-	{{- range $field := .Fields}}
-		{{- if isBasicType $field }}
-	s.{{$field.Name}}().Value()
+	{{- if isIterableMap .}}
+	s.Keys().load()
+	length := s.Keys().Length()
+	for i := 0; i < length; i++ {
+		k := s.Keys().Get(i).Value()
+		{{- $field := index .Fields 0}}
+		{{- if eq "Keys" $field.Name}}
+			{{- $field = index .Fields 1}}
+		{{- end}}
+		{{- $map := index $defines $field.ElemType}}
+		{{- $elemValue := index $map.Fields 1}}
+		{{- if isBasicType $elemValue }}
+		s.Map().Get(k).Value()
 		{{- else}}
+		s.Map().Get(k).load()
+		{{- end}}
+	}
+	{{- else}}
+		{{- range $field := .Fields}}
+			{{- if isBasicType $field }}
+	s.{{$field.Name}}().Value()
+			{{- else}}
 	s.{{$field.Name}}().load()
+			{{- end}}
 		{{- end}}
 	{{- end}}
 	return s.obj
@@ -691,6 +719,8 @@ func (s *Storage_{{ $typeName }}) Save(obj {{ $typeName }}) {
 	for i := 0; i < len(obj); i++ {
 			{{- if isBasicType $elem}}
 		s.Get(i).SetValue(obj[i])
+			{{- else if isstruct $elem}}
+		s.Get(i).Save(&obj[i])
 			{{- else}}
 		s.Get(i).Save(obj[i])		
 			{{- end}}

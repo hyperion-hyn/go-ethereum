@@ -95,6 +95,11 @@ contract Map3Pool {
         uint256 Epoch;
     }
 
+    struct IterableAddressSet_t {
+        address[] Keys;
+        mapping (address => bool) Map;
+    }
+
     struct Map3NodePool_t {
         mapping (address => Map3NodeWrapper_t) Nodes;
         mapping (uint64 => Map3NodeSnapshot_t) NodeSnapshotByEpoch;
@@ -102,6 +107,7 @@ contract Map3Pool {
         mapping (string => bool) NodeKeySet;
         mapping (string => bool) DescriptionIdentitySet;
         mapping (string => uint256) NodePriority;
+        IterableAddressSet_t AddressSet;
     }
 
     Map3NodePool_t pool;

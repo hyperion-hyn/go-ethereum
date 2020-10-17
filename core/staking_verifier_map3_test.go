@@ -1209,7 +1209,7 @@ func updateStateMap3Nodes(sdb *state.StateDB, ws []*microstaking.Map3NodeWrapper
 	pool := sdb.Map3NodePool()
 	for _, w := range ws {
 		pool.Nodes().Put(w.Map3Node.Map3Address, w)
-		sdb.IncrementMap3NodeNonce()
+		sdb.IncreaseMap3NonceIfZero()
 		for _, k := range w.Map3Node.NodeKeys.Keys {
 			pool.NodeKeySet().Get(k.Hex()).SetValue(true)
 		}
@@ -1888,11 +1888,11 @@ func makeStateDBForMap3Verifier(t *testing.T) vm.StateDB {
 	node3 := buildMap3Node(map3NodeAddr3, map3OperatorAddr3, microstaking.Active)
 	node3.RestakingReference.ValidatorAddress = validatorAddr
 	sdb.Map3NodePool().Nodes().Put(map3NodeAddr, node1)
-	sdb.IncrementMap3NodeNonce()
+	sdb.IncreaseMap3NonceIfZero()
 	sdb.Map3NodePool().Nodes().Put(map3NodeAddr2, node2)
-	sdb.IncrementMap3NodeNonce()
+	sdb.IncreaseMap3NonceIfZero()
 	sdb.Map3NodePool().Nodes().Put(map3NodeAddr3, node3)
-	sdb.IncrementMap3NodeNonce()
+	sdb.IncreaseMap3NonceIfZero()
 	sdb.Commit(true)
 	return sdb
 }

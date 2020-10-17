@@ -11,22 +11,10 @@ func (cr *fakeChainReader) Engine() consensus.Engine {
 	panic("implement me")
 }
 
-func (cr *fakeChainReader) ReadValidatorPoolAtBlock(blockNum *big.Int) (*restaking.Storage_ValidatorPool_, error) {
+func (cr *fakeChainReader) ReadValidatorSnapshotAtBlock(blockNum *big.Int, validatorAddress common.Address) (*restaking.Storage_ValidatorWrapper_, error) {
 	panic("implement me")
 }
 
-func (cr *fakeChainReader) ReadValidatorAtBlock(blockNum *big.Int, validatorAddress common.Address) (*restaking.Storage_ValidatorWrapper_, error) {
-	panic("implement me")
-}
-
-func (cr *fakeChainReader) ReadValidatorAtEpoch(epoch *big.Int, validatorAddress common.Address) (*restaking.Storage_ValidatorWrapper_, error) {
-	panic("implement me")
-}
-
-func (cr *fakeChainReader) ReadCommitteeAtEpoch(epoch *big.Int) (*restaking.Storage_Committee_, error) {
-	panic("implement me")
-}
-
-func (cr *fakeChainReader) ReadValidatorAtEpochOrCurrentBlock(b *big.Int, address common.Address) (*restaking.Storage_ValidatorWrapper_, error) {
+func (cr *fakeChainReader) ReadCommitteeAtBlock(blockNum *big.Int) (*restaking.Storage_Committee_, error) {
 	panic("implement me")
 }

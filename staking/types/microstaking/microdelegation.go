@@ -37,8 +37,8 @@ func NewMicrodelegation(delegator common.Address, amount *big.Int, unlockedEpoch
 	return d
 }
 
-func NewMicrodelegationMap() MicrodelegationMap_ {
-	return MicrodelegationMap_{
+func NewMicrodelegationMap() IterableMicrodelegationMap_ {
+	return IterableMicrodelegationMap_{
 		Keys: []*Address{},
 		Map:  map[Address]*MicrodelegationMapEntry_{},
 	}
@@ -77,7 +77,7 @@ func (s *Storage_Microdelegation_) CanReleaseUndelegationAt(epoch *big.Int) bool
 	return s.Undelegation().Amount().Value().Sign() > 0 && s.Undelegation().Epoch().Value().Cmp(epoch) <= 0
 }
 
-func (m *MicrodelegationMap_) Put(delegator Address, microdelegation Microdelegation_) {
+func (m *IterableMicrodelegationMap_) Put(delegator Address, microdelegation Microdelegation_) {
 	entry, ok := m.Map[delegator]
 	if ok {
 		entry.Entry = microdelegation
@@ -90,7 +90,7 @@ func (m *MicrodelegationMap_) Put(delegator Address, microdelegation Microdelega
 	}
 }
 
-func (m *MicrodelegationMap_) Remove(delegator Address) {
+func (m *IterableMicrodelegationMap_) Remove(delegator Address) {
 	if valueEntry, ok := m.Map[delegator]; ok {
 		index := valueEntry.Index.Uint64()
 		if int(index) != len(m.Keys) { // the last one
@@ -103,15 +103,15 @@ func (m *MicrodelegationMap_) Remove(delegator Address) {
 	}
 }
 
-func (m *MicrodelegationMap_) Get(delegator Address) (Microdelegation_, bool) {
+func (m *IterableMicrodelegationMap_) Get(delegator Address) (Microdelegation_, bool) {
 	if entry, ok := m.Map[delegator]; ok {
 		return entry.Entry, true
 	}
 	return Microdelegation_{}, false
 }
 
-// Storage_MicrodelegationMap_
-func (s *Storage_MicrodelegationMap_) AllKeys() []common.Address {
+// Storage_IterableMicrodelegationMap_
+func (s *Storage_IterableMicrodelegationMap_) AllKeys() []common.Address {
 	result := make([]common.Address, 0)
 	length := s.Keys().Length()
 	for i := 0; i < length; i++ {
@@ -120,7 +120,7 @@ func (s *Storage_MicrodelegationMap_) AllKeys() []common.Address {
 	return result
 }
 
-func (s *Storage_MicrodelegationMap_) Put(key common.Address, microdelegation *Microdelegation_) {
+func (s *Storage_IterableMicrodelegationMap_) Put(key common.Address, microdelegation *Microdelegation_) {
 	if s.Contain(key) {
 		s.Map().Get(key).Entry().Clear()
 		s.Map().Get(key).Entry().Save(microdelegation)
@@ -136,11 +136,11 @@ func (s *Storage_MicrodelegationMap_) Put(key common.Address, microdelegation *M
 	}
 }
 
-func (s *Storage_MicrodelegationMap_) Contain(key common.Address) bool {
+func (s *Storage_IterableMicrodelegationMap_) Contain(key common.Address) bool {
 	return s.Map().Get(key).Index().Value().Sign() > 0
 }
 
-func (s *Storage_MicrodelegationMap_) Get(key common.Address) (*Storage_Microdelegation_, bool) {
+func (s *Storage_IterableMicrodelegationMap_) Get(key common.Address) (*Storage_Microdelegation_, bool) {
 	if s.Contain(key) {
 		return s.Map().Get(key).Entry(), true
 	} else {
@@ -148,7 +148,7 @@ func (s *Storage_MicrodelegationMap_) Get(key common.Address) (*Storage_Microdel
 	}
 }
 
-func (s *Storage_MicrodelegationMap_) Remove(key common.Address) {
+func (s *Storage_IterableMicrodelegationMap_) Remove(key common.Address) {
 	if !s.Contain(key) {
 		return
 	}
@@ -168,23 +168,6 @@ func (s *Storage_MicrodelegationMap_) Remove(key common.Address) {
 	s.Keys().Get(length - 1).Clear()
 	s.Keys().Resize(length - 1)
 	entry.Clear()
-}
-
-func (s *Storage_MicrodelegationMap_) LoadFully() (*MicrodelegationMap_, error) {
-	s.Keys().load()
-	length := s.Keys().Length()
-	for i := 0; i < length; i++ {
-		k := s.Keys().Get(i).Value()
-		s.Map().Get(k).load()
-	}
-
-	// copy
-	src := s.obj
-	des := MicrodelegationMap_{}
-	if err := deepCopy(src, &des); err != nil {
-		return nil, err
-	}
-	return &des, nil
 }
 
 func (s *Storage_DelegationIndexMap_) Contain(key common.Address) bool {

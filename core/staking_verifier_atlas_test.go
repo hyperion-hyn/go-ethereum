@@ -301,7 +301,6 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 	type args struct {
 		stateDB      vm.StateDB
 		chainContext ChainContext
-		epoch        *big.Int
 		blockNum     *big.Int
 		msg          restaking.EditValidator
 		signer       common.Address
@@ -316,7 +315,6 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 			args: args{
 				stateDB:      makeStateDBForRestaking(t),
 				chainContext: makeFakeChainContextForStake(t),
-				epoch:        big.NewInt(defaultEpoch),
 				blockNum:     big.NewInt(defaultBlockNumber),
 				msg:          defaultMsgEditValidator(),
 				signer:       operatorAddr,
@@ -328,7 +326,6 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 			args: args{
 				stateDB:      nil,
 				chainContext: makeFakeChainContextForStake(t),
-				epoch:        big.NewInt(defaultEpoch),
 				blockNum:     big.NewInt(defaultBlockNumber),
 				msg:          defaultMsgEditValidator(),
 				signer:       operatorAddr,
@@ -336,35 +333,10 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 			wantErr: errStateDBIsMissing,
 		},
 		{
-			name: "chain context nil",
-			args: args{
-				stateDB:      makeStateDBForRestaking(t),
-				chainContext: nil,
-				epoch:        big.NewInt(defaultEpoch),
-				blockNum:     big.NewInt(defaultBlockNumber),
-				msg:          defaultMsgEditValidator(),
-				signer:       operatorAddr,
-			},
-			wantErr: errChainContextMissing,
-		},
-		{
-			name: "epoch nil",
-			args: args{
-				stateDB:      makeStateDBForRestaking(t),
-				chainContext: makeFakeChainContextForStake(t),
-				epoch:        nil,
-				blockNum:     big.NewInt(defaultBlockNumber),
-				msg:          defaultMsgEditValidator(),
-				signer:       operatorAddr,
-			},
-			wantErr: errEpochMissing,
-		},
-		{
 			name: "block number nil",
 			args: args{
 				stateDB:      makeStateDBForRestaking(t),
 				chainContext: makeFakeChainContextForStake(t),
-				epoch:        big.NewInt(defaultEpoch),
 				blockNum:     nil,
 				msg:          defaultMsgEditValidator(),
 				signer:       operatorAddr,
@@ -376,7 +348,6 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 			args: args{
 				stateDB:      makeStateDBForRestaking(t),
 				chainContext: makeFakeChainContextForStake(t),
-				epoch:        big.NewInt(defaultEpoch),
 				blockNum:     big.NewInt(defaultBlockNumber),
 				msg: func() restaking.EditValidator {
 					msg := defaultMsgEditValidator()
@@ -393,7 +364,6 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 			args: args{
 				stateDB:      makeStateDBForRestaking(t),
 				chainContext: makeFakeChainContextForStake(t),
-				epoch:        big.NewInt(defaultEpoch),
 				blockNum:     big.NewInt(defaultBlockNumber),
 				msg: func() restaking.EditValidator {
 					msg := defaultMsgEditValidator()
@@ -409,7 +379,6 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 			args: args{
 				stateDB:      makeStateDBForRestaking(t),
 				chainContext: makeFakeChainContextForStake(t),
-				epoch:        big.NewInt(defaultEpoch),
 				blockNum:     big.NewInt(defaultBlockNumber),
 				msg: func() restaking.EditValidator {
 					msg := defaultMsgEditValidator()
@@ -425,7 +394,6 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 			args: args{
 				stateDB:      makeStateDBForRestaking(t),
 				chainContext: makeFakeChainContextForStake(t),
-				epoch:        big.NewInt(defaultEpoch),
 				blockNum:     big.NewInt(defaultBlockNumber),
 				msg: func() restaking.EditValidator {
 					msg := defaultMsgEditValidator()
@@ -441,7 +409,6 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 			args: args{
 				stateDB:      makeStateDBForRestaking(t),
 				chainContext: makeFakeChainContextForStake(t),
-				epoch:        big.NewInt(defaultEpoch),
 				blockNum:     big.NewInt(defaultBlockNumber),
 				msg: func() restaking.EditValidator {
 					msg := defaultMsgEditValidator()
@@ -456,7 +423,6 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 			args: args{
 				stateDB:      makeStateDBForRestaking(t),
 				chainContext: makeFakeChainContextForStake(t),
-				epoch:        big.NewInt(defaultEpoch),
 				blockNum:     big.NewInt(defaultBlockNumber),
 				msg: func() restaking.EditValidator {
 					msg := defaultMsgEditValidator()
@@ -472,7 +438,6 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 			args: args{
 				stateDB:      makeStateDBForRestaking(t),
 				chainContext: makeFakeChainContextForStake(t),
-				epoch:        big.NewInt(defaultEpoch),
 				blockNum:     big.NewInt(defaultBlockNumber),
 				msg: func() restaking.EditValidator {
 					msg := defaultMsgEditValidator()
@@ -488,7 +453,6 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 			args: args{
 				stateDB:      makeStateDBForRestaking(t),
 				chainContext: makeFakeChainContextForStake(t),
-				epoch:        big.NewInt(defaultEpoch),
 				blockNum:     big.NewInt(defaultBlockNumber),
 				msg: func() restaking.EditValidator {
 					msg := defaultMsgEditValidator()
@@ -504,7 +468,6 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 			args: args{
 				stateDB:      makeStateDBForRestaking(t),
 				chainContext: makeFakeChainContextForStake(t),
-				epoch:        big.NewInt(defaultEpoch),
 				blockNum:     big.NewInt(defaultBlockNumber),
 				msg: func() restaking.EditValidator {
 					msg := defaultMsgEditValidator()
@@ -528,7 +491,6 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 					return sdb
 				}(t),
 				chainContext: makeFakeChainContextForStake(t),
-				epoch:        big.NewInt(defaultEpoch),
 				blockNum:     big.NewInt(defaultBlockNumber),
 				msg:          defaultMsgEditValidator(),
 				signer:       operatorAddr,
@@ -539,7 +501,7 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			verifier, _ := NewStakingVerifier(tt.args.chainContext)
-			_, err := verifier.VerifyEditValidatorMsg(tt.args.stateDB, tt.args.chainContext, tt.args.epoch, tt.args.blockNum, &tt.args.msg, tt.args.signer)
+			_, err := verifier.VerifyEditValidatorMsg(tt.args.stateDB, tt.args.blockNum, &tt.args.msg, tt.args.signer)
 			if assErr := assertError(err, tt.wantErr); assErr != nil {
 				t.Errorf("Test - %v: %v", tt.name, err)
 			}
@@ -931,7 +893,7 @@ func addStateRewardForAddr(sdb *state.StateDB, validator common.Address, reward 
 func makeFakeChainContextForStake(t *testing.T) *fakeChainContext {
 	stateDB := makeStateDBForRestaking(t)
 	return &fakeChainContext{stateDBs: map[uint64]*state.StateDB{
-		defaultEpoch: stateDB,
+		defaultBlockNumber - 1: stateDB,
 	}}
 }
 
@@ -955,7 +917,8 @@ func makeStateDBForRestaking(t *testing.T) *state.StateDB {
 func updateStateValidators(sdb *state.StateDB, ws []*restaking.ValidatorWrapper_) error {
 	for _, w := range ws {
 		sdb.ValidatorPool().Validators().Put(w.Validator.ValidatorAddress, w)
-		sdb.IncrementValidatorNonce()
+		sdb.ValidatorPool().ValidatorSnapshots().Put(w.Validator.ValidatorAddress, w)
+		sdb.IncreaseValidatorNonceIfZero()
 		for _, k := range w.Validator.SlotPubKeys.Keys {
 			sdb.ValidatorPool().SlotKeySet().Get(k.Hex()).SetValue(true)
 		}
@@ -1039,25 +1002,20 @@ type fakeChainContext struct {
 	stateDBs map[uint64]*state.StateDB
 }
 
+func (chain *fakeChainContext) ReadValidatorSnapshotAtBlock(blockNum *big.Int, validatorAddress common.Address) (*restaking.Storage_ValidatorWrapper_, error) {
+	stateDB := chain.stateDBs[blockNum.Uint64()]
+	return stateDB.ValidatorByAddress(validatorAddress)
+}
+
+func (chain *fakeChainContext) ReadCommitteeAtBlock(blockNum *big.Int) (*restaking.Storage_Committee_, error) {
+	panic("implement me")
+}
+
 func (chain *fakeChainContext) Engine() consensus.Engine {
 	panic("no implement")
 }
 
 func (chain *fakeChainContext) GetHeader(common.Hash, uint64) *types.Header {
-	panic("no implement")
-}
-
-func (chain *fakeChainContext) ReadValidatorAtEpoch(epoch *big.Int, validator common.Address) (*restaking.Storage_ValidatorWrapper_, error) {
-	stateDB := chain.stateDBs[epoch.Uint64()]
-	return stateDB.ValidatorByAddress(validatorAddr)
-}
-
-func (chain *fakeChainContext) ReadValidatorAtEpochOrCurrentBlock(epoch *big.Int, validator common.Address) (*restaking.Storage_ValidatorWrapper_, error) {
-	stateDB := chain.stateDBs[epoch.Uint64()]
-	return stateDB.ValidatorByAddress(validatorAddr)
-}
-
-func (chain *fakeChainContext) ReadCommitteeAtEpoch(epoch *big.Int) (*restaking.Storage_Committee_, error) {
 	panic("no implement")
 }
 

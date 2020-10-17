@@ -62,11 +62,8 @@ type ChainReader interface {
 	// StateAt returns a new mutable state based on a particular point in time.
 	StateAt(root common.Hash) (*state.StateDB, error)
 	Engine() Engine
-	ReadValidatorPoolAtBlock(blockNum *big.Int) (*restaking.Storage_ValidatorPool_, error)
-	ReadValidatorAtBlock(blockNum *big.Int, validatorAddress common.Address) (*restaking.Storage_ValidatorWrapper_, error)
-	ReadValidatorAtEpoch(epoch *big.Int, validatorAddress common.Address) (*restaking.Storage_ValidatorWrapper_, error)
-	ReadCommitteeAtEpoch(epoch *big.Int) (*restaking.Storage_Committee_, error)
-	ReadValidatorAtEpochOrCurrentBlock(*big.Int, common.Address) (*restaking.Storage_ValidatorWrapper_, error)
+	ReadCommitteeAtBlock(blockNum *big.Int) (*restaking.Storage_Committee_, error)
+	ReadValidatorSnapshotAtBlock(blockNum *big.Int, validatorAddress common.Address) (*restaking.Storage_ValidatorWrapper_, error)
 	ChainDb() ethdb.Database
 }
 
