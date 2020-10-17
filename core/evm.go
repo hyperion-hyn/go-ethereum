@@ -40,9 +40,8 @@ type ChainContext interface {
 	// ATLAS
 	// Database retrieves the blockchain's database.
 	Database() ethdb.Database
-	ReadValidatorAtEpoch(*big.Int, common.Address) (*restaking.Storage_ValidatorWrapper_, error)
-	ReadValidatorAtEpochOrCurrentBlock(*big.Int, common.Address) (*restaking.Storage_ValidatorWrapper_, error)
-	ReadCommitteeAtEpoch(epoch *big.Int) (*restaking.Storage_Committee_, error)
+	ReadValidatorSnapshotAtBlock(blockNum *big.Int, validatorAddress common.Address) (*restaking.Storage_ValidatorWrapper_, error)
+	ReadCommitteeAtBlock(blockNum *big.Int) (*restaking.Storage_Committee_, error)
 	Config() *params.ChainConfig
 }
 

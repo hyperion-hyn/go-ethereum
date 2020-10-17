@@ -45,7 +45,7 @@ func (s *PublicRestakingAPI) GetValidatorInformation(
 	if err != nil {
 		return restaking.PlainValidatorWrapper{}, err
 	}
-	validatorWrapper, err := storageValidatorWarpper.LoadFully()
+	validatorWrapper, err := storageValidatorWarpper.Load()
 	if err != nil {
 		return restaking.PlainValidatorWrapper{}, err
 	}
@@ -70,7 +70,8 @@ func (s *PublicRestakingAPI) GetEpochLastBlockNum(
 }
 
 func (s *PublicRestakingAPI) GetCommitteeAtEpoch(ctx context.Context, epoch uint64) (restaking.Committee_, error) {
-	committeeStorage, err := s.b.ChainContext().ReadCommitteeAtEpoch(big.NewInt(int64(epoch)))
+	blockNum := s.b.ChainConfig().Atlas.EpochFirstBlock(epoch)
+	committeeStorage, err := s.b.ChainContext().ReadCommitteeAtBlock(big.NewInt(int64(blockNum)))
 	if err != nil {
 		return restaking.Committee_{}, err
 	}
@@ -79,7 +80,8 @@ func (s *PublicRestakingAPI) GetCommitteeAtEpoch(ctx context.Context, epoch uint
 }
 
 func (s *PublicRestakingAPI) GetCommitteeInformationAtEpoch(ctx context.Context, epoch uint64) ([]restaking.PlainValidatorWrapper, error) {
-	committeeStorage, err := s.b.ChainContext().ReadCommitteeAtEpoch(big.NewInt(int64(epoch)))
+	blockNum := s.b.ChainConfig().Atlas.EpochFirstBlock(epoch)
+	committeeStorage, err := s.b.ChainContext().ReadCommitteeAtBlock(big.NewInt(int64(blockNum)))
 	if err != nil {
 		return nil, err
 	}
@@ -89,11 +91,11 @@ func (s *PublicRestakingAPI) GetCommitteeInformationAtEpoch(ctx context.Context,
 
 	plainValidators := make([]restaking.PlainValidatorWrapper, 0)
 	for _, slotTemp := range slots {
-		validatorWrapperStorage, err := s.b.ChainContext().ReadValidatorAtEpoch(big.NewInt(int64(epoch)), slotTemp.EcdsaAddress)
+		validatorWrapperStorage, err := s.b.ChainContext().ReadValidatorSnapshotAtBlock(big.NewInt(int64(blockNum)), slotTemp.EcdsaAddress)
 		if err != nil {
 			return nil, err
 		}
-		validatorWrapper, err := validatorWrapperStorage.LoadFully()
+		validatorWrapper, err := validatorWrapperStorage.Load()
 		if err != nil {
 			return nil, err
 		}
@@ -105,11 +107,12 @@ func (s *PublicRestakingAPI) GetCommitteeInformationAtEpoch(ctx context.Context,
 
 func (s *PublicRestakingAPI) GetValidatorInformationAtEpoch(ctx context.Context, validatorAddress common.Address,
 	epoch uint64) (restaking.PlainValidatorWrapper, error) {
-	validatorWrapperStorage, err := s.b.ChainContext().ReadValidatorAtEpoch(big.NewInt(int64(epoch)), validatorAddress)
+	blockNum := s.b.ChainConfig().Atlas.EpochFirstBlock(epoch)
+	validatorWrapperStorage, err := s.b.ChainContext().ReadValidatorSnapshotAtBlock(big.NewInt(int64(blockNum)), validatorAddress)
 	if err != nil {
 		return restaking.PlainValidatorWrapper{}, err
 	}
-	validatorWrapper, err := validatorWrapperStorage.LoadFully()
+	validatorWrapper, err := validatorWrapperStorage.Load()
 	if err != nil {
 		return restaking.PlainValidatorWrapper{}, err
 	}

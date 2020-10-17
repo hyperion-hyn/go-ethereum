@@ -86,6 +86,11 @@ func (s *StateDB) AddMicrodelegationReward(snapshot *microstaking.Storage_Map3No
 	return nil
 }
 
-func (s *StateDB) IncrementMap3NodeNonce() {
-	s.SetNonce(map3StorageAddress, s.GetNonce(map3StorageAddress)+1)
+/**
+ * IncreaseMap3NonceIfZero avoids account state of map3 nodes would be delete if its nonce and balance are zero
+ */
+func (s *StateDB) IncreaseMap3NonceIfZero() {
+	if s.GetNonce(map3StorageAddress) == 0 {
+		s.SetNonce(map3StorageAddress, 1)
+	}
 }

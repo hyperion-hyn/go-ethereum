@@ -75,7 +75,7 @@ func (st *StateTransition) StakingTransitionDb() (*ExecutionResult, error) {
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return nil, err
 		}
-		st.state.IncrementValidatorNonce()
+		st.state.IncreaseValidatorNonceIfZero()
 		err = st.verifyAndApplyCreateValidatorTx(verifier, stkMsg, msg.From())
 	case types.EditValidator:
 		stkMsg := &restaking.EditValidator{}
@@ -106,7 +106,7 @@ func (st *StateTransition) StakingTransitionDb() (*ExecutionResult, error) {
 		if err = rlp.DecodeBytes(msg.Data(), stkMsg); err != nil {
 			return nil, err
 		}
-		st.state.IncrementMap3NodeNonce()
+		st.state.IncreaseMap3NonceIfZero()
 		err = st.verifyAndApplyCreateMap3NodeTx(verifier, stkMsg, msg.From())
 	case types.EditMap3:
 		stkMsg := &microstaking.EditMap3Node{}
@@ -172,7 +172,7 @@ func (st *StateTransition) verifyAndApplyCreateValidatorTx(verifier StakingVerif
 }
 
 func (st *StateTransition) verifyAndApplyEditValidatorTx(verifier StakingVerifier, msg *restaking.EditValidator, signer common.Address) error {
-	if _, err := verifier.VerifyEditValidatorMsg(st.state, st.bc, st.evm.EpochNumber, st.evm.BlockNumber, msg, signer); err != nil {
+	if _, err := verifier.VerifyEditValidatorMsg(st.state, st.evm.BlockNumber, msg, signer); err != nil {
 		return err
 	}
 	validatorPool := st.state.ValidatorPool()
@@ -226,6 +226,7 @@ func (st *StateTransition) verifyAndApplyCollectRedelRewardTx(verifier StakingVe
 
 func saveNewValidatorToPool(wrapper *restaking.ValidatorWrapper_, validatorPool *restaking.Storage_ValidatorPool_) {
 	validatorPool.Validators().Put(wrapper.Validator.ValidatorAddress, wrapper)
+	validatorPool.ValidatorSnapshots().Put(wrapper.Validator.ValidatorAddress, wrapper)
 	keySet := validatorPool.SlotKeySet()
 	for _, key := range wrapper.Validator.SlotPubKeys.Keys {
 		keySet.Get(key.Hex()).SetValue(true)

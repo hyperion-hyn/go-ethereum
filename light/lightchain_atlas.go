@@ -6,14 +6,10 @@ import (
 	"math/big"
 )
 
-func (lc *LightChain) ReadValidatorAtEpoch(*big.Int, common.Address) (*restaking.Storage_ValidatorWrapper_, error) {
+func (lc *LightChain) ReadValidatorSnapshotAtBlock(blockNum *big.Int, validatorAddress common.Address) (*restaking.Storage_ValidatorWrapper_, error) {
 	panic("implement me")
 }
 
-func (lc *LightChain) ReadValidatorAtEpochOrCurrentBlock(*big.Int, common.Address) (*restaking.Storage_ValidatorWrapper_, error) {
-	panic("implement me")
-}
-
-func (lc *LightChain) ReadCommitteeAtEpoch(epoch *big.Int) (*restaking.Storage_Committee_, error) {
+func (lc *LightChain) ReadCommitteeAtBlock(blockNum *big.Int) (*restaking.Storage_Committee_, error) {
 	panic("implement me")
 }

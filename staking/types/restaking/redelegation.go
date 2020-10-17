@@ -14,19 +14,19 @@ func NewRedelegation(delegatorAddr common.Address, amount *big.Int) Redelegation
 	}
 }
 
-func NewRedelegationMap() RedelegationMap_ {
-	return RedelegationMap_{
+func NewRedelegationMap() IterableRedelegationMap_ {
+	return IterableRedelegationMap_{
 		Keys: []*Address{},
 		Map:  map[Address]*RedelegationMapEntry_{},
 	}
 }
 
-func (r *RedelegationMap_) Contain(delegator Address) bool {
+func (r *IterableRedelegationMap_) Contain(delegator Address) bool {
 	_, ok := r.Map[delegator]
 	return ok
 }
 
-func (r *RedelegationMap_) Put(delegator Address, redelegation Redelegation_) {
+func (r *IterableRedelegationMap_) Put(delegator Address, redelegation Redelegation_) {
 	entry, ok := r.Map[delegator]
 	if ok {
 		entry.Entry = redelegation
@@ -39,7 +39,7 @@ func (r *RedelegationMap_) Put(delegator Address, redelegation Redelegation_) {
 	}
 }
 
-func (r *RedelegationMap_) Remove(delegator Address) {
+func (r *IterableRedelegationMap_) Remove(delegator Address) {
 	if valueEntry, ok := r.Map[delegator]; ok {
 		index := valueEntry.Index.Uint64()
 		if int(index) != len(r.Keys) { // the last one
@@ -52,7 +52,7 @@ func (r *RedelegationMap_) Remove(delegator Address) {
 	}
 }
 
-func (r *RedelegationMap_) Get(delegator Address) (Redelegation_, bool) {
+func (r *IterableRedelegationMap_) Get(delegator Address) (Redelegation_, bool) {
 	if entry, ok := r.Map[delegator]; ok {
 		return entry.Entry, true
 	}
@@ -76,8 +76,8 @@ func (s *Storage_Redelegation_) CanReleaseUndelegationAt(epoch *big.Int) bool {
 	return s.Undelegation().Amount().Value().Sign() > 0 && s.Undelegation().Epoch().Value().Cmp(epoch) <= 0
 }
 
-// Storage_RedelegationMap_
-func (s *Storage_RedelegationMap_) AllKeys() []common.Address {
+// Storage_IterableRedelegationMap_
+func (s *Storage_IterableRedelegationMap_) AllKeys() []common.Address {
 	result := make([]common.Address, 0)
 	length := s.Keys().Length()
 	for i := 0; i < length; i++ {
@@ -86,7 +86,7 @@ func (s *Storage_RedelegationMap_) AllKeys() []common.Address {
 	return result
 }
 
-func (s *Storage_RedelegationMap_) Put(key common.Address, redelegation *Redelegation_) {
+func (s *Storage_IterableRedelegationMap_) Put(key common.Address, redelegation *Redelegation_) {
 	if s.Contain(key) {
 		s.Map().Get(key).Entry().Clear()
 		s.Map().Get(key).Entry().Save(redelegation)
@@ -102,11 +102,11 @@ func (s *Storage_RedelegationMap_) Put(key common.Address, redelegation *Redeleg
 	}
 }
 
-func (s *Storage_RedelegationMap_) Contain(key common.Address) bool {
+func (s *Storage_IterableRedelegationMap_) Contain(key common.Address) bool {
 	return s.Map().Get(key).Index().Value().Sign() > 0
 }
 
-func (s *Storage_RedelegationMap_) Get(key common.Address) (*Storage_Redelegation_, bool) {
+func (s *Storage_IterableRedelegationMap_) Get(key common.Address) (*Storage_Redelegation_, bool) {
 	if s.Contain(key) {
 		return s.Map().Get(key).Entry(), true
 	} else {
@@ -114,7 +114,7 @@ func (s *Storage_RedelegationMap_) Get(key common.Address) (*Storage_Redelegatio
 	}
 }
 
-func (s *Storage_RedelegationMap_) Remove(key common.Address) {
+func (s *Storage_IterableRedelegationMap_) Remove(key common.Address) {
 	if !s.Contain(key) {
 		return
 	}
@@ -134,21 +134,4 @@ func (s *Storage_RedelegationMap_) Remove(key common.Address) {
 	s.Keys().Get(length - 1).Clear()
 	s.Keys().Resize(length - 1)
 	entry.Clear()
-}
-
-func (s *Storage_RedelegationMap_) LoadFully() (*RedelegationMap_, error) {
-	s.Keys().load()
-	length := s.Keys().Length()
-	for i := 0; i < length; i++ {
-		k := s.Keys().Get(i).Value()
-		s.Map().Get(k).load()
-	}
-
-	// copy
-	src := s.obj
-	des := RedelegationMap_{}
-	if err := deepCopy(src, &des); err != nil {
-		return nil, err
-	}
-	return &des, nil
 }

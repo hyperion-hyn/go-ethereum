@@ -9,8 +9,9 @@ import (
 )
 
 var (
-	ErrValidatorNotExist    = errors.New("staking validator does not exist")
-	errRedelegationNotExist = errors.New("redelegation does not exist")
+	errValidatorNotExist         = errors.New("validator does not exist")
+	errValidatorSnapshotNotExist = errors.New("validator snapshot does not exist")
+	errRedelegationNotExist      = errors.New("redelegation does not exist")
 
 	validatorStorageAddress = common.HexToAddress("0x69270f88069d56dc62bd62b0b9f2b302a2b820a8")
 )
@@ -28,7 +29,15 @@ func (s *StateDB) ValidatorPool() *restaking.Storage_ValidatorPool_ {
 func (s *StateDB) ValidatorByAddress(validatorAddress common.Address) (*restaking.Storage_ValidatorWrapper_, error) {
 	validator, ok := s.ValidatorPool().Validators().Get(validatorAddress)
 	if !ok {
-		return nil, ErrValidatorNotExist
+		return nil, errValidatorNotExist
+	}
+	return validator, nil
+}
+
+func (s *StateDB) ValidatorSnapshotByAddress(validatorAddress common.Address) (*restaking.Storage_ValidatorWrapper_, error) {
+	validator, ok := s.ValidatorPool().ValidatorSnapshots().Get(validatorAddress)
+	if !ok {
+		return nil, errValidatorSnapshotNotExist
 	}
 	return validator, nil
 }
@@ -114,6 +123,11 @@ func (s *StateDB) AddRedelegationReward(snapshot *restaking.Storage_ValidatorWra
 	return nil
 }
 
-func (s *StateDB) IncrementValidatorNonce() {
-	s.SetNonce(validatorStorageAddress, s.GetNonce(validatorStorageAddress)+1)
+/**
+ * IncreaseValidatorNonceIfZero avoids account state of validators would be delete if its nonce and balance are zero
+ */
+func (s *StateDB) IncreaseValidatorNonceIfZero() {
+	if s.GetNonce(validatorStorageAddress) == 0 {
+		s.SetNonce(validatorStorageAddress, 1)
+	}
 }

@@ -626,9 +626,15 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		snap := s.(*Snapshot)
 		return snap, nil
 	}
-	atlasConfig := chain.Config().Atlas
-	epoch := atlasConfig.EpochByBlock(number)
-	validators, err := getValidators(chain, epoch)
+	header := chain.GetHeaderByNumber(number)
+	if header == nil {
+		return nil, consensus.ErrUnknownAncestor
+	}
+	stateDB, err := chain.StateAt(header.Root)
+	if err != nil {
+		return nil, err
+	}
+	validators, err := getValidators(stateDB, MaxValidatorCount)
 	if err != nil {
 		return nil, err
 	}
@@ -760,15 +766,12 @@ func WriteCommittedSealInGenesis(genesis *core.Genesis, extra []byte, signatures
 }
 
 // ATLAS(yhx): getValidators
-func getValidators(chain consensus.ChainReader, epoch uint64) ([]atlas.Validator, error) {
-	committeeSt, err := chain.ReadCommitteeAtEpoch(big.NewInt(int64(epoch)))
+func getValidators(state *state.StateDB, numVal int) ([]atlas.Validator, error) {
+	committee, err := state.ValidatorPool().Committee().Load()
 	if err != nil {
 		return nil, err
 	}
-	committee, err := committeeSt.Load()
-	if err != nil {
-		return nil, err
-	}
+
 	length := len(committee.Slots.Entrys)
 	validators := make([]atlas.Validator, length)
 	for i := 0; i < length; i++ {

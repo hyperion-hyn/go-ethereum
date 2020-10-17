@@ -40,16 +40,16 @@ struct Counters_ {
     uint256 NumBlocksSigned;
 }
 
-struct AddressSet_ {
+struct IterableAddressSet_ {
     address[] Keys;
-    mapping (address => bool) Set;
+    mapping (address => bool) Map;
 }
 
 struct Validator_ {
     // ECDSA address of the validator
     address ValidatorAddress;
     // validator's operator (map3 node address)
-    AddressSet_ OperatorAddresses;
+    IterableAddressSet_ OperatorAddresses;
     // The BLS public key of the validator for consensus
     BLSPublicKeys_ SlotPubKeys;
     // The number of the last epoch this validator is
@@ -86,7 +86,7 @@ struct RedelegationMapEntry_ {
     uint256 Index;
 }
 
-struct RedelegationMap_ {
+struct IterableRedelegationMap_ {
     address[] Keys;
     mapping (address => RedelegationMapEntry_) Map;
 }
@@ -94,7 +94,7 @@ struct RedelegationMap_ {
 // ValidatorWrapper contains validator, its delegation information
 struct ValidatorWrapper_ {
     Validator_ Validator;
-    RedelegationMap_ Redelegations;
+    IterableRedelegationMap_ Redelegations;
     Counters_ Counters;
     uint256 BlockReward;    // All the rewarded accumulated so far
     uint256 TotalDelegation;
@@ -106,7 +106,7 @@ struct ValidatorWrapperMapEntry_ {
     uint256 Index;
 }
 
-struct ValidatorWrapperMap_ {
+struct IterableValidatorWrapperMap_ {
     address[] Keys;
     mapping (address => ValidatorWrapperMapEntry_) Map;
 }
@@ -127,7 +127,8 @@ struct Committee_ {
 }
 
 struct ValidatorPool_ {
-    ValidatorWrapperMap_ Validators;
+    IterableValidatorWrapperMap_ Validators;
+    IterableValidatorWrapperMap_ ValidatorSnapshots;
     mapping (string => bool) SlotKeySet;
     mapping (string => bool) DescriptionIdentitySet;
     Committee_ Committee;

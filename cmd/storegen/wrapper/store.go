@@ -74,6 +74,17 @@ func Store(types []string, layouts []string, pkg string, lang bind.Lang) (string
 	isDefineTypeWrapper := func (val interface{}) bool {
 		return isBasicOrDefineType(val, defines)
 	}
+	isIterableMapWrapper := func (val interface{}) bool {
+		s, ok := val.(*tmplStruct)
+		if !ok {
+			return false
+		}
+		matched, err := regexp.MatchString(`^Iterable.*`, s.Name)
+		if err != nil {
+			return false
+		}
+		return matched
+	}
 	// enhance - end
 
 	funcs := map[string]interface{}{
@@ -85,13 +96,15 @@ func Store(types []string, layouts []string, pkg string, lang bind.Lang) (string
 		"isarray":              isarray,
 		"isslice":              isslice,
 		"ismap":                ismap,
+		"isstruct":             isstruct,
 		"isFixedSizeByteArray": isFixedSizeByteArray,
 		"match":                match,
 		"GetReflectType":       GetReflectType,
 
 		// enhance
-		"isBasicType":          isBasicTypeWrapper,
-		"isDefineType":         isDefineTypeWrapper,
+		"isBasicType":   isBasicTypeWrapper,
+		"isDefineType":  isDefineTypeWrapper,
+		"isIterableMap": isIterableMapWrapper,
 	}
 	tmpl := template.Must(template.New("").Funcs(funcs).Parse(tmplSource[lang]))
 	if err := tmpl.Execute(buffer, data); err != nil {
@@ -170,6 +183,10 @@ func isslice(val interface{}) bool {
 
 func ismap(val interface{}) bool {
 	return isT(val, abi.MappingTy)
+}
+
+func isstruct(val interface{}) bool {
+	return isT(val, abi.TupleTy)
 }
 
 func isFixedSizeByteArray(val interface{}) bool {

@@ -22,7 +22,7 @@ var (
 	errCommissionRateChangeTooFast     = errors.New("change on commission rate can not be more than max change rate within the same epoch")
 	errDelegationTooSmall              = errors.New("delegation amount too small")
 	errNoRewardsToCollect              = errors.New("no rewards to collect")
-	errValidatorNotExist               = errors.New("staking validator does not exist")
+	errValidatorNotExist               = errors.New("validator does not exist")
 	errRedelegationNotExist            = errors.New("redelegation does not exist")
 	errInvalidValidatorOperator        = errors.New("invalid validator operator")
 	errInvalidTotalDelegation          = errors.New("total delegation can not be bigger than max_total_delegation")
@@ -167,16 +167,10 @@ func (verifier StakingVerifier) VerifyCreateValidatorMsg(stateDB vm.StateDB, blo
 // the stateDB, chainContext and returns the edited validatorWrapper.
 //
 // Note that this function never updates the stateDB, it only reads from stateDB.
-func (verifier StakingVerifier) VerifyEditValidatorMsg(stateDB vm.StateDB, chainContext ChainContext, epoch, blockNum *big.Int,
-	msg *restaking.EditValidator, signer common.Address) (*verification, error) {
+func (verifier StakingVerifier) VerifyEditValidatorMsg(stateDB vm.StateDB, blockNum *big.Int, msg *restaking.EditValidator,
+	signer common.Address) (*verification, error) {
 	if stateDB == nil {
 		return nil, errStateDBIsMissing
-	}
-	if chainContext == nil {
-		return nil, errChainContextMissing
-	}
-	if epoch == nil {
-		return nil, errEpochMissing
 	}
 	if blockNum == nil {
 		return nil, errBlockNumMissing
@@ -202,7 +196,7 @@ func (verifier StakingVerifier) VerifyEditValidatorMsg(stateDB vm.StateDB, chain
 	if !wrapperSt.IsOperator(msg.OperatorAddress) {
 		return nil, errInvalidValidatorOperator
 	}
-	validator, err := wrapperSt.Validator().LoadFully()
+	validator, err := wrapperSt.Validator().Load()
 	if err != nil {
 		return nil, err
 	}
@@ -217,7 +211,7 @@ func (verifier StakingVerifier) VerifyEditValidatorMsg(stateDB vm.StateDB, chain
 
 	// check max change at one epoch
 	newRate := validator.Commission.CommissionRates.Rate
-	validatorSnapshot, err := chainContext.ReadValidatorAtEpochOrCurrentBlock(epoch, msg.ValidatorAddress)
+	validatorSnapshot, err := stateDB.ValidatorSnapshotByAddress(msg.ValidatorAddress)
 	if err != nil {
 		return nil, err
 	}

@@ -24,57 +24,40 @@ var (
 	errCannotChangeBannedTrait = errors.New("cannot change validator banned status")
 )
 
-func NewEmptyAddressSet() AddressSet_ {
-	return AddressSet_{
+func NewEmptyAddressSet() IterableAddressSet_ {
+	return IterableAddressSet_{
 		Keys: []*Address{},
-		Set:  make(map[Address]*Bool),
+		Map:  make(map[Address]*Bool),
 	}
 }
 
-func NewAddressSetWithAddress(address common.Address) AddressSet_ {
+func NewAddressSetWithAddress(address common.Address) IterableAddressSet_ {
 	set := NewEmptyAddressSet()
 	set.Put(address)
 	return set
 }
 
-func (a *AddressSet_) Contain(address common.Address) bool {
-	_, ok := a.Set[address]
+func (a *IterableAddressSet_) Contain(address common.Address) bool {
+	_, ok := a.Map[address]
 	return ok
 }
 
-func (a *AddressSet_) Put(address common.Address) {
+func (a *IterableAddressSet_) Put(address common.Address) {
 	if a.Contain(address) {
 		return
 	}
 	a.Keys = append(a.Keys, &address)
-	a.Set[address] = func() *bool { t := true; return &t }()
+	a.Map[address] = func() *bool { t := true; return &t }()
 }
 
-// Storage_AddressSet_
-func (s *Storage_AddressSet_) AllKeys() []common.Address {
+// Storage_IterableAddressSet_
+func (s *Storage_IterableAddressSet_) AllKeys() []common.Address {
 	result := make([]common.Address, 0)
 	length := s.Keys().Length()
 	for i := 0; i < length; i++ {
 		result = append(result, s.Keys().Get(i).Value())
 	}
 	return result
-}
-
-func (s *Storage_AddressSet_) LoadFully() (*AddressSet_, error) {
-	s.Keys().load()
-	length := s.Keys().Length()
-	for i := 0; i < length; i++ {
-		k := s.Keys().Get(i).Value()
-		s.Set().Get(k).Value()
-	}
-
-	// copy
-	src := s.obj
-	des := AddressSet_{}
-	if err := deepCopy(src, &des); err != nil {
-		return nil, err
-	}
-	return &des, nil
 }
 
 // ValidatorStatus represents ability to participate in EPoS auction
@@ -177,28 +160,6 @@ func (v *Validator_) ToPlainValidator() *PlainValidator {
 }
 
 // Storage_Validator_
-func (s *Storage_Validator_) LoadFully() (*Validator_, error) {
-	s.ValidatorAddress().Value()
-	if _, err := s.OperatorAddresses().LoadFully(); err != nil {
-		return nil, err
-	}
-	s.SlotPubKeys().load() // need check
-	s.LastEpochInCommittee().Value()
-	s.MaxTotalDelegation().Value()
-	s.Status().Value()
-	s.Commission().load()
-	s.Description().load()
-	s.CreationHeight().Value()
-
-	// copy
-	src := s.obj
-	des := Validator_{}
-	if err := deepCopy(src, &des); err != nil {
-		return nil, err
-	}
-	return &des, nil
-}
-
 func (v *ValidatorWrapper_) ToPlainValidatorWrapper() *PlainValidatorWrapper {
 	return &PlainValidatorWrapper{
 		Validator: *v.Validator.ToPlainValidator(),
@@ -250,7 +211,7 @@ func (s *Storage_ValidatorWrapper_) SubTotalDelegationByOperator(amount *big.Int
 }
 
 func (s *Storage_ValidatorWrapper_) IsOperator(delegator common.Address) bool {
-	return s.Validator().OperatorAddresses().Set().Get(delegator).Value()
+	return s.Validator().OperatorAddresses().Map().Get(delegator).Value()
 }
 
 func (s *Storage_ValidatorWrapper_) AddRedelegation(delegator common.Address, amount *big.Int) {
@@ -282,29 +243,8 @@ func (s *Storage_ValidatorWrapper_) Undelegate(delegator common.Address, epoch, 
 	}
 }
 
-func (s *Storage_ValidatorWrapper_) LoadFully() (*ValidatorWrapper_, error) {
-	if _, err := s.Validator().LoadFully(); err != nil {
-		return nil, err
-	}
-	if _, err := s.Redelegations().LoadFully(); err != nil {
-		return nil, err
-	}
-	s.Counters().load()
-	s.BlockReward().Value()
-	s.TotalDelegation().Value()
-	s.TotalDelegationByOperator().Value()
-
-	// copy
-	src := s.obj
-	des := ValidatorWrapper_{}
-	if err := deepCopy(src, &des); err != nil {
-		return nil, err
-	}
-	return &des, nil
-}
-
-// Storage_ValidatorWrapperMap_
-func (s *Storage_ValidatorWrapperMap_) AllKeys() []common.Address {
+// Storage_IterableValidatorWrapperMap_
+func (s *Storage_IterableValidatorWrapperMap_) AllKeys() []common.Address {
 	addressSlice := make([]common.Address, 0)
 	addressLength := s.Keys().Length()
 	for i := 0; i < addressLength; i++ {
@@ -313,9 +253,9 @@ func (s *Storage_ValidatorWrapperMap_) AllKeys() []common.Address {
 	return addressSlice
 }
 
-func (s *Storage_ValidatorWrapperMap_) Put(key common.Address, validator *ValidatorWrapper_) {
+func (s *Storage_IterableValidatorWrapperMap_) Put(key common.Address, validator *ValidatorWrapper_) {
 	if s.Contain(key) {
-		s.Map().Get(key).Entry().Clear() // TODO(ATLAS): not supported
+		s.Map().Get(key).Entry().Clear()
 		s.Map().Get(key).Entry().Save(validator)
 	} else {
 		length := s.Keys().Length()
@@ -328,11 +268,11 @@ func (s *Storage_ValidatorWrapperMap_) Put(key common.Address, validator *Valida
 	}
 }
 
-func (s *Storage_ValidatorWrapperMap_) Contain(key common.Address) bool {
+func (s *Storage_IterableValidatorWrapperMap_) Contain(key common.Address) bool {
 	return s.Map().Get(key).Index().Value().Sign() > 0
 }
 
-func (s *Storage_ValidatorWrapperMap_) Get(key common.Address) (*Storage_ValidatorWrapper_, bool) {
+func (s *Storage_IterableValidatorWrapperMap_) Get(key common.Address) (*Storage_ValidatorWrapper_, bool) {
 	if s.Contain(key) {
 		return s.Map().Get(key).Entry(), true
 	}
@@ -446,7 +386,7 @@ type PlainValidator struct {
 func (v *PlainValidator) ToValidator() *Validator_ {
 	return &Validator_{
 		ValidatorAddress: v.ValidatorAddress,
-		OperatorAddresses: func() AddressSet_ {
+		OperatorAddresses: func() IterableAddressSet_ {
 			set := NewEmptyAddressSet()
 			for _, key := range v.OperatorAddresses {
 				set.Put(key)
@@ -481,7 +421,7 @@ type PlainValidatorWrapper struct {
 func (v *PlainValidatorWrapper) ToValidatorWrapper() *ValidatorWrapper_ {
 	return &ValidatorWrapper_{
 		Validator: *v.Validator.ToValidator(),
-		Redelegations: func() RedelegationMap_ {
+		Redelegations: func() IterableRedelegationMap_ {
 			delegations := NewRedelegationMap()
 			for _, delegation := range v.Redelegations {
 				delegations.Put(delegation.DelegatorAddress, delegation)

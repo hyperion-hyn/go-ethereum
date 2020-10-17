@@ -27,24 +27,25 @@ var (
 
 // ATLAS
 func handleMap3AndAtlasStaking(chain consensus.ChainReader, header *types.Header, stateDB *state.StateDB) (reward.Reader, error) {
+	payout, err := accumulateRewardsAndCountSigs(chain, stateDB, header)
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot pay block reward")
+	}
+	// TODO(ATLAS): slash
+
 	isNewEpoch := chain.Config().Atlas.IsFirstBlock(header.Number.Uint64())
 	isEnd := chain.Config().Atlas.IsLastBlock(header.Number.Uint64())
 	if isEnd {
-		// Needs to be before AccumulateRewardsAndCountSigs because
-		// ComputeAndMutateEPOSStatus depends on the signing counts that's
-		// consistent with the counts when the new shardState was proposed.
-		// Refer to committee.IsEligibleForEPoSAuction()
-		curComm, err := lookupCommitteeAtEpoch(header.Epoch, chain)
+		lastBlockNum := new(big.Int).Sub(header.Number, common.Big1)
+		curComm, err := lookupCommitteeAtBlock(lastBlockNum, chain)
 		if err != nil {
 			return nil, err
 		}
 		// TODO(ATLAS): disable status change temporarily
-		for _, _ = range curComm.StakedValidators().Addrs {
-			//if err := availability.ComputeAndMutateEPOSStatus(
-			//	chain, stateDB, addr, header.Epoch,
-			//); err != nil {
-			//	return nil, err
-			//}
+		for _, addr := range curComm.StakedValidators().Addrs {
+			if err := availability.ComputeAndMutateEPOSStatus(stateDB, addr); err != nil {
+				return nil, err
+			}
 		}
 
 		// renew map3 node and unmicrodelegate and unredelegate
@@ -53,19 +54,7 @@ func handleMap3AndAtlasStaking(chain consensus.ChainReader, header *types.Header
 		}
 
 		// update committee
-		if _, err := updateCommitteeForNextEpoch(chain, header, stateDB); err != nil {
-			return nil, err
-		}
-	}
-
-	payout, err := accumulateRewardsAndCountSigs(chain, stateDB, header)
-	if err != nil {
-		return nil, errors.Wrap(err, "cannot pay block reward")
-	}
-	// TODO(ATLAS): slash
-
-	if isNewEpoch {
-		newComm, err := lookupCommitteeAtEpoch(header.Epoch, chain)
+		newComm, err := updateCommitteeForNextEpoch(header, stateDB)
 		if err != nil {
 			return nil, err
 		}
@@ -73,6 +62,13 @@ func handleMap3AndAtlasStaking(chain consensus.ChainReader, header *types.Header
 			return nil, err
 		}
 
+		// update validator snapshots
+		if err := updateValidatorSnapshots(stateDB); err != nil {
+			return nil, err
+		}
+	}
+
+	if isNewEpoch {
 		// Need to be after accumulateRewardsAndCountSigs because unredelegation may release
 		releaser, err := releaserFactory.Create(stateDB, chain.Config())
 		if err != nil {
@@ -86,6 +82,22 @@ func handleMap3AndAtlasStaking(chain consensus.ChainReader, header *types.Header
 		}
 	}
 	return payout, nil
+}
+
+func updateValidatorSnapshots(stateDB *state.StateDB) error {
+	pool := stateDB.ValidatorPool()
+	for _, validatorAddress := range pool.Validators().AllKeys() {
+		validatorStr, err := stateDB.ValidatorByAddress(validatorAddress)
+		if err != nil {
+			return err
+		}
+		v, err := validatorStr.Load()
+		if err != nil {
+			return err
+		}
+		pool.ValidatorSnapshots().Put(validatorAddress, v)
+	}
+	return nil
 }
 
 func renewAndActivateMap3Nodes(chain consensus.ChainReader, header *types.Header, stateDB *state.StateDB) error {
@@ -331,13 +343,9 @@ func payoutUnredelegations(header *types.Header, stateDB *state.StateDB, release
 	return nil
 }
 
-func updateCommitteeForNextEpoch(chain consensus.ChainReader, header *types.Header,
-	stateDB *state.StateDB) (*restaking.Committee_, error) {
+func updateCommitteeForNextEpoch(header *types.Header, stateDB *state.StateDB) (*restaking.Committee_, error) {
 	nextEpoch := big.NewInt(0).Add(header.Epoch, common.Big1)
-	nextComm, err := committee.WithStakingEnabled.Compute(nextEpoch, committee.ChainReaderWithPendingState{
-		ChainReader: chain,
-		StateDB:     stateDB,
-	})
+	nextComm, err := committee.WithStakingEnabled.Compute(nextEpoch, stateDB)
 	if err != nil {
 		return nil, err
 	}
@@ -348,9 +356,7 @@ func updateCommitteeForNextEpoch(chain consensus.ChainReader, header *types.Head
 // accumulateRewardsAndCountSigs credits the coinbase of the given block with the mining
 // reward. The total reward consists of the static block reward
 // This func also do IncrementValidatorSigningCounts for validators
-func accumulateRewardsAndCountSigs(
-	bc consensus.ChainReader, state *state.StateDB, header *types.Header,
-) (reward.Reader, error) {
+func accumulateRewardsAndCountSigs(chain consensus.ChainReader, state *state.StateDB, header *types.Header) (reward.Reader, error) {
 	if header.Number.Uint64() <= 1 {
 		// genesis block has no parent to reward.
 		return network.EmptyPayout, nil
@@ -359,7 +365,7 @@ func accumulateRewardsAndCountSigs(
 	// calculate total reward
 	lastBlockNum := big.NewInt(0).Sub(header.Number, common.Big1)
 	pool := network.NewRewardPool(state)
-	totalReward := pool.TakeReward(lastBlockNum, bc.Config())
+	totalReward := pool.TakeReward(lastBlockNum, chain.Config())
 
 	// no reward
 	if totalReward.Sign() <= 0 {
@@ -367,13 +373,12 @@ func accumulateRewardsAndCountSigs(
 	}
 
 	payouts := []reward.Payout{}
-	comm, payable, missing, err := ballotResult(bc, header) // for last block
+	comm, payable, missing, err := ballotResult(chain, header) // for last block
 	if err != nil {
 		return network.EmptyPayout, err
 	}
 
 	if err := availability.IncrementValidatorSigningCounts(
-		bc,
 		comm.StakedValidators(),
 		state,
 		payable,
@@ -395,11 +400,13 @@ func accumulateRewardsAndCountSigs(
 
 	totalRewardDec := common.NewDecFromBigInt(totalReward)
 	rewardPool := big.NewInt(0).Set(totalReward)
+	lastButOneBlockNum := new(big.Int).Sub(header.Number, common.Big2)
 	for i := len(payable.Entrys) - 1; i >= 0; i-- {
 		// what to do about share of those that didn't sign
 		blsKey := payable.Entrys[i].BLSPublicKey
 		voter := votingPower.Voters[blsKey]
-		snapshot, err := bc.ReadValidatorAtEpoch(comm.Epoch, voter.EarningAccount)
+
+		snapshot, err := chain.ReadValidatorSnapshotAtBlock(lastButOneBlockNum, voter.EarningAccount)
 		if err != nil {
 			return network.EmptyPayout, err
 		}
@@ -440,15 +447,15 @@ func ballotResult(
 			header.ParentHash.Hex(),
 		)
 	}
-	parentCommittee, err := lookupCommitteeAtEpoch(parentHeader.Epoch, bc)
+
+	lastButOneBlockNum := new(big.Int).Sub(header.Number, common.Big2)
+	comm, err := lookupCommitteeAtBlock(lastButOneBlockNum, bc)
 	if err != nil {
-		return nil, nil, nil, errors.Errorf(
-			"cannot read committee at %v", parentHeader.Epoch,
-		)
+		return nil, nil, nil, errors.Errorf("cannot read committee at %v", lastButOneBlockNum)
 	}
 	reader := availability.CommitBitmapReader{Header: parentHeader} // TODO(ATLAS): next block header
-	_, payable, missing, err := availability.BallotResult(reader, parentCommittee)
-	return parentCommittee, payable, missing, err
+	_, payable, missing, err := availability.BallotResult(reader, comm)
+	return comm, payable, missing, err
 }
 
 var (
@@ -457,18 +464,18 @@ var (
 	delegateShareCache, _ = lru.New(100)
 )
 
-func lookupCommitteeAtEpoch(epoch *big.Int, bc consensus.ChainReader) (*restaking.Committee_, error) {
-	key := fmt.Sprintf("committee-%v", epoch.String())
+func lookupCommitteeAtBlock(blockNum *big.Int, chain consensus.ChainReader) (*restaking.Committee_, error) {
+	commStr, err := chain.ReadCommitteeAtBlock(blockNum)
+	if err != nil {
+		return nil, err
+	}
+
+	key := fmt.Sprintf("committee-%v", commStr.Epoch().Value().String())
 	if c, ok := committeeCache.Get(key); ok {
 		return c.(*restaking.Committee_), nil
 	}
 
-	// TODO(ATLAS): read from committee provider
-	committeeSt, err := bc.ReadCommitteeAtEpoch(epoch)
-	if err != nil {
-		return nil, err
-	}
-	comm, err := committeeSt.Load()
+	comm, err := commStr.Load()
 	if err != nil {
 		return nil, err
 	}
