@@ -223,7 +223,7 @@ func TestCommit(t *testing.T) {
 			}
 		}()
 
-		backend.proposedBlockHash = backend.SealHash(expBlock.Header())
+		backend.proposedBlockHash = expBlock.Hash()
 		signature, publicKey, bitmap, err := test.expectedSign(expBlock)
 		if err != nil {
 			t.Errorf("failed to sign block: %v", err)
@@ -238,7 +238,7 @@ func TestCommit(t *testing.T) {
 			// to avoid race condition is occurred by goroutine
 			select {
 			case result := <-commitCh:
-				if result.SealHash(backend) != expBlock.SealHash(backend) {
+				if result.Hash() != expBlock.Hash() {
 					t.Errorf("hash mismatch: have %v, want %v", result.Hash(), expBlock.Hash())
 				}
 			case <-time.After(10 * time.Second):

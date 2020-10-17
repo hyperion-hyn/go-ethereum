@@ -32,7 +32,7 @@ func (c *core) sendPreprepare(request *atlas.Request) {
 	if c.current.Sequence().Cmp(request.Proposal.Number()) == 0 && c.IsProposer() {
 		curView := c.currentView()
 
-		hash := request.Proposal.SealHash(c.backend)
+		hash := request.Proposal.Hash()
 		signature, _, _, err := c.backend.SignHash(hash)
 		if err != nil {
 			logger.Error("Failed to SignHash", "err", err)
@@ -126,7 +126,7 @@ func (c *core) verifyPreprepare(preprepare *atlas.Preprepare, src atlas.Validato
 		return err
 	}
 
-	hash := preprepare.Proposal.SealHash(c.backend)
+	hash := preprepare.Proposal.Hash()
 	if ok := sign.VerifyHash(src.PublicKey(), hash.Bytes()); !ok {
 		return errInvalidSignature
 	}

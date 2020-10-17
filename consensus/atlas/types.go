@@ -17,14 +17,12 @@
 package atlas
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"math/big"
 	"reflect"
 
 	"github.com/hyperion-hyn/bls/ffi/go/bls"
-	"golang.org/x/crypto/sha3"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -187,52 +185,6 @@ func (b *SignPayload) DecodeRLP(s *rlp.Stream) error {
 
 func (b SignPayload) String() string {
 	return fmt.Sprintf("{ Signature: %x, PublicKey: %x}", b.Signature[:10], b.Mask)
-}
-
-// SealHash returns the hash of a block prior to it being sealed.
-func SealHash(header *types.Header) (hash common.Hash) {
-	hasher := sha3.NewLegacyKeccak256()
-	encodeSigHeader(hasher, header)
-	hasher.Sum(hash[:0])
-	return hash
-}
-
-// AtlasRLP returns the rlp bytes which needs to be signed for
-// sealing. The RLP to sign consists of the entire header apart from the signature
-// contained at the end of the extra data.
-//
-// Note, the method requires the extra data to be at least 65 bytes, otherwise it
-// panics. This is done to avoid accidentally using both forms (signature present
-// or not), which could be abused to produce different hashes for the same header.
-func AtlasRLP(header *types.Header) []byte {
-	b := new(bytes.Buffer)
-	encodeSigHeader(b, header)
-	return b.Bytes()
-}
-
-func encodeSigHeader(w io.Writer, header *types.Header) {
-	extra := make([]byte, types.AtlasExtraVanity)
-	copy(extra[:types.AtlasExtraVanity], header.Extra[:])
-	err := rlp.Encode(w, []interface{}{
-		header.ParentHash,
-		header.UncleHash,
-		header.Coinbase,
-		header.Root,
-		header.TxHash,
-		header.ReceiptHash,
-		header.Bloom,
-		header.Difficulty,
-		header.Number,
-		header.GasLimit,
-		header.GasUsed,
-		header.Time,
-		extra,
-		header.MixDigest,
-		header.Nonce,
-	})
-	if err != nil {
-		panic("can't encode: " + err.Error())
-	}
 }
 
 type SignHashFn func(hash common.Hash) (signature []byte, publicKey []byte, mask []byte, err error)

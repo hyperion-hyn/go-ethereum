@@ -88,7 +88,7 @@ func (c *core) handleEvents() {
 			// A real event arrived, process interesting content
 			switch ev := event.Data.(type) {
 			case atlas.RequestEvent:
-				c.logger.Debug("RequestEvent", "sealhash", ev.Proposal.SealHash(c.backend), "number", ev.Proposal.Number())
+				c.logger.Debug("RequestEvent", "sealhash", ev.Proposal.Hash(), "number", ev.Proposal.Number())
 				r := &atlas.Request{
 					Proposal: ev.Proposal,
 				}

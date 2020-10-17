@@ -32,6 +32,7 @@ import (
 	kernel "github.com/ethereum/go-ethereum/consensus/atlas/core"
 	"github.com/ethereum/go-ethereum/consensus/atlas/validator"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -194,18 +195,12 @@ func (sb *backend) Commit(proposal atlas.Proposal, signature []byte, bitmap []by
 		return errInvalidProposal
 	}
 
+	lastCommits := make([]byte, len(signature)+len(bitmap))
+	copy(lastCommits[:len(signature)], signature)
+	copy(lastCommits[len(signature):], bitmap)
+
 	h := block.Header()
-
-	// Append seals into extra-data
-
-	lastProposal, _ := sb.LastProposal()
-	valSetSize := sb.Validators(lastProposal).Size()
-	err := WriteCommittedSeals(h, signature, bitmap, valSetSize)
-	if err != nil {
-		return err
-	}
-	// update block's header
-	block = block.WithSeal(h)
+	rawdb.WriteLastCommits(sb.chain.ChainDb(), h.Number.Uint64(), lastCommits)
 
 	// - if the proposed and committed blocks are the same, send the proposed hash
 	//   to commit channel, which is being watched inside the engine.Seal() function.
@@ -213,7 +208,7 @@ func (sb *backend) Commit(proposal atlas.Proposal, signature []byte, bitmap []by
 	// -- if success, the ChainHeadEvent event will be broadcasted, try to build
 	//    the next block and the previous Seal() will be stopped.
 	// -- otherwise, a error will be returned and a round change event will be fired.
-	if sb.core.GetLockedHash() == sb.SealHash(block.Header()) {
+	if sb.proposedBlockHash == block.Hash() {
 		// feed block hash to Seal() and wait the Seal() result
 		sb.commitCh <- block
 		return nil
@@ -241,7 +236,7 @@ func (sb *backend) Verify(proposal atlas.Proposal) (time.Duration, error) {
 	}
 
 	// check bad block
-	if sb.HasBadProposal(block.SealHash(sb)) {
+	if sb.HasBadProposal(block.Hash()) {
 		return 0, core.ErrBlacklistedHash
 	}
 
@@ -297,14 +292,8 @@ func (sb *backend) CheckSignature(data []byte, pubKey []byte, sig []byte) error 
 }
 
 // HasPropsal implements atlas.Backend.HashBlock
-func (sb *backend) HasPropsal(sealhash common.Hash, number *big.Int) bool {
-	header := sb.chain.GetHeaderByNumber(number.Uint64())
-	if header == nil {
-		return false
-	}
-
-	val := sb.SealHash(header)
-	return val == sealhash
+func (sb *backend) HasPropsal(hash common.Hash, number *big.Int) bool {
+	return sb.chain.GetHeader(hash, number.Uint64()) != nil
 }
 
 // GetProposer implements atlas.Backend.GetProposer

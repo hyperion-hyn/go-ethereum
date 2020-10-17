@@ -88,7 +88,9 @@ type Header struct {
 	Nonce       BlockNonce     `json:"nonce"`
 
 	// ATLAS
-	Epoch *big.Int `json:"epoch" gencodec:"required"`
+	Epoch     *big.Int `json:"epoch" gencodec:"required"`
+	Signature []byte   `json:"signature"`
+	Bitmap    []byte   `json:"bitmap"`
 }
 
 // field type overrides for gencodec

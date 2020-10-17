@@ -19,7 +19,6 @@ package validator
 import (
 	"math"
 	"reflect"
-	"sort"
 	"sync"
 
 	"github.com/hyperion-hyn/bls/ffi/go/bls"
@@ -70,8 +69,10 @@ func newDefaultSet(validators []atlas.Validator, policy atlas.ProposerPolicy) *d
 	for i, validator := range validators {
 		valSet.validators[i] = validator
 	}
+	// ATLAS: Let the caller decide the order
 	// sort validator
-	//sort.Sort(valSet.validators)
+	// sort.Sort(valSet.validators)
+
 	// init proposer
 	if valSet.Size() > 0 {
 		valSet.proposer = valSet.GetByIndex(0)
@@ -200,8 +201,9 @@ func (valSet *defaultSet) AddValidator(validator atlas.Validator) bool {
 		}
 	}
 	valSet.validators = append(valSet.validators, validator)
+	// ATLAS: Let the caller decide the order
 	// sort validator
-	sort.Sort(valSet.validators)
+	// sort.Sort(valSet.validators)
 	return true
 }
 
