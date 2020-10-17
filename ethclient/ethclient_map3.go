@@ -37,10 +37,18 @@ func (ec *Client) GetMap3NodeDelegation(
 	return &redelegation, err
 }
 
-func (ec *Client) GetAllMap3RewardByDelegatorAddress(ctx context.Context, delegatorAddress common.Address, blockNumber *big.Int) (*big.Int, error) {
-	var result hexutil.Big
-	err := ec.c.CallContext(ctx, &result, "eth_getAllMap3RewardByDelegatorAddress", delegatorAddress, toBlockNumArg(blockNumber))
-	return (*big.Int)(&result), err
+func (ec *Client) GetAllMap3RewardByDelegatorAddress(ctx context.Context, delegatorAddress common.Address, blockNumber *big.Int) (map[common.Address]*big.Int, error) {
+
+	resultMap := make(map[common.Address]*hexutil.Big)
+	err := ec.c.CallContext(ctx, &resultMap, "eth_getAllMap3RewardByDelegatorAddress", delegatorAddress, toBlockNumArg(blockNumber))
+	if err != nil {
+		return nil, err
+	}
+	rewardMap := make(map[common.Address]*big.Int)
+	for address, amount := range resultMap {
+		rewardMap[address] = (*big.Int)(amount)
+	}
+	return rewardMap, err
 }
 
 func (ec *Client) GetActiveMap3NodeAtEpoch(ctx context.Context, epoch uint64) ([]string, error) {

@@ -9,7 +9,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/staking/types/microstaking"
-	"math/big"
 )
 
 var (
@@ -89,14 +88,14 @@ func (s *PublicMicroStakingAPI) GetMap3NodeDelegation(
 }
 
 func (s *PublicMicroStakingAPI) GetAllMap3RewardByDelegatorAddress(
-	ctx context.Context, delegatorAddress common.Address, blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Big, error) {
+	ctx context.Context, delegatorAddress common.Address, blockNrOrHash rpc.BlockNumberOrHash) (map[common.Address]*hexutil.Big, error) {
 	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if state == nil || err != nil {
 		return nil, err
 	}
 	map3NodePool := state.Map3NodePool()
 	delegationIndexMap := map3NodePool.DelegationIndexMapByDelegator().Get(delegatorAddress)
-	totalRewards := big.NewInt(0)
+	rewardMap := make(map[common.Address]*hexutil.Big)
 	for i := 0; i < delegationIndexMap.Keys().Length(); i++ {
 		nodeAddr := delegationIndexMap.Keys().Get(i).Value()
 		node, err := state.Map3NodeByAddress(nodeAddr)
@@ -106,14 +105,13 @@ func (s *PublicMicroStakingAPI) GetAllMap3RewardByDelegatorAddress(
 		if micro, ok := node.Microdelegations().Get(delegatorAddress); ok {
 			r := micro.Reward().Value()
 			if r.Sign() > 0 {
-				totalRewards = totalRewards.Add(totalRewards, r)
-				micro.Reward().Clear()
+				rewardMap[nodeAddr] = (*hexutil.Big)(r)
 			}
 		} else {
 			return nil, errMicrodelegationNotExist
 		}
 	}
-	return (*hexutil.Big)(totalRewards), nil
+	return rewardMap, nil
 
 }
 
