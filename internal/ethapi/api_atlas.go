@@ -4,8 +4,6 @@ import (
 	"context"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	"math/big"
@@ -71,20 +69,16 @@ func (s *PublicRestakingAPI) GetEpochLastBlockNum(
 	return blockNumber
 }
 
-func (s *PublicRestakingAPI) GetCommitteeAtEpoch(ctx context.Context, epoch uint64) (hexutil.Bytes, error) {
+func (s *PublicRestakingAPI) GetCommitteeAtEpoch(ctx context.Context, epoch uint64) (restaking.Committee_, error) {
 	committeeStorage, err := s.b.ChainContext().ReadCommitteeAtEpoch(big.NewInt(int64(epoch)))
 	if err != nil {
-		return nil, err
+		return restaking.Committee_{}, err
 	}
 	committee, err := committeeStorage.Load()
-	encodeBytes, err := rlp.EncodeToBytes(committee)
-	if err != nil {
-		return nil, err
-	}
-	return encodeBytes, nil
+	return *committee, nil
 }
 
-func (s *PublicRestakingAPI) GetCommitteeInformationAtEpoch(ctx context.Context, epoch uint64) (hexutil.Bytes, error) {
+func (s *PublicRestakingAPI) GetCommitteeInformationAtEpoch(ctx context.Context, epoch uint64) ([]restaking.PlainValidatorWrapper, error) {
 	committeeStorage, err := s.b.ChainContext().ReadCommitteeAtEpoch(big.NewInt(int64(epoch)))
 	if err != nil {
 		return nil, err
@@ -106,60 +100,43 @@ func (s *PublicRestakingAPI) GetCommitteeInformationAtEpoch(ctx context.Context,
 		validatorWrapperRPC := validatorWrapper.ToPlainValidatorWrapper()
 		plainValidators = append(plainValidators, *validatorWrapperRPC)
 	}
-
-	encodeBytes, err := rlp.EncodeToBytes(plainValidators)
-	if err != nil {
-		return nil, err
-	}
-	return encodeBytes, nil
+	return plainValidators, nil
 }
 
 func (s *PublicRestakingAPI) GetValidatorInformationAtEpoch(ctx context.Context, validatorAddress common.Address,
-	epoch uint64) (hexutil.Bytes, error) {
+	epoch uint64) (restaking.PlainValidatorWrapper, error) {
 	validatorWrapperStorage, err := s.b.ChainContext().ReadValidatorAtEpoch(big.NewInt(int64(epoch)), validatorAddress)
 	if err != nil {
-		return nil, err
+		return restaking.PlainValidatorWrapper{}, err
 	}
-
 	validatorWrapper, err := validatorWrapperStorage.LoadFully()
 	if err != nil {
-		return nil, err
+		return restaking.PlainValidatorWrapper{}, err
 	}
-
 	validatorWrapperRPC := validatorWrapper.ToPlainValidatorWrapper()
-	encodeBytes, err := rlp.EncodeToBytes(&validatorWrapperRPC)
-	if err != nil {
-		return nil, err
-	}
-	return encodeBytes, nil
-
+	return *validatorWrapperRPC, nil
 }
 
 func (s *PublicRestakingAPI) GetValidatorRedelegation(ctx context.Context, validatorAddress common.Address,
-	delegatorAddress common.Address, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
+	delegatorAddress common.Address, blockNrOrHash rpc.BlockNumberOrHash) (restaking.Redelegation_, error) {
 	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if state == nil || err != nil {
-		return nil, err
+		return restaking.Redelegation_{}, err
 
 	}
 	storageValidatorWarpper, err := state.ValidatorByAddress(validatorAddress)
 	if err != nil {
-		return nil, err
+		return restaking.Redelegation_{}, err
 	}
 
 	storageRedelegatetor, ok := storageValidatorWarpper.Redelegations().Get(delegatorAddress)
 	if ok {
 		redelegation, err := storageRedelegatetor.Load()
 		if err != nil {
-			return nil, err
+			return restaking.Redelegation_{}, err
 		}
-
-		encodeBytes, err := rlp.EncodeToBytes(&redelegation)
-		if err != nil {
-			return nil, err
-		}
-		return encodeBytes, nil
+		return *redelegation, nil
 	} else {
-		return nil, ethereum.NotFound
+		return restaking.Redelegation_{}, ethereum.NotFound
 	}
 }
