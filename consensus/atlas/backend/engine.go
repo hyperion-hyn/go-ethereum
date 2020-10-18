@@ -393,7 +393,7 @@ func (sb *backend) _Prepare(chain consensus.ChainReader, header *types.Header) e
 		return err
 	}
 
-	lastCommits := rawdb.ReadLastCommits(chain.ChainDb(), number-1)
+	lastCommits := rawdb.ReadLastCommits(chain.ChainDb(), number)
 	if len(lastCommits) != types.AtlasExtraSignature+types.GetMaskByteCount(snap.ValSet.Size()) {
 		return errInvalidSignature
 	}
