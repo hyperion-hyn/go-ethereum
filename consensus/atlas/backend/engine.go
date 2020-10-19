@@ -164,14 +164,14 @@ func (sb *backend) VerifyHeader(chain consensus.ChainHeaderReader, header *types
 }
 
 func (sb *backend) _VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error {
-	return sb.verifyHeader(chain, header, nil)
+	return sb.verifyHeader(chain, header, nil, seal)
 }
 
 // verifyHeader checks whether a header conforms to the consensus rules.The
 // caller may optionally pass in a batch of parents (ascending order) to avoid
 // looking those up from the database. This is useful for concurrently verifying
 // a batch of new headers.
-func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
+func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header, seal bool) error {
 	if header.Number == nil {
 		return errUnknownBlock
 	}
@@ -198,14 +198,14 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 		return errInvalidDifficulty
 	}
 
-	return sb.verifyCascadingFields(chain, header, parents)
+	return sb.verifyCascadingFields(chain, header, parents, seal)
 }
 
 // verifyCascadingFields verifies all the header fields that are not standalone,
 // rather depend on a batch of previous headers. The caller may optionally pass
 // in a batch of parents (ascending order) to avoid looking those up from the
 // database. This is useful for concurrently verifying a batch of new headers.
-func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
+func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *types.Header, parents []*types.Header, seal bool) error {
 	// The genesis block is the always valid dead-end
 	number := header.Number.Uint64()
 	if number == 0 {
@@ -229,7 +229,10 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 		return err
 	}
 
-	return sb.verifyCommittedSeals(chain, header, parents)
+	if seal {
+		return sb.verifyCommittedSeals(chain, header, parents)
+	}
+	return nil
 }
 
 // VerifyHeaders is similar to VerifyHeader, but verifies a batch of headers
@@ -245,7 +248,7 @@ func (sb *backend) _VerifyHeaders(chain consensus.ChainReader, headers []*types.
 	results := make(chan error, len(headers))
 	go func() {
 		for i, header := range headers {
-			err := sb.verifyHeader(chain, header, headers[:i])
+			err := sb.verifyHeader(chain, header, headers[:i], seals[i])
 
 			select {
 			case <-abort:

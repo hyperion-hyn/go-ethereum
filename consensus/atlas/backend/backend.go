@@ -251,11 +251,9 @@ func (sb *backend) Verify(proposal atlas.Proposal) (time.Duration, error) {
 	}
 
 	// verify the header of proposed block
-	err := sb.VerifyHeader(sb.chain, block.Header(), false)
+	err := sb.VerifyHeader(sb.chain, block.Header(), true)
 	// ignore errEmptyCommittedSeals error because we don't have the committed seals yet
-	if err == nil || err == errEmptyCommittedSeals {
-		return 0, nil
-	} else if err == consensus.ErrFutureBlock {
+	if err == consensus.ErrFutureBlock {
 		return time.Unix(int64(block.Header().Time), 0).Sub(now()), consensus.ErrFutureBlock
 	}
 	return 0, err

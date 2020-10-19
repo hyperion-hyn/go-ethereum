@@ -1594,7 +1594,13 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 	// Pre-checks passed, start the full block imports
 	bc.wg.Add(1)
 	bc.chainmu.Lock()
-	n, err := bc.insertChain(chain, true)
+	var n int
+	var err error
+	if _, ok := bc.Engine().(consensus.Atlas); ok {
+		n, err = bc.insertChain(chain, false)
+	} else {
+		n, err = bc.insertChain(chain, true)
+	}
 	bc.chainmu.Unlock()
 	bc.wg.Done()
 
