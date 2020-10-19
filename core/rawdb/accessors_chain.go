@@ -730,13 +730,14 @@ func FindCommonAncestor(db ethdb.Reader, a, b *types.Header) *types.Header {
 }
 
 // ReadLastCommits retrieves LastCommits.
-func ReadLastCommits(db ethdb.Reader, number uint64) []byte {
+func ReadLastCommits(db ethdb.Reader, number uint64) ([]byte, error) {
 	var data []byte
 	data, err := db.Get(lastCommitsKey(number))
 	if err != nil {
-		log.Crit("Failed to read lastCommits", "err", err)
+		log.Trace("Failed to read lastCommits", "number", number, "err", err)
+		return nil, err
 	}
-	return data
+	return data, nil
 }
 
 // WriteLastCommits stores last commits into database.
@@ -744,6 +745,6 @@ func WriteLastCommits(
 	db ethdb.Writer, number uint64, data []byte,
 ) {
 	if err := db.Put(lastCommitsKey(number), data); err != nil {
-		log.Crit("Failed to write lastCommits", "err", err)
+		log.Crit("Failed to write lastCommits", "number", number, "err", err)
 	}
 }

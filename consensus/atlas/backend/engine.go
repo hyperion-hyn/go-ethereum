@@ -94,6 +94,8 @@ var (
 	errInvalidCommittedSeals = errors.New("invalid committed seals")
 	// errEmptyCommittedSeals is returned if the field of committed seals is zero.
 	errEmptyCommittedSeals = errors.New("zero committed seals")
+	// errInvalidLastCommits is returned if LastCommits is invalid
+	errInvalidLastCommits = errors.New("invalid lastCommits")
 	// errInvalidAggregatedSignature is returned if the field of aggregated signature is invalid.
 	errInvalidAggregatedSignature = errors.New("invalid aggregated signature")
 	// errMismatchTxhashes is returned if the TxHash in header is mismatch.
@@ -393,9 +395,12 @@ func (sb *backend) _Prepare(chain consensus.ChainReader, header *types.Header) e
 		return err
 	}
 
-	lastCommits := rawdb.ReadLastCommits(chain.ChainDb(), number)
+	lastCommits, err := rawdb.ReadLastCommits(chain.ChainDb(), number-1)
+	if err != nil {
+		return errInvalidLastCommits
+	}
 	if len(lastCommits) != types.AtlasExtraSignature+types.GetMaskByteCount(snap.ValSet.Size()) {
-		return errInvalidSignature
+		return errInvalidLastCommits
 	}
 
 	// set header's signature and bitmap
