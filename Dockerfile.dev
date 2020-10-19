@@ -2,7 +2,7 @@
 FROM alpine:latest
 
 RUN apk add --no-cache ca-certificates \
-    musl gmp openssl libstdc++ fish shadow \
+    musl gmp openssl libstdc++ fish bash shadow \
     && usermod -s `which fish` root
 
 ADD ./build-alpine/bin/* /usr/local/bin/

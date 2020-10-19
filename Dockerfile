@@ -11,7 +11,7 @@ RUN cd /go-ethereum && make clean && make third_party && make geth
 FROM alpine:latest
 
 RUN apk add --no-cache ca-certificates \
-    musl gmp openssl libstdc++ fish shadow \
+    musl gmp openssl libstdc++ fish bash shadow \
     && usermod -s `which fish` root
 COPY --from=builder /go-ethereum/build/bin/geth /usr/local/bin/
 
