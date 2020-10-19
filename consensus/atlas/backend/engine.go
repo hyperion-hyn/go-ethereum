@@ -131,7 +131,7 @@ func (sb *backend) Signers(header *types.Header) ([]atlas.Validator, error) {
 		return []atlas.Validator{}, err
 	}
 
-	signers, err := getSigners(snap.ValSet, header.Bitmap[:])
+	signers, err := getSigners(snap.ValSet, header.LastCommits[types.AtlasExtraSignature:])
 	if err != nil {
 		return nil, err
 	}
@@ -293,7 +293,7 @@ func (sb *backend) verifyCommittedSeals(chain consensus.ChainReader, header *typ
 		return err
 	}
 
-	if len(header.Signature) != types.AtlasExtraSignature || len(header.Bitmap) != types.GetMaskByteCount(snap.ValSet.Size()) {
+	if len(header.LastCommits) != types.AtlasExtraSignature+types.GetMaskByteCount(snap.ValSet.Size()) {
 		return errInvalidAggregatedSignature
 	}
 
@@ -304,7 +304,7 @@ func (sb *backend) verifyCommittedSeals(chain consensus.ChainReader, header *typ
 		parent = chain.GetHeader(header.ParentHash, number-1)
 	}
 
-	err = verifySignature(snap.ValSet, parent.Hash().Bytes()[:], header.Signature[:], header.Bitmap[:])
+	err = verifySignature(snap.ValSet, parent.Hash().Bytes()[:], header.LastCommits[:types.AtlasExtraSignature], header.LastCommits[types.AtlasExtraSignature:])
 	if err != nil {
 		return err
 	}
@@ -399,10 +399,8 @@ func (sb *backend) _Prepare(chain consensus.ChainReader, header *types.Header) e
 	}
 
 	// set header's signature and bitmap
-	header.Signature = make([]byte, types.AtlasExtraSignature)
-	header.Bitmap = make([]byte, types.GetMaskByteCount(snap.ValSet.Size()))
-	copy(header.Signature[:], lastCommits[:types.AtlasExtraSignature])
-	copy(header.Bitmap[:], lastCommits[types.AtlasExtraSignature:])
+	header.LastCommits = make([]byte, len(lastCommits))
+	copy(header.LastCommits[:], lastCommits[:])
 
 	extra, err := prepareExtra(header, snap.validators())
 	if err != nil {
@@ -656,8 +654,7 @@ func writeSeal(h *types.Header, seal []byte) error {
 		return errInvalidSignature
 	}
 
-	copy(h.Signature[:], seal)
-	copy(h.Bitmap, []byte{})
+	copy(h.LastCommits[:], seal)
 
 	return nil
 }
@@ -668,8 +665,8 @@ func WriteCommittedSeals(h *types.Header, signature []byte, bitmap []byte, valSe
 		return errInvalidCommittedSeals
 	}
 
-	copy(h.Signature[:], signature[:])
-	copy(h.Bitmap[:], bitmap)
+	copy(h.LastCommits[:types.AtlasExtraSignature], signature[:])
+	copy(h.LastCommits[types.AtlasExtraSignature:], bitmap[:])
 
 	return nil
 }
@@ -759,8 +756,7 @@ func encodeSigHeader(w io.Writer, header *types.Header) {
 		header.MixDigest,
 		header.Nonce,
 		header.Epoch,
-		header.Signature,
-		header.Bitmap,
+		header.LastCommits,
 	})
 	if err != nil {
 		panic("can't encode: " + err.Error())

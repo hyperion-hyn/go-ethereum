@@ -88,21 +88,21 @@ type Header struct {
 	Nonce       BlockNonce     `json:"nonce"`
 
 	// ATLAS
-	Epoch     *big.Int `json:"epoch" gencodec:"required"`
-	Signature []byte   `json:"signature"`
-	Bitmap    []byte   `json:"bitmap"`
+	Epoch       *big.Int `json:"epoch" gencodec:"required"`
+	LastCommits []byte   `json:"lastCommits"`
 }
 
 // field type overrides for gencodec
 type headerMarshaling struct {
-	Difficulty *hexutil.Big
-	Number     *hexutil.Big
-	GasLimit   hexutil.Uint64
-	GasUsed    hexutil.Uint64
-	Time       hexutil.Uint64
-	Extra      hexutil.Bytes
-	Hash       common.Hash `json:"hash"` // adds call to Hash() in MarshalJSON
-	Epoch      *big.Int
+	Difficulty  *hexutil.Big
+	Number      *hexutil.Big
+	GasLimit    hexutil.Uint64
+	GasUsed     hexutil.Uint64
+	Time        hexutil.Uint64
+	Extra       hexutil.Bytes
+	Hash        common.Hash `json:"hash"` // adds call to Hash() in MarshalJSON
+	Epoch       *big.Int
+	LastCommits hexutil.Bytes
 }
 
 // Hash returns the block hash of the header, which is simply the keccak256 hash of its

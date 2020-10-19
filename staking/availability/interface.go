@@ -28,5 +28,5 @@ func (c CommitBitmapReader) Number() *big.Int {
 }
 
 func (c CommitBitmapReader) LastCommitBitmap() ([]byte, error) {
-	return c.Header.Bitmap, nil
+	return c.Header.LastCommits[types.AtlasExtraSignature:], nil
 }
