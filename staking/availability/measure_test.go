@@ -150,7 +150,7 @@ func TestIncrementValidatorSigningCounts(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := IncrementValidatorSigningCounts(nil, ctx.staked, ctx.state, ctx.signers, ctx.missings); err != nil {
+		if err := IncrementValidatorSigningCounts(ctx.staked, ctx.state, ctx.signers, ctx.missings); err != nil {
 			t.Fatal(err)
 		}
 		if err := ctx.checkResult(); err != nil {
@@ -280,7 +280,7 @@ func TestComputeAndMutateEPOSStatus(t *testing.T) {
 				snapEli:    restaking.Active,
 				curEli:     restaking.Nil,
 			},
-			expErr: errors.New("staking validator does not exist"),
+			expErr: errors.New("validator does not exist"),
 		},
 		// nil validator wrapper in snapshot
 		{
@@ -291,7 +291,7 @@ func TestComputeAndMutateEPOSStatus(t *testing.T) {
 				curToSign: 200,
 				curEli:    restaking.Active,
 			},
-			expErr: errors.New("staking validator does not exist"),
+			expErr: errors.New("validator snapshot does not exist"),
 		},
 		// banned node
 		{
@@ -311,7 +311,7 @@ func TestComputeAndMutateEPOSStatus(t *testing.T) {
 		ctx := test.ctx
 		ctx.makeStateAndReader()
 
-		err := ComputeAndMutateEPOSStatus(ctx.reader, ctx.stateDB, ctx.addr, ctx.epoch)
+		err := ComputeAndMutateEPOSStatus(ctx.stateDB, ctx.addr)
 		if err != nil {
 			if assErr := assertError(err, test.expErr); assErr != nil {
 				t.Errorf("Test - %v: %v", i, assErr)
@@ -471,24 +471,19 @@ type computeEPOSTestCtx struct {
 
 // makeStateAndReader compute for state and reader given the input arguments
 func (ctx *computeEPOSTestCtx) makeStateAndReader() {
-	// chain reader
-	ctx.reader = newTestReader()
-	ctx.epoch = big.NewInt(1)
-	stateDB := newTestStateDB()
-	ctx.reader[ctx.epoch.Uint64()] = stateDB
-	if ctx.snapEli != restaking.Nil {
-		wrapper := makeTestWrapper(ctx.addr, ctx.snapSigned, ctx.snapToSign)
-		wrapper.Validator.Status = uint8(ctx.curEli)
-		stateDB.ValidatorPool().Validators().Put(ctx.addr, &wrapper)
-		stateDB.Commit(false)
-	}
-
 	// state db
 	ctx.stateDB = newTestStateDB()
 	if ctx.curEli != restaking.Nil {
+		// latest
 		wrapper := makeTestWrapper(ctx.addr, ctx.curSigned, ctx.curToSign)
 		wrapper.Validator.Status = uint8(ctx.curEli)
 		ctx.stateDB.ValidatorPool().Validators().Put(ctx.addr, &wrapper)
+		// snapshot
+		if ctx.snapEli != restaking.Nil {
+			snapshot := makeTestWrapper(ctx.addr, ctx.snapSigned, ctx.snapToSign)
+			snapshot.Validator.Status = uint8(ctx.curEli)
+			ctx.stateDB.ValidatorPool().ValidatorSnapshots().Put(ctx.addr, &snapshot)
+		}
 		ctx.stateDB.Commit(false)
 	}
 }
