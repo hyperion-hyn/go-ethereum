@@ -17,10 +17,9 @@
 package core
 
 import (
-	"github.com/hyperion-hyn/bls/ffi/go/bls"
-
 	"github.com/ethereum/go-ethereum/consensus/atlas"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/hyperion-hyn/bls/ffi/go/bls"
 )
 
 func (c *core) sendPrepare() {
@@ -47,7 +46,7 @@ func (c *core) handlePrepare(msg *message, src atlas.Validator) error {
 	logger := c.logger.New("from", src, "state", c.state)
 
 	if !c.IsProposer() {
-		logger.Debug("only proposer can handle PREPARE message", "msg", msg, "leader", c.valSet.GetProposer())
+		logger.Trace("only proposer can handle PREPARE message", "msg", msg, "leader", c.valSet.GetProposer())
 		return nil
 	}
 

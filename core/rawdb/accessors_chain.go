@@ -25,7 +25,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/internal/ctxerror"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -731,22 +730,21 @@ func FindCommonAncestor(db ethdb.Reader, a, b *types.Header) *types.Header {
 }
 
 // ReadLastCommits retrieves LastCommits.
-func ReadLastCommits(db ethdb.Reader) ([]byte, error) {
+func ReadLastCommits(db ethdb.Reader, number uint64) ([]byte, error) {
 	var data []byte
-	data, err := db.Get(lastCommitsKey)
+	data, err := db.Get(lastCommitsKey(number))
 	if err != nil {
-		return nil, ctxerror.New("cannot read last commits from rawdb").WithCause(err)
+		log.Trace("Failed to read lastCommits", "number", number, "err", err)
+		return nil, err
 	}
 	return data, nil
 }
 
 // WriteLastCommits stores last commits into database.
 func WriteLastCommits(
-	db ethdb.Writer, data []byte,
-) (err error) {
-	if err = db.Put(lastCommitsKey, data); err != nil {
-		return ctxerror.New("cannot write last commits").WithCause(err)
+	db ethdb.Writer, number uint64, data []byte,
+) {
+	if err := db.Put(lastCommitsKey(number), data); err != nil {
+		log.Crit("Failed to write lastCommits", "number", number, "err", err)
 	}
-	log.Info("wrote last commits", "numShards", len(data))
-	return nil
 }

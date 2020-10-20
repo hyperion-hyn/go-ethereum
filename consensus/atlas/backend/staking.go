@@ -440,20 +440,12 @@ func accumulateRewardsAndCountSigs(chain consensus.ChainReader, state *state.Sta
 func ballotResult(
 	bc consensus.ChainReader, header *types.Header,
 ) (*restaking.Committee_, *restaking.Slots_, *restaking.Slots_, error) {
-	parentHeader := bc.GetHeaderByHash(header.ParentHash)
-	if parentHeader == nil {
-		return nil, nil, nil, errors.Errorf(
-			"cannot find parent block header in DB %s",
-			header.ParentHash.Hex(),
-		)
-	}
-
 	lastButOneBlockNum := new(big.Int).Sub(header.Number, common.Big2)
 	comm, err := lookupCommitteeAtBlock(lastButOneBlockNum, bc)
 	if err != nil {
 		return nil, nil, nil, errors.Errorf("cannot read committee at %v", lastButOneBlockNum)
 	}
-	reader := availability.CommitBitmapReader{Header: parentHeader} // TODO(ATLAS): next block header
+	reader := availability.CommitBitmapReader{Header: header}
 	_, payable, missing, err := availability.BallotResult(reader, comm)
 	return comm, payable, missing, err
 }

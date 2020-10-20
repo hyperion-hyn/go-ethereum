@@ -63,6 +63,10 @@ func (self *testSystemBackend) Signer() common.Address {
 	return self.signer
 }
 
+func (self *testSystemBackend) Annotation() string {
+	return fmt.Sprintf("backend-%d", self.id)
+}
+
 type testCommittedMsgs struct {
 	commitProposal atlas.Proposal
 	committedSeals []byte
@@ -108,7 +112,7 @@ func (self *testSystemBackend) Gossip(valSet atlas.ValidatorSet, message []byte)
 	return nil
 }
 
-func (self *testSystemBackend) Commit(proposal atlas.Proposal, signature []byte, publicKey []byte, bitmap []byte) error {
+func (self *testSystemBackend) Commit(proposal atlas.Proposal, signature []byte, bitmap []byte) error {
 	// func (self *testSystemBackend) Commit(proposal atlas.Proposal, seals [][]byte) error {
 	testLogger.Info("commit message", "address", self.Signer())
 	self.committedMsgs = append(self.committedMsgs, testCommittedMsgs{

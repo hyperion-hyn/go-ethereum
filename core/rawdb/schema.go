@@ -73,7 +73,7 @@ var (
 	preimagePrefix = []byte("secure-key-")      // preimagePrefix + hash -> preimage
 	configPrefix   = []byte("ethereum-config-") // config prefix for the db
 
-	lastCommitsKey   = []byte("LastCommits")
+	lastCommitsKeyPrefix = []byte("LastCommits")
 
 	// Chain index prefixes (use `i` + single byte to avoid mixing data types).
 	BloomBitsIndexPrefix = []byte("iB") // BloomBitsIndexPrefix is the data table of a chain indexer to track its progress
@@ -197,4 +197,8 @@ func preimageKey(hash common.Hash) []byte {
 // configKey = configPrefix + hash
 func configKey(hash common.Hash) []byte {
 	return append(configPrefix, hash.Bytes()...)
+}
+
+func lastCommitsKey(number uint64) []byte {
+	return append(lastCommitsKeyPrefix, encodeBlockNumber(number)...)
 }

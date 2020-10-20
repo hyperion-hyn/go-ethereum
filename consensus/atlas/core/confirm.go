@@ -17,10 +17,11 @@
 package core
 
 import (
-	"github.com/hyperion-hyn/bls/ffi/go/bls"
-
+	"fmt"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/hyperion-hyn/bls/ffi/go/bls"
+	"time"
 )
 
 func (c *core) sendConfirm() {
@@ -82,10 +83,23 @@ func (c *core) handleConfirm(msg *message, src atlas.Validator) error {
 	// and we are in Expected state to provent validator send CONFIRM messages
 	// to pass by Prepared and Expected state
 	if c.current.GetConfirmSize() >= c.QuorumSize() && c.state.Cmp(StateExpected) == 0 {
-		c.setState(StateConfirmed)
-		c.sendCommit()
+		duration := 2 * time.Second
+		blockPeriod := time.Duration(int64(c.config.BlockPeriod)) * time.Second
+		if !c.current.WaitConfirm() {
+			c.current.SetWaitConfirm(true)
+			if blockPeriod-time.Now().Sub(c.prePrepareTimestamp) < duration {
+				duration = blockPeriod - time.Now().Sub(c.prePrepareTimestamp)
+			}
+			c.logger.Debug(fmt.Sprintf("sleep %v second to accept more message", duration))
+			time.AfterFunc(duration, func() {
+				c.logger.Debug(fmt.Sprintf("%v second passed, send commit message", duration))
+				c.setState(StateConfirmed)
+				c.sendCommit()
+			})
+		} else {
+			c.logger.Debug("accept more message")
+		}
 	}
-
 	return nil
 }
 

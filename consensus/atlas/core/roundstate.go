@@ -48,6 +48,7 @@ func newRoundState(view *atlas.View, validatorSet atlas.ValidatorSet, lockedHash
 		prepareBitmap:        prepareBitmap,
 		aggregatedConfirmSig: &bls.Sign{},
 		confirmBitmap:        confirmBitmap,
+		waitConfirm:          false,
 	}
 }
 
@@ -68,6 +69,19 @@ type roundState struct {
 	prepareBitmap        *bls_cosi.Mask
 	aggregatedConfirmSig *bls.Sign
 	confirmBitmap        *bls_cosi.Mask
+	waitConfirm          bool
+}
+
+func (s *roundState) WaitConfirm() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.waitConfirm
+}
+
+func (s *roundState) SetWaitConfirm(waitConfirm bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	s.waitConfirm = waitConfirm
 }
 
 func (s *roundState) GetPrepareSize() int {
@@ -95,7 +109,7 @@ func (s *roundState) Subject() *atlas.Subject {
 			Round:    new(big.Int).Set(s.round),
 			Sequence: new(big.Int).Set(s.sequence),
 		},
-		Digest:  atlas.SealHash(s.Preprepare.Proposal.Header()),
+		Digest:  s.Preprepare.Proposal.Hash(),
 		Payload: []byte{},
 	}
 }
@@ -165,7 +179,7 @@ func (s *roundState) LockHash() {
 	defer s.mu.Unlock()
 
 	if s.Preprepare != nil {
-		s.lockedHash = atlas.SealHash(s.Preprepare.Proposal.Header())
+		s.lockedHash = s.Preprepare.Proposal.Hash()
 	}
 }
 

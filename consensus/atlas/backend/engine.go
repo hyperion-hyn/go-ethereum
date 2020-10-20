@@ -28,6 +28,7 @@ import (
 	"github.com/hyperion-hyn/bls/ffi/go/bls"
 
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/rawdb"
 	bls_cosi "github.com/ethereum/go-ethereum/crypto/bls"
 
 	lru "github.com/hashicorp/golang-lru"
@@ -93,6 +94,8 @@ var (
 	errInvalidCommittedSeals = errors.New("invalid committed seals")
 	// errEmptyCommittedSeals is returned if the field of committed seals is zero.
 	errEmptyCommittedSeals = errors.New("zero committed seals")
+	// errInvalidLastCommits is returned if LastCommits is invalid
+	errInvalidLastCommits = errors.New("invalid lastCommits")
 	// errInvalidAggregatedSignature is returned if the field of aggregated signature is invalid.
 	errInvalidAggregatedSignature = errors.New("invalid aggregated signature")
 	// errMismatchTxhashes is returned if the TxHash in header is mismatch.
@@ -124,18 +127,13 @@ func (sb *backend) Author(header *types.Header) (common.Address, error) {
 // It will extract for each seal who signed it, regardless of if the seal is
 // repeated
 func (sb *backend) Signers(header *types.Header) ([]atlas.Validator, error) {
-	extra, err := types.ExtractAtlasExtra(header)
-	if err != nil {
-		return []atlas.Validator{}, err
-	}
-
 	number := header.Number.Uint64()
 	snap, err := sb.snapshot(sb.chain, number-1, header.ParentHash, nil)
 	if err != nil {
 		return []atlas.Validator{}, err
 	}
 
-	signers, err := getSigners(snap.ValSet, extra.AggBitmap[:])
+	signers, err := getSigners(snap.ValSet, header.LastCommits[types.AtlasExtraSignature:])
 	if err != nil {
 		return nil, err
 	}
@@ -166,14 +164,14 @@ func (sb *backend) VerifyHeader(chain consensus.ChainHeaderReader, header *types
 }
 
 func (sb *backend) _VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error {
-	return sb.verifyHeader(chain, header, nil)
+	return sb.verifyHeader(chain, header, nil, seal)
 }
 
 // verifyHeader checks whether a header conforms to the consensus rules.The
 // caller may optionally pass in a batch of parents (ascending order) to avoid
 // looking those up from the database. This is useful for concurrently verifying
 // a batch of new headers.
-func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
+func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header, seal bool) error {
 	if header.Number == nil {
 		return errUnknownBlock
 	}
@@ -181,11 +179,6 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 	// Don't waste time checking blocks from the future
 	if header.Time > uint64(now().Unix()) {
 		return consensus.ErrFutureBlock
-	}
-
-	// Ensure that the extra data format is satisfied
-	if _, err := types.ExtractAtlasExtra(header); err != nil {
-		return errInvalidExtraDataFormat
 	}
 
 	// Ensure that the coinbase is valid
@@ -205,14 +198,14 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 		return errInvalidDifficulty
 	}
 
-	return sb.verifyCascadingFields(chain, header, parents)
+	return sb.verifyCascadingFields(chain, header, parents, seal)
 }
 
 // verifyCascadingFields verifies all the header fields that are not standalone,
 // rather depend on a batch of previous headers. The caller may optionally pass
 // in a batch of parents (ascending order) to avoid looking those up from the
 // database. This is useful for concurrently verifying a batch of new headers.
-func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
+func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *types.Header, parents []*types.Header, seal bool) error {
 	// The genesis block is the always valid dead-end
 	number := header.Number.Uint64()
 	if number == 0 {
@@ -236,7 +229,10 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 		return err
 	}
 
-	return sb.verifyCommittedSeals(chain, header, parents)
+	if seal {
+		return sb.verifyCommittedSeals(chain, header, parents)
+	}
+	return nil
 }
 
 // VerifyHeaders is similar to VerifyHeader, but verifies a batch of headers
@@ -252,7 +248,7 @@ func (sb *backend) _VerifyHeaders(chain consensus.ChainReader, headers []*types.
 	results := make(chan error, len(headers))
 	go func() {
 		for i, header := range headers {
-			err := sb.verifyHeader(chain, header, headers[:i])
+			err := sb.verifyHeader(chain, header, headers[:i], seals[i])
 
 			select {
 			case <-abort:
@@ -284,6 +280,10 @@ func (sb *backend) verifySigner(chain consensus.ChainReader, header *types.Heade
 	return nil
 }
 
+func (sb *backend) VerifyCommittedSeals(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
+	return sb.verifyCommittedSeals(chain, header, parents)
+}
+
 // verifyCommittedSeals checks whether every committed seal is signed by one of the parent's validators
 func (sb *backend) verifyCommittedSeals(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
 	number := header.Number.Uint64()
@@ -298,20 +298,18 @@ func (sb *backend) verifyCommittedSeals(chain consensus.ChainReader, header *typ
 		return err
 	}
 
-	extra, err := types.ExtractAtlasExtra(header)
-	if err != nil {
-		return err
-	}
-	// The length of Confirm seals should be larger than 0
-	if len(extra.AggSignature) == 0 || len(extra.AggBitmap) == 0 {
-		return errEmptyCommittedSeals
-	}
-
-	if len(extra.AggSignature) != types.AtlasExtraSignature || len(extra.AggBitmap) != types.GetMaskByteCount(snap.ValSet.Size()) {
+	if len(header.LastCommits) != types.AtlasExtraSignature+types.GetMaskByteCount(snap.ValSet.Size()) {
 		return errInvalidAggregatedSignature
 	}
 
-	err = verifySignature(snap.ValSet, SealHash(header).Bytes()[:], extra.AggSignature[:], extra.AggBitmap[:])
+	var parent *types.Header
+	if len(parents) > 0 {
+		parent = parents[len(parents)-1]
+	} else {
+		parent = chain.GetHeader(header.ParentHash, number-1)
+	}
+
+	err = verifySignature(snap.ValSet, parent.Hash().Bytes()[:], header.LastCommits[:types.AtlasExtraSignature], header.LastCommits[types.AtlasExtraSignature:])
 	if err != nil {
 		return err
 	}
@@ -399,6 +397,18 @@ func (sb *backend) _Prepare(chain consensus.ChainReader, header *types.Header) e
 	if err != nil {
 		return err
 	}
+
+	lastCommits, err := rawdb.ReadLastCommits(chain.ChainDb(), number-1)
+	if err != nil {
+		return errInvalidLastCommits
+	}
+	if len(lastCommits) != types.AtlasExtraSignature+types.GetMaskByteCount(snap.ValSet.Size()) {
+		return errInvalidLastCommits
+	}
+
+	// set header's signature and bitmap
+	header.LastCommits = make([]byte, len(lastCommits))
+	copy(header.LastCommits[:], lastCommits[:])
 
 	extra, err := prepareExtra(header, snap.validators())
 	if err != nil {
@@ -500,8 +510,10 @@ func (sb *backend) _Seal(chain consensus.ChainReader, block *types.Block, result
 	go func() {
 		// get the proposed block hash and clear it if the seal() is completed.
 		sb.sealMu.Lock()
+		sb.proposedBlockHash = block.Hash()
 
 		defer func() {
+			sb.proposedBlockHash = common.Hash{}
 			sb.sealMu.Unlock()
 		}()
 		// post block into Atlas engine
@@ -521,7 +533,7 @@ func (sb *backend) _Seal(chain consensus.ChainReader, block *types.Block, result
 				//  no more events will be handled.
 				//  to make it work and prevent hang in handleEvents, keeping consumming blocks
 				//  from commit channel here is necessary.
-				if result != nil && sb.SealHash(block.Header()) == sb.SealHash(result.Header()) {
+				if result != nil && block.Hash() == result.Hash() {
 					// wait for the timestamp of header, use this to adjust the block period
 					delay := time.Unix(int64(header.Time+sb.config.BlockPeriod), 0).Sub(now())
 					sb.logger.Debug("mine new block in future", "delay", delay)
@@ -530,11 +542,15 @@ func (sb *backend) _Seal(chain consensus.ChainReader, block *types.Block, result
 					}
 					results <- result
 					return
-				} else {
+				} else if result != nil {
+					sb.logger.Debug("drop block", "number", result.NumberU64(), "blockHash", sb.SealHash(block.Header()), "resultHash", sb.SealHash(result.Header()))
 					// ATLAS: keeping consumming blocks from commit channel is necessary
 					//  to prevent hang in handleEvents.
+				} else {
+					sb.logger.Debug("result is null")
 				}
 			case <-stop:
+				sb.logger.Debug("stop seal", "number", block.NumberU64())
 				results <- nil
 				return
 			}
@@ -546,20 +562,6 @@ func (sb *backend) _Seal(chain consensus.ChainReader, block *types.Block, result
 // update timestamp and signature of the block based on its number of transactions
 func (sb *backend) updateBlock(parent *types.Header, block *types.Block) (*types.Block, error) {
 	header := block.Header()
-
-	// sign the hash
-	seal, _, _, err := sb.SignHash(SealHash(header))
-
-	if err != nil {
-		return nil, err
-	}
-
-	// WARNING: call sb.snapshot(sb.chain, number-1, header.ParentHash, nil)) will cause TestVerifyHeaders fail.
-
-	err = writeSeal(header, seal)
-	if err != nil {
-		return nil, err
-	}
 
 	return block.WithSeal(header), nil
 }
@@ -652,20 +654,9 @@ func (sb *backend) SealHash(header *types.Header) common.Hash {
 func prepareExtra(header *types.Header, vals []atlas.Validator) ([]byte, error) {
 	var buf bytes.Buffer
 
-	// compensate the lack bytes if header.Extra is not enough AtlasExtraVanity bytes.
-	if len(header.Extra) < types.AtlasExtraVanity {
-		header.Extra = append(header.Extra, bytes.Repeat([]byte{0x00}, types.AtlasExtraVanity-len(header.Extra))...)
-	}
-	buf.Write(header.Extra[:types.AtlasExtraVanity])
+	buf.Write(header.Extra[:])
 
-	ist := &types.AtlasExtra{}
-
-	payload, err := rlp.EncodeToBytes(&ist)
-	if err != nil {
-		return nil, err
-	}
-
-	return append(buf.Bytes(), payload...), nil
+	return append(buf.Bytes(), []byte{}...), nil
 }
 
 // writeSeal writes the extra-data field of the given header with the given seals.
@@ -675,20 +666,8 @@ func writeSeal(h *types.Header, seal []byte) error {
 		return errInvalidSignature
 	}
 
-	atlasExtra, err := types.ExtractAtlasExtra(h)
-	if err != nil {
-		return err
-	}
+	copy(h.LastCommits[:], seal)
 
-	copy(atlasExtra.AggSignature[:], seal)
-	atlasExtra.AggBitmap = []byte{}
-
-	payload, err := rlp.EncodeToBytes(&atlasExtra)
-	if err != nil {
-		return err
-	}
-
-	h.Extra = append(h.Extra[:types.AtlasExtraVanity], payload...)
 	return nil
 }
 
@@ -698,46 +677,13 @@ func WriteCommittedSeals(h *types.Header, signature []byte, bitmap []byte, valSe
 		return errInvalidCommittedSeals
 	}
 
-	atlasExtra, err := types.ExtractAtlasExtra(h)
-	if err != nil {
-		return err
-	}
+	copy(h.LastCommits[:types.AtlasExtraSignature], signature[:])
+	copy(h.LastCommits[types.AtlasExtraSignature:], bitmap[:])
 
-	copy(atlasExtra.AggSignature[:], signature)
-	atlasExtra.AggBitmap = bitmap
-
-	payload, err := rlp.EncodeToBytes(&atlasExtra)
-	if err != nil {
-		return err
-	}
-
-	h.Extra = append(h.Extra[:types.AtlasExtraVanity], payload...)
 	return nil
 }
 
-func WriteCommittedSealsAsExtra(extra []byte, signature []byte, publicKey []byte, bitmap []byte, valSetSize int) ([]byte, error) {
-	if len(signature) != types.AtlasExtraSignature || len(publicKey) != types.AtlasExtraPublicKey || len(bitmap) != types.GetMaskByteCount(valSetSize) {
-		return nil, errInvalidCommittedSeals
-	}
-
-	extraData := make([]byte, len(extra))
-	copy(extraData, extra)
-
-	atlasExtra := &types.AtlasExtra{}
-
-	copy(atlasExtra.AggSignature[:], signature)
-	atlasExtra.AggBitmap = bitmap
-
-	payload, err := rlp.EncodeToBytes(&atlasExtra)
-	if err != nil {
-		return nil, err
-	}
-
-	extraData = append(extraData[:types.AtlasExtraVanity], payload...)
-	return extraData, nil
-}
-
-func WriteCommittedSealInGenesis(genesis *core.Genesis, extra []byte, signatures []*bls.Sign, publicKeys []*bls.PublicKey) error {
+func WriteCommittedSealInGenesis(genesis *core.Genesis, header *types.Header, signatures []*bls.Sign, publicKeys []*bls.PublicKey) error {
 	mask, err := bls_cosi.NewMask(publicKeys, nil)
 	if err != nil {
 		return err
@@ -756,12 +702,10 @@ func WriteCommittedSealInGenesis(genesis *core.Genesis, extra []byte, signatures
 		sign.Add(signatures[i])
 	}
 
-	data, err := WriteCommittedSealsAsExtra(extra, sign.Serialize(), publicKey.Serialize(), mask.Mask(), len(publicKeys))
-	if err != nil {
-		return err
-	}
+	genesis.LastCommits = make([]byte, types.AtlasExtraSignature+types.GetMaskByteCount(len(publicKeys)))
+	copy(genesis.LastCommits[:types.AtlasExtraSignature], sign.Serialize())
+	copy(genesis.LastCommits[types.AtlasExtraSignature:], mask.Mask())
 
-	genesis.ExtraData = data
 	return nil
 }
 
@@ -807,8 +751,6 @@ func AtlasRLP(header *types.Header) []byte {
 }
 
 func encodeSigHeader(w io.Writer, header *types.Header) {
-	extra := make([]byte, types.AtlasExtraVanity)
-	copy(extra[:types.AtlasExtraVanity], header.Extra[:])
 	err := rlp.Encode(w, []interface{}{
 		header.ParentHash,
 		header.UncleHash,
@@ -822,9 +764,11 @@ func encodeSigHeader(w io.Writer, header *types.Header) {
 		header.GasLimit,
 		header.GasUsed,
 		header.Time,
-		extra,
+		header.Extra,
 		header.MixDigest,
 		header.Nonce,
+		header.Epoch,
+		header.LastCommits,
 	})
 	if err != nil {
 		panic("can't encode: " + err.Error())

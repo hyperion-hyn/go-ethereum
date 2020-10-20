@@ -39,7 +39,7 @@ func TestHandleExpect(t *testing.T) {
 			Round:    big.NewInt(0),
 			Sequence: proposal.Number(),
 		},
-		Digest: atlas.SealHash(proposal.Header()),
+		Digest: proposal.Hash(),
 	}
 
 	testCases := []struct {
@@ -274,7 +274,7 @@ func TestVerifyExpect(t *testing.T) {
 			expected: nil,
 			expect: &atlas.Subject{
 				View:   &atlas.View{Round: big.NewInt(0), Sequence: big.NewInt(0)},
-				Digest: atlas.SealHash(newTestProposal().Header()),
+				Digest: newTestProposal().Hash(),
 			},
 			roundState: newTestRoundState(
 				&atlas.View{Round: big.NewInt(0), Sequence: big.NewInt(0)},
@@ -286,7 +286,7 @@ func TestVerifyExpect(t *testing.T) {
 			expected: errInconsistentSubject,
 			expect: &atlas.Subject{
 				View:   &atlas.View{Round: big.NewInt(0), Sequence: big.NewInt(0)},
-				Digest: atlas.SealHash(newTestProposal().Header()),
+				Digest: newTestProposal().Hash(),
 			},
 			roundState: newTestRoundState(
 				&atlas.View{Round: big.NewInt(1), Sequence: big.NewInt(1)},
@@ -310,7 +310,7 @@ func TestVerifyExpect(t *testing.T) {
 			expected: errInconsistentSubject,
 			expect: &atlas.Subject{
 				View:   &atlas.View{Round: big.NewInt(0), Sequence: nil},
-				Digest: atlas.SealHash(newTestProposal().Header()),
+				Digest: newTestProposal().Hash(),
 			},
 			roundState: newTestRoundState(
 				&atlas.View{Round: big.NewInt(1), Sequence: big.NewInt(1)},
@@ -322,7 +322,7 @@ func TestVerifyExpect(t *testing.T) {
 			expected: errInconsistentSubject,
 			expect: &atlas.Subject{
 				View:   &atlas.View{Round: big.NewInt(1), Sequence: big.NewInt(0)},
-				Digest: atlas.SealHash(newTestProposal().Header()),
+				Digest: newTestProposal().Hash(),
 			},
 			roundState: newTestRoundState(
 				&atlas.View{Round: big.NewInt(0), Sequence: big.NewInt(0)},
@@ -334,7 +334,7 @@ func TestVerifyExpect(t *testing.T) {
 			expected: errInconsistentSubject,
 			expect: &atlas.Subject{
 				View:   &atlas.View{Round: big.NewInt(0), Sequence: big.NewInt(1)},
-				Digest: atlas.SealHash(newTestProposal().Header()),
+				Digest: newTestProposal().Hash(),
 			},
 			roundState: newTestRoundState(
 				&atlas.View{Round: big.NewInt(0), Sequence: big.NewInt(0)},
@@ -348,7 +348,6 @@ func TestVerifyExpect(t *testing.T) {
 
 		c.state = StatePrepared
 		c.current.aggregatedPrepareSig = &bls.Sign{}
-		c.current.aggregatedPreparePublicKey = &bls.PublicKey{}
 		c.current.prepareBitmap, _ = bls_cosi.NewMask(c.valSet.GetPublicKeys(), nil)
 
 		for _, v := range sys.backends {

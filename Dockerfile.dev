@@ -1,0 +1,10 @@
+# Pull all binaries into a second stage deploy alpine container
+FROM alpine:latest
+
+RUN apk add --no-cache ca-certificates \
+    musl gmp openssl libstdc++ fish bash shadow \
+    && usermod -s `which fish` root
+
+ADD ./build-alpine/bin/* /usr/local/bin/
+
+EXPOSE 8545 8546 8547 30303 30303/udp

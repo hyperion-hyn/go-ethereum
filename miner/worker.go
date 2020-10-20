@@ -560,6 +560,7 @@ func (w *worker) taskLoop() {
 			if sealHash == prev {
 				continue
 			}
+			log.Debug("seal block", "block", task.block.NumberU64(), "stop", stopCh != nil)
 			// Interrupt previous sealing operation
 			interrupt()
 			stopCh, prev = make(chan struct{}), sealHash
@@ -589,10 +590,12 @@ func (w *worker) resultLoop() {
 		case block := <-w.resultCh:
 			// Short circuit when receiving empty result.
 			if block == nil {
+				log.Error("block is nil")
 				continue
 			}
 			// Short circuit when receiving duplicate result caused by resubmitting.
 			if w.chain.HasBlock(block.Hash(), block.NumberU64()) {
+				log.Error("chain has the block", "block", block.NumberU64())
 				continue
 			}
 			var (
