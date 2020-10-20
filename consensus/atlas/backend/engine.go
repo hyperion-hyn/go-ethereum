@@ -542,11 +542,15 @@ func (sb *backend) _Seal(chain consensus.ChainReader, block *types.Block, result
 					}
 					results <- result
 					return
-				} else {
+				} else if result != nil {
+					sb.logger.Debug("drop block", "number", result.NumberU64(), "blockHash", sb.SealHash(block.Header()), "resultHash", sb.SealHash(result.Header()))
 					// ATLAS: keeping consumming blocks from commit channel is necessary
 					//  to prevent hang in handleEvents.
+				} else {
+					sb.logger.Debug("result is null")
 				}
 			case <-stop:
+				sb.logger.Debug("stop seal", "number", block.NumberU64())
 				results <- nil
 				return
 			}

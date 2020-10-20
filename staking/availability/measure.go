@@ -180,7 +180,7 @@ func ComputeAndMutateEPOSStatus(
 
 	computed := ComputeCurrentSigning(snapshot, wrapper)
 
-	log.Info("check if signing percent is meeting required threshold")
+	log.Info("check if signing percent is meeting required threshold", "addr", addr.Hex(), "result", computed.Percentage)
 
 	const missedTooManyBlocks = true
 

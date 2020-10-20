@@ -48,6 +48,7 @@ func newRoundState(view *atlas.View, validatorSet atlas.ValidatorSet, lockedHash
 		prepareBitmap:        prepareBitmap,
 		aggregatedConfirmSig: &bls.Sign{},
 		confirmBitmap:        confirmBitmap,
+		waitConfirm:          false,
 	}
 }
 
@@ -68,6 +69,19 @@ type roundState struct {
 	prepareBitmap        *bls_cosi.Mask
 	aggregatedConfirmSig *bls.Sign
 	confirmBitmap        *bls_cosi.Mask
+	waitConfirm          bool
+}
+
+func (s *roundState) WaitConfirm() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.waitConfirm
+}
+
+func (s *roundState) SetWaitConfirm(waitConfirm bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	s.waitConfirm = waitConfirm
 }
 
 func (s *roundState) GetPrepareSize() int {

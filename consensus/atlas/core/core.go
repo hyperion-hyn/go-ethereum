@@ -40,7 +40,7 @@ import (
 
 // New creates an Atlas consensus core
 func New(backend atlas.Backend, config *atlas.Config) Engine {
-	r := metrics.NewRegistry()
+	//r := metrics.NewRegistry()
 	c := &core{
 		config:             config,
 		address:            backend.Address(),
@@ -53,14 +53,14 @@ func New(backend atlas.Backend, config *atlas.Config) Engine {
 		pendingRequests:    prque.New(),
 		pendingRequestsMu:  new(sync.Mutex),
 		consensusTimestamp: time.Time{},
-		roundMeter:         metrics.NewMeter(),
-		sequenceMeter:      metrics.NewMeter(),
-		consensusTimer:     metrics.NewTimer(),
-	}
+		roundMeter:         metrics.NewRegisteredMeter("consensus/atlas/core/round", nil),
+		sequenceMeter:      metrics.NewRegisteredMeter("consensus/atlas/core/sequence", nil),
+		consensusTimer:     metrics.NewRegisteredTimer("consensus/atlas/core/consensus", nil),
 
-	r.Register("consensus/atlas/core/round", c.roundMeter)
-	r.Register("consensus/atlas/core/sequence", c.sequenceMeter)
-	r.Register("consensus/atlas/core/consensus", c.consensusTimer)
+		//ATLAS
+		consensusPrepareGauge: metrics.NewRegisteredGauge("consensus/atlas/core/consensus/prepare", nil),
+		consensusConfirmGauge: metrics.NewRegisteredGauge("consensus/atlas/core/consensus/confirm", nil),
+	}
 
 	c.validateHashFn = c.checkValidatorSignature
 	return c
@@ -103,6 +103,12 @@ type core struct {
 	sequenceMeter metrics.Meter
 	// the timer to record consensus duration (from accepting a preprepare to final committed stage)
 	consensusTimer metrics.Timer
+
+	//Atlas
+	consensusPrepareGauge metrics.Gauge
+	consensusConfirmGauge metrics.Gauge
+	prePrepareTimestamp   time.Time
+	confirmTimestamp      time.Time
 }
 
 func (c *core) finalizeMessage(msg *message) ([]byte, error) {
@@ -208,7 +214,7 @@ func (c *core) startNewRound(round *big.Int) {
 			c.consensusTimer.UpdateSince(c.consensusTimestamp)
 			c.consensusTimestamp = time.Time{}
 		}
-		logger.Trace("Catch up latest proposal", "number", lastProposal.Number().Uint64(), "hash", lastProposal.Hash())
+		logger.Debug("Catch up latest proposal", "number", lastProposal.Number().Uint64(), "hash", lastProposal.Hash())
 	} else if lastProposal.Number().Cmp(big.NewInt(c.current.Sequence().Int64()-1)) == 0 {
 		if round.Cmp(common.Big0) == 0 {
 			// same seq and round, don't need to start new round
@@ -261,7 +267,7 @@ func (c *core) startNewRound(round *big.Int) {
 	}
 	c.newRoundChangeTimer()
 
-	logger.Debug("New round", "new_round", newView.Round, "new_seq", newView.Sequence, "new_proposer", c.valSet.GetProposer(), "valSet", c.valSet.List(), "size", c.valSet.Size(), "IsProposer", c.IsProposer())
+	logger.Debug("New round", "new_round", newView.Round, "new_seq", newView.Sequence, "new_proposer", c.valSet.GetProposer(), "size", c.valSet.Size(), "valSet", c.valSet.List(), "IsProposer", c.IsProposer())
 }
 
 func (c *core) catchUpRound(view *atlas.View) {
@@ -277,7 +283,7 @@ func (c *core) catchUpRound(view *atlas.View) {
 	c.roundChangeSet.Clear(view.Round)
 	c.newRoundChangeTimer()
 
-	logger.Trace("Catch up round", "new_round", view.Round, "new_seq", view.Sequence, "new_proposer", c.valSet)
+	logger.Debug("Catch up round", "new_round", view.Round, "new_seq", view.Sequence, "new_proposer", c.valSet)
 }
 
 // updateRoundState updates round state by checking if locking block is necessary

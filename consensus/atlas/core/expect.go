@@ -40,7 +40,8 @@ func (c *core) sendExpect() {
 			logger.Error("Failed to encode", "subject", sub, "err", err)
 			return
 		}
-
+		c.consensusPrepareGauge.Update(time.Since(c.prePrepareTimestamp).Milliseconds())
+		c.confirmTimestamp = time.Now()
 		c.broadcast(&message{
 			Code: msgExpect,
 			Msg:  encodedSubject,

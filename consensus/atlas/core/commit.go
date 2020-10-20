@@ -17,11 +17,11 @@
 package core
 
 import (
-	"github.com/hyperion-hyn/bls/ffi/go/bls"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/atlas"
 	bls_cosi "github.com/ethereum/go-ethereum/crypto/bls"
+	"github.com/hyperion-hyn/bls/ffi/go/bls"
+	"time"
 )
 
 func (c *core) sendCommit() {
@@ -39,7 +39,7 @@ func (c *core) sendCommit() {
 			logger.Error("Failed to encode", "subject", sub, "err", err)
 			return
 		}
-
+		c.consensusConfirmGauge.Update(time.Since(c.confirmTimestamp).Milliseconds())
 		c.broadcast(&message{
 			Code: msgCommit,
 			Msg:  encodedSubject,

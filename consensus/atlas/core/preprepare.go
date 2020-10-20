@@ -48,7 +48,8 @@ func (c *core) sendPreprepare(request *atlas.Request) {
 			logger.Error("Failed to encode", "view", curView)
 			return
 		}
-
+		c.prePrepareTimestamp = time.Now()
+		c.consensusTimestamp = time.Now()
 		c.broadcast(&message{
 			Code: msgPreprepare,
 			Msg:  preprepare,
@@ -68,7 +69,7 @@ func (c *core) handlePreprepare(msg *message, src atlas.Validator) error {
 
 	// Check if the message comes from current proposer
 	if !c.valSet.IsProposer(src.Signer()) {
-		logger.Warn("Ignore preprepare messages from non-proposer")
+		logger.Trace("Ignore preprepare messages from non-proposer")
 		return errNotFromProposer
 	}
 
