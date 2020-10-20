@@ -497,6 +497,30 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 			},
 			wantErr: errors.New("cannot change validator banned status"),
 		},
+		{
+			name: "validator activate but self delegation too little",
+			args: args{
+				stateDB: func(t *testing.T) *state.StateDB {
+					sdb := makeStateDBForRestaking(t)
+					vw, err := sdb.ValidatorByAddress(validatorAddr)
+					if err != nil {
+						t.Fatal(err)
+					}
+					vw.TotalDelegationByOperator().SetValue(common.Big0)
+					vw.Validator().Status().SetValue(uint8(restaking.Inactive))
+					return sdb
+				}(t),
+				chainContext: makeFakeChainContextForStake(t),
+				blockNum:     big.NewInt(defaultBlockNumber),
+				msg: func() restaking.EditValidator {
+					msg := defaultMsgEditValidator()
+					msg.EPOSStatus = restaking.Active
+					return msg
+				}(),
+				signer: operatorAddr,
+			},
+			wantErr: errInvalidSelfDelegation,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

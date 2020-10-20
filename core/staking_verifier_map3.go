@@ -51,7 +51,7 @@ func (m map3VerifierForRestaking) VerifyForCreatingValidator(stateDB vm.StateDB,
 		return nil, errInvalidMap3NodeStatusToRestake
 	}
 
-	if node.IsAlreadyRestaking() {
+	if node.IsRestaking() {
 		return nil, errMap3NodeAlreadyRestaking
 	}
 	return map3NodeAsParticipant{node: node}, nil
@@ -90,7 +90,7 @@ func (m map3VerifierForRestaking) VerifyForRedelegating(stateDB vm.StateDB, msg 
 		return nil, errInvalidMap3NodeStatusToRestake
 	}
 
-	if node.IsAlreadyRestaking() {
+	if node.IsRestaking() {
 		return nil, errMap3NodeAlreadyRestaking
 	}
 	return map3NodeAsParticipant{node: node}, nil

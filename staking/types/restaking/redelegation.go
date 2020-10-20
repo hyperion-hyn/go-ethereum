@@ -72,8 +72,26 @@ func (s *Storage_Redelegation_) AddAmount(amount *big.Int) {
 	s.Amount().SetValue(amountTemp)
 }
 
+func (s *Storage_Redelegation_) SubAmount(amount *big.Int) {
+	amountTemp := s.Amount().Value()
+	amountTemp = amountTemp.Sub(amountTemp, amount)
+	s.Amount().SetValue(amountTemp)
+}
+
 func (s *Storage_Redelegation_) CanReleaseUndelegationAt(epoch *big.Int) bool {
 	return s.Undelegation().Amount().Value().Sign() > 0 && s.Undelegation().Epoch().Value().Cmp(epoch) <= 0
+}
+
+func (s *Storage_Undelegation_) AddAmount(amount *big.Int) {
+	amountTemp := s.Amount().Value()
+	amountTemp = amountTemp.Add(amountTemp, amount)
+	s.Amount().SetValue(amountTemp)
+}
+
+func (s *Storage_Undelegation_) SubAmount(amount *big.Int) {
+	amountTemp := s.Amount().Value()
+	amountTemp = amountTemp.Sub(amountTemp, amount)
+	s.Amount().SetValue(amountTemp)
 }
 
 // Storage_IterableRedelegationMap_

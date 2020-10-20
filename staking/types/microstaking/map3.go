@@ -222,7 +222,10 @@ func (s *Storage_Map3NodeWrapper_) IsOperator(delegator common.Address) bool {
 	return s.Map3Node().OperatorAddress().Value() == delegator
 }
 
-func (s *Storage_Map3NodeWrapper_) IsAlreadyRestaking() bool {
+/**
+ * IsRestaking indicates the map3 node is restaking or not
+ */
+func (s *Storage_Map3NodeWrapper_) IsRestaking() bool {
 	addr0 := common.Address{}
 	return s.RestakingReference().ValidatorAddress().Value() != addr0
 }
@@ -383,7 +386,7 @@ func (s *Storage_IterableMap3NodeWrapperMap_) AllKeys() []common.Address {
 
 func (s *Storage_IterableMap3NodeWrapperMap_) Put(key common.Address, map3Node *Map3NodeWrapper_) {
 	if s.Contain(key) {
-		s.Map().Get(key).Entry().Clear() // TODO(ATLAS): not supported
+		s.Map().Get(key).Entry().Clear()
 		s.Map().Get(key).Entry().Save(map3Node)
 	} else {
 		length := s.Keys().Length()

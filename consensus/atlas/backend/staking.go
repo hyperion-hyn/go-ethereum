@@ -136,7 +136,7 @@ func renewAndActivateMap3Nodes(chain consensus.ChainReader, header *types.Header
 					activeNodeAddrs = append(activeNodeAddrs, nodeAddr)
 				}
 
-				if node.IsAlreadyRestaking() && (notRenewedAmt.Sign() > 0 || !isActive) {
+				if node.IsRestaking() && (notRenewedAmt.Sign() > 0 || !isActive) {
 					validatorAddr := node.RestakingReference().ValidatorAddress().Value()
 					validator, err := stateDB.ValidatorByAddress(validatorAddr)
 					if err != nil {
@@ -148,7 +148,7 @@ func renewAndActivateMap3Nodes(chain consensus.ChainReader, header *types.Header
 						undelegation = nil
 					}
 					validator.Undelegate(nodeAddr, nowEpoch, undelegation)
-					// TODO(ATLAS): need 20%? change state to inactive?
+					validator.InactivateIfSelfDelegationTooLittle()
 				}
 			} else {
 				node.Terminate()

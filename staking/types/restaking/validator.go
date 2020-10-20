@@ -115,7 +115,6 @@ func (v *Validator_) SanityCheck(maxSlotKeyAllowed int) error {
 	if v.MaxTotalDelegation == nil {
 		return errNilMaxTotalDelegation
 	}
-	// TODO(ATLAS): minimal delegation?
 
 	if err := v.Commission.SanityCheck(); err != nil {
 		return err
@@ -159,7 +158,6 @@ func (v *Validator_) ToPlainValidator() *PlainValidator {
 	}
 }
 
-// Storage_Validator_
 func (v *ValidatorWrapper_) ToPlainValidatorWrapper() *PlainValidatorWrapper {
 	return &PlainValidatorWrapper{
 		Validator: *v.Validator.ToPlainValidator(),
@@ -180,6 +178,12 @@ func (v *ValidatorWrapper_) ToPlainValidatorWrapper() *PlainValidatorWrapper {
 	}
 }
 
+// Storage_Validator_
+func (s *Storage_Validator_) AtStatus(status ValidatorStatus) bool {
+	return s.Status().Value() == uint8(status)
+}
+
+// Storage_ValidatorWrapper_
 func (s *Storage_ValidatorWrapper_) AddBlockReward(reward *big.Int) {
 	blockReward := s.BlockReward().Value()
 	blockReward = blockReward.Add(blockReward, reward)
@@ -230,16 +234,23 @@ func (s *Storage_ValidatorWrapper_) AddRedelegation(delegator common.Address, am
 func (s *Storage_ValidatorWrapper_) Undelegate(delegator common.Address, epoch, amountOrNil *big.Int) {
 	if redelegation, ok := s.Redelegations().Get(delegator); ok {
 		amt := redelegation.Amount().Value()
-		if amountOrNil != nil && amountOrNil.Cmp(amt) < 0 {
+		if amountOrNil != nil && amountOrNil.Cmp(amt) <= 0 {
 			amt = amountOrNil
 		}
-		redelegation.Undelegation().Amount().SetValue(amt)
+		redelegation.Undelegation().AddAmount(amt)
 		redelegation.Undelegation().Epoch().SetValue(epoch)
-		redelegation.Amount().Clear()
+		redelegation.SubAmount(amt)
 		s.SubTotalDelegation(amt)
 		if s.IsOperator(delegator) {
 			s.SubTotalDelegationByOperator(amt)
 		}
+	}
+}
+
+func (s *Storage_ValidatorWrapper_) InactivateIfSelfDelegationTooLittle() {
+	// TODO(ATLAS): 10% of total delegation
+	if s.Validator().AtStatus(Active) && s.TotalDelegationByOperator().Value().Sign() == 0 {
+		s.Validator().Status().SetValue(uint8(Inactive))
 	}
 }
 

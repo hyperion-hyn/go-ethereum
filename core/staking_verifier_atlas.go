@@ -27,6 +27,7 @@ var (
 	errInvalidValidatorOperator        = errors.New("invalid validator operator")
 	errInvalidTotalDelegation          = errors.New("total delegation can not be bigger than max_total_delegation")
 	errInsufficientBalanceToUndelegate = errors.New("insufficient balance to undelegate")
+	errInvalidSelfDelegation           = errors.New("self delegation too little")
 )
 
 type RestakingParticipantVerifier interface {
@@ -207,6 +208,11 @@ func (verifier StakingVerifier) VerifyEditValidatorMsg(stateDB vm.StateDB, block
 	}
 	if err := validator.SanityCheck(restaking.MaxPubKeyAllowed); err != nil {
 		return nil, err
+	}
+
+	// TODO(ATLAS): 10% of total delegation
+	if msg.EPOSStatus == restaking.Active && wrapperSt.TotalDelegationByOperator().Value().Sign() == 0 {
+		return nil, errInvalidSelfDelegation
 	}
 
 	// check max change at one epoch
