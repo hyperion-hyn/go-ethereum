@@ -3,8 +3,9 @@
 ## in container
 
 ````shell script
-docker run --rm -it \
+docker run -it \
   --name atlas-builder \
+  --restart always \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v `pwd`:/src/ -v `pwd`/build-alpine/bin:/src/build/bin/ \
   -v `pwd`/build-alpine/mcl/obj:/src/third_party/mcl/obj -v `pwd`/build-alpine/mcl/lib:/src/third_party/mcl/lib \
