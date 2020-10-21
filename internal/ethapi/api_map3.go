@@ -118,17 +118,21 @@ func (s *PublicMicroStakingAPI) GetAllMap3RewardByDelegatorAddress(
 }
 
 func (s *PublicMicroStakingAPI) GetActiveMap3NodeAtEpoch(ctx context.Context, epoch uint64) ([]ActiveMap3Info, error) {
-	blockNum := s.b.ChainConfig().Atlas.EpochFirstBlock(epoch)
-	state, _, err := s.b.StateAndHeaderByNumber(ctx, rpc.BlockNumber(blockNum))
-	if state == nil || err != nil {
-		return nil, err
-	}
 
 	db := s.b.ChainDb()
 	activeMap3Addr := rawdb.ReadActiveMap3Nodes(db, epoch)
 	if activeMap3Addr == nil {
 		return nil, nil
 	}
+	blockNum := s.b.ChainConfig().Atlas.EpochLastBlock(epoch)
+	if blockNum > s.b.CurrentBlock().NumberU64() {
+		blockNum = s.b.CurrentBlock().NumberU64()
+	}
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, rpc.BlockNumber(blockNum))
+	if state == nil || err != nil {
+		return nil, err
+	}
+
 	var map3Infos []ActiveMap3Info
 	for _, addrTemp := range activeMap3Addr {
 		map3WrapperStorage, err := state.Map3NodeByAddress(addrTemp)
