@@ -88,7 +88,7 @@ type Header struct {
 	Nonce       BlockNonce     `json:"nonce"`
 
 	// ATLAS
-	Epoch       *big.Int `json:"epoch" gencodec:"required"`
+	Epoch       *big.Int `json:"epoch"`
 	LastCommits []byte   `json:"lastCommits"`
 }
 
@@ -101,7 +101,7 @@ type headerMarshaling struct {
 	Time        hexutil.Uint64
 	Extra       hexutil.Bytes
 	Hash        common.Hash `json:"hash"` // adds call to Hash() in MarshalJSON
-	Epoch       *big.Int
+	Epoch       *hexutil.Big
 	LastCommits hexutil.Bytes
 }
 
