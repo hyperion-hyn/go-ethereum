@@ -52,16 +52,9 @@ func (ec *Client) GetAllMap3RewardByDelegatorAddress(ctx context.Context, delega
 	return rewardMap, err
 }
 
-func (ec *Client) GetActiveMap3NodeAtEpoch(ctx context.Context, epoch uint64) ([]ethapi.ActiveMap3Info, error) {
-	var map3Infos []ethapi.ActiveMap3Info
-
-	err := ec.c.CallContext(ctx, &map3Infos, "eth_getActiveMap3NodeAtEpoch", epoch)
-	return map3Infos, err
-}
-
-func (ec *Client) GetTerminatedMap3NodeAtEpoch(ctx context.Context, epoch uint64) ([]string, error) {
+func (ec *Client) GetMutateMap3NodeAtEpoch(ctx context.Context, epoch uint64) ([]string, error) {
 	var result []string
-	err := ec.c.CallContext(ctx, &result, "eth_getTerminatedMap3NodeAtEpoch", epoch)
+	err := ec.c.CallContext(ctx, &result, "eth_getMutateMap3NodeAtEpoch", epoch)
 	return result, err
 }
 
