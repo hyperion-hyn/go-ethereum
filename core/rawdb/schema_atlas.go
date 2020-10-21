@@ -3,18 +3,18 @@ package rawdb
 import "encoding/binary"
 
 var (
-	activeMap3KeyPrefix     = []byte("ActiveMap3Node")
-	terminatedMap3KeyPrefix = []byte("TerminatedMap3Node")
+	mutateMap3KeyPrefix      = []byte("MutateMap3Node")
+	renewActiveMap3KeyPrefix = []byte("RenewActiveMap3Node")
 )
 
-func activeMap3Key(epoch uint64) []byte {
+func mutateMap3Key(epoch uint64) []byte {
 	epochKey := make([]byte, 8)
 	binary.BigEndian.PutUint64(epochKey, epoch)
-	return append(activeMap3KeyPrefix, epochKey...)
+	return append(mutateMap3KeyPrefix, epochKey...)
 }
 
-func terminatedMap3Key(epoch uint64) []byte {
+func renewActiveMap3Key(epoch uint64) []byte {
 	epochKey := make([]byte, 8)
 	binary.BigEndian.PutUint64(epochKey, epoch)
-	return append(terminatedMap3KeyPrefix, epochKey...)
+	return append(renewActiveMap3KeyPrefix, epochKey...)
 }

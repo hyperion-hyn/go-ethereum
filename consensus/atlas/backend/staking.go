@@ -104,8 +104,8 @@ func renewAndActivateMap3Nodes(chain consensus.ChainReader, header *types.Header
 	requireTotal, requireSelf, _ := network.LatestMicrostakingRequirement(header.Number, chain.Config())
 	map3NodePool := stateDB.Map3NodePool()
 	nowEpoch := header.Epoch
-	var activeNodeAddrs []common.Address
-	var terminatedNodeAddrs []common.Address
+	var mutateMap3Addrs []common.Address
+	var renewActiveMap3Addrs []common.Address
 	for _, nodeAddr := range map3NodePool.Nodes().AllKeys() {
 		node, ok := map3NodePool.Nodes().Get(nodeAddr)
 		if !ok {
@@ -116,6 +116,8 @@ func renewAndActivateMap3Nodes(chain consensus.ChainReader, header *types.Header
 		if node.CanReleaseAt(nowEpoch) {
 			nodeAge := node.Map3Node().CalculateNodeAge(header.Number, chain.Config().Atlas)
 			node.Map3Node().Age().SetValue(nodeAge)
+
+			mutateMap3Addrs = append(mutateMap3Addrs, nodeAddr)
 
 			isRenewed, notRenewedAmt, err := node.UnmicrodelegateIfNotRenewed(nowEpoch)
 			if err != nil {
@@ -133,7 +135,7 @@ func renewAndActivateMap3Nodes(chain consensus.ChainReader, header *types.Header
 						return err
 					}
 					isActive = true
-					activeNodeAddrs = append(activeNodeAddrs, nodeAddr)
+					renewActiveMap3Addrs = append(renewActiveMap3Addrs, nodeAddr)
 				}
 
 				if node.IsRestaking() && (notRenewedAmt.Sign() > 0 || !isActive) {
@@ -152,7 +154,6 @@ func renewAndActivateMap3Nodes(chain consensus.ChainReader, header *types.Header
 				}
 			} else {
 				node.Terminate()
-				terminatedNodeAddrs = append(terminatedNodeAddrs, nodeAddr)
 			}
 			continue
 		}
@@ -161,16 +162,15 @@ func renewAndActivateMap3Nodes(chain consensus.ChainReader, header *types.Header
 			if err := node.Activate(nowEpoch); err != nil {
 				return err
 			}
-			activeNodeAddrs = append(activeNodeAddrs, nodeAddr)
+			mutateMap3Addrs = append(mutateMap3Addrs, nodeAddr)
 		}
 	}
-	log.Info("New active map3 nodes", "addresses", activeNodeAddrs)
-	log.Info("New terminated map3 nodes", "addresses", terminatedNodeAddrs)
+	log.Info("New mutate map3 nodes", "addresses", mutateMap3Addrs)
 
 	// store active and terminated map3 addr to rawdb
 	batch := chain.ChainDb().NewBatch()
-	rawdb.WriteActiveMap3Nodes(batch, header.Epoch.Uint64(), activeNodeAddrs)
-	rawdb.WriteTerminatedMap3Nodes(batch, header.Epoch.Uint64(), terminatedNodeAddrs)
+	rawdb.WriteMutateMap3Nodes(batch, header.Epoch.Uint64(), mutateMap3Addrs)
+	rawdb.WriteRenewActiveMap3Nodes(batch, header.Epoch.Uint64(), renewActiveMap3Addrs)
 	if err := batch.Write(); err != nil {
 		return err
 	}
