@@ -33,6 +33,7 @@ func (h Header) MarshalJSON() ([]byte, error) {
 		Nonce       BlockNonce     `json:"nonce"`
 		Epoch       *hexutil.Big   `json:"epoch"`
 		LastCommits hexutil.Bytes  `json:"lastCommits"`
+		Slashes     hexutil.Bytes  `json:"slashes"`
 		Hash        common.Hash    `json:"hash"`
 	}
 	var enc Header
@@ -53,6 +54,7 @@ func (h Header) MarshalJSON() ([]byte, error) {
 	enc.Nonce = h.Nonce
 	enc.Epoch = (*hexutil.Big)(h.Epoch)
 	enc.LastCommits = h.LastCommits
+	enc.Slashes = h.Slashes
 	enc.Hash = h.Hash()
 	return json.Marshal(&enc)
 }
@@ -77,6 +79,7 @@ func (h *Header) UnmarshalJSON(input []byte) error {
 		Nonce       *BlockNonce     `json:"nonce"`
 		Epoch       *hexutil.Big    `json:"epoch"`
 		LastCommits *hexutil.Bytes  `json:"lastCommits"`
+		Slashes     *hexutil.Bytes  `json:"slashes"`
 	}
 	var dec Header
 	if err := json.Unmarshal(input, &dec); err != nil {
@@ -145,6 +148,9 @@ func (h *Header) UnmarshalJSON(input []byte) error {
 	}
 	if dec.LastCommits != nil {
 		h.LastCommits = *dec.LastCommits
+	}
+	if dec.Slashes != nil {
+		h.Slashes = *dec.Slashes
 	}
 	return nil
 }
