@@ -46,7 +46,7 @@ func (c *core) handlePrepare(msg *message, src atlas.Validator) error {
 	logger := c.logger.New("from", src, "state", c.state)
 
 	if !c.IsProposer() {
-		logger.Trace("only proposer can handle PREPARE message", "msg", msg, "leader", c.valSet.GetProposer())
+		logger.Debug("only proposer can handle PREPARE message", "msg", msg, "leader", c.valSet.GetProposer())
 		return nil
 	}
 
