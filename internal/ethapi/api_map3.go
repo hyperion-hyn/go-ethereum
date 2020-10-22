@@ -32,7 +32,7 @@ func (s *PublicMicroStakingAPI) GetAllMap3NodeAddresses(
 		return nil, err
 	}
 
-	keys := state.Map3NodePool().Nodes().AllKeys()
+	keys := state.Map3NodeList()
 	addresses := make([]string, len(keys))
 	for i, addr := range keys {
 		hexAddr := addr.Hex()

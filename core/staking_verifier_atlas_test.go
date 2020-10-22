@@ -1052,6 +1052,10 @@ func (chain *fakeChainContext) Database() ethdb.Database {
 	panic("no implement")
 }
 
+func (chain *fakeChainContext) ReadMap3NodeSnapshotAtBlock(blockNum *big.Int, map3Address common.Address) (*microstaking.Storage_Map3NodeWrapper_, error) {
+	panic("implement me")
+}
+
 func makeIdentityStr(item interface{}) string {
 	return fmt.Sprintf("hyperion-hyn-%v", item)
 }

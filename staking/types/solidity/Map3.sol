@@ -123,7 +123,8 @@ struct DelegationIndexMap_ {
 }
 
 struct Map3NodePool_ {
-    IterableMap3NodeWrapperMap_ Nodes;
+    IterableMap3NodeWrapperMap_ Map3Nodes;
+    IterableMap3NodeWrapperMap_ Map3NodeSnapshots;
     mapping (address => DelegationIndexMap_) DelegationIndexMapByDelegator;
     mapping (string => bool) NodeKeySet;
     mapping (string => bool) DescriptionIdentitySet;

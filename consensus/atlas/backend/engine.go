@@ -398,7 +398,7 @@ func (sb *backend) _Prepare(chain consensus.ChainReader, header *types.Header) e
 		return err
 	}
 
-	lastCommits, err := rawdb.ReadLastCommits(chain.ChainDb(), number-1)
+	lastCommits, err := rawdb.ReadLastCommits(chain.Database(), number-1)
 	if err != nil {
 		return errInvalidLastCommits
 	}

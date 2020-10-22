@@ -114,7 +114,11 @@ func NewStakingVerifier(ctx ChainContext) (StakingVerifier, error) {
 	}
 	config := ctx.Config().Atlas
 	if config.RestakingEnable {
-		return StakingVerifier{participantVerifier: map3VerifierForRestaking{}}, nil
+		return StakingVerifier{
+			participantVerifier: map3VerifierForRestaking{
+				chainContext: ctx,
+			},
+		}, nil
 	} else {
 		return StakingVerifier{participantVerifier: tokenHolderVerifier{}}, nil
 	}

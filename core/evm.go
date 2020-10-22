@@ -17,6 +17,7 @@
 package core
 
 import (
+	"github.com/ethereum/go-ethereum/staking/types/microstaking"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -42,6 +43,7 @@ type ChainContext interface {
 	Database() ethdb.Database
 	ReadValidatorSnapshotAtBlock(blockNum *big.Int, validatorAddress common.Address) (*restaking.Storage_ValidatorWrapper_, error)
 	ReadCommitteeAtBlock(blockNum *big.Int) (*restaking.Storage_Committee_, error)
+	ReadMap3NodeSnapshotAtBlock(blockNum *big.Int, map3Address common.Address) (*microstaking.Storage_Map3NodeWrapper_, error)
 	Config() *params.ChainConfig
 }
 

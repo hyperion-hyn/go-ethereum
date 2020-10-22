@@ -200,7 +200,7 @@ func (sb *backend) Commit(proposal atlas.Proposal, signature []byte, bitmap []by
 	copy(lastCommits[len(signature):], bitmap)
 
 	h := block.Header()
-	rawdb.WriteLastCommits(sb.chain.ChainDb(), h.Number.Uint64(), lastCommits)
+	rawdb.WriteLastCommits(sb.chain.Database(), h.Number.Uint64(), lastCommits)
 
 	// - if the proposed and committed blocks are the same, send the proposed hash
 	//   to commit channel, which is being watched inside the engine.Seal() function.

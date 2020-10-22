@@ -2,7 +2,7 @@ package core
 
 import (
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/ethereum/go-ethereum/staking/types/microstaking"
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	"github.com/pkg/errors"
 	"math/big"
@@ -34,5 +34,6 @@ func (bc *BlockChain) ReadCommitteeAtBlock(blockNum *big.Int) (*restaking.Storag
 	return cmm, nil
 }
 
-// ChainDb returns the database
-func (bc *BlockChain) ChainDb() ethdb.Database { return bc.db }
+func (bc *BlockChain) ReadMap3NodeSnapshotAtBlock(blockNum *big.Int, map3Address common.Address) (*microstaking.Storage_Map3NodeWrapper_, error) {
+	return nil, nil
+}

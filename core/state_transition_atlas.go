@@ -208,7 +208,7 @@ func (st *StateTransition) verifyAndApplyCollectRedelRewardTx(verifier StakingVe
 		return network.NoReward, err
 	}
 	validator, _ := st.state.ValidatorByAddress(msg.ValidatorAddress)
-	reward, err := payoutRedelegationReward(validator, msg.DelegatorAddress, verified.Participant.rewardHandler(), st.evm.EpochNumber)
+	reward, err := payoutRedelegationReward(validator, msg.DelegatorAddress, verified.Participant.rewardHandler(), st.evm.BlockNumber)
 	if err != nil {
 		return network.NoReward, err
 	}
@@ -279,13 +279,13 @@ func updateValidatorFromPoolByMsg(validator *restaking.Storage_ValidatorWrapper_
 }
 
 func payoutRedelegationReward(s *restaking.Storage_ValidatorWrapper_, delegator common.Address, handler RestakingRewardHandler,
-	epoch *big.Int) (*big.Int, error) {
+	blockNum *big.Int) (*big.Int, error) {
 	redelegation, ok := s.Redelegations().Get(delegator)
 	if !ok {
 		return nil, errMicrodelegationNotExist
 	}
 
-	r, err := handler.HandleReward(redelegation, epoch)
+	r, err := handler.HandleReward(redelegation, blockNum)
 	if err != nil {
 		return common.Big0, err
 	}
@@ -293,14 +293,14 @@ func payoutRedelegationReward(s *restaking.Storage_ValidatorWrapper_, delegator 
 }
 
 type RestakingRewardHandler interface {
-	HandleReward(redelegation *restaking.Storage_Redelegation_, epoch *big.Int) (*big.Int, error)
+	HandleReward(redelegation *restaking.Storage_Redelegation_, blockNum *big.Int) (*big.Int, error)
 }
 
 type RewardToBalance struct {
 	StateDB vm.StateDB
 }
 
-func (handler RewardToBalance) HandleReward(redelegation *restaking.Storage_Redelegation_, epoch *big.Int) (*big.Int, error) {
+func (handler RewardToBalance) HandleReward(redelegation *restaking.Storage_Redelegation_, blockNum *big.Int) (*big.Int, error) {
 	r := redelegation.Reward().Value()
 	handler.StateDB.AddBalance(redelegation.DelegatorAddress().Value(), r)
 	redelegation.Reward().Clear()

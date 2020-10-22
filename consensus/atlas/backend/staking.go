@@ -11,7 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/staking/availability"
 	"github.com/ethereum/go-ethereum/staking/committee"
 	"github.com/ethereum/go-ethereum/staking/network"
@@ -69,8 +68,13 @@ func handleMap3AndAtlasStaking(chain consensus.ChainReader, header *types.Header
 	}
 
 	if isNewEpoch {
+		lastEpoch := new(big.Int).Sub(header.Epoch, common.Big1)
+		if err := collectRestakingRewardForRenewedMap3Nodes(stateDB, lastEpoch); err != nil {
+			return nil, err
+		}
+
 		// Need to be after accumulateRewardsAndCountSigs because unredelegation may release
-		releaser, err := releaserFactory.Create(stateDB, chain.Config())
+		releaser, err := releaserFactory.Create(stateDB, chain)
 		if err != nil {
 			return nil, err
 		}
@@ -82,6 +86,27 @@ func handleMap3AndAtlasStaking(chain consensus.ChainReader, header *types.Header
 		}
 	}
 	return payout, nil
+}
+
+func collectRestakingRewardForRenewedMap3Nodes(stateDB *state.StateDB, epoch *big.Int) error {
+	//foreach node from nodePool
+	//if node.isPendAt(lastEpch) && node.IsRestaking {
+	//	collect and distrbute restaking reward
+	//}
+	//rewardHandler := core.RewardToMap3Node{StateDB: stateDB}
+	//for _, map3Addr := range stateDB.Map3NodeList() {
+	//	node, err := stateDB.Map3NodeByAddress(map3Addr)
+	//	if err != nil {
+	//		return err
+	//	}
+	//
+	//	if node.IsRenewed(epoch) && node.IsRestaking() {
+	//		validatorAddr := node.RestakingReference().ValidatorAddress().Value()
+	//		stateDB.ValidatorByAddress()
+	//	}
+	//}
+
+	return nil
 }
 
 func updateValidatorSnapshots(stateDB *state.StateDB) error {
@@ -102,15 +127,13 @@ func updateValidatorSnapshots(stateDB *state.StateDB) error {
 
 func renewAndActivateMap3Nodes(chain consensus.ChainReader, header *types.Header, stateDB *state.StateDB) error {
 	requireTotal, requireSelf, _ := network.LatestMicrostakingRequirement(header.Number, chain.Config())
-	map3NodePool := stateDB.Map3NodePool()
 	nowEpoch := header.Epoch
 	var activeNodeAddrs []common.Address
 	var terminatedNodeAddrs []common.Address
-	for _, nodeAddr := range map3NodePool.Nodes().AllKeys() {
-		node, ok := map3NodePool.Nodes().Get(nodeAddr)
-		if !ok {
-			log.Error("map3 node should exist", "map3 address", nodeAddr.String())
-			continue
+	for _, nodeAddr := range stateDB.Map3NodeList() {
+		node, err := stateDB.Map3NodeByAddress(nodeAddr)
+		if err != nil {
+			return err
 		}
 
 		if node.CanReleaseAt(nowEpoch) {
@@ -167,8 +190,9 @@ func renewAndActivateMap3Nodes(chain consensus.ChainReader, header *types.Header
 	log.Info("New active map3 nodes", "addresses", activeNodeAddrs)
 	log.Info("New terminated map3 nodes", "addresses", terminatedNodeAddrs)
 
+	// TODO(ATLAS): write off chain data after inserting block
 	// store active and terminated map3 addr to rawdb
-	batch := chain.ChainDb().NewBatch()
+	batch := chain.Database().NewBatch()
 	rawdb.WriteActiveMap3Nodes(batch, header.Epoch.Uint64(), activeNodeAddrs)
 	rawdb.WriteTerminatedMap3Nodes(batch, header.Epoch.Uint64(), terminatedNodeAddrs)
 	if err := batch.Write(); err != nil {
@@ -191,14 +215,14 @@ func setLastEpochInCommittee(comm *restaking.Committee_, stateDB *state.StateDB)
 type UndelegationReleaserFactory struct {
 }
 
-func (f UndelegationReleaserFactory) Create(stateDB *state.StateDB, config *params.ChainConfig) (UndelegationReleaser, error) {
-	if config.Atlas == nil {
+func (f UndelegationReleaserFactory) Create(stateDB *state.StateDB, chain consensus.ChainReader) (UndelegationReleaser, error) {
+	if chain.Config().Atlas == nil {
 		return nil, errors.New("not support to undelegate")
 	}
-	if config.Atlas.RestakingEnable {
+	if chain.Config().Atlas.RestakingEnable {
 		return undelegationToMap3Node{
 			stateDB:       stateDB,
-			rewardHandler: core.RewardToMap3Node{StateDB: stateDB},
+			rewardHandler: core.RewardToMap3Node{StateDB: stateDB, Chain: chain},
 		}, nil
 	} else {
 		return undelegationToBalance{
@@ -209,7 +233,7 @@ func (f UndelegationReleaserFactory) Create(stateDB *state.StateDB, config *para
 }
 
 type UndelegationReleaser interface {
-	Release(redelegation *restaking.Storage_Redelegation_, fromValidator common.Address, epoch *big.Int) (completed bool, err error)
+	Release(redelegation *restaking.Storage_Redelegation_, fromValidator common.Address, epoch, blockNum *big.Int) (completed bool, err error)
 }
 
 type undelegationToBalance struct {
@@ -218,7 +242,7 @@ type undelegationToBalance struct {
 }
 
 func (u undelegationToBalance) Release(redelegation *restaking.Storage_Redelegation_, fromValidator common.Address,
-	epoch *big.Int) (completed bool, err error) {
+	epoch, blockNum *big.Int) (completed bool, err error) {
 	// return undelegation
 	delegator := redelegation.DelegatorAddress().Value()
 	undelegation := redelegation.Undelegation().Amount().Value()
@@ -227,7 +251,7 @@ func (u undelegationToBalance) Release(redelegation *restaking.Storage_Redelegat
 
 	// return reward if redelgation is empty
 	if amt := redelegation.Amount().Value(); amt.Sign() == 0 {
-		_, err := u.rewardHandler.HandleReward(redelegation, epoch)
+		_, err := u.rewardHandler.HandleReward(redelegation, blockNum)
 		if err != nil {
 			return false, err
 		}
@@ -238,17 +262,18 @@ func (u undelegationToBalance) Release(redelegation *restaking.Storage_Redelegat
 
 type undelegationToMap3Node struct {
 	stateDB       *state.StateDB
+	chain         consensus.ChainReader
 	rewardHandler core.RewardToMap3Node
 }
 
 func (u undelegationToMap3Node) Release(redelegation *restaking.Storage_Redelegation_, fromValidator common.Address,
-	epoch *big.Int) (completed bool, err error) {
+	epoch, blockNum *big.Int) (completed bool, err error) {
 	// clear undelegation
 	redelegation.Undelegation().Clear()
 
 	// return reward if redelgation is empty
 	if amt := redelegation.Amount().Value(); amt.Sign() == 0 {
-		_, err := u.rewardHandler.HandleReward(redelegation, epoch)
+		_, err := u.rewardHandler.HandleReward(redelegation, blockNum)
 		if err != nil {
 			return false, err
 		}
@@ -267,12 +292,11 @@ func (u undelegationToMap3Node) Release(redelegation *restaking.Storage_Redelega
 
 func payoutUnmicrodelegations(header *types.Header, stateDB *state.StateDB) error {
 	nowEpoch := header.Epoch
-	map3Nodes := stateDB.Map3NodePool().Nodes()
 	// Payout undelegated/unlocked tokens
-	for _, map3Addr := range map3Nodes.AllKeys() {
-		node, ok := map3Nodes.Get(map3Addr)
-		if !ok {
-			return errMap3NodeNotExist
+	for _, map3Addr := range stateDB.Map3NodeList() {
+		node, err := stateDB.Map3NodeByAddress(map3Addr)
+		if err != nil {
+			return err
 		}
 
 		var toBeRemoved []common.Address
@@ -308,7 +332,7 @@ func payoutUnmicrodelegations(header *types.Header, stateDB *state.StateDB) erro
 
 // Withdraw unlocked tokens to the delegators' accounts
 func payoutUnredelegations(header *types.Header, stateDB *state.StateDB, releaser UndelegationReleaser) error {
-	nowEpoch := header.Epoch
+	nowEpoch, numBlock := header.Epoch, header.Number
 	validators := stateDB.ValidatorPool().Validators()
 	// Payout undelegated/unlocked tokens
 	for _, validatorAddr := range validators.AllKeys() {
@@ -325,7 +349,7 @@ func payoutUnredelegations(header *types.Header, stateDB *state.StateDB, release
 			}
 
 			if redelegation.CanReleaseUndelegationAt(nowEpoch) {
-				completed, err := releaser.Release(redelegation, validatorAddr, nowEpoch)
+				completed, err := releaser.Release(redelegation, validatorAddr, nowEpoch, numBlock)
 				if err != nil {
 					return err
 				}

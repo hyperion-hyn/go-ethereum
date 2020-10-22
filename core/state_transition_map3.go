@@ -123,7 +123,8 @@ func (st *StateTransition) verifyAndApplyRenewMap3NodeTx(verifier StakingVerifie
  * save the new map3 node into pool
  */
 func saveNewMap3NodeToPool(wrapper *microstaking.Map3NodeWrapper_, map3NodePool *microstaking.Storage_Map3NodePool_) {
-	map3NodePool.Nodes().Put(wrapper.Map3Node.Map3Address, wrapper)
+	map3NodePool.Map3Nodes().Put(wrapper.Map3Node.Map3Address, wrapper)
+	map3NodePool.Map3NodeSnapshots().Put(wrapper.Map3Node.Map3Address, wrapper)
 	keySet := map3NodePool.NodeKeySet()
 	for _, key := range wrapper.Map3Node.NodeKeys.Keys {
 		keySet.Get(key.Hex()).SetValue(true)
@@ -242,6 +243,7 @@ func LookupMicrodelegationShares(node *microstaking.Storage_Map3NodeWrapper_) (m
 
 type map3NodeAsParticipant struct {
 	stateDB vm.StateDB
+	chain   ChainContext
 	node    *microstaking.Storage_Map3NodeWrapper_
 }
 
@@ -260,22 +262,26 @@ func (p map3NodeAsParticipant) postRedelegate(validator common.Address, amount *
 }
 
 func (p map3NodeAsParticipant) rewardHandler() RestakingRewardHandler {
-	return &RewardToMap3Node{p.stateDB}
+	return &RewardToMap3Node{
+		StateDB: p.stateDB,
+		Chain:   p.chain,
+	}
 }
 
 type RewardToMap3Node struct {
 	StateDB vm.StateDB
+	Chain   ChainContext
 }
 
-func (handler RewardToMap3Node) HandleReward(redelegation *restaking.Storage_Redelegation_, epoch *big.Int) (*big.Int, error) {
+func (handler RewardToMap3Node) HandleReward(redelegation *restaking.Storage_Redelegation_, blockNum *big.Int) (*big.Int, error) {
 	reward := redelegation.Reward().Value()
 	if reward.Sign() == 0 {
 		return common.Big0, nil
 	}
 	map3Address := redelegation.DelegatorAddress().Value()
-	// TODO(ATLAS): can not continue to delegate after activating the map3 node
-	// calculate shares based on the latest delegation state
-	node, err := handler.StateDB.Map3NodeByAddress(map3Address)
+	// calculate shares based on the map3 node snapshot
+	lastButOneBlockNum := new(big.Int).Sub(blockNum, common.Big2)
+	node, err := handler.Chain.ReadMap3NodeSnapshotAtBlock(lastButOneBlockNum, map3Address)
 	if err != nil {
 		return nil, err
 	}

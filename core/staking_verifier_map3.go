@@ -35,6 +35,7 @@ var (
 )
 
 type map3VerifierForRestaking struct {
+	chainContext ChainContext
 }
 
 func (m map3VerifierForRestaking) VerifyForCreatingValidator(stateDB vm.StateDB, msg *restaking.CreateValidator, signer common.Address) (participant, error) {
@@ -54,7 +55,11 @@ func (m map3VerifierForRestaking) VerifyForCreatingValidator(stateDB vm.StateDB,
 	if node.IsRestaking() {
 		return nil, errMap3NodeAlreadyRestaking
 	}
-	return map3NodeAsParticipant{node: node}, nil
+	return map3NodeAsParticipant{
+		stateDB: stateDB,
+		chain:   m.chainContext,
+		node:    node,
+	}, nil
 }
 
 func (m map3VerifierForRestaking) VerifyForEditingValidator(stateDB vm.StateDB, msg *restaking.EditValidator, signer common.Address) (participant, error) {
@@ -74,7 +79,11 @@ func (m map3VerifierForRestaking) VerifyForEditingValidator(stateDB vm.StateDB, 
 	if node.RestakingReference().ValidatorAddress().Value() != msg.ValidatorAddress {
 		return nil, errInvalidValidatorAddress
 	}
-	return &map3NodeAsParticipant{node: node}, nil
+	return map3NodeAsParticipant{
+		stateDB: stateDB,
+		chain:   m.chainContext,
+		node:    node,
+	}, nil
 }
 
 func (m map3VerifierForRestaking) VerifyForRedelegating(stateDB vm.StateDB, msg *restaking.Redelegate, signer common.Address) (participant, error) {
@@ -93,7 +102,11 @@ func (m map3VerifierForRestaking) VerifyForRedelegating(stateDB vm.StateDB, msg 
 	if node.IsRestaking() {
 		return nil, errMap3NodeAlreadyRestaking
 	}
-	return map3NodeAsParticipant{node: node}, nil
+	return map3NodeAsParticipant{
+		stateDB: stateDB,
+		chain:   m.chainContext,
+		node:    node,
+	}, nil
 }
 
 func (m map3VerifierForRestaking) VerifyForUnredelegating(stateDB vm.StateDB, msg *restaking.Unredelegate, signer common.Address) (participant, error) {
@@ -113,7 +126,11 @@ func (m map3VerifierForRestaking) VerifyForUnredelegating(stateDB vm.StateDB, ms
 	if node.RestakingReference().ValidatorAddress().Value() != msg.ValidatorAddress {
 		return nil, errInvalidValidatorAddress
 	}
-	return &map3NodeAsParticipant{node: node}, nil
+	return map3NodeAsParticipant{
+		stateDB: stateDB,
+		chain:   m.chainContext,
+		node:    node,
+	}, nil
 }
 
 func (m map3VerifierForRestaking) VerifyForCollectingReward(stateDB vm.StateDB, msg *restaking.CollectReward, signer common.Address) (participant, error) {
@@ -133,7 +150,11 @@ func (m map3VerifierForRestaking) VerifyForCollectingReward(stateDB vm.StateDB, 
 	if node.RestakingReference().ValidatorAddress().Value() != msg.ValidatorAddress {
 		return nil, errInvalidValidatorAddress
 	}
-	return &map3NodeAsParticipant{stateDB: stateDB, node: node}, nil
+	return map3NodeAsParticipant{
+		stateDB: stateDB,
+		chain:   m.chainContext,
+		node:    node,
+	}, nil
 }
 
 func checkMap3DuplicatedFields(state vm.StateDB, identity string, keys microstaking.BLSPublicKeys_) error {

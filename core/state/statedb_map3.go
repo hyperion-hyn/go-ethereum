@@ -25,11 +25,23 @@ func (s *StateDB) Map3NodePool() *microstaking.Storage_Map3NodePool_ {
 }
 
 func (s *StateDB) Map3NodeByAddress(map3Address common.Address) (*microstaking.Storage_Map3NodeWrapper_, error) {
-	node, ok := s.Map3NodePool().Nodes().Get(map3Address)
+	node, ok := s.Map3NodePool().Map3Nodes().Get(map3Address)
 	if !ok {
 		return nil, errMap3NodeNotExist
 	}
 	return node, nil
+}
+
+func (s *StateDB) Map3NodeSnapshotByAddress(map3Address common.Address) (*microstaking.Storage_Map3NodeWrapper_, error) {
+	node, ok := s.Map3NodePool().Map3NodeSnapshots().Get(map3Address)
+	if !ok {
+		return nil, errMap3NodeNotExist
+	}
+	return node, nil
+}
+
+func (s *StateDB) Map3NodeList() []common.Address {
+	return s.Map3NodePool().Map3Nodes().AllKeys()
 }
 
 // AddMicrodelegationReward distributes the reward to all the delegators based on stake percentage.

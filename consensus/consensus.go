@@ -18,6 +18,7 @@
 package consensus
 
 import (
+	"github.com/ethereum/go-ethereum/staking/types/microstaking"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts"
@@ -62,9 +63,10 @@ type ChainReader interface {
 	// StateAt returns a new mutable state based on a particular point in time.
 	StateAt(root common.Hash) (*state.StateDB, error)
 	Engine() Engine
+	Database() ethdb.Database
 	ReadCommitteeAtBlock(blockNum *big.Int) (*restaking.Storage_Committee_, error)
 	ReadValidatorSnapshotAtBlock(blockNum *big.Int, validatorAddress common.Address) (*restaking.Storage_ValidatorWrapper_, error)
-	ChainDb() ethdb.Database
+	ReadMap3NodeSnapshotAtBlock(blockNum *big.Int, map3Address common.Address) (*microstaking.Storage_Map3NodeWrapper_, error)
 }
 
 // Engine is an algorithm agnostic consensus engine.
