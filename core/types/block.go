@@ -288,6 +288,14 @@ func CopyHeader(h *Header) *Header {
 		cpy.Extra = make([]byte, len(h.Extra))
 		copy(cpy.Extra, h.Extra)
 	}
+	if len(h.LastCommits) > 0 {
+		cpy.LastCommits = make([]byte, len(h.LastCommits))
+		copy(cpy.LastCommits, h.LastCommits)
+	}
+	if len(h.Slashes) > 0 {
+		cpy.Slashes = make([]byte, len(h.Slashes))
+		copy(cpy.Slashes, h.Slashes)
+	}
 	return &cpy
 }
 
