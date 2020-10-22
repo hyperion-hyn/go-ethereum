@@ -19,6 +19,7 @@ package backend
 import (
 	"bytes"
 	"errors"
+	"github.com/ethereum/go-ethereum/log"
 	"io"
 	"math"
 
@@ -293,7 +294,16 @@ func (sb *backend) verifyCommittedSeals(chain consensus.ChainReader, header *typ
 	}
 
 	// Retrieve the snapshot needed to verify this header and cache it
-	snap, err := sb.snapshot(chain, number-1, header.ParentHash, parents)
+	var (
+		snap *Snapshot
+		err  error
+	)
+	if number == 1 {
+		snap, err = sb.snapshot(chain, 0, header.ParentHash, parents)
+	} else {
+		parentHeader := chain.GetHeaderByHash(header.ParentHash)
+		snap, err = sb.snapshot(chain, number-2, parentHeader.ParentHash, parents)
+	}
 	if err != nil {
 		return err
 	}
@@ -409,6 +419,9 @@ func (sb *backend) _Prepare(chain consensus.ChainReader, header *types.Header) e
 	// set header's signature and bitmap
 	header.LastCommits = make([]byte, len(lastCommits))
 	copy(header.LastCommits[:], lastCommits[:])
+
+	// set header's slashes
+	header.Slashes = []byte{}
 
 	extra, err := prepareExtra(header, snap.validators())
 	if err != nil {
@@ -619,13 +632,16 @@ func (sb *backend) Stop() error {
 
 // snapshot retrieves the authorization snapshot at a given point in time.
 func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*Snapshot, error) {
-	if number == 0 {
-		hash = chain.GetHeaderByNumber(number).Hash()
+	if number == 0 || number == 1 {
+		hash = chain.GetHeaderByNumber(0).Hash()
 	}
 
 	// If an in-memory snapshot was found, use that
 	if s, ok := sb.recents.Get(hash); ok {
 		snap := s.(*Snapshot)
+		if number > 1 && snap.Number != number {
+			return nil, consensus.ErrUnknownAncestor
+		}
 		return snap, nil
 	}
 	header := chain.GetHeaderByNumber(number)
@@ -637,6 +653,7 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		return nil, err
 	}
 	validators, err := getValidators(stateDB, MaxValidatorCount)
+	log.Debug("get validator", "number", number, "size", len(validators))
 	if err != nil {
 		return nil, err
 	}

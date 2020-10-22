@@ -30,7 +30,7 @@ func (c *core) handleRequest(request *atlas.Request) error {
 		return err
 	}
 
-	logger.Trace("handleRequest", "number", request.Proposal.Number(), "hash", request.Proposal.Hash())
+	logger.Debug("handleRequest", "number", request.Proposal.Number(), "hash", request.Proposal.Hash())
 
 	// ATLAS(zgx): only msg come from proposer is acceptable.
 

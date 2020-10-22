@@ -45,10 +45,6 @@ const (
 	fetcherID = "atlas"
 )
 
-var (
-	lastCommitsKey = []byte("LastCommits")
-)
-
 // New creates an Ethereum backend for Atlas core engine.
 func New(config *atlas.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database, annotation string) consensus.Atlas {
 	// Allocate the snapshot caches and create the engine

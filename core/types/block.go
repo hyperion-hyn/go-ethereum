@@ -90,6 +90,7 @@ type Header struct {
 	// ATLAS
 	Epoch       *big.Int `json:"epoch"`
 	LastCommits []byte   `json:"lastCommits"`
+	Slashes     []byte   `json:"slashes"`
 }
 
 // field type overrides for gencodec
@@ -103,6 +104,7 @@ type headerMarshaling struct {
 	Hash        common.Hash `json:"hash"` // adds call to Hash() in MarshalJSON
 	Epoch       *hexutil.Big
 	LastCommits hexutil.Bytes
+	Slashes     hexutil.Bytes
 }
 
 // Hash returns the block hash of the header, which is simply the keccak256 hash of its
@@ -285,6 +287,14 @@ func CopyHeader(h *Header) *Header {
 	if len(h.Extra) > 0 {
 		cpy.Extra = make([]byte, len(h.Extra))
 		copy(cpy.Extra, h.Extra)
+	}
+	if len(h.LastCommits) > 0 {
+		cpy.LastCommits = make([]byte, len(h.LastCommits))
+		copy(cpy.LastCommits, h.LastCommits)
+	}
+	if len(h.Slashes) > 0 {
+		cpy.Slashes = make([]byte, len(h.Slashes))
+		copy(cpy.Slashes, h.Slashes)
 	}
 	return &cpy
 }

@@ -117,55 +117,18 @@ func (s *PublicMicroStakingAPI) GetAllMap3RewardByDelegatorAddress(
 
 }
 
-func (s *PublicMicroStakingAPI) GetActiveMap3NodeAtEpoch(ctx context.Context, epoch uint64) ([]ActiveMap3Info, error) {
-
-	db := s.b.ChainDb()
-	activeMap3Addr := rawdb.ReadActiveMap3Nodes(db, epoch)
-	if activeMap3Addr == nil {
-		return nil, nil
-	}
-	blockNum := s.b.ChainConfig().Atlas.EpochLastBlock(epoch)
-	if blockNum > s.b.CurrentBlock().NumberU64() {
-		blockNum = s.b.CurrentBlock().NumberU64()
-	}
-	state, _, err := s.b.StateAndHeaderByNumber(ctx, rpc.BlockNumber(blockNum))
-	if state == nil || err != nil {
-		return nil, err
-	}
-
-	var map3Infos []ActiveMap3Info
-	for _, addrTemp := range activeMap3Addr {
-		map3WrapperStorage, err := state.Map3NodeByAddress(addrTemp)
-		if err != nil {
-			return nil, err
-		}
-		map3Wrapper, err := map3WrapperStorage.Load()
-		if err != nil {
-			return nil, err
-		}
-		activeMap3Infor := ActiveMap3Info{
-			Address:    addrTemp.Hex(),
-			StartEpoch: map3Wrapper.Map3Node.ActivationEpoch.Uint64(),
-			EndEpoch:   map3Wrapper.Map3Node.ReleaseEpoch,
-			Commission: map3Wrapper.Map3Node.Commission.Rate,
-		}
-		map3Infos = append(map3Infos, activeMap3Infor)
-	}
-	return map3Infos, nil
-}
-
-func (s *PublicMicroStakingAPI) GetTerminatedMap3NodeAtEpoch(ctx context.Context, epoch uint64) ([]string, error) {
+func (s *PublicMicroStakingAPI) GetMutateMap3NodeAtEpoch(ctx context.Context, epoch uint64) ([]string, error) {
 
 	db := s.b.ChainDb()
 
-	terminatedMap3Addr := rawdb.ReadTerminatedMap3Nodes(db, epoch)
+	mutateMap3Addr := rawdb.ReadMutateMap3Nodes(db, epoch)
 
-	if terminatedMap3Addr == nil {
+	if mutateMap3Addr == nil {
 		return nil, nil
 	}
 	var addrStrs []string
 
-	for _, addrTemp := range terminatedMap3Addr {
+	for _, addrTemp := range mutateMap3Addr {
 		addrStrs = append(addrStrs, addrTemp.Hex())
 	}
 	return addrStrs, nil

@@ -590,12 +590,12 @@ func (w *worker) resultLoop() {
 		case block := <-w.resultCh:
 			// Short circuit when receiving empty result.
 			if block == nil {
-				log.Error("block is nil")
+				log.Debug("block is nil")
 				continue
 			}
 			// Short circuit when receiving duplicate result caused by resubmitting.
 			if w.chain.HasBlock(block.Hash(), block.NumberU64()) {
-				log.Error("chain has the block", "block", block.NumberU64())
+				log.Debug("chain has the block", "block", block.NumberU64())
 				continue
 			}
 			var (
