@@ -69,7 +69,7 @@ func handleMap3AndAtlasStaking(chain consensus.ChainReader, header *types.Header
 
 	if isNewEpoch {
 		lastEpoch := new(big.Int).Sub(header.Epoch, common.Big1)
-		if err := collectRestakingRewardForRenewedMap3Nodes(stateDB, lastEpoch); err != nil {
+		if err := collectRestakingRewardForRenewedMap3Nodes(stateDB, chain, lastEpoch, header.Number); err != nil {
 			return nil, err
 		}
 
@@ -88,24 +88,35 @@ func handleMap3AndAtlasStaking(chain consensus.ChainReader, header *types.Header
 	return payout, nil
 }
 
-func collectRestakingRewardForRenewedMap3Nodes(stateDB *state.StateDB, epoch *big.Int) error {
-	//foreach node from nodePool
-	//if node.isPendAt(lastEpch) && node.IsRestaking {
-	//	collect and distrbute restaking reward
-	//}
-	//rewardHandler := core.RewardToMap3Node{StateDB: stateDB}
-	//for _, map3Addr := range stateDB.Map3NodeList() {
-	//	node, err := stateDB.Map3NodeByAddress(map3Addr)
-	//	if err != nil {
-	//		return err
-	//	}
-	//
-	//	if node.IsRenewed(epoch) && node.IsRestaking() {
-	//		validatorAddr := node.RestakingReference().ValidatorAddress().Value()
-	//		stateDB.ValidatorByAddress()
-	//	}
-	//}
+func collectRestakingRewardForRenewedMap3Nodes(stateDB *state.StateDB, chain consensus.ChainReader, lastEpoch, currentBlock *big.Int) error {
+	rewardHandler := core.RewardToMap3Node{
+		StateDB: stateDB,
+		Chain:   chain,
+	}
+	nodes := rawdb.ReadRenewedMap3Nodes(chain.Database(), lastEpoch.Uint64())
+	for _, map3Addr := range nodes {
+		node, err := stateDB.Map3NodeByAddress(map3Addr)
+		if err != nil {
+			return err
+		}
 
+		// handle restaking reward
+		if !node.IsRestaking() {
+			continue
+		}
+		validatorAddr := node.RestakingReference().ValidatorAddress().Value()
+		validator, err := stateDB.ValidatorByAddress(validatorAddr)
+		if err != nil {
+			return err
+		}
+		redelegation, ok := validator.Redelegations().Get(map3Addr)
+		if !ok {
+			return errRedelegationNotExist
+		}
+		if _, err := rewardHandler.HandleReward(redelegation, currentBlock); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -129,7 +140,7 @@ func renewAndActivateMap3Nodes(chain consensus.ChainReader, header *types.Header
 	requireTotal, requireSelf, _ := network.LatestMicrostakingRequirement(header.Number, chain.Config())
 	nowEpoch := header.Epoch
 	var mutateMap3Addrs []common.Address
-	var renewActiveMap3Addrs []common.Address
+	var renewedMap3Addrs []common.Address
 	for _, nodeAddr := range stateDB.Map3NodeList() {
 		node, err := stateDB.Map3NodeByAddress(nodeAddr)
 		if err != nil {
@@ -147,6 +158,7 @@ func renewAndActivateMap3Nodes(chain consensus.ChainReader, header *types.Header
 				return err
 			}
 			if isRenewed {
+				renewedMap3Addrs = append(renewedMap3Addrs, nodeAddr)
 				err := node.RenewAndPend(nowEpoch)
 				if err != nil {
 					return err
@@ -158,7 +170,6 @@ func renewAndActivateMap3Nodes(chain consensus.ChainReader, header *types.Header
 						return err
 					}
 					isActive = true
-					renewActiveMap3Addrs = append(renewActiveMap3Addrs, nodeAddr)
 				}
 
 				if node.IsRestaking() && (notRenewedAmt.Sign() > 0 || !isActive) {
@@ -194,7 +205,7 @@ func renewAndActivateMap3Nodes(chain consensus.ChainReader, header *types.Header
 	// store active and terminated map3 addr to rawdb
 	batch := chain.Database().NewBatch()
 	rawdb.WriteMutateMap3Nodes(batch, header.Epoch.Uint64(), mutateMap3Addrs)
-	rawdb.WriteRenewActiveMap3Nodes(batch, header.Epoch.Uint64(), renewActiveMap3Addrs)
+	rawdb.WriteRenewedMap3Nodes(batch, header.Epoch.Uint64(), renewedMap3Addrs)
 	if err := batch.Write(); err != nil {
 		return err
 	}

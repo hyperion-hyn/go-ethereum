@@ -32,26 +32,26 @@ func ReadMutateMap3Nodes(db DatabaseReader, epoch uint64) []common.Address {
 	return mutateMap3Nodes
 }
 
-func WriteRenewActiveMap3Nodes(db DatabaseWriter, epoch uint64, renewActiveMap3Nodes []common.Address) {
+func WriteRenewedMap3Nodes(db DatabaseWriter, epoch uint64, renewActiveMap3Nodes []common.Address) {
 	// Convert the receipts into their mutateAddrs form and serialize them
 	bytes, err := rlp.EncodeToBytes(renewActiveMap3Nodes)
 	if err != nil {
-		log.Error("Fail to encode renewActiveMap3Nodes")
+		log.Error("Fail to encode renewedMap3Nodes")
 	}
 	// Store the flattened receipt slice
-	if err := db.Put(renewActiveMap3Key(epoch), bytes); err != nil {
-		log.Error("Fail to store renewActiveMap3Nodes")
+	if err := db.Put(renewedMap3Key(epoch), bytes); err != nil {
+		log.Error("Fail to store renewedMap3Nodes")
 	}
 }
 
-func ReadRenewActiveMap3Nodes(db DatabaseReader, epoch uint64) []common.Address {
-	data, _ := db.Get(renewActiveMap3Key(epoch))
+func ReadRenewedMap3Nodes(db DatabaseReader, epoch uint64) []common.Address {
+	data, _ := db.Get(renewedMap3Key(epoch))
 	if len(data) == 0 {
 		return nil
 	}
 	var renewActiveMap3Nodes []common.Address
 	if err := rlp.DecodeBytes(data, &renewActiveMap3Nodes); err != nil {
-		log.Error("Invalid renewActiveMap3Nodes RLP")
+		log.Error("Invalid renewedMap3Nodes RLP")
 		return nil
 	}
 	return renewActiveMap3Nodes
