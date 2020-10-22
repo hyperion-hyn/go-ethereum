@@ -420,6 +420,9 @@ func (sb *backend) _Prepare(chain consensus.ChainReader, header *types.Header) e
 	header.LastCommits = make([]byte, len(lastCommits))
 	copy(header.LastCommits[:], lastCommits[:])
 
+	// set header's slashes
+	header.Slashes = []byte{}
+
 	extra, err := prepareExtra(header, snap.validators())
 	if err != nil {
 		return err
