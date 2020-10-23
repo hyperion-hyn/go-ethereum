@@ -1,6 +1,7 @@
 package core
 
 import (
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"math"
 	"math/big"
 
@@ -53,7 +54,7 @@ func (st *StateTransition) StakingTransitionDb() (*ExecutionResult, error) {
 	sender := vm.AccountRef(msg.From())
 
 	// Pay intrinsic gas
-	gas, err := IntrinsicGasForStaking(st.data, msg.Type() == types.CreateValidator)
+	gas, err := IntrinsicGasForStaking(st.data, msg.Type() == types.CreateValidator || msg.Type() == types.CreateMap3)
 	if err != nil {
 		return nil, err
 	}
@@ -69,6 +70,8 @@ func (st *StateTransition) StakingTransitionDb() (*ExecutionResult, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// staking errors as evm execution errors, not consensus errors
 	switch msg.Type() {
 	case types.CreateValidator:
 		stkMsg := &restaking.CreateValidator{}
@@ -150,6 +153,7 @@ func (st *StateTransition) StakingTransitionDb() (*ExecutionResult, error) {
 	st.refundGas()
 
 	if _, ok := st.bc.Engine().(consensus.Atlas); ok {
+		// fee should not be given to evm.Coinbase directly, it should be distributed between validators.
 		fee := new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)
 		pool := network.NewRewardPool(st.state)
 		pool.AddTxFeeAsReward(st.evm.BlockNumber, fee)
@@ -157,9 +161,19 @@ func (st *StateTransition) StakingTransitionDb() (*ExecutionResult, error) {
 		st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
 	}
 
-	return &ExecutionResult{
+	result := ExecutionResult{
 		UsedGas: st.gasUsed(),
-	}, err
+	}
+	if err != nil {
+		// revert reason
+		revert, err := abi.PackRevert(err.Error())
+		if err != nil {
+			return nil, err
+		}
+		result.Err = vm.ErrExecutionReverted
+		result.ReturnData = revert
+	}
+	return &result, nil
 }
 
 func (st *StateTransition) verifyAndApplyCreateValidatorTx(verifier StakingVerifier, msg *restaking.CreateValidator, signer common.Address) error {
@@ -339,11 +353,11 @@ func (t tokenHolder) rewardHandler() RestakingRewardHandler {
 }
 
 // IntrinsicGas computes the 'intrinsic gas' for a message with the given data.
-func IntrinsicGasForStaking(data []byte, isValidatorCreation bool) (uint64, error) {
+func IntrinsicGasForStaking(data []byte, isMap3OrValidatorCreation bool) (uint64, error) {
 	// Set the starting gas for the raw transaction
 	var gas uint64
-	if isValidatorCreation {
-		gas = params.TxGasValidatorCreation
+	if isMap3OrValidatorCreation {
+		gas = params.TxGasMap3OrValidatorCreation
 	} else {
 		gas = params.TxGas
 	}

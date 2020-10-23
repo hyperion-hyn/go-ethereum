@@ -108,7 +108,7 @@ func (pool *TxPool) validateStakingTx(tx *types.Transaction) error {
 			return err
 		}
 		return verifier.VerifyRenewMap3NodeMsg(pool.currentState, chainContext, pendingBlockNumber, pendingEpoch, stkMsg, msg.From())
+	default:
+		return ErrInvalidStakingKind
 	}
-
-	return nil
 }
