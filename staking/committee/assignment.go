@@ -127,7 +127,6 @@ func IsEligibleForEPoSAuction(snapshot, validator *restaking.Storage_ValidatorWr
 	// because cross-links may arrive after the epoch ends and it still got counted into the
 	// NumBlocksToSign, making this condition to be true when the validator is actually not in committee
 
-	// TODO(ATLAS): disable signing rate check temporarily
 	// Check whether the validator is in current committee
 	if lastEpoch.Sign() > 0 && validator.Validator().LastEpochInCommittee().Value().Cmp(lastEpoch) == 0 {
 		// validator was in last epoch's committee

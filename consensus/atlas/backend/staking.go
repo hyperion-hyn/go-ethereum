@@ -40,7 +40,6 @@ func handleMap3AndAtlasStaking(chain consensus.ChainReader, header *types.Header
 		if err != nil {
 			return nil, err
 		}
-		// TODO(ATLAS): disable status change temporarily
 		for _, addr := range curComm.StakedValidators().Addrs {
 			if err := availability.ComputeAndMutateEPOSStatus(stateDB, addr); err != nil {
 				return nil, err
