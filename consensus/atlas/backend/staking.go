@@ -548,11 +548,11 @@ func lookupDelegatorShares(
 		for _, key := range snapshot.Redelegations().AllKeys() {
 			delegation, ok := snapshot.Redelegations().Get(key)
 			if !ok {
-				return nil, errValidatorNotExist
+				return nil, errRedelegationNotExist
 			}
 			// NOTE percentage = <this_delegator_amount>/<total_delegation>
 			percentage := common.NewDecFromBigInt(delegation.Amount().Value()).Quo(totalDelegationDec)
-			votingPower[delegation.DelegatorAddress().Value()] = percentage
+			votingPower[key] = percentage
 		}
 	}
 

@@ -15,6 +15,9 @@ type AtlasConfig struct {
 	RestakingEnable       bool     `json:"restaking_enable"`
 	ProposerPolicy        uint64   `json:"policy"`                   // The policy for proposer selection
 	Ceil2Nby3Block        *big.Int `json:"ceil2Nby3Block,omitempty"` // Number of confirmations required to move from one state to next [2F + 1 to Ceil(2N/3)]
+
+	// HIP config
+
 }
 
 func (c *AtlasConfig) IsLastBlock(blockNum uint64) bool {

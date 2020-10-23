@@ -218,7 +218,7 @@ func releaseMicrodelegationFromMap3Node(stateDB vm.StateDB, node *microstaking.S
 	return nil
 }
 
-func LookupMicrodelegationShares(node *microstaking.Storage_Map3NodeWrapper_) (map[common.Address]common.Dec, error) {
+func lookupMicrodelegationShares(node *microstaking.Storage_Map3NodeWrapper_) (map[common.Address]common.Dec, error) {
 	shares := map[common.Address]common.Dec{}
 	totalDelegationDec := common.NewDecFromBigInt(node.TotalDelegation().Value())
 	if totalDelegationDec.IsZero() {
@@ -285,7 +285,7 @@ func (handler RewardToMap3Node) HandleReward(redelegation *restaking.Storage_Red
 	if err != nil {
 		return nil, err
 	}
-	shares, err := LookupMicrodelegationShares(node)
+	shares, err := lookupMicrodelegationShares(node)
 	if err != nil {
 		return nil, err
 	}

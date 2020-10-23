@@ -80,6 +80,9 @@ func (s *StateDB) AddRedelegationReward(snapshot *restaking.Storage_ValidatorWra
 			if !ok {
 				return errors.Wrapf(err, "missing delegation shares for reward distribution")
 			}
+			if percentage.IsNil() || percentage.IsZero() {
+				continue
+			}
 			rewardInt := percentage.MulInt(rewardPool).Mul(noncommisionRate).RoundInt()
 
 			curDelegation, ok := curValidator.Redelegations().Get(delegatorAddress)
@@ -92,19 +95,29 @@ func (s *StateDB) AddRedelegationReward(snapshot *restaking.Storage_ValidatorWra
 	}
 
 	// Payout each operator's reward
+	totalDelegationByOperator := snapshot.TotalDelegationByOperator().Value()
+	if totalDelegationByOperator.Sign() == 0 {
+		return errors.New("missing total delegation of operator")
+	}
+
 	rewardForOperators := big.NewInt(0).Set(rewardPool)
-	var largestOperator common.Address
+	emptyAddress := common.Address{}
+	largestOperator := emptyAddress
 	largestAmount := common.Big0
 	for _, operator := range snapshot.Validator().OperatorAddresses().AllKeys() {
-		redelegation, ok := snapshot.Redelegations().Get(operator)
+		redelegationSnapshot, ok := snapshot.Redelegations().Get(operator)
 		if !ok {
 			continue
 		}
-		if redelegation.Amount().Value().Cmp(largestAmount) > 0 {
-			largestAmount = big.NewInt(0).Set(redelegation.Amount().Value())
+		amtSnapshot := redelegationSnapshot.Amount().Value()
+		if amtSnapshot.Sign() == 0 {
+			continue
+		}
+		if amtSnapshot.Cmp(largestAmount) > 0 {
+			largestAmount = amtSnapshot
 			largestOperator = operator
 		}
-		percentage := common.NewDecFromBigInt(redelegation.Amount().Value()).QuoInt(snapshot.TotalDelegationByOperator().Value())
+		percentage := common.NewDecFromBigInt(amtSnapshot).QuoInt(totalDelegationByOperator)
 		rewardInt := percentage.MulInt(rewardForOperators).RoundInt()
 
 		curDelegation, ok := curValidator.Redelegations().Get(operator)
@@ -116,7 +129,7 @@ func (s *StateDB) AddRedelegationReward(snapshot *restaking.Storage_ValidatorWra
 	}
 
 	// The last remaining bit belongs to the operator with largest delegation
-	if rewardPool.Cmp(common.Big0) > 0 {
+	if rewardPool.Cmp(common.Big0) > 0 && largestOperator != emptyAddress {
 		redelegation, _ := curValidator.Redelegations().Get(largestOperator)
 		redelegation.AddReward(rewardPool)
 	}

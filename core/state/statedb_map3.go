@@ -9,7 +9,8 @@ import (
 )
 
 var (
-	errMap3NodeNotExist = errors.New("map3 node does not exist")
+	errMap3NodeNotExist        = errors.New("map3 node does not exist")
+	errMicrodelegationNotExist = errors.New("microdelegation does not exist")
 
 	map3StorageAddress = common.HexToAddress("0x6a7ad21ff076440e39020e289debdcb309e12c23")
 )
@@ -49,7 +50,7 @@ func (s *StateDB) AddMicrodelegationReward(snapshot *microstaking.Storage_Map3No
 	shareLookup map[common.Address]common.Dec) error {
 	map3Addr := snapshot.Map3Node().Map3Address().Value()
 	if reward.Cmp(common.Big0) == 0 {
-		log.Info("0 given as reward", "validator", map3Addr)
+		log.Info("0 given as reward", "map3Address", map3Addr)
 		return nil
 	}
 
@@ -81,13 +82,16 @@ func (s *StateDB) AddMicrodelegationReward(snapshot *microstaking.Storage_Map3No
 		if !ok {
 			return errors.Wrapf(err, "missing delegation shares for reward distribution")
 		}
+		if percentage.IsNil() || percentage.IsZero() {
+			continue
+		}
 		rewardInt := percentage.MulInt(totalRewardForDelegators).RoundInt()
 
 		curDelegation, ok := curNode.Microdelegations().Get(delegatorAddress)
 		if !ok {
-			return errRedelegationNotExist
+			return errMicrodelegationNotExist
 		}
-		curDelegation.AddAmount(rewardInt)
+		curDelegation.AddReward(rewardInt)
 		rewardPool.Sub(rewardPool, rewardInt)
 	}
 
