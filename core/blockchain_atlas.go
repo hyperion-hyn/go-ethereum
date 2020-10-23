@@ -35,5 +35,10 @@ func (bc *BlockChain) ReadCommitteeAtBlock(blockNum *big.Int) (*restaking.Storag
 }
 
 func (bc *BlockChain) ReadMap3NodeSnapshotAtBlock(blockNum *big.Int, map3Address common.Address) (*microstaking.Storage_Map3NodeWrapper_, error) {
-	return nil, nil
+	header := bc.GetHeaderByNumber(blockNum.Uint64())
+	stateDB, err := bc.StateAt(header.Root)
+	if err != nil {
+		return nil, err
+	}
+	return stateDB.Map3NodeSnapshotByAddress(map3Address)
 }
