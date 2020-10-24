@@ -75,3 +75,17 @@ func (tx *Transaction) Type() TransactionType {
 }
 
 func (m Message) Type() TransactionType { return m.txType }
+
+func NewMessageWithTransactionType(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, checkNonce bool, txType TransactionType) Message {
+	return Message{
+		from:       from,
+		to:         to,
+		nonce:      nonce,
+		amount:     amount,
+		gasLimit:   gasLimit,
+		gasPrice:   gasPrice,
+		data:       data,
+		checkNonce: checkNonce,
+		txType:     txType,
+	}
+}
