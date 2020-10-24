@@ -17,7 +17,8 @@ type AtlasConfig struct {
 	Ceil2Nby3Block        *big.Int `json:"ceil2Nby3Block,omitempty"` // Number of confirmations required to move from one state to next [2F + 1 to Ceil(2N/3)]
 
 	// HIP config
-
+	MigrationBlock    uint64 `json:"migrationBlock"`
+	MigrationDuration uint64 `json:"migrationDuration"`
 }
 
 func (c *AtlasConfig) IsLastBlock(blockNum uint64) bool {
