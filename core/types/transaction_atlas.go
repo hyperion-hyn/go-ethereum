@@ -60,6 +60,8 @@ func (txType TransactionType) String() string {
 		return "Unmicrodelegate"
 	} else if txType == CollectMicrostakingRewards {
 		return "CollectMicrostakingRewards"
+	} else if txType == RenewMap3Node {
+		return "RenewMap3Node"
 	}
 	return "Normal"
 }
