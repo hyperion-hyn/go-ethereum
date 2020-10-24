@@ -196,6 +196,9 @@ func renewAndActivateMap3Nodes(chain consensus.ChainReader, header *types.Header
 				return err
 			}
 			mutateMap3Addrs = append(mutateMap3Addrs, nodeAddr)
+
+			// add nodeAge to node migrate from eth
+
 		}
 	}
 	log.Info("New mutate map3 nodes", "addresses", mutateMap3Addrs)
