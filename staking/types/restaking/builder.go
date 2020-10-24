@@ -66,7 +66,7 @@ func (b *ValidatorWrapperBuilder) AddRedelegation(redelegation Redelegation_) *V
 	b.wrapper.Redelegations.Put(redelegation.DelegatorAddress, redelegation)
 	b.wrapper.TotalDelegation.Add(b.wrapper.TotalDelegation, redelegation.Amount)
 	if b.wrapper.Validator.OperatorAddresses.Contain(redelegation.DelegatorAddress) {
-		b.wrapper.TotalDelegationByOperator.Add(b.wrapper.TotalDelegationByOperator, redelegation.Amount)
+		b.wrapper.TotalDelegationFromOperators.Add(b.wrapper.TotalDelegationFromOperators, redelegation.Amount)
 	}
 	return b
 }
@@ -116,9 +116,9 @@ func NewValidatorWrapperBuilder() *ValidatorWrapperBuilder {
 				NumBlocksToSign: big.NewInt(0),
 				NumBlocksSigned: big.NewInt(0),
 			},
-			BlockReward:               big.NewInt(0),
-			TotalDelegation:           big.NewInt(0),
-			TotalDelegationByOperator: big.NewInt(0),
+			BlockReward:                  big.NewInt(0),
+			TotalDelegation:              big.NewInt(0),
+			TotalDelegationFromOperators: big.NewInt(0),
 		},
 	}
 }

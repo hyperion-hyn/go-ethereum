@@ -98,7 +98,7 @@ struct ValidatorWrapper_ {
     Counters_ Counters;
     uint256 BlockReward;    // All the rewarded accumulated so far
     uint256 TotalDelegation;
-    uint256 TotalDelegationByOperator;
+    uint256 TotalDelegationFromOperators;
 }
 
 struct ValidatorWrapperMapEntry_ {
@@ -132,6 +132,7 @@ struct ValidatorPool_ {
     mapping (string => bool) SlotKeySet;
     mapping (string => bool) DescriptionIdentitySet;
     Committee_ Committee;
+    mapping (address => bool) FoundationValidatorSet;
 }
 
 contract ValidatorPoolWrapper {

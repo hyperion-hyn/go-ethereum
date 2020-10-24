@@ -45,8 +45,8 @@ func (s *StateDB) Map3NodeList() []common.Address {
 	return s.Map3NodePool().Map3Nodes().AllKeys()
 }
 
-// AddMicrodelegationReward distributes the reward to all the delegators based on stake percentage.
-func (s *StateDB) AddMicrodelegationReward(snapshot *microstaking.Storage_Map3NodeWrapper_, reward *big.Int,
+// AddMicrostakingReward distributes the reward to all the delegators based on stake percentage.
+func (s *StateDB) AddMicrostakingReward(snapshot *microstaking.Storage_Map3NodeWrapper_, reward *big.Int,
 	shareLookup map[common.Address]common.Dec) error {
 	map3Addr := snapshot.Map3Node().Map3Address().Value()
 	if reward.Cmp(common.Big0) == 0 {

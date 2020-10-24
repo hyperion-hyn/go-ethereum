@@ -289,7 +289,7 @@ func (handler RewardToMap3Node) HandleReward(redelegation *restaking.Storage_Red
 	if err != nil {
 		return nil, err
 	}
-	if err := handler.StateDB.AddMicrodelegationReward(node, reward, shares); err != nil {
+	if err := handler.StateDB.AddMicrostakingReward(node, reward, shares); err != nil {
 		return nil, err
 	}
 	redelegation.Reward().Clear()

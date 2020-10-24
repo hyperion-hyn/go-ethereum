@@ -43,8 +43,8 @@ func checkValidatorWrapperEqual(w1, w2 ValidatorWrapper_) error {
 	if err := checkBigIntEqual(w1.TotalDelegation, w2.TotalDelegation); err != nil {
 		return fmt.Errorf(".TotalDelegation %v", err)
 	}
-	if err := checkBigIntEqual(w1.TotalDelegationByOperator, w2.TotalDelegationByOperator); err != nil {
-		return fmt.Errorf(".TotalDelegationByOperator %v", err)
+	if err := checkBigIntEqual(w1.TotalDelegationFromOperators, w2.TotalDelegationFromOperators); err != nil {
+		return fmt.Errorf(".TotalDelegationFromOperators %v", err)
 	}
 	return nil
 }

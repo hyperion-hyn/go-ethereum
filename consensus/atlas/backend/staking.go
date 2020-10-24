@@ -440,7 +440,9 @@ func accumulateRewardsAndCountSigs(chain consensus.ChainReader, state *state.Sta
 		blsKey := payable.Entrys[i].BLSPublicKey
 		voter := votingPower.Voters[blsKey]
 
-		snapshot, err := chain.ReadValidatorSnapshotAtBlock(lastButOneBlockNum, voter.EarningAccount)
+		validatorAddress := voter.EarningAccount
+		isFoundationValidator := state.IsFoundationValidator(validatorAddress)
+		snapshot, err := chain.ReadValidatorSnapshotAtBlock(lastButOneBlockNum, validatorAddress)
 		if err != nil {
 			return network.EmptyPayout, err
 		}
@@ -454,15 +456,15 @@ func accumulateRewardsAndCountSigs(chain consensus.ChainReader, state *state.Sta
 			).RoundInt()
 		}
 
-		shares, err := lookupDelegatorShares(comm.Epoch, snapshot)
+		shares, err := lookupRedelegatonSharesForReward(comm.Epoch, snapshot, isFoundationValidator)
 		if err != nil {
 			return network.EmptyPayout, err
 		}
-		if err := state.AddRedelegationReward(snapshot, due, shares); err != nil {
+		if err := state.AddRestakingReward(snapshot, due, shares); err != nil {
 			return network.EmptyPayout, err
 		}
 		payouts = append(payouts, reward.Payout{
-			Addr:        voter.EarningAccount,
+			Addr:        validatorAddress,
 			NewlyEarned: due,
 			EarningKey:  voter.Identity,
 		})
@@ -530,9 +532,7 @@ func lookupVotingPower(epoch *big.Int, comm *restaking.Committee_) (*votepower.R
 }
 
 // Lookup or compute the shares of stake for all delegators in a validator
-func lookupDelegatorShares(
-	epoch *big.Int, snapshot *restaking.Storage_ValidatorWrapper_,
-) (map[common.Address]common.Dec, error) {
+func lookupRedelegatonSharesForReward(epoch *big.Int, snapshot *restaking.Storage_ValidatorWrapper_, isFoundationValidator bool) (map[common.Address]common.Dec, error) {
 	valAddr := snapshot.Validator().ValidatorAddress().Value()
 	key := fmt.Sprintf("delegatorshares-%s-%s", epoch.String(), valAddr.Hex())
 	if d, ok := delegateShareCache.Get(key); ok {
@@ -541,18 +541,30 @@ func lookupDelegatorShares(
 
 	votingPower := map[common.Address]common.Dec{}
 	totalDelegationDec := common.NewDecFromBigInt(snapshot.TotalDelegation().Value())
+	totalDelegationFromOperatorsDec := common.NewDecFromBigInt(snapshot.TotalDelegationFromOperators().Value())
 	if totalDelegationDec.IsZero() {
-		log.Info("zero total delegation during AddReward delegation payout",
+		log.Warn("zero total delegation during AddReward delegation payout",
 			"validator-snapshot", valAddr.Hex())
 	} else {
-		for _, key := range snapshot.Redelegations().AllKeys() {
-			delegation, ok := snapshot.Redelegations().Get(key)
+		isTotalOnlyFromOperators := totalDelegationDec.Equal(totalDelegationFromOperatorsDec)
+		if isFoundationValidator && !isTotalOnlyFromOperators {
+			totalDelegationDec = totalDelegationDec.Sub(totalDelegationFromOperatorsDec)
+		}
+
+		for _, delegator := range snapshot.Redelegations().AllKeys() {
+			delegation, ok := snapshot.Redelegations().Get(delegator)
 			if !ok {
 				return nil, errRedelegationNotExist
 			}
+			amt := delegation.Amount().Value()
+			// payout all restaking reward to non-operators in the foundation validator
+			if isFoundationValidator && !isTotalOnlyFromOperators && snapshot.IsOperator(delegator) {
+				amt = common.Big0
+			}
+
 			// NOTE percentage = <this_delegator_amount>/<total_delegation>
-			percentage := common.NewDecFromBigInt(delegation.Amount().Value()).Quo(totalDelegationDec)
-			votingPower[key] = percentage
+			percentage := common.NewDecFromBigInt(amt).Quo(totalDelegationDec)
+			votingPower[delegator] = percentage
 		}
 	}
 
