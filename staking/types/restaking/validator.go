@@ -171,10 +171,10 @@ func (v *ValidatorWrapper_) ToPlainValidatorWrapper() *PlainValidatorWrapper {
 			}
 			return redelegations
 		}(),
-		Counters:                  v.Counters,
-		BlockReward:               v.BlockReward,
-		TotalDelegation:           v.TotalDelegation,
-		TotalDelegationByOperator: v.TotalDelegationByOperator,
+		Counters:                     v.Counters,
+		BlockReward:                  v.BlockReward,
+		TotalDelegation:              v.TotalDelegation,
+		TotalDelegationFromOperators: v.TotalDelegationFromOperators,
 	}
 }
 
@@ -202,16 +202,16 @@ func (s *Storage_ValidatorWrapper_) SubTotalDelegation(amount *big.Int) {
 	s.TotalDelegation().SetValue(totalDelegation)
 }
 
-func (s *Storage_ValidatorWrapper_) AddTotalDelegationByOperator(amount *big.Int) {
-	totalDelegationByOperator := s.TotalDelegationByOperator().Value()
-	totalDelegationByOperator = totalDelegationByOperator.Add(totalDelegationByOperator, amount)
-	s.TotalDelegationByOperator().SetValue(totalDelegationByOperator)
+func (s *Storage_ValidatorWrapper_) AddTotalDelegationFromOperators(amount *big.Int) {
+	totalDelegationFromOperators := s.TotalDelegationFromOperators().Value()
+	totalDelegationFromOperators = totalDelegationFromOperators.Add(totalDelegationFromOperators, amount)
+	s.TotalDelegationFromOperators().SetValue(totalDelegationFromOperators)
 }
 
-func (s *Storage_ValidatorWrapper_) SubTotalDelegationByOperator(amount *big.Int) {
-	totalDelegationByOperator := s.TotalDelegationByOperator().Value()
-	totalDelegationByOperator = totalDelegationByOperator.Sub(totalDelegationByOperator, amount)
-	s.TotalDelegationByOperator().SetValue(totalDelegationByOperator)
+func (s *Storage_ValidatorWrapper_) SubTotalDelegationFromOperators(amount *big.Int) {
+	totalDelegationFromOperators := s.TotalDelegationFromOperators().Value()
+	totalDelegationFromOperators = totalDelegationFromOperators.Sub(totalDelegationFromOperators, amount)
+	s.TotalDelegationFromOperators().SetValue(totalDelegationFromOperators)
 }
 
 func (s *Storage_ValidatorWrapper_) IsOperator(delegator common.Address) bool {
@@ -227,7 +227,7 @@ func (s *Storage_ValidatorWrapper_) AddRedelegation(delegator common.Address, am
 	}
 	s.AddTotalDelegation(amount)
 	if s.IsOperator(delegator) {
-		s.AddTotalDelegationByOperator(amount)
+		s.AddTotalDelegationFromOperators(amount)
 	}
 }
 
@@ -242,14 +242,14 @@ func (s *Storage_ValidatorWrapper_) Undelegate(delegator common.Address, epoch, 
 		redelegation.SubAmount(amt)
 		s.SubTotalDelegation(amt)
 		if s.IsOperator(delegator) {
-			s.SubTotalDelegationByOperator(amt)
+			s.SubTotalDelegationFromOperators(amt)
 		}
 	}
 }
 
 func (s *Storage_ValidatorWrapper_) InactivateIfSelfDelegationTooLittle() {
 	// TODO(ATLAS): 10% of total delegation
-	if s.Validator().AtStatus(Active) && s.TotalDelegationByOperator().Value().Sign() == 0 {
+	if s.Validator().AtStatus(Active) && s.TotalDelegationFromOperators().Value().Sign() == 0 {
 		s.Validator().Status().SetValue(uint8(Inactive))
 	}
 }
@@ -421,12 +421,12 @@ func (v *PlainValidator) ToValidator() *Validator_ {
 }
 
 type PlainValidatorWrapper struct {
-	Validator                 PlainValidator  `json:"Validator"`
-	Redelegations             []Redelegation_ `json:"Redelegations"`
-	Counters                  Counters_       `json:"Counters"`
-	BlockReward               BigInt          `json:"BlockReward"`
-	TotalDelegation           BigInt          `json:"TotalDelegation"`
-	TotalDelegationByOperator BigInt          `json:"TotalDelegationByOperator"`
+	Validator                    PlainValidator  `json:"Validator"`
+	Redelegations                []Redelegation_ `json:"Redelegations"`
+	Counters                     Counters_       `json:"Counters"`
+	BlockReward                  BigInt          `json:"BlockReward"`
+	TotalDelegation              BigInt          `json:"TotalDelegation"`
+	TotalDelegationFromOperators BigInt          `json:"TotalDelegationFromOperators"`
 }
 
 func (v *PlainValidatorWrapper) ToValidatorWrapper() *ValidatorWrapper_ {
@@ -439,9 +439,9 @@ func (v *PlainValidatorWrapper) ToValidatorWrapper() *ValidatorWrapper_ {
 			}
 			return delegations
 		}(),
-		Counters:                  v.Counters,
-		BlockReward:               v.BlockReward,
-		TotalDelegation:           v.TotalDelegation,
-		TotalDelegationByOperator: v.TotalDelegationByOperator,
+		Counters:                     v.Counters,
+		BlockReward:                  v.BlockReward,
+		TotalDelegation:              v.TotalDelegation,
+		TotalDelegationFromOperators: v.TotalDelegationFromOperators,
 	}
 }

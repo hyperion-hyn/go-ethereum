@@ -215,7 +215,7 @@ func (verifier StakingVerifier) VerifyEditValidatorMsg(stateDB vm.StateDB, block
 	}
 
 	// TODO(ATLAS): 10% of total delegation
-	if msg.EPOSStatus == restaking.Active && wrapperSt.TotalDelegationByOperator().Value().Sign() == 0 {
+	if msg.EPOSStatus == restaking.Active && wrapperSt.TotalDelegationFromOperators().Value().Sign() == 0 {
 		return nil, errInvalidSelfDelegation
 	}
 

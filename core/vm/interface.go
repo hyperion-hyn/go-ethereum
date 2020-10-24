@@ -72,12 +72,12 @@ type StateDB interface {
 	ValidatorPool() *restaking.Storage_ValidatorPool_
 	ValidatorByAddress(validatorAddress common.Address) (*restaking.Storage_ValidatorWrapper_, error)
 	ValidatorSnapshotByAddress(validatorAddress common.Address) (*restaking.Storage_ValidatorWrapper_, error)
-	AddRedelegationReward(snapshot *restaking.Storage_ValidatorWrapper_, reward *big.Int, shareLookup map[common.Address]common.Dec) error
+	AddRestakingReward(snapshot *restaking.Storage_ValidatorWrapper_, reward *big.Int, shareLookup map[common.Address]common.Dec) error
 	IncreaseValidatorNonceIfZero()
 	// Map3
 	Map3NodePool() *microstaking.Storage_Map3NodePool_
 	Map3NodeByAddress(map3Address common.Address) (*microstaking.Storage_Map3NodeWrapper_, error)
-	AddMicrodelegationReward(snapshot *microstaking.Storage_Map3NodeWrapper_, reward *big.Int, shareLookup map[common.Address]common.Dec) error
+	AddMicrostakingReward(snapshot *microstaking.Storage_Map3NodeWrapper_, reward *big.Int, shareLookup map[common.Address]common.Dec) error
 	IncreaseMap3NonceIfZero()
 }
 

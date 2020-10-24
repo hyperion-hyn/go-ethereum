@@ -1208,7 +1208,7 @@ func makeStateNodeWrapperFromGetter(index int, numPubs int, pubGetter *BLSPubGet
 func updateStateMap3Nodes(sdb *state.StateDB, ws []*microstaking.Map3NodeWrapper_) error {
 	pool := sdb.Map3NodePool()
 	for _, w := range ws {
-		pool.Nodes().Put(w.Map3Node.Map3Address, w)
+		pool.Map3Nodes().Put(w.Map3Node.Map3Address, w)
 		sdb.IncreaseMap3NonceIfZero()
 		for _, k := range w.Map3Node.NodeKeys.Keys {
 			pool.NodeKeySet().Get(k.Hex()).SetValue(true)
@@ -1887,11 +1887,11 @@ func makeStateDBForMap3Verifier(t *testing.T) vm.StateDB {
 	node2 := buildMap3Node(map3NodeAddr2, map3OperatorAddr2, microstaking.Pending)
 	node3 := buildMap3Node(map3NodeAddr3, map3OperatorAddr3, microstaking.Active)
 	node3.RestakingReference.ValidatorAddress = validatorAddr
-	sdb.Map3NodePool().Nodes().Put(map3NodeAddr, node1)
+	sdb.Map3NodePool().Map3Nodes().Put(map3NodeAddr, node1)
 	sdb.IncreaseMap3NonceIfZero()
-	sdb.Map3NodePool().Nodes().Put(map3NodeAddr2, node2)
+	sdb.Map3NodePool().Map3Nodes().Put(map3NodeAddr2, node2)
 	sdb.IncreaseMap3NonceIfZero()
-	sdb.Map3NodePool().Nodes().Put(map3NodeAddr3, node3)
+	sdb.Map3NodePool().Map3Nodes().Put(map3NodeAddr3, node3)
 	sdb.IncreaseMap3NonceIfZero()
 	sdb.Commit(true)
 	return sdb

@@ -118,7 +118,7 @@ func TestValidatorWrapperBuilder(t *testing.T) {
 		exp.Counters.NumBlocksToSign = test.numBlocksToSign
 		exp.Counters.NumBlocksSigned = test.numBlocksSigned
 		exp.TotalDelegation = common.Big1
-		exp.TotalDelegationByOperator = common.Big1
+		exp.TotalDelegationFromOperators = common.Big1
 
 		if err := CheckValidatorWrapperEqual(*v, exp); err != nil {
 			t.Errorf("Test %v: %v", i, err)

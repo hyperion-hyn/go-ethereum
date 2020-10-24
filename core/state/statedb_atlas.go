@@ -46,8 +46,12 @@ func (s *StateDB) ValidatorList() []common.Address {
 	return s.ValidatorPool().Validators().AllKeys()
 }
 
-// AddRedelegationReward distributes the reward to all the delegators based on stake percentage.
-func (s *StateDB) AddRedelegationReward(snapshot *restaking.Storage_ValidatorWrapper_, reward *big.Int,
+func (s *StateDB) IsFoundationValidator(validatorAddress common.Address) bool {
+	return s.ValidatorPool().FoundationValidatorSet().Get(validatorAddress).Value()
+}
+
+// AddRestakingReward distributes the reward to all the delegators based on stake percentage.
+func (s *StateDB) AddRestakingReward(snapshot *restaking.Storage_ValidatorWrapper_, reward *big.Int,
 	shareLookup map[common.Address]common.Dec) error {
 	valAddr := snapshot.Validator().ValidatorAddress().Value()
 	if reward.Cmp(common.Big0) == 0 {
@@ -57,14 +61,18 @@ func (s *StateDB) AddRedelegationReward(snapshot *restaking.Storage_ValidatorWra
 
 	curValidator, err := s.ValidatorByAddress(valAddr)
 	if err != nil {
-		return errors.Wrapf(err, "failed to distribute rewards: validator does not exist")
+		return errors.Wrapf(err, "failed to distribute rewards")
 	}
 
 	if curValidator.Validator().Status().Value() == uint8(restaking.Banned) {
+		// TODO(ATLAS): need to return back?
 		log.Info("cannot add reward to banned validator", "validator", valAddr)
 		return nil
 	}
 	curValidator.AddBlockReward(reward)
+
+	// last delegator, who gets the leftover reward
+	lastDelegator, emptyAddress := common.Address{}, common.Address{}
 
 	// Payout each delegator's (non-operator) reward
 	rewardPool := big.NewInt(0).Set(reward)
@@ -91,19 +99,17 @@ func (s *StateDB) AddRedelegationReward(snapshot *restaking.Storage_ValidatorWra
 			}
 			curDelegation.AddReward(rewardInt)
 			rewardPool.Sub(rewardPool, rewardInt)
+			lastDelegator = delegatorAddress
 		}
 	}
 
 	// Payout each operator's reward
-	totalDelegationByOperator := snapshot.TotalDelegationByOperator().Value()
-	if totalDelegationByOperator.Sign() == 0 {
+	totalDelegationFromOperators := snapshot.TotalDelegationFromOperators().Value()
+	if totalDelegationFromOperators.Sign() == 0 {
 		return errors.New("missing total delegation of operator")
 	}
 
 	rewardForOperators := big.NewInt(0).Set(rewardPool)
-	emptyAddress := common.Address{}
-	largestOperator := emptyAddress
-	largestAmount := common.Big0
 	for _, operator := range snapshot.Validator().OperatorAddresses().AllKeys() {
 		redelegationSnapshot, ok := snapshot.Redelegations().Get(operator)
 		if !ok {
@@ -113,11 +119,7 @@ func (s *StateDB) AddRedelegationReward(snapshot *restaking.Storage_ValidatorWra
 		if amtSnapshot.Sign() == 0 {
 			continue
 		}
-		if amtSnapshot.Cmp(largestAmount) > 0 {
-			largestAmount = amtSnapshot
-			largestOperator = operator
-		}
-		percentage := common.NewDecFromBigInt(amtSnapshot).QuoInt(totalDelegationByOperator)
+		percentage := common.NewDecFromBigInt(amtSnapshot).QuoInt(totalDelegationFromOperators)
 		rewardInt := percentage.MulInt(rewardForOperators).RoundInt()
 
 		curDelegation, ok := curValidator.Redelegations().Get(operator)
@@ -126,11 +128,15 @@ func (s *StateDB) AddRedelegationReward(snapshot *restaking.Storage_ValidatorWra
 		}
 		curDelegation.AddReward(rewardInt)
 		rewardPool.Sub(rewardPool, rewardInt)
+		lastDelegator = operator
 	}
 
-	// The last remaining bit belongs to the operator with largest delegation
-	if rewardPool.Cmp(common.Big0) > 0 && largestOperator != emptyAddress {
-		redelegation, _ := curValidator.Redelegations().Get(largestOperator)
+	// last delegator gets the leftover reward
+	if lastDelegator == emptyAddress {
+		return errors.Errorf("missing any delegator to reward")
+	}
+	if rewardPool.Sign() > 0 {
+		redelegation, _ := curValidator.Redelegations().Get(lastDelegator)
 		redelegation.AddReward(rewardPool)
 	}
 	return nil

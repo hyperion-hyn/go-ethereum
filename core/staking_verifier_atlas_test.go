@@ -506,7 +506,7 @@ func TestVerifyEditValidatorMsg(t *testing.T) {
 					if err != nil {
 						t.Fatal(err)
 					}
-					vw.TotalDelegationByOperator().SetValue(common.Big0)
+					vw.TotalDelegationFromOperators().SetValue(common.Big0)
 					vw.Validator().Status().SetValue(uint8(restaking.Inactive))
 					return sdb
 				}(t),
