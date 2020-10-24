@@ -17,6 +17,7 @@ var (
 	}
 
 	map3NodesToBeMigrated = "" // TODO(ATLAS): get from ethereum staking contract
+	operatorsOfMap3Node   = []string{""}
 )
 
 func increaseMap3NodeAgeOnDemand(node *microstaking.Map3NodeWrapper_, blockNum *big.Int, stateDB vm.StateDB, chain ChainContext) error {
@@ -58,9 +59,16 @@ func MigrateMap3NodesFromEthereum(chain ChainContext, stateDB vm.StateDB, blockN
 		return errors.Wrap(err, "failed to parse map3 nodes to be migrated")
 	}
 
+	// save map3 nodes into pool
 	pool := stateDB.Map3NodePool()
 	for _, n := range ns {
 		saveNewMap3NodeToPool(n.ToMap3NodeWrapper(), pool)
+	}
+
+	// set operator nonce to be 1
+	for _, operator := range operatorsOfMap3Node {
+		operatorAddr := common.HexToAddress(operator)
+		stateDB.SetNonce(operatorAddr, 1)
 	}
 	return nil
 }
