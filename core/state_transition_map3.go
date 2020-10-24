@@ -5,6 +5,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/staking/network"
 	"github.com/ethereum/go-ethereum/staking/types/microstaking"
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
@@ -78,19 +79,29 @@ func (st *StateTransition) verifyAndApplyUnmicrodelegateTx(verifier StakingVerif
 	return nil
 }
 
+type RewardFromMap3 struct {
+	Map3NodeAddress common.Address
+	RewardAmount    *big.Int
+}
+
 func (st *StateTransition) verifyAndApplyCollectMicrodelRewardsTx(verifier StakingVerifier, msg *microstaking.CollectRewards, signer common.Address) (*big.Int, error) {
 	if err := verifier.VerifyCollectMicrostakingRewardsMsg(st.state, msg, signer); err != nil {
 		return network.NoReward, err
 	}
-	totalReward, err := payoutMicrodelegationRewards(st.state, st.state.Map3NodePool(), msg.DelegatorAddress)
+	totalReward, rewardNodes, err := payoutMicrodelegationRewards(st.state, st.state.Map3NodePool(), msg.DelegatorAddress)
 	if err != nil {
 		return network.NoReward, err
 	}
+
 	// Add log if everything is good
+	rewardNodesBytes, err := rlp.EncodeToBytes(rewardNodes)
+	if err != nil {
+		return network.NoReward, err
+	}
 	st.state.AddLog(&types.Log{
 		Address:     msg.DelegatorAddress,
 		Topics:      []common.Hash{microstaking.CollectRewardsTopic},
-		Data:        totalReward.Bytes(),
+		Data:        rewardNodesBytes,
 		BlockNumber: st.evm.BlockNumber.Uint64(),
 	})
 	return totalReward, nil
@@ -165,14 +176,15 @@ func updateMap3NodeFromPoolByMsg(map3Node *microstaking.Storage_Map3NodeWrapper_
 	}
 }
 
-func payoutMicrodelegationRewards(stateDB vm.StateDB, map3NodePool *microstaking.Storage_Map3NodePool_, delegator common.Address) (*big.Int, error) {
+func payoutMicrodelegationRewards(stateDB vm.StateDB, map3NodePool *microstaking.Storage_Map3NodePool_, delegator common.Address) (*big.Int, []RewardFromMap3, error) {
 	delegationIndexMap := map3NodePool.DelegationIndexMapByDelegator().Get(delegator)
 	totalRewards := big.NewInt(0)
+	rewardNodes := make([]RewardFromMap3, 0)
 	for i := 0; i < delegationIndexMap.Keys().Length(); i++ {
 		nodeAddr := delegationIndexMap.Keys().Get(i).Value()
 		node, err := stateDB.Map3NodeByAddress(nodeAddr)
 		if err != nil {
-			return network.NoReward, err
+			return network.NoReward, nil, err
 		}
 
 		if micro, ok := node.Microdelegations().Get(delegator); ok {
@@ -180,13 +192,17 @@ func payoutMicrodelegationRewards(stateDB vm.StateDB, map3NodePool *microstaking
 			if r.Sign() > 0 {
 				totalRewards = totalRewards.Add(totalRewards, r)
 				micro.Reward().Clear()
+				rewardNodes = append(rewardNodes, RewardFromMap3{
+					Map3NodeAddress: nodeAddr,
+					RewardAmount:    r,
+				})
 			}
 		} else {
-			return network.NoReward, errMicrodelegationNotExist
+			return network.NoReward, nil, errMicrodelegationNotExist
 		}
 	}
 	stateDB.AddBalance(delegator, totalRewards)
-	return totalRewards, nil
+	return totalRewards, rewardNodes, nil
 }
 
 // TODO(ATLAS): terminate and Release delegation?
