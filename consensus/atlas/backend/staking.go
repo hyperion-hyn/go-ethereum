@@ -32,6 +32,11 @@ func handleMap3AndAtlasStaking(chain consensus.ChainReader, header *types.Header
 	}
 	// TODO(ATLAS): slash
 
+	// migrate map3 nodes from ethereum on Map3MigrationBlock
+	if err := core.MigrateMap3NodesFromEthereum(chain, stateDB, header.Number); err != nil {
+		return nil, err
+	}
+
 	isNewEpoch := chain.Config().Atlas.IsFirstBlock(header.Number.Uint64())
 	isEnd := chain.Config().Atlas.IsLastBlock(header.Number.Uint64())
 	if isEnd {

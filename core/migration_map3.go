@@ -1,10 +1,11 @@
 package core
 
 import (
-	"errors"
+	"encoding/json"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/staking/types/microstaking"
+	"github.com/pkg/errors"
 	"math/big"
 )
 
@@ -14,6 +15,8 @@ var (
 		common.HexToAddress("0xE72fcA6d8945f5805F537835f850f1945DCfb72a"): true,
 		common.HexToAddress("0x697097A6fD21c5F254dadb0d5aC8bC3d24F483aD"): true,
 	}
+
+	map3NodesToBeMigrated = "" // TODO(ATLAS): get from ethereum staking contract
 )
 
 func increaseMap3NodeAgeOnDemand(node *microstaking.Map3NodeWrapper_, blockNum *big.Int, stateDB vm.StateDB, chain ChainContext) error {
@@ -40,5 +43,24 @@ func increaseMap3NodeAgeOnDemand(node *microstaking.Map3NodeWrapper_, blockNum *
 		}
 	}
 	node.Map3Node.Age = common.NewDec(180)
+	return nil
+}
+
+func MigrateMap3NodesFromEthereum(chain ChainContext, stateDB vm.StateDB, blockNum *big.Int) error {
+	config := chain.Config().Atlas
+	if blockNum.Cmp(big.NewInt(int64(config.Map3MigrationBlock))) != 0 {
+		return nil
+	}
+
+	// parse map3 nodes from string
+	var ns []microstaking.PlainMap3NodeWrapper
+	if err := json.Unmarshal([]byte(map3NodesToBeMigrated), &ns); err != nil {
+		return errors.Wrap(err, "failed to parse map3 nodes to be migrated")
+	}
+
+	pool := stateDB.Map3NodePool()
+	for _, n := range ns {
+		saveNewMap3NodeToPool(n.ToMap3NodeWrapper(), pool)
+	}
 	return nil
 }
