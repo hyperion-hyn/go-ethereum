@@ -10,6 +10,7 @@ import (
 )
 
 var (
+	foundationAddress = common.HexToAddress("0xB9F8d03176f040c6f1A739DDF73ae8Dbde9657F6")
 	operatorsToAddNodeAge = map[common.Address]bool{
 		common.HexToAddress("0x42B66C58c1D1bf304c37398Ccb89963f7d1e3E38"): true,
 		common.HexToAddress("0xE72fcA6d8945f5805F537835f850f1945DCfb72a"): true,
@@ -70,5 +71,21 @@ func MigrateMap3NodesFromEthereum(chain ChainContext, stateDB vm.StateDB, blockN
 		operatorAddr := common.HexToAddress(operator)
 		stateDB.SetNonce(operatorAddr, 1)
 	}
+
+	// pay out from foundation account
+	total := calculateTotalDelegationAndReward(ns)
+	stateDB.SubBalance(foundationAddress, total)
+
 	return nil
+}
+
+func calculateTotalDelegationAndReward(nodes []microstaking.PlainMap3NodeWrapper) *big.Int {
+	total := big.NewInt(0)
+	for _, node := range nodes {
+		for _, microdelegation := range node.Microdelegations {
+			total = total.Add(total, microdelegation.Reward)
+		}
+		total = total.Add(total, node.TotalDelegation)
+	}
+	return total
 }
