@@ -192,6 +192,14 @@ func renewAndActivateMap3Nodes(chain consensus.ChainReader, header *types.Header
 					validator.InactivateIfSelfDelegationTooLittle()
 				}
 			} else {
+				if node.IsRestaking() {
+					validatorAddr := node.RestakingReference().ValidatorAddress().Value()
+					validator, err := stateDB.ValidatorByAddress(validatorAddr)
+					if err != nil {
+						return err
+					}
+					validator.Undelegate(nodeAddr, nowEpoch, nil)
+				}
 				node.Terminate()
 			}
 
