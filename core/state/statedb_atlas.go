@@ -91,7 +91,7 @@ func (s *StateDB) AddRestakingReward(snapshot *restaking.Storage_ValidatorWrappe
 			if percentage.IsNil() || percentage.IsZero() {
 				continue
 			}
-			rewardInt := percentage.MulInt(rewardPool).Mul(noncommisionRate).RoundInt()
+			rewardInt := percentage.MulInt(reward).Mul(noncommisionRate).RoundInt()
 
 			curDelegation, ok := curValidator.Redelegations().Get(delegatorAddress)
 			if !ok {
@@ -110,25 +110,40 @@ func (s *StateDB) AddRestakingReward(snapshot *restaking.Storage_ValidatorWrappe
 	}
 
 	rewardForOperators := big.NewInt(0).Set(rewardPool)
+	totalPercentForOperators := common.NewDec(0)
 	for _, operator := range snapshot.Validator().OperatorAddresses().AllKeys() {
-		redelegationSnapshot, ok := snapshot.Redelegations().Get(operator)
+		percent, ok := shareLookup[operator]
 		if !ok {
 			continue
 		}
-		amtSnapshot := redelegationSnapshot.Amount().Value()
-		if amtSnapshot.Sign() == 0 {
-			continue
-		}
-		percentage := common.NewDecFromBigInt(amtSnapshot).QuoInt(totalDelegationFromOperators)
-		rewardInt := percentage.MulInt(rewardForOperators).RoundInt()
+		totalPercentForOperators = totalPercentForOperators.Add(percent)
+	}
+	if !totalPercentForOperators.IsZero() {
+		for _, operator := range snapshot.Validator().OperatorAddresses().AllKeys() {
+			redelegationSnapshot, ok := snapshot.Redelegations().Get(operator)
+			if !ok {
+				continue
+			}
+			amtSnapshot := redelegationSnapshot.Amount().Value()
+			if amtSnapshot.Sign() == 0 {
+				continue
+			}
 
-		curDelegation, ok := curValidator.Redelegations().Get(operator)
-		if !ok {
-			return errors.Wrap(errRedelegationNotExist, "missing delegation of operator for reward distribution")
+			p, ok := shareLookup[operator]
+			if !ok || p.IsZero() {
+				continue
+			}
+			percentage := p.Quo(totalPercentForOperators)
+			rewardInt := percentage.MulInt(rewardForOperators).RoundInt()
+
+			curDelegation, ok := curValidator.Redelegations().Get(operator)
+			if !ok {
+				return errors.Wrap(errRedelegationNotExist, "missing delegation of operator for reward distribution")
+			}
+			curDelegation.AddReward(rewardInt)
+			rewardPool.Sub(rewardPool, rewardInt)
+			lastDelegator = operator
 		}
-		curDelegation.AddReward(rewardInt)
-		rewardPool.Sub(rewardPool, rewardInt)
-		lastDelegator = operator
 	}
 
 	// last delegator gets the leftover reward
