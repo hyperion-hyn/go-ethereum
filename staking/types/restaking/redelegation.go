@@ -79,7 +79,7 @@ func (s *Storage_Redelegation_) SubAmount(amount *big.Int) {
 }
 
 func (s *Storage_Redelegation_) CanReleaseUndelegationAt(epoch *big.Int) bool {
-	return s.Undelegation().Amount().Value().Sign() > 0 && s.Undelegation().Epoch().Value().Cmp(epoch) <= 0
+	return s.Undelegation().Amount().Value().Sign() > 0 && s.Undelegation().Epoch().Value().Cmp(epoch) < 0
 }
 
 func (s *Storage_Undelegation_) AddAmount(amount *big.Int) {
