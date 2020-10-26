@@ -9,8 +9,9 @@ import (
 )
 
 var (
-	errMap3NodeNotExist        = errors.New("map3 node does not exist")
-	errMicrodelegationNotExist = errors.New("microdelegation does not exist")
+	errMap3NodeNotExist         = errors.New("map3 node does not exist")
+	errMap3NodeSnapshotNotExist = errors.New("map3 node snapshot does not exist")
+	errMicrodelegationNotExist  = errors.New("microdelegation does not exist")
 
 	map3StorageAddress = common.HexToAddress("0x6a7ad21ff076440e39020e289debdcb309e12c23")
 )
@@ -36,7 +37,7 @@ func (s *StateDB) Map3NodeByAddress(map3Address common.Address) (*microstaking.S
 func (s *StateDB) Map3NodeSnapshotByAddress(map3Address common.Address) (*microstaking.Storage_Map3NodeWrapper_, error) {
 	node, ok := s.Map3NodePool().Map3NodeSnapshots().Get(map3Address)
 	if !ok {
-		return nil, errMap3NodeNotExist
+		return nil, errMap3NodeSnapshotNotExist
 	}
 	return node, nil
 }

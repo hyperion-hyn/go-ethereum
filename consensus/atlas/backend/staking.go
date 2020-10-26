@@ -52,6 +52,7 @@ func handleMap3AndAtlasStaking(chain consensus.ChainReader, header *types.Header
 		}
 
 		// renew map3 node and unmicrodelegate and unredelegate
+		// update map3 node snapshot when it activates, renews or terminates
 		if err := renewAndActivateMap3Nodes(chain, header, stateDB); err != nil {
 			return nil, err
 		}
@@ -193,6 +194,13 @@ func renewAndActivateMap3Nodes(chain consensus.ChainReader, header *types.Header
 			} else {
 				node.Terminate()
 			}
+
+			// update snapshot
+			n, err := node.Load()
+			if err != nil {
+				return errors.Wrap(err, "failed to update snapshot")
+			}
+			stateDB.Map3NodePool().Map3NodeSnapshots().Put(nodeAddr, n)
 			continue
 		}
 
@@ -202,8 +210,12 @@ func renewAndActivateMap3Nodes(chain consensus.ChainReader, header *types.Header
 			}
 			mutateMap3Addrs = append(mutateMap3Addrs, nodeAddr)
 
-			// add nodeAge to node migrate from eth
-
+			// update snapshot
+			n, err := node.Load()
+			if err != nil {
+				return errors.Wrap(err, "failed to update snapshot")
+			}
+			stateDB.Map3NodePool().Map3NodeSnapshots().Put(nodeAddr, n)
 		}
 	}
 	log.Info("New mutate map3 nodes", "addresses", mutateMap3Addrs)

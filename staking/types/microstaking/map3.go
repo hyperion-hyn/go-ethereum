@@ -317,7 +317,7 @@ func (s *Storage_Map3NodeWrapper_) RenewAndPend(epoch *big.Int) error {
 }
 
 func (s *Storage_Map3NodeWrapper_) CanActivate(requireTotal, requireSelf *big.Int) bool {
-	if s.Map3Node().Status().Value() != uint8(Pending) {
+	if !s.Map3Node().AtStatus(Pending) {
 		return false
 	}
 

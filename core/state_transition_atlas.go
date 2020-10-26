@@ -301,7 +301,7 @@ func payoutRedelegationReward(s *restaking.Storage_ValidatorWrapper_, delegator 
 
 	r, err := handler.HandleReward(redelegation, blockNum)
 	if err != nil {
-		return common.Big0, err
+		return nil, err
 	}
 	return r, nil
 }
