@@ -242,7 +242,7 @@ func lookupMicrodelegationShares(node *microstaking.Storage_Map3NodeWrapper_) (m
 	totalDelegationDec := common.NewDecFromBigInt(node.TotalDelegation().Value())
 	if totalDelegationDec.IsZero() {
 		log.Info("zero total delegation during AddReward delegation payout",
-			"validator-snapshot", node.Map3Node().Map3Address().Value().Hex())
+			"map3node-snapshot", node.Map3Node().Map3Address().Value().Hex())
 		return shares, nil
 	}
 
