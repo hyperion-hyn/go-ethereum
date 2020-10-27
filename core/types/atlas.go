@@ -17,6 +17,8 @@
 package types
 
 import (
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -35,4 +37,20 @@ var (
 
 func GetMaskByteCount(valSetSize int) int {
 	return (valSetSize + 7) >> 3
+}
+
+type ActiveMap3Info struct {
+	Address    string     `json:"address"`
+	StartEpoch uint64     `json:"start_epoch"`
+	EndEpoch   common.Dec `json:"end_epoch"`
+	Commission common.Dec `json:"commission"`
+}
+
+type Map3Requirement struct {
+	RequireTotal    *big.Int   `json:"requireTotal"`
+	RequireSelf     *big.Int   `json:"requireSelf"`
+	RequireDelegate *big.Int   `json:"requireDelegate"`
+	MinCommission   common.Dec `json:"minCommission"`
+	MaxCommission   common.Dec `json:"maxCommission"`
+	Map3LockEpoch   common.Dec `json:"map3LockEpoch"`
 }

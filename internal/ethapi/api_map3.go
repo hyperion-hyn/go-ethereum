@@ -3,14 +3,15 @@ package ethapi
 import (
 	"context"
 	"errors"
+
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/staking/network"
 	"github.com/ethereum/go-ethereum/staking/types/microstaking"
-	"math/big"
 )
 
 var (
@@ -134,7 +135,7 @@ func (s *PublicMicroStakingAPI) GetMutateMap3NodeAtEpoch(ctx context.Context, ep
 	return addrStrs, nil
 }
 
-func (s *PublicMicroStakingAPI) GetMap3Requirement(ctx context.Context) (Map3Requirement, error) {
+func (s *PublicMicroStakingAPI) GetMap3Requirement(ctx context.Context) (types.Map3Requirement, error) {
 
 	blockNum := s.b.CurrentBlock().Header().Number
 	chainContext := s.b.ChainContext()
@@ -142,7 +143,7 @@ func (s *PublicMicroStakingAPI) GetMap3Requirement(ctx context.Context) (Map3Req
 	tenPercent := common.NewDecWithPrec(1, 1)    // 10%
 	twentyPercent := common.NewDecWithPrec(2, 1) // 20%
 
-	map3Requirement := Map3Requirement{
+	map3Requirement := types.Map3Requirement{
 		RequireTotal:    requireTotal,
 		RequireSelf:     requireSelf,
 		RequireDelegate: requireDel,
@@ -151,20 +152,4 @@ func (s *PublicMicroStakingAPI) GetMap3Requirement(ctx context.Context) (Map3Req
 		Map3LockEpoch:   microstaking.Map3NodeLockDurationInEpoch,
 	}
 	return map3Requirement, nil
-}
-
-type ActiveMap3Info struct {
-	Address    string     `json:"address"`
-	StartEpoch uint64     `json:"start_epoch"`
-	EndEpoch   common.Dec `json:"end_epoch"`
-	Commission common.Dec `json:"commission"`
-}
-
-type Map3Requirement struct {
-	RequireTotal    *big.Int   `json:"requireTotal"`
-	RequireSelf     *big.Int   `json:"requireSelf"`
-	RequireDelegate *big.Int   `json:"requireDelegate"`
-	MinCommission   common.Dec `json:"minCommission"`
-	MaxCommission   common.Dec `json:"maxCommission"`
-	Map3LockEpoch   common.Dec `json:"map3LockEpoch"`
 }

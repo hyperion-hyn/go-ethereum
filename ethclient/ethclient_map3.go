@@ -2,11 +2,12 @@ package ethclient
 
 import (
 	"context"
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/internal/ethapi"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/staking/types/microstaking"
-	"math/big"
 )
 
 func (ec *Client) GetAllMap3NodeAddresses(ctx context.Context, blockNumber *big.Int) ([]string, error) {
@@ -58,8 +59,8 @@ func (ec *Client) GetMutateMap3NodeAtEpoch(ctx context.Context, epoch uint64) ([
 	return result, err
 }
 
-func (ec *Client) GetMap3Requirement(ctx context.Context) (ethapi.Map3Requirement, error) {
-	var requirement ethapi.Map3Requirement
+func (ec *Client) GetMap3Requirement(ctx context.Context) (types.Map3Requirement, error) {
+	var requirement types.Map3Requirement
 	err := ec.c.CallContext(ctx, &requirement, "eth_getMap3Requirement")
 	return requirement, err
 }
