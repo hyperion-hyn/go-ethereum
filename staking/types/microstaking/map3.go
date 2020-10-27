@@ -198,16 +198,19 @@ func (s *Storage_Map3NodeWrapper_) AddMicrodelegation(delegator common.Address, 
 	}
 	md, _ := s.Microdelegations().Get(delegator)
 	if pending {
-		// new epoch = ((current epoch - last epoch) * last amount + 7 * new amount) / total amount
+		// duration = ((last epoch - current epoch) * last amount + 7 * new amount) / total amount
+		// new epoch = current epoch + duration
 		lastAmt := md.PendingDelegation().Amount().Value()
 		lastEpoch := md.PendingDelegation().UnlockedEpoch().Value()
-		delta := common.NewDecFromBigInt(epoch).Sub(lastEpoch)
+		curEpoch := common.NewDecFromBigInt(epoch)
+		delta := lastEpoch.Sub(curEpoch)
 		if delta.IsNegative() {
 			delta = common.ZeroDec()
 		}
-		newEpoch := delta.MulInt(lastAmt).Add(PendingLockInEpoch.MulInt(amount))
-		newEpoch = newEpoch.QuoInt(big.NewInt(0).Add(lastAmt, amount))
-		md.PendingDelegation().UnlockedEpoch().SetValue(newEpoch)
+		newLockDuration := delta.MulInt(lastAmt).Add(PendingLockInEpoch.MulInt(amount))
+		newLockDuration = newLockDuration.QuoInt(big.NewInt(0).Add(lastAmt, amount))
+		newUnlockedEpoch := newLockDuration.Add(curEpoch)
+		md.PendingDelegation().UnlockedEpoch().SetValue(newUnlockedEpoch)
 
 		md.PendingDelegation().AddAmount(amount)
 		s.AddTotalPendingDelegation(amount)
