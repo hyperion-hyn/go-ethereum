@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/staking/types/microstaking"
 	"github.com/pkg/errors"
 	"math/big"
@@ -65,6 +66,7 @@ func MigrateMap3NodesFromEthereum(chain ChainContext, stateDB vm.StateDB, blockN
 	for _, n := range ns {
 		saveNewMap3NodeToPool(n.ToMap3NodeWrapper(), pool)
 	}
+	log.Info("migrate eth map3 nodes", "nodes", len(ns), "height", blockNum)
 
 	// set operator nonce to be 1
 	for _, operator := range operatorsOfMap3Node {
@@ -75,6 +77,7 @@ func MigrateMap3NodesFromEthereum(chain ChainContext, stateDB vm.StateDB, blockN
 	// pay out from foundation account
 	total := calculateTotalDelegationAndReward(ns)
 	stateDB.SubBalance(foundationAddress, total)
+	log.Info("take out from foundation account for eth map3 nodes", "total", total)
 
 	return nil
 }
