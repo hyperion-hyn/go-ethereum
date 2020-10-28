@@ -52,33 +52,57 @@ func increaseMap3NodeAgeOnDemand(node *microstaking.Map3NodeWrapper_, blockNum *
 
 func MigrateMap3NodesFromEthereum(chain ChainContext, stateDB vm.StateDB, blockNum *big.Int) error {
 	config := chain.Config().Atlas
-	if blockNum.Cmp(big.NewInt(int64(config.Map3MigrationBlock))) != 0 {
-		return nil
+	// migrate map3 nodes from ethereum
+	if blockNum.Cmp(big.NewInt(int64(config.Map3MigrationBlock))) == 0 {
+
+		// parse map3 nodes from string
+		var ns []microstaking.PlainMap3NodeWrapper
+		if err := json.Unmarshal([]byte(map3NodesToBeMigrated), &ns); err != nil {
+			return errors.Wrap(err, "failed to parse map3 nodes to be migrated")
+		}
+
+		// save map3 nodes into pool
+		pool := stateDB.Map3NodePool()
+		for _, n := range ns {
+			saveNewMap3NodeToPool(n.ToMap3NodeWrapper(), pool)
+		}
+		log.Info("migrate eth map3 nodes", "nodes", len(ns), "height", blockNum)
+
+		// set operator nonce to be 1
+		for _, operator := range operatorsOfMap3Node {
+			operatorAddr := common.HexToAddress(operator)
+			stateDB.SetNonce(operatorAddr, 1)
+		}
+
+		// pay out from foundation account
+		total := calculateTotalDelegationAndReward(ns)
+		stateDB.SubBalance(foundationAddress, total)
+		log.Info("take out from foundation account for eth map3 nodes", "total", total)
 	}
 
-	// parse map3 nodes from string
-	var ns []microstaking.PlainMap3NodeWrapper
-	if err := json.Unmarshal([]byte(map3NodesToBeMigrated), &ns); err != nil {
-		return errors.Wrap(err, "failed to parse map3 nodes to be migrated")
-	}
+	// repair microdelegation index for map3 nodes from ethereum
+	if blockNum.Cmp(big.NewInt(int64(config.MicrodelegationIndexRepairBlock))) == 0 {
+		// parse map3 nodes from string
+		var ns []microstaking.PlainMap3NodeWrapper
+		if err := json.Unmarshal([]byte(map3NodesToBeMigrated), &ns); err != nil {
+			return errors.Wrap(err, "failed to parse map3 nodes to repair index")
+		}
 
-	// save map3 nodes into pool
-	pool := stateDB.Map3NodePool()
-	for _, n := range ns {
-		saveNewMap3NodeToPool(n.ToMap3NodeWrapper(), pool)
+		// repair index
+		pool := stateDB.Map3NodePool()
+		for _, node := range ns {
+			map3Address := node.Map3Node.Map3Address
+			operatorAddress := node.Map3Node.OperatorAddress
+			for _, delegation := range node.Microdelegations {
+				delegator := delegation.DelegatorAddress
+				pool.UpdateDelegationIndex(delegator, &microstaking.DelegationIndex_{
+					Map3Address: map3Address,
+					IsOperator:  delegator == operatorAddress,
+				})
+			}
+		}
+		log.Info("repaired microdelegation index for map3 nodes from ethereum", "nodes", len(ns))
 	}
-	log.Info("migrate eth map3 nodes", "nodes", len(ns), "height", blockNum)
-
-	// set operator nonce to be 1
-	for _, operator := range operatorsOfMap3Node {
-		operatorAddr := common.HexToAddress(operator)
-		stateDB.SetNonce(operatorAddr, 1)
-	}
-
-	// pay out from foundation account
-	total := calculateTotalDelegationAndReward(ns)
-	stateDB.SubBalance(foundationAddress, total)
-	log.Info("take out from foundation account for eth map3 nodes", "total", total)
 
 	return nil
 }
