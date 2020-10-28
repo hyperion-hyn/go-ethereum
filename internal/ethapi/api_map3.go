@@ -2,7 +2,7 @@ package ethapi
 
 import (
 	"context"
-	"errors"
+	"github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
@@ -152,4 +152,27 @@ func (s *PublicMicroStakingAPI) GetMap3Requirement(ctx context.Context) (types.M
 		Map3LockEpoch:   microstaking.Map3NodeLockDurationInEpoch,
 	}
 	return map3Requirement, nil
+}
+
+func (s *PublicMicroStakingAPI) GetMicrodelegationIndexByDelegator(ctx context.Context, delegatorAddress common.Address,
+	blockNrOrHash rpc.BlockNumberOrHash) ([]microstaking.DelegationIndex_, error) {
+	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
+	if state == nil || err != nil {
+		return nil, err
+	}
+	map3NodePool := state.Map3NodePool()
+	delegationIndexMap := map3NodePool.DelegationIndexMapByDelegator().Get(delegatorAddress)
+	indexes := make([]microstaking.DelegationIndex_, 0)
+	for i := 0; i < delegationIndexMap.Keys().Length(); i++ {
+		nodeAddr := delegationIndexMap.Keys().Get(i).Value()
+		index, ok := delegationIndexMap.Get(nodeAddr)
+		if !ok {
+			return nil, errors.Errorf("microdelegation index not found, node: %v, delegator: %v", nodeAddr, delegatorAddress)
+		}
+		indexes = append(indexes, microstaking.DelegationIndex_{
+			Map3Address: index.Map3Address().Value(),
+			IsOperator:  index.IsOperator().Value(),
+		})
+	}
+	return indexes, nil
 }
