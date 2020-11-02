@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/staking/network"
 	"github.com/ethereum/go-ethereum/staking/types/microstaking"
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
+	"github.com/pkg/errors"
 	"math/big"
 )
 
@@ -19,10 +20,26 @@ func (st *StateTransition) verifyAndApplyCreateMap3NodeTx(verifier StakingVerifi
 		return err
 	}
 	if err := increaseMap3NodeAgeFromEthereum(newNode, blockNum, st.state, st.bc); err != nil {
-		return err
+		return errors.Wrap(err, "failed to increase node age")
 	}
-	saveNewMap3NodeToPool(newNode, st.state.Map3NodePool())
+	nodeSt := saveNewMap3NodeToPool(newNode, st.state.Map3NodePool())
 	st.state.SubBalance(signer, msg.Amount)
+
+	if st.bc.Config().Atlas.IsMicrostakingImprove(blockNum) {
+		requireTotal, requireSelf, _ := network.LatestMicrostakingRequirement(blockNum, st.bc.Config())
+		if nodeSt.CanActivate(requireTotal, requireSelf) {
+			if err := nodeSt.Activate(epoch); err != nil {
+				return errors.Wrap(err, "failed to activate new map3 node")
+			}
+
+			// update snapshot
+			newSnapshot, err := nodeSt.Load()
+			if err != nil {
+				return errors.Wrap(err, "failed to update snapshot")
+			}
+			st.state.Map3NodePool().Map3NodeSnapshots().Put(newSnapshot.Map3Node.Map3Address, newSnapshot)
+		}
+	}
 	return nil
 }
 
@@ -64,6 +81,22 @@ func (st *StateTransition) verifyAndApplyMicrodelegateTx(verifier StakingVerifie
 			Map3Address: msg.Map3NodeAddress,
 			IsOperator:  node.IsOperator(msg.DelegatorAddress),
 		})
+	}
+
+	if st.bc.Config().Atlas.IsMicrostakingImprove(blockNum) {
+		requireTotal, requireSelf, _ := network.LatestMicrostakingRequirement(blockNum, st.bc.Config())
+		if node.CanActivate(requireTotal, requireSelf) {
+			if err := node.Activate(epoch); err != nil {
+				return errors.Wrap(err, "failed to activate map3 node")
+			}
+
+			// update snapshot
+			newSnapshot, err := node.Load()
+			if err != nil {
+				return errors.Wrap(err, "failed to update snapshot")
+			}
+			st.state.Map3NodePool().Map3NodeSnapshots().Put(newSnapshot.Map3Node.Map3Address, newSnapshot)
+		}
 	}
 	return nil
 }
@@ -136,9 +169,10 @@ func (st *StateTransition) verifyAndApplyRenewMap3NodeTx(verifier StakingVerifie
 /**
  * save the new map3 node into pool
  */
-func saveNewMap3NodeToPool(wrapper *microstaking.Map3NodeWrapper_, map3NodePool *microstaking.Storage_Map3NodePool_) {
-	map3NodePool.Map3Nodes().Put(wrapper.Map3Node.Map3Address, wrapper)
-	map3NodePool.Map3NodeSnapshots().Put(wrapper.Map3Node.Map3Address, wrapper)
+func saveNewMap3NodeToPool(wrapper *microstaking.Map3NodeWrapper_, map3NodePool *microstaking.Storage_Map3NodePool_) *microstaking.Storage_Map3NodeWrapper_ {
+	map3Address, operator := wrapper.Map3Node.Map3Address, wrapper.Map3Node.OperatorAddress
+	map3NodePool.Map3Nodes().Put(map3Address, wrapper)
+	map3NodePool.Map3NodeSnapshots().Put(map3Address, wrapper)
 	keySet := map3NodePool.NodeKeySet()
 	for _, key := range wrapper.Map3Node.NodeKeys.Keys {
 		keySet.Get(key.Hex()).SetValue(true)
@@ -146,11 +180,15 @@ func saveNewMap3NodeToPool(wrapper *microstaking.Map3NodeWrapper_, map3NodePool 
 	if identity := wrapper.Map3Node.Description.Identity; identity != "" {
 		map3NodePool.DescriptionIdentitySet().Get(identity).SetValue(true)
 	}
-	map3Address, operator := wrapper.Map3Node.Map3Address, wrapper.Map3Node.OperatorAddress
 	map3NodePool.UpdateDelegationIndex(operator, &microstaking.DelegationIndex_{
 		Map3Address: map3Address,
 		IsOperator:  true,
 	})
+	nSt, ok := map3NodePool.Map3Nodes().Get(map3Address)
+	if !ok {
+		log.Error("new map3 node not found in pool", "node", map3Address)
+	}
+	return nSt
 }
 
 func updateMap3NodeFromPoolByMsg(map3Node *microstaking.Storage_Map3NodeWrapper_, pool *microstaking.Storage_Map3NodePool_,

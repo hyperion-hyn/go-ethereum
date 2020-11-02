@@ -74,7 +74,7 @@ func (s *Storage_Microdelegation_) AddAmount(amount *big.Int) {
 }
 
 func (s *Storage_Microdelegation_) CanReleaseUndelegationAt(epoch *big.Int) bool {
-	return s.Undelegation().Amount().Value().Sign() > 0 && s.Undelegation().Epoch().Value().Cmp(epoch) <= 0
+	return s.Undelegation().Amount().Value().Sign() > 0 && s.Undelegation().Epoch().Value().Cmp(epoch) < 0
 }
 
 func (m *IterableMicrodelegationMap_) Put(delegator Address, microdelegation Microdelegation_) {
