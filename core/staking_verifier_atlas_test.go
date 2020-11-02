@@ -59,6 +59,7 @@ var (
 	pointEightFiveDec = common.NewDecWithPrec(85, 2)
 	pointNineDec      = common.NewDecWithPrec(9, 1)
 	oneDec            = common.OneDec()
+	twoDec            = common.NewDec(2)
 
 	defaultDelAmount = millionOnes
 )

@@ -75,6 +75,10 @@ func (n *Map3Node_) SanityCheck(maxPubKeyAllowed int, selfProportion *common.Dec
 		if err := n.Commission.SanityCheck(tenPercent, common.MinDec(*selfProportion, twentyPercent)); err != nil {
 			return err
 		}
+	} else {
+		if err := n.Commission.SanityCheck(zeroPercent, hundredPercent); err != nil {
+			return err
+		}
 	}
 
 	allKeys := map[string]struct{}{}

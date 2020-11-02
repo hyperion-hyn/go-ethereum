@@ -20,6 +20,7 @@ type AtlasConfig struct {
 	Map3MigrationBlock              uint64 `json:"map3MigrationBlock"`
 	Map3NodeAgeDeadlineBlock        uint64 `json:"map3NodeAgeDeadlineBlock"`
 	MicrodelegationIndexRepairBlock uint64 `json:"microdelegationIndexRepairBlock"`
+	MicrostakingImprove				uint64 `json:"microstakingImprove"`
 }
 
 func (c *AtlasConfig) IsLastBlock(blockNum uint64) bool {
@@ -70,4 +71,8 @@ func (c *AtlasConfig) EpochOfBlock(blockNum uint64) (epoch, firstBlock, lastBloc
 
 func (c *AtlasConfig) String() string {
 	return "atlas"
+}
+
+func (c *AtlasConfig) IsMicrostakingImprove(num *big.Int) bool {
+	return isForked(big.NewInt(int64(c.MicrostakingImprove)), num)
 }

@@ -208,7 +208,11 @@ func (verifier StakingVerifier) VerifyCreateMap3NodeMsg(stateDB vm.StateDB, chai
 	if requireSelf.Cmp(msg.Amount) > 0 {
 		return nil, errSelfDelegationTooSmall
 	}
-	percent := common.NewDecFromInt(msg.Amount).QuoInt(requireTotal)
+	var percent *common.Dec
+	if !chainContext.Config().Atlas.IsMicrostakingImprove(blockNum) {
+		p := common.NewDecFromInt(msg.Amount).QuoInt(requireTotal)
+		percent = &p
+	}
 
 	// create map3 node
 	map3Address := crypto.CreateAddress(signer, stateDB.GetNonce(signer))
@@ -216,7 +220,7 @@ func (verifier StakingVerifier) VerifyCreateMap3NodeMsg(stateDB vm.StateDB, chai
 	if err != nil {
 		return nil, err
 	}
-	if err := node.Map3Node.SanityCheck(microstaking.MaxPubKeyAllowed, &percent); err != nil {
+	if err := node.Map3Node.SanityCheck(microstaking.MaxPubKeyAllowed, percent); err != nil {
 		return nil, err
 	}
 	return node, nil
@@ -489,9 +493,13 @@ func (verifier StakingVerifier) VerifyRenewMap3NodeMsg(stateDB vm.StateDB, chain
 		}
 
 		if msg.IsRenew {
-			// self delegation proportion
-			requireTotal, _, _ := network.LatestMicrostakingRequirement(blockNum, chainContext.Config())
-			percent := common.NewDecFromInt(md.Amount().Value()).QuoInt(requireTotal)
+			var percent *common.Dec
+			if !chainContext.Config().Atlas.IsMicrostakingImprove(blockNum) {
+				// self delegation proportion
+				requireTotal, _, _ := network.LatestMicrostakingRequirement(blockNum, chainContext.Config())
+				p := common.NewDecFromInt(md.Amount().Value()).QuoInt(requireTotal)
+				percent = &p
+			}
 
 			node, err := node.Map3Node().Load()
 			if err != nil {
@@ -501,7 +509,7 @@ func (verifier StakingVerifier) VerifyRenewMap3NodeMsg(stateDB vm.StateDB, chain
 			if msg.NewCommissionRate != nil && !msg.NewCommissionRate.IsNil() {
 				node.Commission.RateForNextPeriod = *msg.NewCommissionRate
 			}
-			return node.SanityCheck(microstaking.MaxPubKeyAllowed, &percent)
+			return node.SanityCheck(microstaking.MaxPubKeyAllowed, percent)
 		}
 	} else {
 		if msg.NewCommissionRate != nil {

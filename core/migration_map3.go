@@ -19,7 +19,7 @@ var (
 	}
 )
 
-func increaseMap3NodeAgeOnDemand(node *microstaking.Map3NodeWrapper_, blockNum *big.Int, stateDB vm.StateDB, chain ChainContext) error {
+func increaseMap3NodeAgeFromEthereum(node *microstaking.Map3NodeWrapper_, blockNum *big.Int, stateDB vm.StateDB, chain ChainContext) error {
 	config := chain.Config().Atlas
 	// over deadline
 	if blockNum.Cmp(big.NewInt(int64(config.Map3NodeAgeDeadlineBlock))) > 0 {

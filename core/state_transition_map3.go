@@ -18,7 +18,7 @@ func (st *StateTransition) verifyAndApplyCreateMap3NodeTx(verifier StakingVerifi
 	if err != nil {
 		return err
 	}
-	if err := increaseMap3NodeAgeOnDemand(newNode, blockNum, st.state, st.bc); err != nil {
+	if err := increaseMap3NodeAgeFromEthereum(newNode, blockNum, st.state, st.bc); err != nil {
 		return err
 	}
 	saveNewMap3NodeToPool(newNode, st.state.Map3NodePool())

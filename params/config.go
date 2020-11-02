@@ -607,9 +607,11 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 	if isForkIncompatible(c.EWASMBlock, newcfg.EWASMBlock, head) {
 		return newCompatError("ewasm fork block", c.EWASMBlock, newcfg.EWASMBlock)
 	}
+	// ATLAS
 	if c.Istanbul != nil && newcfg.Istanbul != nil && isForkIncompatible(c.Istanbul.Ceil2Nby3Block, newcfg.Istanbul.Ceil2Nby3Block, head) {
 		return newCompatError("Ceil 2N/3 fork block", c.Istanbul.Ceil2Nby3Block, newcfg.Istanbul.Ceil2Nby3Block)
 	}
+
 	return nil
 }
 

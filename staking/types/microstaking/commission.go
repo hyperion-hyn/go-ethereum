@@ -10,8 +10,10 @@ var (
 )
 
 var (
-	tenPercent    = common.NewDecWithPrec(1, 1) // 10%
-	twentyPercent = common.NewDecWithPrec(2, 1) // 20%
+	zeroPercent    = common.NewDec(0)
+	tenPercent     = common.NewDecWithPrec(1, 1) // 10%
+	twentyPercent  = common.NewDecWithPrec(2, 1) // 20%
+	hundredPercent = common.NewDec(1)
 )
 
 func (c *Commission_) SanityCheck(minCommissionRate, maxCommissionRate common.Dec) error {

@@ -1412,7 +1412,7 @@ func TestVerifyRenewMap3NodeMsg(t *testing.T) {
 				blockNum:     big.NewInt(defaultBlockNumber),
 				msg: func() microstaking.RenewMap3Node {
 					msg := defaultMsgRenewMap3Node(map3OperatorAddr, true)
-					msg.NewCommissionRate = &oneDec
+					msg.NewCommissionRate = &twoDec
 					return msg
 				}(),
 				signer: map3OperatorAddr,
