@@ -768,7 +768,7 @@ type CallArgs struct {
 	GasPrice *hexutil.Big          `json:"gasPrice"`
 	Value    *hexutil.Big          `json:"value"`
 	Data     *hexutil.Bytes        `json:"data"`
-	TxType   types.TransactionType `json:"txType"` // ATLAS
+	TxType   types.TransactionType `json:"type"` // ATLAS
 }
 
 // ToMessage converts CallArgs to the Message type used by the core evm
