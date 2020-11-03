@@ -140,15 +140,15 @@ func (s *PublicMicroStakingAPI) GetMap3Requirement(ctx context.Context) (types.M
 	blockNum := s.b.CurrentBlock().Header().Number
 	chainContext := s.b.ChainContext()
 	requireTotal, requireSelf, requireDel := network.LatestMicrostakingRequirement(blockNum, chainContext.Config())
-	tenPercent := common.NewDecWithPrec(1, 1)    // 10%
-	twentyPercent := common.NewDecWithPrec(2, 1) // 20%
+	zeroPercent := common.NewDec(0)
+	hundredPercent := common.NewDec(1)
 
 	map3Requirement := types.Map3Requirement{
 		RequireTotal:    requireTotal,
 		RequireSelf:     requireSelf,
 		RequireDelegate: requireDel,
-		MinCommission:   tenPercent,
-		MaxCommission:   twentyPercent,
+		MinCommission:   zeroPercent,
+		MaxCommission:   hundredPercent,
 		Map3LockEpoch:   microstaking.Map3NodeLockDurationInEpoch,
 	}
 	return map3Requirement, nil
