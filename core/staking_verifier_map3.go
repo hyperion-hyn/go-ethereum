@@ -402,11 +402,16 @@ func (verifier StakingVerifier) VerifyUnmicrodelegateMsg(stateDB vm.StateDB, cha
 		self := amt.Add(amt, md.Amount().Value())
 
 		requireTotal, requireSelf, _ := network.LatestMicrostakingRequirement(blockNum, chainContext.Config())
-		percent := common.NewDecFromInt(self).QuoInt(requireTotal)
-		commissionRate := node.Map3Node().Commission().Rate().Value()
-
-		if requireSelf.Cmp(self) > 0 || percent.LT(commissionRate) {
-			return errSelfDelegationTooSmall
+		if chainContext.Config().Atlas.IsMicrostakingImprove(blockNum) {
+			if requireSelf.Cmp(self) > 0 {
+				return errSelfDelegationTooSmall
+			}
+		} else {
+			percent := common.NewDecFromInt(self).QuoInt(requireTotal)
+			commissionRate := node.Map3Node().Commission().Rate().Value()
+			if requireSelf.Cmp(self) > 0 || percent.LT(commissionRate) {
+				return errSelfDelegationTooSmall
+			}
 		}
 	}
 	return nil
