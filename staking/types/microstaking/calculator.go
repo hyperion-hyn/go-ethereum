@@ -42,9 +42,6 @@ func (c CalculatorForActivationAtOnce) Calculate(epoch, blockNum *big.Int) (acti
 	return activationEpoch, releaseEpoch
 }
 
-type LockDurationCalculatorFactory struct {
-}
-
 func NewLockDurationCalculator(config Config, blockNum *big.Int) LockDurationCalculator {
 	if config.IsMicrostakingImprove(blockNum) {
 		return CalculatorForActivationAtOnce{config: config}
