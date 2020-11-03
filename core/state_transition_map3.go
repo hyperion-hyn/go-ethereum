@@ -28,7 +28,8 @@ func (st *StateTransition) verifyAndApplyCreateMap3NodeTx(verifier StakingVerifi
 	if st.bc.Config().Atlas.IsMicrostakingImprove(blockNum) {
 		requireTotal, requireSelf, _ := network.LatestMicrostakingRequirement(blockNum, st.bc.Config())
 		if nodeSt.CanActivate(requireTotal, requireSelf) {
-			if err := nodeSt.Activate(epoch); err != nil {
+			calculator := microstaking.NewLockDurationCalculator(st.bc.Config().Atlas, blockNum)
+			if err := nodeSt.Activate(epoch, blockNum, calculator); err != nil {
 				return errors.Wrap(err, "failed to activate new map3 node")
 			}
 
@@ -86,7 +87,8 @@ func (st *StateTransition) verifyAndApplyMicrodelegateTx(verifier StakingVerifie
 	if st.bc.Config().Atlas.IsMicrostakingImprove(blockNum) {
 		requireTotal, requireSelf, _ := network.LatestMicrostakingRequirement(blockNum, st.bc.Config())
 		if node.CanActivate(requireTotal, requireSelf) {
-			if err := node.Activate(epoch); err != nil {
+			calculator := microstaking.NewLockDurationCalculator(st.bc.Config().Atlas, blockNum)
+			if err := node.Activate(epoch, blockNum, calculator); err != nil {
 				return errors.Wrap(err, "failed to activate map3 node")
 			}
 

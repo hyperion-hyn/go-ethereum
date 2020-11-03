@@ -2,8 +2,6 @@ package ethapi
 
 import (
 	"context"
-	"github.com/pkg/errors"
-
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -12,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/staking/network"
 	"github.com/ethereum/go-ethereum/staking/types/microstaking"
+	"github.com/pkg/errors"
 )
 
 var (
@@ -149,7 +148,7 @@ func (s *PublicMicroStakingAPI) GetMap3Requirement(ctx context.Context) (types.M
 		RequireDelegate: requireDel,
 		MinCommission:   zeroPercent,
 		MaxCommission:   hundredPercent,
-		Map3LockEpoch:   microstaking.Map3NodeLockDurationInEpoch,
+		Map3LockEpoch:   common.NewDec(microstaking.LockDurationInEpoch),
 	}
 	return map3Requirement, nil
 }

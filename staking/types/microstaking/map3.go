@@ -25,7 +25,6 @@ var (
 )
 
 var (
-	Map3NodeLockDurationInEpoch = common.NewDec(180)
 	PendingLockInEpoch          = common.NewDec(7)
 )
 
@@ -345,7 +344,7 @@ func (s *Storage_Map3NodeWrapper_) CanActivate(requireTotal, requireSelf *big.In
 	return false
 }
 
-func (s *Storage_Map3NodeWrapper_) Activate(epoch *big.Int) error {
+func (s *Storage_Map3NodeWrapper_) Activate(epoch, blockNum *big.Int, calculator LockDurationCalculator) error {
 	// change pending delegation
 	for _, delegator := range s.Microdelegations().AllKeys() {
 		delegation, ok := s.Microdelegations().Get(delegator)
@@ -361,12 +360,11 @@ func (s *Storage_Map3NodeWrapper_) Activate(epoch *big.Int) error {
 	s.TotalPendingDelegation().SetValue(common.Big0)
 
 	// update state
-	if s.Map3Node().AtStatus(Pending) {
-		releaseEpoch := common.NewDecFromInt(epoch).Add(Map3NodeLockDurationInEpoch)
-		s.Map3Node().ReleaseEpoch().SetValue(releaseEpoch)
-	}
 	s.Map3Node().Status().SetValue(uint8(Active))
-	s.Map3Node().ActivationEpoch().SetValue(epoch)
+
+	activationEpoch, releaseEpoch := calculator.Calculate(epoch, blockNum)
+	s.Map3Node().ActivationEpoch().SetValue(activationEpoch)
+	s.Map3Node().ReleaseEpoch().SetValue(releaseEpoch)
 	return nil
 }
 

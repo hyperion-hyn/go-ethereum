@@ -1515,7 +1515,7 @@ func activateMap3NodeForAddr(sdb vm.StateDB, nodeAddr common.Address) error {
 	if err != nil {
 		return err
 	}
-	return node.Activate(big.NewInt(defaultEpoch))
+	return node.Activate(big.NewInt(defaultEpoch), big.NewInt(defaultBlockNumber), microstaking.CalculatorForActivationAtEndOfEpoch{})
 }
 
 func defaultMsgRenewMap3Node(signer common.Address, isOperator bool) microstaking.RenewMap3Node {

@@ -14,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/staking/availability"
 	"github.com/ethereum/go-ethereum/staking/committee"
 	"github.com/ethereum/go-ethereum/staking/network"
+	"github.com/ethereum/go-ethereum/staking/types/microstaking"
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
@@ -142,8 +143,8 @@ func updateValidatorSnapshots(stateDB *state.StateDB) error {
 }
 
 func renewAndActivateMap3Nodes(chain consensus.ChainReader, header *types.Header, stateDB *state.StateDB) error {
-	requireTotal, requireSelf, _ := network.LatestMicrostakingRequirement(header.Number, chain.Config())
-	nowEpoch := header.Epoch
+	nowBlock, nowEpoch := header.Number, header.Epoch
+	requireTotal, requireSelf, _ := network.LatestMicrostakingRequirement(nowBlock, chain.Config())
 	var mutateMap3Addrs []common.Address
 	var renewedMap3Addrs []common.Address
 	for _, nodeAddr := range stateDB.Map3NodeList() {
@@ -153,7 +154,7 @@ func renewAndActivateMap3Nodes(chain consensus.ChainReader, header *types.Header
 		}
 
 		if node.CanReleaseAt(nowEpoch) {
-			nodeAge := node.Map3Node().CalculateNodeAge(header.Number, chain.Config().Atlas)
+			nodeAge := node.Map3Node().CalculateNodeAge(nowBlock, chain.Config().Atlas)
 			node.Map3Node().Age().SetValue(nodeAge)
 
 			mutateMap3Addrs = append(mutateMap3Addrs, nodeAddr)
@@ -171,7 +172,8 @@ func renewAndActivateMap3Nodes(chain consensus.ChainReader, header *types.Header
 
 				isActive := false
 				if node.CanActivate(requireTotal, requireSelf) {
-					if err := node.Activate(nowEpoch); err != nil {
+					calculator := microstaking.NewLockDurationCalculator(chain.Config().Atlas, nowBlock)
+					if err := node.Activate(nowEpoch, nowBlock, calculator); err != nil {
 						return err
 					}
 					isActive = true
@@ -213,7 +215,8 @@ func renewAndActivateMap3Nodes(chain consensus.ChainReader, header *types.Header
 		}
 
 		if node.CanActivate(requireTotal, requireSelf) {
-			if err := node.Activate(nowEpoch); err != nil {
+			calculator := microstaking.NewLockDurationCalculator(chain.Config().Atlas, nowBlock)
+			if err := node.Activate(nowEpoch, nowBlock, calculator); err != nil {
 				return err
 			}
 			mutateMap3Addrs = append(mutateMap3Addrs, nodeAddr)
