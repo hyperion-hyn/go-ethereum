@@ -27,7 +27,7 @@ type EditMap3Node struct {
 }
 
 type TerminateMap3Node struct {
-	Map3NodeAddress common.Address `json:"validator-address"`
+	Map3NodeAddress common.Address `json:"map3node-address"`
 	OperatorAddress common.Address `json:"operator-address"`
 }
 
