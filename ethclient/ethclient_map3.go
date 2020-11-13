@@ -64,3 +64,15 @@ func (ec *Client) GetMap3Requirement(ctx context.Context) (types.Map3Requirement
 	err := ec.c.CallContext(ctx, &requirement, "eth_getMap3Requirement")
 	return requirement, err
 }
+
+func (ec *Client) GetUnmicrodelegationReturnRecordsAtBlock(ctx context.Context, block int64) ([]microstaking.MicrostakingReturnRecord, error) {
+	var result []microstaking.MicrostakingReturnRecord
+	err := ec.c.CallContext(ctx, &result, "eth_getUnmicrodelegationReturnRecordsAtBlock", block)
+	return result, err
+}
+
+func (ec *Client) GetTerminateMap3RecordsAtBlock(ctx context.Context, map3Node common.Address, block int64) ([]microstaking.MicrostakingReturnRecord, error) {
+	var result []microstaking.MicrostakingReturnRecord
+	err := ec.c.CallContext(ctx, &result, "eth_getTerminateMap3RecordsAtBlock", map3Node, block)
+	return result, err
+}
