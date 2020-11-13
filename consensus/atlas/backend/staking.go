@@ -87,7 +87,7 @@ func handleMap3AndAtlasStaking(chain consensus.ChainReader, header *types.Header
 		if err := payoutUnredelegations(header, stateDB, releaser); err != nil {
 			return nil, err
 		}
-		if err := payoutUnmicrodelegations(header, stateDB); err != nil {
+		if err := payoutUnmicrodelegations(chain, header, stateDB); err != nil {
 			return nil, err
 		}
 	}
@@ -331,9 +331,10 @@ func (u undelegationToMap3Node) Release(redelegation *restaking.Storage_Redelega
 	return false, nil
 }
 
-func payoutUnmicrodelegations(header *types.Header, stateDB *state.StateDB) error {
+func payoutUnmicrodelegations(chain consensus.ChainReader, header *types.Header, stateDB *state.StateDB) error {
 	nowEpoch := header.Epoch
 	// Payout undelegated/unlocked tokens
+	returnRecords := make([]microstaking.MicrostakingReturnRecord, 0)
 	for _, map3Addr := range stateDB.Map3NodeList() {
 		node, err := stateDB.Map3NodeByAddress(map3Addr)
 		if err != nil {
@@ -348,6 +349,11 @@ func payoutUnmicrodelegations(header *types.Header, stateDB *state.StateDB) erro
 			}
 
 			if md.CanReleaseUndelegationAt(nowEpoch) {
+				returnRecord := microstaking.MicrostakingReturnRecord{
+					Delegator: delegator,
+					Map3Node:  map3Addr,
+					Amount:    md.Undelegation().Amount().Value(),
+				}
 				// payout unmicrodelegation
 				amt := md.Undelegation().Amount().Value()
 				completed := md.Amount().Value().Sign() == 0 &&
@@ -355,10 +361,13 @@ func payoutUnmicrodelegations(header *types.Header, stateDB *state.StateDB) erro
 				if completed {
 					amt.Add(amt, md.Reward().Value())
 					toBeRemoved = append(toBeRemoved, delegator)
+					returnRecord.Reward = md.Reward().Value()
 				} else {
 					md.Undelegation().Clear()
+					returnRecord.Reward = big.NewInt(0)
 				}
 				stateDB.AddBalance(delegator, amt)
+				returnRecords = append(returnRecords, returnRecord)
 			}
 		}
 
@@ -368,6 +377,15 @@ func payoutUnmicrodelegations(header *types.Header, stateDB *state.StateDB) erro
 		}
 	}
 	log.Info("paid out unmicrodelegations", "epoch", nowEpoch.Uint64(), "block-number", header.Number.Uint64())
+
+	// write to db
+	if len(returnRecords) > 0 {
+		batch := chain.Database().NewBatch()
+		rawdb.WriteUnmicrodelegationReturnRecords(batch, header.Number, returnRecords)
+		if err := batch.Write(); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

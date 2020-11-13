@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/staking/network"
 	"github.com/ethereum/go-ethereum/staking/types/microstaking"
 	"github.com/pkg/errors"
+	"math/big"
 )
 
 var (
@@ -132,6 +133,26 @@ func (s *PublicMicroStakingAPI) GetMutateMap3NodeAtEpoch(ctx context.Context, ep
 		addrStrs = append(addrStrs, addrTemp.Hex())
 	}
 	return addrStrs, nil
+}
+
+func (s *PublicMicroStakingAPI) GetUnmicrodelegationReturnRecordsAtBlock(ctx context.Context, block int64) ([]microstaking.MicrostakingReturnRecord, error) {
+
+	db := s.b.ChainDb()
+	records := rawdb.ReadUnmicrodelegationReturnRecords(db, big.NewInt(block))
+	if records == nil {
+		return nil, nil
+	}
+	return records, nil
+}
+
+func (s *PublicMicroStakingAPI) GetTerminateMap3RecordsAtBlock(ctx context.Context, map3Node common.Address, block int64) ([]microstaking.MicrostakingReturnRecord, error) {
+
+	db := s.b.ChainDb()
+	records := rawdb.ReadTerminateMap3ReturnRecords(db, big.NewInt(block), map3Node)
+	if records == nil {
+		return nil, nil
+	}
+	return records, nil
 }
 
 func (s *PublicMicroStakingAPI) GetMap3Requirement(ctx context.Context) (types.Map3Requirement, error) {

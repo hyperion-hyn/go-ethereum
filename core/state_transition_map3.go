@@ -2,6 +2,7 @@ package core
 
 import (
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/log"
@@ -60,7 +61,7 @@ func (st *StateTransition) verifyAndApplyTerminateMap3NodeTx(verifier StakingVer
 	}
 	node, _ := st.state.Map3NodeByAddress(msg.Map3NodeAddress)
 	allDelegators := node.Microdelegations().AllKeys()
-	if err := releaseMicrodelegationFromMap3Node(st.state, node, allDelegators); err != nil {
+	if err := releaseMicrodelegationFromMap3Node(st.bc, st.evm.BlockNumber, st.state, node, allDelegators); err != nil {
 		return err
 	}
 	node.Terminate()
@@ -249,9 +250,10 @@ func payoutMicrodelegationRewards(stateDB vm.StateDB, map3NodePool *microstaking
 }
 
 // TODO(ATLAS): terminate and Release delegation?
-func releaseMicrodelegationFromMap3Node(stateDB vm.StateDB, node *microstaking.Storage_Map3NodeWrapper_,
+func releaseMicrodelegationFromMap3Node(chain ChainContext, blockNum *big.Int, stateDB vm.StateDB, node *microstaking.Storage_Map3NodeWrapper_,
 	delegatorsToBeReleased []common.Address) error {
 	totalToReduce, totalPendingToReduce := big.NewInt(0), big.NewInt(0)
+	returnRecords := make([]microstaking.MicrostakingReturnRecord, 0)
 	for _, delegator := range delegatorsToBeReleased {
 		md, ok := node.Microdelegations().Get(delegator)
 		if !ok {
@@ -264,6 +266,14 @@ func releaseMicrodelegationFromMap3Node(stateDB vm.StateDB, node *microstaking.S
 
 		totalToReduce = totalToReduce.Add(totalToReduce, md.Amount().Value())
 		totalPendingToReduce = totalPendingToReduce.Add(totalPendingToReduce, md.PendingDelegation().Amount().Value())
+
+		returnRecord := microstaking.MicrostakingReturnRecord{
+			Delegator: delegator,
+			Map3Node:  node.Map3Node().Map3Address().Value(),
+			Amount:    md.Amount().Value(),
+			Reward:    md.Reward().Value(),
+		}
+		returnRecords = append(returnRecords, returnRecord)
 	}
 
 	for _, delegator := range delegatorsToBeReleased {
@@ -274,6 +284,14 @@ func releaseMicrodelegationFromMap3Node(stateDB vm.StateDB, node *microstaking.S
 
 	node.SubTotalDelegation(totalToReduce)
 	node.SubTotalPendingDelegation(totalPendingToReduce)
+
+	// write rawdb
+	batch := chain.Database().NewBatch()
+	rawdb.WriteTerminateMap3ReturnRecords(batch, blockNum, node.Map3Node().Map3Address().Value(), returnRecords)
+	if err := batch.Write(); err != nil {
+		return err
+	}
+
 	return nil
 }
 

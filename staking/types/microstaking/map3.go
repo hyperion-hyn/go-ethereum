@@ -25,7 +25,7 @@ var (
 )
 
 var (
-	PendingLockInEpoch          = common.NewDec(7)
+	PendingLockInEpoch = common.NewDec(7)
 )
 
 type Map3Status byte
@@ -559,4 +559,11 @@ func (n *PlainMap3NodeWrapper) ToMap3NodeWrapper() *Map3NodeWrapper_ {
 		TotalDelegation:        n.TotalDelegation,
 		TotalPendingDelegation: n.TotalPendingDelegation,
 	}
+}
+
+type MicrostakingReturnRecord struct {
+	Delegator common.Address
+	Map3Node  common.Address
+	Amount    *big.Int
+	Reward    *big.Int
 }

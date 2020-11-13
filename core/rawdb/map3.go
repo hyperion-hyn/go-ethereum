@@ -4,6 +4,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/ethereum/go-ethereum/staking/types/microstaking"
+	"math/big"
 )
 
 //Write active map3 node address at epoch to rawdb
@@ -55,4 +57,52 @@ func ReadRenewedMap3Nodes(db DatabaseReader, epoch uint64) []common.Address {
 		return nil
 	}
 	return renewActiveMap3Nodes
+}
+
+func WriteUnmicrodelegationReturnRecords(db DatabaseWriter, block *big.Int, unmicrodelegationReturnRecords []microstaking.MicrostakingReturnRecord) {
+	bytes, err := rlp.EncodeToBytes(unmicrodelegationReturnRecords)
+	if err != nil {
+		log.Error("Fail to encode unmicrodelegationReturnRecords")
+	}
+	// Store the flattened receipt slice
+	if err := db.Put(unmicrodelegationReturnRecordKey(block), bytes); err != nil {
+		log.Error("Fail to store unmicrodelegationReturnRecords")
+	}
+}
+
+func ReadUnmicrodelegationReturnRecords(db DatabaseReader, blockNum *big.Int) []microstaking.MicrostakingReturnRecord {
+	data, _ := db.Get(unmicrodelegationReturnRecordKey(blockNum))
+	if len(data) == 0 {
+		return nil
+	}
+	var unmicrodelegationReturnRecords []microstaking.MicrostakingReturnRecord
+	if err := rlp.DecodeBytes(data, &unmicrodelegationReturnRecords); err != nil {
+		log.Error("Invalid unmicrodelegationReturnRecords RLP")
+		return nil
+	}
+	return unmicrodelegationReturnRecords
+}
+
+func WriteTerminateMap3ReturnRecords(db DatabaseWriter, blockNum *big.Int, map3Node common.Address, terminateMap3ReturnRecords []microstaking.MicrostakingReturnRecord) {
+	bytes, err := rlp.EncodeToBytes(terminateMap3ReturnRecords)
+	if err != nil {
+		log.Error("Fail to encode terminateMap3ReturnRecords")
+	}
+	// Store the flattened receipt slice
+	if err := db.Put(terminateMap3ReturnRecordKey(blockNum, map3Node), bytes); err != nil {
+		log.Error("Fail to store terminateMap3ReturnRecords")
+	}
+}
+
+func ReadTerminateMap3ReturnRecords(db DatabaseReader, blockNum *big.Int, map3Node common.Address) []microstaking.MicrostakingReturnRecord {
+	data, _ := db.Get(terminateMap3ReturnRecordKey(blockNum, map3Node))
+	if len(data) == 0 {
+		return nil
+	}
+	var terminateMap3ReturnRecords []microstaking.MicrostakingReturnRecord
+	if err := rlp.DecodeBytes(data, &terminateMap3ReturnRecords); err != nil {
+		log.Error("Invalid terminateMap3ReturnRecords RLP")
+		return nil
+	}
+	return terminateMap3ReturnRecords
 }
