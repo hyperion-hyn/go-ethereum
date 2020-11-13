@@ -267,10 +267,11 @@ func releaseMicrodelegationFromMap3Node(chain ChainContext, blockNum *big.Int, s
 		totalToReduce = totalToReduce.Add(totalToReduce, md.Amount().Value())
 		totalPendingToReduce = totalPendingToReduce.Add(totalPendingToReduce, md.PendingDelegation().Amount().Value())
 
+		returnAmount := big.NewInt(0).Add(md.Amount().Value(), md.PendingDelegation().Amount().Value())
 		returnRecord := microstaking.MicrostakingReturnRecord{
 			Delegator: delegator,
 			Map3Node:  node.Map3Node().Map3Address().Value(),
-			Amount:    md.Amount().Value(),
+			Amount:    returnAmount,
 			Reward:    md.Reward().Value(),
 		}
 		returnRecords = append(returnRecords, returnRecord)
