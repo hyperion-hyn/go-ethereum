@@ -108,25 +108,43 @@ func ReadTerminateMap3ReturnRecords(db DatabaseReader, blockNum *big.Int, map3No
 	return terminateMap3ReturnRecords
 }
 
-func WriteTokenBurningRecord(writer DatabaseWriter, blockNum *big.Int, record burning.Record) {
-	bytes, err := rlp.EncodeToBytes(record)
+func WriteTokenBurningReceipt(db DatabaseWriter, receipt burning.Receipt) {
+	bytes, err := rlp.EncodeToBytes(receipt)
 	if err != nil {
-		log.Error("Fail to encode burningRecord")
+		log.Error("Fail to encode burningReceipt")
 	}
-	if err := writer.Put(tokenBurningRecordKey(blockNum), bytes); err != nil {
-		log.Error("Fail to store burningRecord")
+	if err := db.Put(tokenBurningReceiptKey(receipt.BlockNum.Bytes()), bytes); err != nil {
+		log.Error("Fail to store burningReceipt by block number")
+	}
+	if err := db.Put(tokenBurningReceiptKey(receipt.Hash.Bytes()), bytes); err != nil {
+		log.Error("Fail to store burningReceipt by hash")
 	}
 }
 
-func ReadTokenBurningRecords(db DatabaseReader, blockNum *big.Int) *burning.Record {
-	data, _ := db.Get(tokenBurningRecordKey(blockNum))
+func ReadTokenBurningReceiptByBlockNum(db DatabaseReader, blockNum *big.Int) *burning.Receipt {
+	data, _ := db.Get(tokenBurningReceiptKey(blockNum.Bytes()))
 	if len(data) == 0 {
 		return nil
 	}
-	var record burning.Record
-	if err := rlp.DecodeBytes(data, &record); err != nil {
-		log.Error("Invalid burningRecord RLP")
+	var receipt burning.Receipt
+	if err := rlp.DecodeBytes(data, &receipt); err != nil {
+		log.Error("Invalid burningReceipt RLP")
 		return nil
 	}
-	return &record
+	receipt.DoHash()
+	return &receipt
+}
+
+func ReadTokenBurningReceiptByHash(db DatabaseReader, hash common.Hash) *burning.Receipt {
+	data, _ := db.Get(tokenBurningReceiptKey(hash.Bytes()))
+	if len(data) == 0 {
+		return nil
+	}
+	var receipt burning.Receipt
+	if err := rlp.DecodeBytes(data, &receipt); err != nil {
+		log.Error("Invalid burningReceipt RLP")
+		return nil
+	}
+	receipt.DoHash()
+	return &receipt
 }

@@ -2,6 +2,7 @@ package burning
 
 import (
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus/atlas"
 	"github.com/pkg/errors"
 	"math/big"
 )
@@ -10,10 +11,20 @@ const (
 	preBurningAmount = 1 // TODO(ATLAS): how much ?
 )
 
-type Record struct {
-	InternalAmount *big.Int
-	ExternalAmount *big.Int
-	BlockNum       *big.Int
+type Receipt struct {
+	Hash           *common.Hash `json:"hash" rlp:"-"`
+	InternalAmount *big.Int     `json:"internal-amount"`
+	ExternalAmount *big.Int     `json:"external-amount"`
+	BlockNum       *big.Int     `json:"block"`
+}
+
+func (r *Receipt) DoHash() common.Hash {
+	if r.Hash != nil {
+		return *r.Hash
+	}
+	h := atlas.RLPHash(r)
+	r.Hash = &h
+	return h
 }
 
 func CalculateInternalBurningAmount(activeNodeCount int, scalingCycleNum int, requireMicrostaking *big.Int) (*big.Int, error) {

@@ -38,8 +38,7 @@ func terminateMap3ReturnRecordKey(block *big.Int, map3Address common.Address) []
 	return key
 }
 
-func tokenBurningRecordKey(block *big.Int) []byte {
-	blockKey := block.Bytes()
-	key := append(tokenBurningRecordKeyPrefix, blockKey...)
+func tokenBurningReceiptKey(blockNumOrHash []byte) []byte {
+	key := append(tokenBurningRecordKeyPrefix, blockNumOrHash...)
 	return key
 }

@@ -17,6 +17,7 @@ import (
 
 var (
 	errMicrodelegationNotExist = errors.New("microdelegation does not exist")
+	errBurningReceiptNotFound  = errors.New("burning record not found")
 )
 
 type PublicMicroStakingAPI struct {
@@ -198,11 +199,20 @@ func (s *PublicMicroStakingAPI) GetMicrodelegationIndexByDelegator(ctx context.C
 	return indexes, nil
 }
 
-func (s *PublicMicroStakingAPI) GetTokenBurningRecord(ctx context.Context, blockNum int64) (*burning.Record, error) {
+func (s *PublicMicroStakingAPI) GetTokenBurningReceiptByBlockNum(ctx context.Context, blockNum int64) (*burning.Receipt, error) {
 	db := s.b.ChainDb()
-	record := rawdb.ReadTokenBurningRecords(db, big.NewInt(blockNum))
+	record := rawdb.ReadTokenBurningReceiptByBlockNum(db, big.NewInt(blockNum))
 	if record == nil {
-		return nil, errors.New("burning record not found")
+		return nil, errBurningReceiptNotFound
+	}
+	return record, nil
+}
+
+func (s *PublicMicroStakingAPI) GetTokenBurningReceiptByReceiptHash(ctx context.Context, hash common.Hash) (*burning.Receipt, error) {
+	db := s.b.ChainDb()
+	record := rawdb.ReadTokenBurningReceiptByHash(db, hash)
+	if record == nil {
+		return nil, errBurningReceiptNotFound
 	}
 	return record, nil
 }

@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	preBurningAmount = 1
+	preBurningAmount = 1 // TODO(ATLAS): calculate
 )
 
 func CheckAndPreburnToken(chain ChainContext, stateDB vm.StateDB, blockNum *big.Int) {
@@ -19,12 +19,14 @@ func CheckAndPreburnToken(chain ChainContext, stateDB vm.StateDB, blockNum *big.
 		stateDB.SubBalance(foundationAddress, amount)
 
 		// write off-chain record
-		db := chain.Database()
-		rawdb.WriteTokenBurningRecord(db, blockNum, burning.Record{
+		receipt := burning.Receipt{
 			InternalAmount: amount,
 			ExternalAmount: common.Big0,
 			BlockNum:       blockNum,
-		})
+		}
+		receipt.DoHash()
+		db := chain.Database()
+		rawdb.WriteTokenBurningReceipt(db, receipt)
 	}
 }
 
@@ -46,12 +48,14 @@ func BurnTokenByEach30Epochs(chain ChainContext, stateDB vm.StateDB, blockNum *b
 	}
 	stateDB.SubBalance(foundationAddress, amount)
 
-	// write off-chain record
-	db := chain.Database()
-	rawdb.WriteTokenBurningRecord(db, blockNum, burning.Record{
+	// write off-chain burning receipt
+	receipt := burning.Receipt{
 		InternalAmount: amount,
 		ExternalAmount: common.Big0,
 		BlockNum:       blockNum,
-	})
+	}
+	receipt.DoHash()
+	db := chain.Database()
+	rawdb.WriteTokenBurningReceipt(db, receipt)
 	return nil
 }
