@@ -37,6 +37,8 @@ func handleMap3AndAtlasStaking(chain consensus.ChainReader, header *types.Header
 	if err := core.MigrateMap3NodesFromEthereum(chain, stateDB, header.Number); err != nil {
 		return nil, err
 	}
+	// pre-burn HYN based on microstaking in Ethereum
+	core.CheckAndPreburnToken(chain, stateDB, header.Number)
 
 	isNewEpoch := chain.Config().Atlas.IsFirstBlock(header.Number.Uint64())
 	isEnd := chain.Config().Atlas.IsLastBlock(header.Number.Uint64())
@@ -70,6 +72,13 @@ func handleMap3AndAtlasStaking(chain consensus.ChainReader, header *types.Header
 		// update validator snapshots
 		if err := updateValidatorSnapshots(stateDB); err != nil {
 			return nil, err
+		}
+
+		// burn token from foundation account
+		if core.CanBurnAtEndOfEach30Epochs(chain, header.Number, header.Epoch) {
+			if err := core.BurnTokenByEach30Epochs(chain, stateDB, header.Number); err != nil {
+				return nil, errors.Wrap(err, "failed to burn")
+			}
 		}
 	}
 

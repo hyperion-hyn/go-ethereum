@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/ethereum/go-ethereum/staking/burning"
 	"github.com/ethereum/go-ethereum/staking/network"
 	"github.com/ethereum/go-ethereum/staking/types/microstaking"
 	"github.com/pkg/errors"
@@ -195,4 +196,13 @@ func (s *PublicMicroStakingAPI) GetMicrodelegationIndexByDelegator(ctx context.C
 		})
 	}
 	return indexes, nil
+}
+
+func (s *PublicMicroStakingAPI) GetTokenBurningRecord(ctx context.Context, blockNum int64) (*burning.Record, error) {
+	db := s.b.ChainDb()
+	record := rawdb.ReadTokenBurningRecords(db, big.NewInt(blockNum))
+	if record == nil {
+		return nil, errors.New("burning record not found")
+	}
+	return record, nil
 }

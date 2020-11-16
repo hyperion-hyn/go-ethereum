@@ -4,6 +4,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/ethereum/go-ethereum/staking/burning"
 	"github.com/ethereum/go-ethereum/staking/types/microstaking"
 	"math/big"
 )
@@ -105,4 +106,27 @@ func ReadTerminateMap3ReturnRecords(db DatabaseReader, blockNum *big.Int, map3No
 		return nil
 	}
 	return terminateMap3ReturnRecords
+}
+
+func WriteTokenBurningRecord(writer DatabaseWriter, blockNum *big.Int, record burning.Record) {
+	bytes, err := rlp.EncodeToBytes(record)
+	if err != nil {
+		log.Error("Fail to encode burningRecord")
+	}
+	if err := writer.Put(tokenBurningRecordKey(blockNum), bytes); err != nil {
+		log.Error("Fail to store burningRecord")
+	}
+}
+
+func ReadTokenBurningRecords(db DatabaseReader, blockNum *big.Int) *burning.Record {
+	data, _ := db.Get(tokenBurningRecordKey(blockNum))
+	if len(data) == 0 {
+		return nil
+	}
+	var record burning.Record
+	if err := rlp.DecodeBytes(data, &record); err != nil {
+		log.Error("Invalid burningRecord RLP")
+		return nil
+	}
+	return &record
 }

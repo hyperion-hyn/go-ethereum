@@ -18,20 +18,11 @@ var (
 
 // according to hyperion economic model v2.1
 func LatestMicrostakingRequirement(blockHeight *big.Int, config *params.ChainConfig) (*big.Int, *big.Int, *big.Int) {
-	times := new(big.Int).Quo(blockHeight, big.NewInt(int64(config.Atlas.ScalingCycle))).Int64()
-	if times > 4 && times <= 10 {
-		h := new(big.Int).Sub(blockHeight, big.NewInt(int64(config.Atlas.ScalingCycle)*4))
-		times = h.Quo(h, big.NewInt(int64(config.Atlas.ScalingCycle)*2)).Int64()
-		times += 4
-	} else if times > 10 {
-		h := new(big.Int).Sub(blockHeight, big.NewInt(int64(config.Atlas.ScalingCycle)*10))
-		times = h.Quo(h, big.NewInt(int64(config.Atlas.ScalingCycle)*3)).Int64()
-		times += 7
-	}
+	numOfScalingCycle := NumOfScalingCycle(blockHeight, config)
 
 	requirement := baseStakingRequirement
 	coefficient := scalingCoefficient
-	for i := int64(0); i < times; i++ {
+	for i := 1; i < numOfScalingCycle; i++ { // cycle num starts form 1
 		if coefficient.GTE(common.OneDec()) {
 			break
 		}
@@ -43,4 +34,29 @@ func LatestMicrostakingRequirement(blockHeight *big.Int, config *params.ChainCon
 	requireSelf := requirement.Mul(minSelfDelegationProportion).RoundInt()
 	requireDel := requirement.Mul(minDelegationProportion)
 	return requireTotal, requireSelf, common.MaxDec(requireDel, minimalDelegation).RoundInt()
+}
+
+func NumOfScalingCycle(blockHeight *big.Int, config *params.ChainConfig) int {
+	num := common.NewDecFromBigInt(blockHeight).QuoInt64(int64(config.Atlas.ScalingCycle))
+	if !num.TruncateDec().Equal(num) { // check if it is an integer
+		num = num.Add(common.OneDec())
+	}
+	numInt := num.TruncateInt64()
+
+	if numInt > 4 && numInt <= 10 {
+		h := common.NewDecFromBigInt(blockHeight).Sub(common.NewDec(int64(config.Atlas.ScalingCycle)*4))
+		num := h.QuoInt64(int64(config.Atlas.ScalingCycle)*2)
+		if !num.TruncateDec().Equal(num) { // check if it is an integer
+			num = num.Add(common.OneDec())
+		}
+		numInt = num.TruncateInt64() + 4
+	} else if numInt > 10 {
+		h := common.NewDecFromBigInt(blockHeight).Sub(common.NewDec(int64(config.Atlas.ScalingCycle)*10))
+		num := h.QuoInt64(int64(config.Atlas.ScalingCycle)*3)
+		if !num.TruncateDec().Equal(num) { // check if it is an integer
+			num = num.Add(common.OneDec())
+		}
+		numInt = num.TruncateInt64() + 7
+	}
+	return int(numInt)
 }
