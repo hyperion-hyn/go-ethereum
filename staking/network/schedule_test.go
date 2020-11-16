@@ -203,6 +203,16 @@ func TestNumOfScalingCycle(t *testing.T) {
 			blockHeight:  big.NewInt(12960001),
 			want:         8,
 		},
+		{
+			ScalingCycle: 1296000,
+			blockHeight:  big.NewInt(16848000),
+			want:         8,
+		},
+		{
+			ScalingCycle: 1296000,
+			blockHeight:  big.NewInt(16848001),
+			want:         9,
+		},
 	}
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("Test Case-%v", i), func(t *testing.T) {
