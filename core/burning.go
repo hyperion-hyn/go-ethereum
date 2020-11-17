@@ -4,6 +4,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/staking/burning"
 	"github.com/ethereum/go-ethereum/staking/network"
@@ -17,11 +18,12 @@ var (
 
 func CheckAndPreburnToken(chain ChainContext, stateDB vm.StateDB, blockNum *big.Int) {
 	if blockNum.Cmp(big.NewInt(int64(chain.Config().Atlas.HYNBurningBlock))) == 0 {
-		stateDB.SubBalance(foundationAddress, preBurningAmount)
+		actualAmount := burnTokenFromFoundationAccount(stateDB, foundationAddress, preBurningAmount)
+		log.Info("genesis internal burning", "block", blockNum, "expect", preBurningAmount, "actual", actualAmount)
 
 		// write off-chain record
 		receipt := burning.Receipt{
-			InternalAmount: preBurningAmount,
+			InternalAmount: actualAmount,
 			ExternalAmount: common.Big0,
 			BlockNum:       blockNum,
 		}
@@ -43,15 +45,20 @@ func BurnTokenByEach30Epochs(chain ChainContext, stateDB vm.StateDB, blockNum *b
 	numOfScalingCycle := network.NumOfScalingCycle(blockNum, chain.Config())
 	require, _, _ := network.LatestMicrostakingRequirement(blockNum, chain.Config())
 	numOfActiveMap3Node := stateDB.Map3NodePool().SizeByMap3Status(microstaking.Active)
-	amount, err := burning.CalculateInternalBurningAmount(numOfActiveMap3Node, numOfScalingCycle, require)
+	expectedAmount, err := burning.CalculateInternalBurningAmount(numOfActiveMap3Node, numOfScalingCycle, require)
 	if err != nil {
 		return err
 	}
-	stateDB.SubBalance(foundationAddress, amount)
+
+	actualAmount := burnTokenFromFoundationAccount(stateDB, foundationAddress, expectedAmount)
+	log.Info("internal burning", "block", blockNum, "expect", expectedAmount, "actual", actualAmount)
+	if actualAmount.Sign() == 0 {
+		return nil
+	}
 
 	// write off-chain burning receipt
 	receipt := burning.Receipt{
-		InternalAmount: amount,
+		InternalAmount: actualAmount,
 		ExternalAmount: common.Big0,
 		BlockNum:       blockNum,
 	}
@@ -59,4 +66,13 @@ func BurnTokenByEach30Epochs(chain ChainContext, stateDB vm.StateDB, blockNum *b
 	db := chain.Database()
 	rawdb.WriteTokenBurningReceipt(db, receipt)
 	return nil
+}
+
+func burnTokenFromFoundationAccount(stateDB vm.StateDB, foundationAddress common.Address, amount *big.Int) *big.Int {
+	balance := stateDB.GetBalance(foundationAddress)
+	if balance.Cmp(amount) < 0 {
+		amount = balance
+	}
+	stateDB.SubBalance(foundationAddress, amount)
+	return amount
 }
