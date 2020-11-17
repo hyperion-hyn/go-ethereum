@@ -2,6 +2,7 @@ package ethclient
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/staking/burning"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -75,4 +76,16 @@ func (ec *Client) GetTerminateMap3RecordsAtBlock(ctx context.Context, map3Node c
 	var result []microstaking.MicrostakingReturnRecord
 	err := ec.c.CallContext(ctx, &result, "eth_getTerminateMap3RecordsAtBlock", map3Node, block)
 	return result, err
+}
+
+func (ec *Client) GetTokenBurningReceiptByBlockNum(ctx context.Context, block int64) (*burning.Receipt, error) {
+	var result burning.Receipt
+	err := ec.c.CallContext(ctx, &result, "eth_getTokenBurningReceiptByBlockNum", block)
+	return &result, err
+}
+
+func (ec *Client) GetTokenBurningReceiptByReceiptHash(ctx context.Context, hash common.Hash) (*burning.Receipt, error) {
+	var result burning.Receipt
+	err := ec.c.CallContext(ctx, &result, "eth_getTokenBurningReceiptByReceiptHash", hash)
+	return &result, err
 }
