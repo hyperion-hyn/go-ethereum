@@ -4,23 +4,23 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/staking/burning"
 	"github.com/ethereum/go-ethereum/staking/network"
 	"math/big"
 )
 
-const (
-	preBurningAmount = 1 // TODO(ATLAS): calculate
+var (
+	preBurningAmount = new(big.Int).Mul(big.NewInt(510000000), big.NewInt(params.Ether)) // (100 * 57 *6 +55 * 50 * 6 + 100 * 1 *3) * 10^18
 )
 
 func CheckAndPreburnToken(chain ChainContext, stateDB vm.StateDB, blockNum *big.Int) {
 	if blockNum.Cmp(big.NewInt(int64(chain.Config().Atlas.HYNBurningBlock))) == 0 {
-		amount := big.NewInt(preBurningAmount)
-		stateDB.SubBalance(foundationAddress, amount)
+		stateDB.SubBalance(foundationAddress, preBurningAmount)
 
 		// write off-chain record
 		receipt := burning.Receipt{
-			InternalAmount: amount,
+			InternalAmount: preBurningAmount,
 			ExternalAmount: common.Big0,
 			BlockNum:       blockNum,
 		}
