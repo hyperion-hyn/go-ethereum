@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/staking/burning"
 	"github.com/ethereum/go-ethereum/staking/network"
+	"github.com/ethereum/go-ethereum/staking/types/microstaking"
 	"math/big"
 )
 
@@ -41,8 +42,8 @@ func BurnTokenByEach30Epochs(chain ChainContext, stateDB vm.StateDB, blockNum *b
 	// internal burning
 	numOfScalingCycle := network.NumOfScalingCycle(blockNum, chain.Config())
 	require, _, _ := network.LatestMicrostakingRequirement(blockNum, chain.Config())
-	numOfMap3Node := stateDB.Map3NodePool().Map3Nodes().Keys().Length()
-	amount, err := burning.CalculateInternalBurningAmount(numOfMap3Node, numOfScalingCycle, require)
+	numOfActiveMap3Node := stateDB.Map3NodePool().SizeByMap3Status(microstaking.Active)
+	amount, err := burning.CalculateInternalBurningAmount(numOfActiveMap3Node, numOfScalingCycle, require)
 	if err != nil {
 		return err
 	}

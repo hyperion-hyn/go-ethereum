@@ -425,6 +425,25 @@ func (s *Storage_Map3NodePool_) RemoveDelegationIndex(delegator, map3Addr common
 	indexMap.Remove(map3Addr)
 }
 
+func (s *Storage_Map3NodePool_) SizeByMap3Status(status Map3Status) int {
+	if status == Nil {
+		return s.Map3Nodes().Keys().Length()
+	}
+
+	size := 0
+	for _, map3Address := range s.Map3Nodes().AllKeys() {
+		node, ok := s.Map3Nodes().Get(map3Address)
+		if !ok {
+			log.Error("map3 node not found in map3 node counting", "map3Addr", map3Address)
+			continue
+		}
+		if node.Map3Node().AtStatus(status) {
+			size++
+		}
+	}
+	return size
+}
+
 // CreateValidatorFromNewMsg creates validator from NewValidator message
 func CreateMap3NodeFromNewMsg(msg *CreateMap3Node, map3Address common.Address, blockNum, epoch *big.Int) (*Map3NodeWrapper_, error) {
 	if err := common2.VerifyBLSKey(&msg.NodePubKey, &msg.NodeKeySig); err != nil {

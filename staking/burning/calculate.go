@@ -7,10 +7,6 @@ import (
 	"math/big"
 )
 
-const (
-	preBurningAmount = 1 // TODO(ATLAS): how much ?
-)
-
 type Receipt struct {
 	Hash           *common.Hash `json:"hash" rlp:"-"`
 	InternalAmount *big.Int     `json:"internal-amount"`

@@ -11,7 +11,7 @@ var (
 	renewedMap3KeyPrefix                   = []byte("RenewedMap3Node")
 	unmicrodelegationReturnRecordKeyPrefix = []byte("UnmicrodelegationReturnRecord")
 	terminateMap3ReturnRecordKeyPrefix     = []byte("TerminateMap3ReturnRecord")
-	tokenBurningRecordKeyPrefix            = []byte("TokenBurningRecord")
+	tokenBurningReceiptKeyPrefix           = []byte("TokenBurningReceipt")
 )
 
 func mutateMap3Key(epoch uint64) []byte {
@@ -39,6 +39,6 @@ func terminateMap3ReturnRecordKey(block *big.Int, map3Address common.Address) []
 }
 
 func tokenBurningReceiptKey(blockNumOrHash []byte) []byte {
-	key := append(tokenBurningRecordKeyPrefix, blockNumOrHash...)
+	key := append(tokenBurningReceiptKeyPrefix, blockNumOrHash...)
 	return key
 }
