@@ -31,6 +31,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
+	"github.com/ethereum/go-ethereum/trie"
 )
 
 const (
@@ -39,9 +40,10 @@ const (
 )
 
 var (
-	blockCacheItems      = 8192             // Maximum number of blocks to cache before throttling the download
-	blockCacheMemory     = 64 * 1024 * 1024 // Maximum amount of memory to use for block caching
-	blockCacheSizeWeight = 0.1              // Multiplier to approximate the average block size based on past ones
+	blockCacheMaxItems     = 8192             // Maximum number of blocks to cache before throttling the download
+	blockCacheInitialItems = 2048             // Initial number of blocks to start fetching, before we know the sizes of the blocks
+	blockCacheMemory       = 64 * 1024 * 1024 // Maximum amount of memory to use for block caching
+	blockCacheSizeWeight   = 0.1              // Multiplier to approximate the average block size based on past ones
 )
 
 var (
@@ -141,7 +143,7 @@ type queue struct {
 }
 
 // newQueue creates a new download queue for scheduling block retrieval.
-func newQueue(blockCacheLimit int) *queue {
+func newQueue(blockCacheLimit int, thresholdInitialSize int) *queue {
 	lock := new(sync.RWMutex)
 	q := &queue{
 		headerContCh:     make(chan bool),
@@ -150,12 +152,12 @@ func newQueue(blockCacheLimit int) *queue {
 		active:           sync.NewCond(lock),
 		lock:             lock,
 	}
-	q.Reset(blockCacheLimit)
+	q.Reset(blockCacheLimit, thresholdInitialSize)
 	return q
 }
 
 // Reset clears out the queue contents.
-func (q *queue) Reset(blockCacheLimit int) {
+func (q *queue) Reset(blockCacheLimit int, thresholdInitialSize int) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
@@ -174,6 +176,7 @@ func (q *queue) Reset(blockCacheLimit int) {
 	q.receiptPendPool = make(map[string]*fetchRequest)
 
 	q.resultCache = newResultStore(blockCacheLimit)
+	q.resultCache.SetThrottleThreshold(uint64(thresholdInitialSize))
 }
 
 // Close marks the end of the sync, unblocking Results.
@@ -381,7 +384,7 @@ func (q *queue) Results(block bool) []*fetchResult {
 	throttleThreshold = q.resultCache.SetThrottleThreshold(throttleThreshold)
 
 	// Log some info at certain times
-	if time.Since(q.lastStatLog) > 10*time.Second {
+	if time.Since(q.lastStatLog) > 60*time.Second {
 		q.lastStatLog = time.Now()
 		info := q.Stats()
 		info = append(info, "throttle", throttleThreshold)
@@ -771,7 +774,7 @@ func (q *queue) DeliverBodies(id string, txLists [][]*types.Transaction, uncleLi
 	q.lock.Lock()
 	defer q.lock.Unlock()
 	validate := func(index int, header *types.Header) error {
-		if types.DeriveSha(types.Transactions(txLists[index])) != header.TxHash {
+		if types.DeriveSha(types.Transactions(txLists[index]), new(trie.Trie)) != header.TxHash {
 			return errInvalidBody
 		}
 		if types.CalcUncleHash(uncleLists[index]) != header.UncleHash {
@@ -796,7 +799,7 @@ func (q *queue) DeliverReceipts(id string, receiptList [][]*types.Receipt) (int,
 	q.lock.Lock()
 	defer q.lock.Unlock()
 	validate := func(index int, header *types.Header) error {
-		if types.DeriveSha(types.Receipts(receiptList[index])) != header.ReceiptHash {
+		if types.DeriveSha(types.Receipts(receiptList[index]), new(trie.Trie)) != header.ReceiptHash {
 			return errInvalidReceipt
 		}
 		return nil

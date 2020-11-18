@@ -110,7 +110,7 @@ type Downloader struct {
 	peers      *peerSet // Set of active peers from which download can proceed
 
 	stateDB    ethdb.Database  // Database to state sync into (and deduplicate via)
-	stateBloom *trie.SyncBloom // Bloom filter for fast trie node existence checks
+	stateBloom *trie.SyncBloom // Bloom filter for fast trie node and contract code existence checks
 
 	// Statistics
 	syncStatsChainOrigin uint64 // Origin block number where syncing started at
@@ -225,7 +225,7 @@ func New(checkpoint uint64, stateDb ethdb.Database, stateBloom *trie.SyncBloom, 
 		stateBloom:     stateBloom,
 		mux:            mux,
 		checkpoint:     checkpoint,
-		queue:          newQueue(blockCacheItems),
+		queue:          newQueue(blockCacheMaxItems, blockCacheInitialItems),
 		peers:          newPeerSet(),
 		rttEstimate:    uint64(rttMaxEstimate),
 		rttConfidence:  uint64(1000000),
@@ -287,6 +287,15 @@ func (d *Downloader) Progress() ethereum.SyncProgress {
 // Synchronising returns whether the downloader is currently retrieving blocks.
 func (d *Downloader) Synchronising() bool {
 	return atomic.LoadInt32(&d.synchronising) > 0
+}
+
+// SyncBloomContains tests if the syncbloom filter contains the given hash:
+//   - false: the bloom definitely does not contain hash
+//   - true:  the bloom maybe contains hash
+//
+// While the bloom is being initialized (or is closed), all queries will return true.
+func (d *Downloader) SyncBloomContains(hash []byte) bool {
+	return d.stateBloom == nil || d.stateBloom.Contains(hash)
 }
 
 // RegisterPeer injects a new download peer into the set of block source to be
@@ -376,7 +385,7 @@ func (d *Downloader) synchronise(id string, hash common.Hash, td *big.Int, mode 
 		d.stateBloom.Close()
 	}
 	// Reset the queue, peer set and wake channels to clean any internal leftover state
-	d.queue.Reset(blockCacheItems)
+	d.queue.Reset(blockCacheMaxItems, blockCacheInitialItems)
 	d.peers.Reset()
 
 	for _, ch := range []chan bool{d.bodyWakeCh, d.receiptWakeCh} {
@@ -1508,6 +1517,8 @@ func (d *Downloader) processHeaders(origin uint64, pivot uint64, td *big.Int) er
 					head := chunk[len(chunk)-1].Number.Uint64()
 					if head-rollback > uint64(fsHeaderSafetyNet) {
 						rollback = head - uint64(fsHeaderSafetyNet)
+					} else {
+						rollback = 1
 					}
 				}
 				// Unless we're doing light chains, schedule the headers for associated content retrieval
@@ -1628,7 +1639,13 @@ func (d *Downloader) processFastSyncContent(latest *types.Header) error {
 	// Start syncing state of the reported head block. This should get us most of
 	// the state of the pivot block.
 	sync := d.syncState(latest.Root)
-	defer sync.Cancel()
+	defer func() {
+		// The `sync` object is replaced every time the pivot moves. We need to
+		// defer close the very last active one, hence the lazy evaluation vs.
+		// calling defer sync.Cancel() !!!
+		sync.Cancel()
+	}()
+
 	closeOnErr := func(s *stateSync) {
 		if err := s.Wait(); err != nil && err != errCancelStateFetch && err != errCanceled {
 			d.queue.Close() // wake up Results
@@ -1691,9 +1708,8 @@ func (d *Downloader) processFastSyncContent(latest *types.Header) error {
 			// If new pivot block found, cancel old state retrieval and restart
 			if oldPivot != P {
 				sync.Cancel()
-
 				sync = d.syncState(P.Header.Root)
-				defer sync.Cancel()
+
 				go closeOnErr(sync)
 				oldPivot = P
 			}
