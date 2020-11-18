@@ -43,6 +43,7 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/ethereum/go-ethereum/trie"
 )
 
 // This nil assignment ensures at compile time that SimulatedBackend implements bind.ContractBackend.
@@ -142,7 +143,7 @@ func (b *SimulatedBackend) FlushStateInNewBlock(stateDB *state.StateDB) error {
 
 	header := b.pendingBlock.Header()
 	header.Root = root
-	block := types.NewBlock(header, nil, nil, nil)
+	block := types.NewBlock(header, nil, nil, nil, new(trie.Trie))
 	_, err = b.Blockchain().WriteBlockWithState(block, nil, nil, stateDB, false)
 	if err != nil {
 		return err
@@ -737,15 +738,15 @@ type callMsg struct {
 	ethereum.CallMsg
 }
 
-func (m callMsg) From() common.Address { return m.CallMsg.From }
-func (m callMsg) Nonce() uint64        { return 0 }
-func (m callMsg) CheckNonce() bool     { return false }
-func (m callMsg) To() *common.Address  { return m.CallMsg.To }
-func (m callMsg) GasPrice() *big.Int   { return m.CallMsg.GasPrice }
-func (m callMsg) Gas() uint64          { return m.CallMsg.Gas }
-func (m callMsg) Value() *big.Int      { return m.CallMsg.Value }
-func (m callMsg) Data() []byte         { return m.CallMsg.Data }
-func (m callmsg) Type() types.TransactionType { return types.Normal }
+func (m callMsg) From() common.Address        { return m.CallMsg.From }
+func (m callMsg) Nonce() uint64               { return 0 }
+func (m callMsg) CheckNonce() bool            { return false }
+func (m callMsg) To() *common.Address         { return m.CallMsg.To }
+func (m callMsg) GasPrice() *big.Int          { return m.CallMsg.GasPrice }
+func (m callMsg) Gas() uint64                 { return m.CallMsg.Gas }
+func (m callMsg) Value() *big.Int             { return m.CallMsg.Value }
+func (m callMsg) Data() []byte                { return m.CallMsg.Data }
+func (m callMsg) Type() types.TransactionType { return types.Normal }
 
 // filterBackend implements filters.Backend to support filtering for logs without
 // taking bloom-bits acceleration structures into account.

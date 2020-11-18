@@ -31,9 +31,7 @@ import (
 	"text/template"
 	"time"
 
-	pcsclite "github.com/gballet/go-libpcsclite"
 	"github.com/hyperion-hyn/bls/ffi/go/bls"
-	"gopkg.in/urfave/cli.v1"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
