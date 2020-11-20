@@ -62,11 +62,6 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 		if err != nil {
 			return true, errDecodeFailed
 		}
-		if !sb.coreStarted {
-			err := sb.Gossip(nil, data)
-			return true, err
-			//return true, atlas.ErrStoppedEngine
-		}
 
 		// Mark peer's message
 		ms, ok := sb.recentMessages.Get(addr)
@@ -84,6 +79,11 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 			return true, nil
 		}
 		sb.knownMessages.Add(hash, true)
+
+		if !sb.coreStarted {
+			err := sb.Gossip(nil, data)
+			return true, err
+		}
 
 		go sb.atlasEventMux.Post(atlas.MessageEvent{
 			Payload: data,
