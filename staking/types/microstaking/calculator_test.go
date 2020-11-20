@@ -99,8 +99,8 @@ func TestCalculatorForActivationAtEndOfEpoch_Calculate(t *testing.T) {
 				epoch:    big.NewInt(5),
 				blockNum: big.NewInt(500),
 			},
-			wantActivationEpoch: big.NewInt(6),
-			wantReleaseEpoch:    common.NewDec(186),
+			wantActivationEpoch: big.NewInt(5),
+			wantReleaseEpoch:    common.NewDec(185),
 		},
 	}
 	for _, tt := range tests {
