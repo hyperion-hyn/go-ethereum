@@ -351,6 +351,7 @@ func verifySignature(valSet atlas.ValidatorSet, hash []byte, signature []byte, b
 	}
 
 	if ok := sign.VerifyHash(aggregatePublicKey, hash); !ok {
+		log.Error("verify hash error", "hash", common.Bytes2Hex(hash))
 		return errInvalidAggregatedSignature
 	}
 
