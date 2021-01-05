@@ -406,16 +406,18 @@ func (sb *backend) _Prepare(chain consensus.ChainReader, header *types.Header) e
 	header.Difficulty = DefaultDifficulty
 
 	// Assemble the voting snapshot
-	snap, err := sb.snapshot(chain, number-1, header.ParentHash, nil)
+	snap, err := sb.snapshot(chain, number-2, parent.ParentHash, nil)
 	if err != nil {
 		return err
 	}
 
 	lastCommits, err := rawdb.ReadLastCommits(chain.Database(), number-1)
 	if err != nil {
+		sb.logger.Error("last commit not found. ", "number", number-1)
 		return errInvalidLastCommits
 	}
 	if len(lastCommits) != types.AtlasExtraSignature+types.GetMaskByteCount(snap.ValSet.Size()) {
+		sb.logger.Error("last commit length error.", "signature", types.AtlasExtraSignature, "maskCount", types.GetMaskByteCount(snap.ValSet.Size()))
 		return errInvalidLastCommits
 	}
 
