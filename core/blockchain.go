@@ -112,7 +112,10 @@ const (
 	// - Version 7
 	//  The following incompatible database changes were added:
 	//    * Use freezer as the ancient database to maintain all ancient data
-	BlockChainVersion uint64 = 7
+	// - Version 8
+	//  The following incompatible database changes were added:
+	//    * New scheme for contract code in order to separate the codes and trie nodes
+	BlockChainVersion uint64 = 8
 )
 
 // CacheConfig contains the configuration values for the trie caching/pruning
@@ -907,10 +910,28 @@ func (bc *BlockChain) GetUnclesInChain(block *types.Block, length int) []*types.
 	return uncles
 }
 
-// TrieNode retrieves a blob of data associated with a trie node (or code hash)
+// TrieNode retrieves a blob of data associated with a trie node
 // either from ephemeral in-memory cache, or from persistent storage.
 func (bc *BlockChain) TrieNode(hash common.Hash) ([]byte, error) {
 	return bc.stateCache.TrieDB().Node(hash)
+}
+
+// ContractCode retrieves a blob of data associated with a contract hash
+// either from ephemeral in-memory cache, or from persistent storage.
+func (bc *BlockChain) ContractCode(hash common.Hash) ([]byte, error) {
+	return bc.stateCache.ContractCode(common.Hash{}, hash)
+}
+
+// ContractCodeWithPrefix retrieves a blob of data associated with a contract
+// hash either from ephemeral in-memory cache, or from persistent storage.
+//
+// If the code doesn't exist in the in-memory cache, check the storage with
+// new code scheme.
+func (bc *BlockChain) ContractCodeWithPrefix(hash common.Hash) ([]byte, error) {
+	type codeReader interface {
+		ContractCodeWithPrefix(addrHash, codeHash common.Hash) ([]byte, error)
+	}
+	return bc.stateCache.(codeReader).ContractCodeWithPrefix(common.Hash{}, hash)
 }
 
 // Stop stops the blockchain service. If any imports are currently in progress
@@ -1268,6 +1289,7 @@ func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain [
 	}
 	// writeLive writes blockchain and corresponding receipt chain into active store.
 	writeLive := func(blockChain types.Blocks, receiptChain []types.Receipts) (int, error) {
+		skipPresenceCheck := false
 		batch := bc.db.NewBatch()
 		for i, block := range blockChain {
 			// Short circuit insertion if shutting down or processing failed
@@ -1278,9 +1300,17 @@ func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain [
 			if !bc.HasHeader(block.Hash(), block.NumberU64()) {
 				return i, fmt.Errorf("containing header #%d [%x…] unknown", block.Number(), block.Hash().Bytes()[:4])
 			}
-			if bc.HasBlock(block.Hash(), block.NumberU64()) {
-				stats.ignored++
-				continue
+			if !skipPresenceCheck {
+				// Ignore if the entire data is already known
+				if bc.HasBlock(block.Hash(), block.NumberU64()) {
+					stats.ignored++
+					continue
+				} else {
+					// If block N is not present, neither are the later blocks.
+					// This should be true, but if we are mistaken, the shortcut
+					// here will only cause overwriting of some existing data
+					skipPresenceCheck = true
+				}
 			}
 			// Write all the data out into the database
 			rawdb.WriteBody(batch, block.Hash(), block.NumberU64(), block.Body())

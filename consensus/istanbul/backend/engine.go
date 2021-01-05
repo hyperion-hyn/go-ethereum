@@ -34,6 +34,8 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/ethereum/go-ethereum/trie"
+
 	lru "github.com/hashicorp/golang-lru"
 	"golang.org/x/crypto/sha3"
 )
@@ -446,7 +448,7 @@ func (sb *backend) _FinalizeAndAssemble(chain consensus.ChainReader, header *typ
 	header.UncleHash = nilUncleHash
 
 	// Assemble and return the final block for sealing
-	return types.NewBlock(header, txs, nil, receipts), nil
+	return types.NewBlock(header, txs, nil, receipts, new(trie.Trie)), nil
 }
 
 // Seal generates a new block for the given input block with the local miner's

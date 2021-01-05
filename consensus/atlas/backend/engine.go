@@ -20,6 +20,8 @@ import (
 	"bytes"
 	"errors"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/trie"
+
 	"io"
 	"math"
 
@@ -349,6 +351,7 @@ func verifySignature(valSet atlas.ValidatorSet, hash []byte, signature []byte, b
 	}
 
 	if ok := sign.VerifyHash(aggregatePublicKey, hash); !ok {
+		log.Error("verify hash error", "hash", common.Bytes2Hex(hash))
 		return errInvalidAggregatedSignature
 	}
 
@@ -485,7 +488,7 @@ func (sb *backend) _FinalizeAndAssemble(chain consensus.ChainReader, header *typ
 	header.UncleHash = nilUncleHash
 
 	// Assemble and return the final block for sealing
-	return types.NewBlock(header, txs, nil, receipts), nil
+	return types.NewBlock(header, txs, nil, receipts, new(trie.Trie)), nil
 }
 
 // Seal generates a new block for the given input block with the local miner's

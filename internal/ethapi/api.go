@@ -1157,7 +1157,11 @@ func RPCMarshalHeader(head *types.Header) map[string]interface{} {
 		"timestamp":        hexutil.Uint64(head.Time),
 		"transactionsRoot": head.TxHash,
 		"receiptsRoot":     head.ReceiptHash,
-		"epoch":            (*hexutil.Big)(head.Epoch), //ATLAS
+
+		//ATLAS
+		"epoch":       (*hexutil.Big)(head.Epoch),
+		"lastCommits": hexutil.Bytes(head.LastCommits),
+		"slashes":     hexutil.Bytes(head.Slashes),
 	}
 }
 
