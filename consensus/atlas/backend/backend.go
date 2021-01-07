@@ -84,7 +84,7 @@ type backend struct {
 
 	address    common.Address       // Signer's account address
 	annotation string               // Signer's annotation
-	signer     common.Address       // Signer's id (address format)
+	signers    []common.Address     // Signer's id (address format)
 	signHashFn consensus.SignHashFn // Sign function to authorize hashes with
 	lock       sync.RWMutex         // Protects the signer fields
 
@@ -131,8 +131,8 @@ func (sb *backend) Annotation() string {
 }
 
 // Signer implements atlas.Backend.Signer
-func (sb *backend) Signer() common.Address {
-	return sb.signer
+func (sb *backend) Signer() []common.Address {
+	return sb.signers
 }
 
 // Validators implements atlas.Backend.Validators
@@ -257,9 +257,9 @@ func (sb *backend) Verify(proposal atlas.Proposal) (time.Duration, error) {
 }
 
 // Sign implements atlas.Backend.Sign
-func (sb *backend) SignHash(hash common.Hash) (signature []byte, publicKey []byte, mask []byte, err error) {
+func (sb *backend) SignHash(signer common.Address, hash common.Hash) (signature []byte, publicKey []byte, mask []byte, err error) {
 	// ATLAS(zgx): Sign is called by finalizeMessage and updateBlock, the former sign message, the latter sign block
-	signature, publicKey, mask, err = sb.signHashFn(accounts.Account{Address: sb.signer}, hash)
+	signature, publicKey, mask, err = sb.signHashFn(accounts.Account{Address: signer}, hash)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -347,12 +347,19 @@ func (sb *backend) Close() error {
 
 // Authorize injects a private key into the consensus engine to mint new blocks
 // with.
-func (sb *backend) Authorize(signer common.Address, signHashFn consensus.SignHashFn) {
+func (sb *backend) Authorize(signers []common.Address, signHashFn consensus.SignHashFn) {
 	sb.lock.Lock()
 	defer sb.lock.Unlock()
 
-	sb.signer = signer
+	sb.signers = signers
 	sb.signHashFn = signHashFn
-	sb.logger = log.New("annotation", sb.annotation, "signer", sb.signer)
+
+	//only use in logger
+	signersStr := make([]string, 0, len(signers))
+	for _, tmp := range signers {
+		signersStr = append(signersStr, tmp.String())
+	}
+
+	sb.logger = log.New("annotation", sb.annotation, "signer", signersStr)
 	sb.core.Authorize()
 }

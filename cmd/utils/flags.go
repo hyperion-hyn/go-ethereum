@@ -614,11 +614,11 @@ var (
 		Name:  "node.annotation",
 		Usage: "node annotation",
 	}
-	SignerKeyFileFlag = cli.StringFlag{
+	SignerKeyFileFlag = cli.StringSliceFlag{
 		Name:  "signerkey",
 		Usage: "signer key file",
 	}
-	SignerKeyHexFlag = cli.StringFlag{
+	SignerKeyHexFlag = cli.StringSliceFlag{
 		Name:  "signerkeyhex",
 		Usage: "signer key as hex (for testing)",
 	}
@@ -839,24 +839,34 @@ func setNodeKey(ctx *cli.Context, cfg *p2p.Config) {
 // from a file or as a specified hex value.
 func setSignerKey(ctx *cli.Context, cfg *p2p.Config) {
 	var (
-		hex  = ctx.GlobalString(SignerKeyHexFlag.Name)
-		file = ctx.GlobalString(SignerKeyFileFlag.Name)
-		key  *bls.SecretKey
-		err  error
+		hexes = ctx.GlobalStringSlice(SignerKeyHexFlag.Name)
+		files = ctx.GlobalStringSlice(SignerKeyFileFlag.Name)
+		keys  = make([]*bls.SecretKey, 0, 10)
 	)
-	switch {
-	case file != "" && hex != "":
-		Fatalf("Options %q and %q are mutually exclusive", SignerKeyFileFlag.Name, SignerKeyHexFlag.Name)
-	case file != "":
-		if key, err = crypto.LoadBLS(file); err != nil {
-			Fatalf("Option %q: %v", SignerKeyFileFlag.Name, err)
+
+	for _, hex := range hexes {
+		if hex != "" {
+			if key, err := crypto.HexToBLS(hex); err != nil {
+				Fatalf("Option %q: %v", SignerKeyHexFlag.Name, err)
+			} else {
+				keys = append(keys, key)
+			}
 		}
-		cfg.SignerKey = key
-	case hex != "":
-		if key, err = crypto.HexToBLS(hex); err != nil {
-			Fatalf("Option %q: %v", SignerKeyHexFlag.Name, err)
+	}
+
+	for _, file := range files {
+		if file != "" {
+			if key, err := crypto.LoadBLS(file); err != nil {
+				Fatalf("Option %q: %v", SignerKeyFileFlag.Name, err)
+			} else {
+				keys = append(keys, key)
+			}
 		}
-		cfg.SignerKey = key
+	}
+
+	if len(keys) >= 0 {
+		cfg.SignerKeys = keys
+		//Fatalf("Options %q and %q are mutually exclusive", SignerKeyFileFlag.Name, SignerKeyHexFlag.Name)
 	}
 }
 

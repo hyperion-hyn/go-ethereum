@@ -519,16 +519,22 @@ func (s *Ethereum) StartMining(threads int) error {
 
 		if atlas, ok := s.engine.(consensus.EngineEx); ok {
 			// ATLAS(zgx): should put signer key into eth.Config instead of p2p.Config, because signer key can be indepent to p2p
-			signer := crypto.PubkeyToSigner(s.ctx.Config().SignerKey().GetPublicKey())
-			signFn := func(account accounts.Account, hash common.Hash) ([]byte, []byte, []byte, error) {
-				secrectKey := s.ctx.Config().SignerKey()
-				sign := secrectKey.SignHash(hash.Bytes())
-
-				// ATLAS(zgx): only one signer, so set mask to byte 1 here.
-				return sign.Serialize(), secrectKey.GetPublicKey().Serialize(), nil, nil
+			signers := make([]common.Address, 0, len(s.ctx.Config().SignerKeys()))
+			for _, key := range s.ctx.Config().SignerKeys() {
+				signers = append(signers, crypto.PubkeyToSigner(key.GetPublicKey()))
 			}
-
-			atlas.Authorize(signer, signFn)
+			signFn := func(account accounts.Account, hash common.Hash) ([]byte, []byte, []byte, error) {
+				for i, addr := range signers {
+					if addr == account.Address {
+						secretKey := s.ctx.Config().SignerKeys()[i]
+						sign := secretKey.SignHash(hash.Bytes())
+						// ATLAS(zgx): only one signer, so set mask to byte 1 here.
+						return sign.Serialize(), secretKey.GetPublicKey().Serialize(), nil, nil
+					}
+				}
+				return nil, nil, nil, errors.New("signer not found")
+			}
+			atlas.Authorize(signers, signFn)
 		}
 
 		// If mining is started, we can disable the transaction rejection mechanism

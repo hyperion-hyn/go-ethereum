@@ -405,8 +405,16 @@ func (sb *backend) _Prepare(chain consensus.ChainReader, header *types.Header) e
 	// use the same difficulty for all blocks
 	header.Difficulty = DefaultDifficulty
 
-	// Assemble the voting snapshot
-	snap, err := sb.snapshot(chain, number-2, parent.ParentHash, nil)
+	var (
+		snap *Snapshot
+		err  error
+	)
+	if number == 1 {
+		snap, err = sb.snapshot(chain, number-1, header.ParentHash, nil)
+	} else {
+		// Assemble the voting snapshot
+		snap, err = sb.snapshot(chain, number-2, parent.ParentHash, nil)
+	}
 	if err != nil {
 		return err
 	}
@@ -516,7 +524,15 @@ func (sb *backend) _Seal(chain consensus.ChainReader, block *types.Block, result
 		return err
 	}
 
-	if _, v := snap.ValSet.GetBySigner(sb.signer); v == nil {
+	containSigner := false
+	for _, signer := range sb.signers {
+		if _, v := snap.ValSet.GetBySigner(signer); v != nil {
+			containSigner = true
+			break
+		}
+	}
+
+	if !containSigner {
 		return errUnauthorized
 	}
 

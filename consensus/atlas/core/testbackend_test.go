@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"fmt"
+	"github.com/ethereum/go-ethereum/consensus/atlas/backend"
 	"math/big"
 	"os"
 	"sync"
@@ -53,14 +54,14 @@ type testSystemBackend struct {
 	committedMsgs []testCommittedMsgs
 	sentMsgs      [][]byte // store the message when Send is called by core
 
-	signer    common.Address // signer's id (address format)
+	signers   []common.Address // signer's id (address format)
 	signerKey *bls.SecretKey
 	address   common.Address // owner's address
 	db        ethdb.Database
 }
 
-func (self *testSystemBackend) Signer() common.Address {
-	return self.signer
+func (self *testSystemBackend) Signer() []common.Address {
+	return self.signers
 }
 
 func (self *testSystemBackend) Annotation() string {
@@ -130,7 +131,7 @@ func (self *testSystemBackend) Verify(proposal atlas.Proposal) (time.Duration, e
 	return 0, nil
 }
 
-func (self *testSystemBackend) SignHash(hash common.Hash) ([]byte, []byte, []byte, error) {
+func (self *testSystemBackend) SignHash(singer common.Address, hash common.Hash) ([]byte, []byte, []byte, error) {
 	testLogger.Info(fmt.Sprintf("testSystemBackend.Sign: %x...", hash.Hex()))
 	sighash := self.signerKey.SignHash(hash.Bytes()).Serialize()
 	pubkey := self.signerKey.GetPublicKey().Serialize()
@@ -182,7 +183,7 @@ func (self *testSystemBackend) ParentValidators(proposal atlas.Proposal) atlas.V
 }
 
 func (self *testSystemBackend) SealHash(header *types.Header) common.Hash {
-	return atlas.SealHash(header)
+	return backend.SealHash(header)
 }
 
 func (sb *testSystemBackend) Close() error {
@@ -249,7 +250,7 @@ func NewTestSystemWithBackend(n, f uint64) *testSystem {
 		backend := sys.NewBackend(i)
 		backend.peers = vset
 		backend.address = vset.GetByIndex(i).Coinbase()
-		backend.signer = vset.GetByIndex(i).Signer()
+		backend.signers = []common.Address{vset.GetByIndex(i).Signer()}
 		backend.signerKey = findSecretKeyBySigner(keys, vset.GetByIndex(i).Signer())
 
 		core := New(backend, config).(*core)

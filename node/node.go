@@ -503,8 +503,8 @@ func (n *Node) GetNodeKey() *ecdsa.PrivateKey {
 	return n.config.NodeKey()
 }
 
-func (n *Node) GetSignerKey() *bls.SecretKey {
-	return n.config.SignerKey()
+func (n *Node) GetSignerKeys() []*bls.SecretKey {
+	return n.config.SignerKeys()
 }
 
 // DataDir retrieves the current datadir used by the protocol stack.

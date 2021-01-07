@@ -43,12 +43,12 @@ func TestHandleMsg(t *testing.T) {
 	msg := &message{
 		Code:          msgPreprepare,
 		Msg:           m,
-		Signer:        v0.Signer(),
+		Signer:        v0.Signer()[0],
 		Signature:     []byte{},
 		CommittedSeal: []byte{},
 	}
 
-	_, val := v0.Validators(nil).GetBySigner(v0.Signer())
+	_, val := v0.Validators(nil).GetBySigner(v0.Signer()[0])
 	if err := r0.handleCheckedMsg(msg, val); err != errFailedDecodePreprepare {
 		t.Errorf("error mismatch: have %v, want %v", err, errFailedDecodePreprepare)
 	}
@@ -61,12 +61,12 @@ func TestHandleMsg(t *testing.T) {
 	msg = &message{
 		Code:          msgPrepare,
 		Msg:           m,
-		Signer:        v0.Signer(),
+		Signer:        v0.Signer()[0],
 		Signature:     []byte{},
 		CommittedSeal: []byte{},
 	}
 
-	_, val = v0.Validators(nil).GetBySigner(v0.Signer())
+	_, val = v0.Validators(nil).GetBySigner(v0.Signer()[0])
 	if err := r0.handleCheckedMsg(msg, val); err != errFailedDecodePrepare {
 		t.Errorf("error mismatch: have %v, want %v", err, errFailedDecodePreprepare)
 	}
@@ -79,12 +79,12 @@ func TestHandleMsg(t *testing.T) {
 	msg = &message{
 		Code:          msgExpect,
 		Msg:           m,
-		Signer:        v0.Signer(),
+		Signer:        v0.Signer()[0],
 		Signature:     []byte{},
 		CommittedSeal: []byte{},
 	}
 
-	_, val = v0.Validators(nil).GetBySigner(v0.Signer())
+	_, val = v0.Validators(nil).GetBySigner(v0.Signer()[0])
 	if err := r0.handleCheckedMsg(msg, val); err != errFailedDecodeExpect {
 		t.Errorf("error mismatch: have %v, want %v", err, errFailedDecodeExpect)
 	}
@@ -97,12 +97,12 @@ func TestHandleMsg(t *testing.T) {
 	msg = &message{
 		Code:          msgConfirm,
 		Msg:           m,
-		Signer:        v0.Signer(),
+		Signer:        v0.Signer()[0],
 		Signature:     []byte{},
 		CommittedSeal: []byte{},
 	}
 
-	_, val = v0.Validators(nil).GetBySigner(v0.Signer())
+	_, val = v0.Validators(nil).GetBySigner(v0.Signer()[0])
 	if err := r0.handleCheckedMsg(msg, val); err != errFailedDecodeConfirm {
 		t.Errorf("error mismatch: have %v, want %v", err, errFailedDecodeConfirm)
 	}
@@ -115,12 +115,12 @@ func TestHandleMsg(t *testing.T) {
 	msg = &message{
 		Code:          msgCommit,
 		Msg:           m,
-		Signer:        v0.Signer(),
+		Signer:        v0.Signer()[0],
 		Signature:     []byte{},
 		CommittedSeal: []byte{},
 	}
 
-	_, val = v0.Validators(nil).GetBySigner(v0.Signer())
+	_, val = v0.Validators(nil).GetBySigner(v0.Signer()[0])
 	if err := r0.handleCheckedMsg(msg, val); err != errFailedDecodeCommit {
 		t.Errorf("error mismatch: have %v, want %v", err, errFailedDecodeCommit)
 	}
@@ -133,12 +133,12 @@ func TestHandleMsg(t *testing.T) {
 	msg = &message{
 		Code:          uint64(msgAll),
 		Msg:           m,
-		Signer:        v0.Signer(),
+		Signer:        v0.Signer()[0],
 		Signature:     []byte{},
 		CommittedSeal: []byte{},
 	}
 
-	_, val = v0.Validators(nil).GetBySigner(v0.Signer())
+	_, val = v0.Validators(nil).GetBySigner(v0.Signer()[0])
 	if err := r0.handleCheckedMsg(msg, val); err == nil {
 		t.Errorf("error mismatch: have %v, want nil", err)
 	}
@@ -164,13 +164,13 @@ func TestHandleMsg(t *testing.T) {
 	msg = &message{
 		Code:          msgPrepare,
 		Msg:           m,
-		Signer:        v0.Signer(),
+		Signer:        v0.Signer()[0],
 		Signature:     []byte{},
 		SignerPubKey:  []byte{},
 		CommittedSeal: []byte{},
 	}
 
-	payload, err := r0.finalizeMessage(msg)
+	payload, err := r0.finalizeMessage(v0.Signer()[0], msg)
 	if err != nil {
 		t.Errorf("failed to finalizeMessage: %v", err)
 	}

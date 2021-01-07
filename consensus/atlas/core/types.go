@@ -30,7 +30,9 @@ type Engine interface {
 	Start() error
 	Stop() error
 
-	IsProposer() bool
+	IsProposer(signer common.Address) bool
+
+	ContainProposer() bool
 
 	// verify if a hash is the same as the proposed block in the current pending request
 	//

@@ -81,37 +81,40 @@ func (c *core) checkMessage(msgCode uint64, view *atlas.View) error {
 func (c *core) storeBacklog(msg *message, src atlas.Validator) {
 	logger := c.logger.New("from", src, "state", c.state)
 
-	if src.Signer() == c.Signer() {
-		logger.Warn("Backlog from self")
-		return
-	}
-
-	logger.Trace("Store future message")
-
-	c.backlogsMu.Lock()
-	defer c.backlogsMu.Unlock()
-
-	logger.Debug("Retrieving backlog queue", "for", src.Signer(), "backlogs_size", len(c.backlogs))
-	backlog := c.backlogs[src.Signer()]
-	if backlog == nil {
-		backlog = prque.New()
-	}
-	switch msg.Code {
-	case msgPreprepare:
-		var p atlas.Preprepare
-		err := msg.Decode(&p)
-		if err == nil {
-			backlog.Push(msg, toPriority(msg.Code, p.View))
+	signers := c.Signer()
+	for _, signer := range signers {
+		if src.Signer() == signer {
+			logger.Warn("Backlog from self")
+			continue
 		}
-		// for msgRoundChange, msgPrepare and msgCommit cases
-	default:
-		var p atlas.Subject
-		err := msg.Decode(&p)
-		if err == nil {
-			backlog.Push(msg, toPriority(msg.Code, p.View))
+
+		logger.Trace("Store future message")
+
+		c.backlogsMu.Lock()
+		defer c.backlogsMu.Unlock()
+
+		logger.Debug("Retrieving backlog queue", "for", src.Signer(), "backlogs_size", len(c.backlogs))
+		backlog := c.backlogs[src.Signer()]
+		if backlog == nil {
+			backlog = prque.New()
 		}
+		switch msg.Code {
+		case msgPreprepare:
+			var p atlas.Preprepare
+			err := msg.Decode(&p)
+			if err == nil {
+				backlog.Push(msg, toPriority(msg.Code, p.View))
+			}
+			// for msgRoundChange, msgPrepare and msgCommit cases
+		default:
+			var p atlas.Subject
+			err := msg.Decode(&p)
+			if err == nil {
+				backlog.Push(msg, toPriority(msg.Code, p.View))
+			}
+		}
+		c.backlogs[src.Signer()] = backlog
 	}
-	c.backlogs[src.Signer()] = backlog
 }
 
 func (c *core) processBacklog() {

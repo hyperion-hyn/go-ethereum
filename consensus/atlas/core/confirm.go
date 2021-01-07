@@ -27,28 +27,30 @@ import (
 func (c *core) sendConfirm() {
 	logger := c.logger.New("state", c.state)
 
-	sub, err := c.SignSubject(c.current.Subject())
-	if err != nil {
-		logger.Error("Failed to sign", "view", c.currentView(), "err", err)
-	}
+	signers := c.Signer()
+	for _, signer := range signers {
+		sub, err := c.SignSubject(signer, c.current.Subject())
+		if err != nil {
+			logger.Error("Failed to sign", "view", c.currentView(), "err", err)
+		}
 
-	encodedSubject, err := Encode(sub)
-	if err != nil {
-		logger.Error("Failed to encode", "subject", sub, "err", err)
-		return
+		encodedSubject, err := Encode(sub)
+		if err != nil {
+			logger.Error("Failed to encode", "subject", sub, "err", err)
+			return
+		}
+		c.broadcast(signer, &message{
+			Code: msgConfirm,
+			Msg:  encodedSubject,
+		})
 	}
-
-	c.broadcast(&message{
-		Code: msgConfirm,
-		Msg:  encodedSubject,
-	})
 }
 
 func (c *core) handleConfirm(msg *message, src atlas.Validator) error {
 	logger := c.logger.New("from", src, "state", c.state)
 
 	// only proposer can/need handle confirm
-	if !c.IsProposer() {
+	if !c.ContainProposer() {
 		return nil
 	}
 
