@@ -34,12 +34,13 @@ func (c *core) sendCommit() {
 			sub, err := c.AssembleSignedSubject(signer, c.current.Subject())
 			if err != nil {
 				logger.Error("Failed to sign", "view", c.currentView(), "err", err)
+				continue
 			}
 
 			encodedSubject, err := Encode(sub)
 			if err != nil {
 				logger.Error("Failed to encode", "subject", sub, "err", err)
-				return
+				continue
 			}
 			c.consensusConfirmGauge.Update(time.Since(c.confirmTimestamp).Milliseconds())
 			c.broadcast(signer, &message{

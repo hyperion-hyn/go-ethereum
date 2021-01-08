@@ -34,6 +34,7 @@ func (c *core) sendExpect() {
 			sub, err := c.AssembleSignedSubject(signer, c.current.Subject())
 			if err != nil {
 				logger.Error("Failed to sign", "view", c.currentView(), "err", err)
+				return
 			}
 
 			encodedSubject, err := Encode(sub)
