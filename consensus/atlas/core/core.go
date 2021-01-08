@@ -180,7 +180,9 @@ func (c *core) ContainProposer() bool {
 		return false
 	}
 	for _, signer := range c.backend.Signer() {
-		return v.IsProposer(signer)
+		if v.IsProposer(signer) {
+			return true
+		}
 	}
 	return false
 }
