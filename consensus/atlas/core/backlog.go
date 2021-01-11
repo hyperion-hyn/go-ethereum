@@ -113,7 +113,7 @@ func (c *core) storeBacklog(msg *message, src atlas.Validator) {
 				backlog.Push(msg, toPriority(msg.Code, p.View))
 			}
 		}
-		c.backlogs[src.Signer()] = backlog
+		c.backlogs[src.Signer()] = backlog // TODO(Z): backlog group by signer
 	}
 }
 

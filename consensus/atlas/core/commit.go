@@ -34,13 +34,13 @@ func (c *core) sendCommit() {
 			sub, err := c.AssembleSignedSubject(signer, c.current.Subject())
 			if err != nil {
 				logger.Error("Failed to sign", "view", c.currentView(), "err", err)
-				continue
+				continue // TODO(Z): break?
 			}
 
 			encodedSubject, err := Encode(sub)
 			if err != nil {
 				logger.Error("Failed to encode", "subject", sub, "err", err)
-				continue
+				continue // TODO(Z): break?
 			}
 			c.consensusConfirmGauge.Update(time.Since(c.confirmTimestamp).Milliseconds())
 			c.broadcast(signer, &message{
@@ -69,7 +69,7 @@ func (c *core) broadcastCommit(sub *atlas.Subject) {
 		return
 	}
 	signers := c.Signer()
-	for _, signer := range signers {
+	for _, signer := range signers { // TODO(Z): every signer?
 		c.broadcast(signer, &message{
 			Code: msgCommit,
 			Msg:  encodedSubject,
