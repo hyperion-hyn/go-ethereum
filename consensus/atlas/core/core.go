@@ -459,7 +459,8 @@ func (c *core) Authorize() {
 	for _, signer := range c.Signer() {
 		signers = append(signers, signer.String())
 	}
-	c.logger = log.New("annotation", c.backend.Annotation(), "signer", signers[:1])
+	//c.logger = log.New("annotation", c.backend.Annotation(), "signer", signers[:1])
+	c.logger = log.New("annotation", c.backend.Annotation())
 }
 
 func (c *core) GetLockedHash() common.Hash {

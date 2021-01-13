@@ -92,12 +92,12 @@ func (s State) Cmp(y State) int {
 }
 
 const (
-	msgPreprepare uint64 = iota
-	msgPrepare
-	msgExpect
-	msgConfirm
-	msgCommit
-	msgRoundChange
+	msgPreprepare  uint64 = iota //0
+	msgPrepare                   //1
+	msgExpect                    //2
+	msgConfirm                   //3
+	msgCommit                    //4
+	msgRoundChange               //5
 	msgAll
 )
 

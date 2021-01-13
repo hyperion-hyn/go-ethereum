@@ -166,7 +166,7 @@ func (c *core) handleMsg(payload []byte) error {
 }
 
 func (c *core) handleCheckedMsg(msg *message, src atlas.Validator) error {
-	logger := c.logger.New("from", src)
+	logger := c.logger.New("from", src.Signer().Hex())
 	logger.Debug("handleCheckedMsg", "code", msg.Code)
 	// Store the message if it's a future message
 	testBacklog := func(err error) error {
