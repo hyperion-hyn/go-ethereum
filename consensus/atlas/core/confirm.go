@@ -91,7 +91,7 @@ func (c *core) handleConfirm(msg *message, src atlas.Validator) error {
 		if !c.current.WaitConfirm() {
 			c.current.SetWaitConfirm(true)
 			if blockPeriod-time.Now().Sub(c.prePrepareTimestamp) < duration {
-				duration = blockPeriod - time.Now().Sub(c.prePrepareTimestamp) - time.Duration(500)*time.Millisecond
+				duration = blockPeriod - time.Now().Sub(c.prePrepareTimestamp) - time.Duration(700)*time.Millisecond
 			}
 			c.logger.Debug(fmt.Sprintf("sleep %v second to accept more message", duration))
 			time.AfterFunc(duration, func() {
