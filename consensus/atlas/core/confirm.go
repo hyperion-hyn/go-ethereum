@@ -87,12 +87,13 @@ func (c *core) handleConfirm(msg *message, src atlas.Validator) error {
 	// to pass by Prepared and Expected state
 	if c.current.GetConfirmSize() >= c.QuorumSize() && c.state.Cmp(StateExpected) == 0 {
 		duration := 2 * time.Second
-		commitElapsed := time.Duration(700) * time.Millisecond
+		estimateCommitElapsed := time.Duration(500) * time.Millisecond
 		blockPeriod := time.Duration(int64(c.config.BlockPeriod)) * time.Second
 		if !c.current.WaitConfirm() {
 			c.current.SetWaitConfirm(true)
-			if blockPeriod-time.Now().Sub(c.prePrepareTimestamp) < duration+commitElapsed {
-				duration = blockPeriod - time.Now().Sub(c.prePrepareTimestamp) - commitElapsed
+			//if blockPeriod-time.Now().Sub(c.prePrepareTimestamp) < duration+commitElapsed {
+			if blockPeriod-time.Now().Sub(time.Unix(int64(c.current.Proposal().Header().Time), 0)) < duration+estimateCommitElapsed {
+				duration = blockPeriod - time.Now().Sub(c.prePrepareTimestamp) - estimateCommitElapsed
 			}
 			c.logger.Debug(fmt.Sprintf("sleep %v second to accept more message", duration))
 			time.AfterFunc(duration, func() {
