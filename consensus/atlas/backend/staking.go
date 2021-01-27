@@ -19,6 +19,7 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	"math/big"
+	"time"
 )
 
 var (
@@ -84,9 +85,11 @@ func handleMap3AndAtlasStaking(chain consensus.ChainReader, header *types.Header
 
 	if isNewEpoch {
 		lastEpoch := new(big.Int).Sub(header.Epoch, common.Big1)
+		start := time.Now()
 		if err := collectRestakingRewardForRenewedMap3Nodes(stateDB, chain, lastEpoch, header.Number); err != nil {
 			return nil, err
 		}
+		collect := common.PrettyDuration(time.Since(start))
 
 		// Need to be after accumulateRewardsAndCountSigs because unredelegation may release
 		releaser, err := releaserFactory.Create(stateDB, chain)
@@ -96,9 +99,15 @@ func handleMap3AndAtlasStaking(chain consensus.ChainReader, header *types.Header
 		if err := payoutUnredelegations(header, stateDB, releaser); err != nil {
 			return nil, err
 		}
+		unredelegation := common.PrettyDuration(time.Since(start))
+
 		if err := payoutUnmicrodelegations(chain, header, stateDB); err != nil {
 			return nil, err
 		}
+		unmicrodelegation := common.PrettyDuration(time.Since(start))
+
+		log.Debug("NewEpoch...", "collect", collect, "unredelegation", unredelegation, "unmicrodelegation", unmicrodelegation)
+
 	}
 	return payout, nil
 }
