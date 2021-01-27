@@ -349,8 +349,21 @@ func (c *core) newRoundChangeTimer() {
 	// set timeout based on the round number
 	timeout := time.Duration(c.config.RequestTimeout) * time.Millisecond
 	round := c.current.Round().Uint64()
+
+	// params/config_atlas.go IsFirstBlock
+	isFistBlock := func(blockNum uint64) bool {
+		if blockNum == 0 {
+			return true
+		}
+		return blockNum%c.config.Epoch == 1
+	}
+
 	if round > 0 {
 		timeout += time.Duration(math.Pow(2, float64(round))) * time.Second
+	} else if isFistBlock(c.current.Sequence().Uint64()) {
+		//first block in epoch take more than {{c.config.RequestTimeout}}. because staking.go/handleMap3AndAtlasStaking
+		timeout = timeout * 3
+		c.logger.Debug("set new timeout", "timeout", timeout)
 	}
 
 	c.roundChangeTimer = time.AfterFunc(timeout, func() {
