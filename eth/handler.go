@@ -754,6 +754,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 
 		//ATLAS lastCommits
 		if request.LastCommits != "" {
+			//TODO(ATLAS) verify lastCommits. if blockchain.go->insertChain verify lastCommit. this TODO can be skipped
 			rawdb.WriteLastCommits(pm.chaindb, request.Block.NumberU64(), common.Hex2Bytes(request.LastCommits))
 			log.Debug("NewBlockMsg write lastCommits", "number", request.Block.NumberU64())
 		} else {
