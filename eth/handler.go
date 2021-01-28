@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/consensus/clique"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
+	"github.com/ethereum/go-ethereum/core/rawdb"
 	"math"
 	"math/big"
 	"sync"
@@ -730,6 +731,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		// Retrieve and decode the propagated block
 		var request newBlockData
 		if err := msg.Decode(&request); err != nil {
+			log.Error("decode msg error")
 			return errResp(ErrDecode, "%v: %v", msg, err)
 		}
 		if hash := types.CalcUncleHash(request.Block.Uncles()); hash != request.Block.UncleHash() {
@@ -749,6 +751,14 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		// Mark the peer as owning the block and schedule it for import
 		p.MarkBlock(request.Block.Hash())
 		pm.blockFetcher.Enqueue(p.id, request.Block)
+
+		//ATLAS lastCommits
+		if request.LastCommits != "" {
+			rawdb.WriteLastCommits(pm.chaindb, request.Block.NumberU64(), common.Hex2Bytes(request.LastCommits))
+			log.Debug("NewBlockMsg write lastCommits", "number", request.Block.NumberU64())
+		} else {
+			log.Debug("NewBlockMsg lastCommits empty", "number", request.Block.NumberU64())
+		}
 
 		// Assuming the block is importable by the peer, but possibly not yet done so,
 		// calculate the head hash and TD that the peer truly must have.
@@ -859,10 +869,24 @@ func (pm *ProtocolManager) BroadcastBlock(block *types.Block, propagate bool) {
 			log.Error("Propagating dangling block", "number", block.Number(), "hash", hash)
 			return
 		}
+
+		//ATLAS  -- lastCommits
+		lastCommits, err := rawdb.ReadLastCommits(pm.chaindb, block.NumberU64())
+		if err != nil {
+			log.Trace("last commit not found. ", "number", block.Number())
+			lastCommits = nil
+		}
+
 		// Send the block to a subset of our peers
 		transfer := peers[:int(math.Sqrt(float64(len(peers))))]
 		for _, peer := range transfer {
-			peer.AsyncSendNewBlock(block, td)
+			if lastCommits != nil {
+				log.Debug("send NewBlockMsg with lastCommits", "number", block.NumberU64())
+				peer.AsyncSendNewBlock(block, td, common.Bytes2Hex(lastCommits))
+			} else {
+				peer.AsyncSendNewBlock(block, td, "")
+			}
+
 		}
 		log.Trace("Propagated block", "hash", hash, "recipients", len(transfer), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
 		return
