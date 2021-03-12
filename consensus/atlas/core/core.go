@@ -111,10 +111,12 @@ type core struct {
 	confirmTimestamp      time.Time
 }
 
-func (c *core) finalizeMessage(msg *message) ([]byte, error) {
+func (c *core) finalizeMessage(sender common.Address, msg *message) ([]byte, error) {
 	var err error
+
+	//msg.Signer = c.backend.Signer()
 	// Add sender address
-	msg.Signer = c.backend.Signer()
+	msg.Signer = sender
 
 	// Sign message
 	data, err := msg.PayloadNoSig()
@@ -122,7 +124,7 @@ func (c *core) finalizeMessage(msg *message) ([]byte, error) {
 		return nil, err
 	}
 	hash := crypto.Keccak256Hash(data)
-	msg.Signature, msg.SignerPubKey, _, err = c.backend.SignHash(hash)
+	msg.Signature, msg.SignerPubKey, _, err = c.backend.SignHash(sender, hash)
 	if err != nil {
 		return nil, err
 	}
@@ -141,10 +143,10 @@ func (c *core) finalizeMessage(msg *message) ([]byte, error) {
 	return payload, nil
 }
 
-func (c *core) broadcast(msg *message) {
+func (c *core) broadcast(sender common.Address, msg *message) {
 	logger := c.logger.New("state", c.state)
 
-	payload, err := c.finalizeMessage(msg)
+	payload, err := c.finalizeMessage(sender, msg)
 	if err != nil {
 		logger.Error("Failed to finalize message", "msg", msg, "err", err)
 		return
@@ -164,12 +166,25 @@ func (c *core) currentView() *atlas.View {
 	}
 }
 
-func (c *core) IsProposer() bool {
+func (c *core) IsProposer(signer common.Address) bool {
 	v := c.valSet
 	if v == nil {
 		return false
 	}
-	return v.IsProposer(c.backend.Signer())
+	return v.IsProposer(signer)
+}
+
+func (c *core) ContainProposer() bool {
+	v := c.valSet
+	if v == nil {
+		return false
+	}
+	for _, signer := range c.backend.Signer() {
+		if v.IsProposer(signer) {
+			return true
+		}
+	}
+	return false
 }
 
 func (c *core) IsCurrentProposal(blockHash common.Hash) bool {
@@ -253,7 +268,8 @@ func (c *core) startNewRound(round *big.Int) {
 	c.valSet.CalcProposer(lastProposer, newView.Round.Uint64())
 	c.waitingForRoundChange = false
 	c.setState(StateAcceptRequest)
-	if roundChange && c.IsProposer() && c.current != nil {
+
+	if roundChange && c.ContainProposer() && c.current != nil {
 		// If it is locked, propose the old proposal
 		// If we have pending request, propose pending request
 		if c.current.IsHashLocked() {
@@ -267,7 +283,7 @@ func (c *core) startNewRound(round *big.Int) {
 	}
 	c.newRoundChangeTimer()
 
-	logger.Debug("New round", "new_round", newView.Round, "new_seq", newView.Sequence, "new_proposer", c.valSet.GetProposer(), "size", c.valSet.Size(), "valSet", c.valSet.List(), "IsProposer", c.IsProposer())
+	logger.Debug("New round", "new_round", newView.Round, "new_seq", newView.Sequence, "new_proposer", c.valSet.GetProposer(), "size", c.valSet.Size(), "valSet", c.valSet.List(), "containProposer", c.ContainProposer())
 }
 
 func (c *core) catchUpRound(view *atlas.View) {
@@ -310,7 +326,7 @@ func (c *core) setState(state State) {
 	c.processBacklog()
 }
 
-func (c *core) Signer() common.Address {
+func (c *core) Signer() []common.Address {
 	return c.backend.Signer()
 }
 
@@ -333,8 +349,21 @@ func (c *core) newRoundChangeTimer() {
 	// set timeout based on the round number
 	timeout := time.Duration(c.config.RequestTimeout) * time.Millisecond
 	round := c.current.Round().Uint64()
+
+	// params/config_atlas.go IsFirstBlock
+	isFistBlock := func(blockNum uint64) bool {
+		if blockNum == 0 {
+			return true
+		}
+		return blockNum%c.config.Epoch == 1
+	}
+
 	if round > 0 {
 		timeout += time.Duration(math.Pow(2, float64(round))) * time.Second
+	} else if isFistBlock(c.current.Sequence().Uint64()) {
+		//first block in epoch take more than {{c.config.RequestTimeout}}. because staking.go/handleMap3AndAtlasStaking
+		timeout = timeout * 3
+		c.logger.Debug("set new timeout", "timeout", timeout)
 	}
 
 	c.roundChangeTimer = time.AfterFunc(timeout, func() {
@@ -360,9 +389,9 @@ func PrepareCommittedSeal(hash common.Hash) []byte {
 	return buf.Bytes()
 }
 
-func (c *core) SignSubject(subject *atlas.Subject) (*atlas.Subject, error) {
+func (c *core) SignSubject(signer common.Address, subject *atlas.Subject) (*atlas.Subject, error) {
 	signedSubject, err := atlas.SignSubject(subject, c.valSet, func(hash common.Hash) (signature []byte, publicKey []byte, mask []byte, err error) {
-		signature, publicKey, mask, err = c.backend.SignHash(hash)
+		signature, publicKey, mask, err = c.backend.SignHash(signer, hash)
 		if err != nil {
 			return nil, nil, nil, err
 		}
@@ -371,7 +400,7 @@ func (c *core) SignSubject(subject *atlas.Subject) (*atlas.Subject, error) {
 	return signedSubject, err
 }
 
-func (c *core) AssembleSignedSubject(subject *atlas.Subject) (*atlas.Subject, error) {
+func (c *core) AssembleSignedSubject(signer common.Address, subject *atlas.Subject) (*atlas.Subject, error) {
 	switch c.state {
 	case StatePrepared, StateConfirmed:
 		var val *atlas.SignPayload
@@ -392,7 +421,7 @@ func (c *core) AssembleSignedSubject(subject *atlas.Subject) (*atlas.Subject, er
 			return nil, err
 		}
 		hash := crypto.Keccak256Hash(payload)
-		signature, _, _, err := c.backend.SignHash(hash)
+		signature, _, _, err := c.backend.SignHash(signer, hash)
 		if err != nil {
 			return nil, errFailedSignData
 		}
@@ -439,7 +468,12 @@ func (c *core) getValidatorPublicKey(signer common.Address, valSet atlas.Validat
 }
 
 func (c *core) Authorize() {
-	c.logger = log.New("annotation", c.backend.Annotation(), "signer", c.backend.Signer())
+	signers := make([]string, 0, len(c.Signer()))
+	for _, signer := range c.Signer() {
+		signers = append(signers, signer.String())
+	}
+	//c.logger = log.New("annotation", c.backend.Annotation(), "signer", signers[:1])
+	c.logger = log.New("annotation", c.backend.Annotation())
 }
 
 func (c *core) GetLockedHash() common.Hash {

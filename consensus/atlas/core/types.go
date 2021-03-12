@@ -30,7 +30,9 @@ type Engine interface {
 	Start() error
 	Stop() error
 
-	IsProposer() bool
+	IsProposer(signer common.Address) bool
+
+	ContainProposer() bool
 
 	// verify if a hash is the same as the proposed block in the current pending request
 	//
@@ -90,12 +92,12 @@ func (s State) Cmp(y State) int {
 }
 
 const (
-	msgPreprepare uint64 = iota
-	msgPrepare
-	msgExpect
-	msgConfirm
-	msgCommit
-	msgRoundChange
+	msgPreprepare  uint64 = iota //0
+	msgPrepare                   //1
+	msgExpect                    //2
+	msgConfirm                   //3
+	msgCommit                    //4
+	msgRoundChange               //5
 	msgAll
 )
 

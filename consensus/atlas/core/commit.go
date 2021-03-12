@@ -27,23 +27,28 @@ import (
 func (c *core) sendCommit() {
 	logger := c.logger.New("state", c.state)
 
-	// If I'm the proposer and I have the same sequence with the proposal
-	if c.IsProposer() {
-		sub, err := c.AssembleSignedSubject(c.current.Subject())
-		if err != nil {
-			logger.Error("Failed to sign", "view", c.currentView(), "err", err)
-		}
+	signers := c.Signer()
+	for _, signer := range signers {
+		// If I'm the proposer and I have the same sequence with the proposal
+		if c.IsProposer(signer) {
+			sub, err := c.AssembleSignedSubject(signer, c.current.Subject())
+			if err != nil {
+				logger.Error("Failed to sign", "view", c.currentView(), "err", err)
+				break
+			}
 
-		encodedSubject, err := Encode(sub)
-		if err != nil {
-			logger.Error("Failed to encode", "subject", sub, "err", err)
-			return
+			encodedSubject, err := Encode(sub)
+			if err != nil {
+				logger.Error("Failed to encode", "subject", sub, "err", err)
+				break
+			}
+			c.consensusConfirmGauge.Update(time.Since(c.confirmTimestamp).Milliseconds())
+			c.broadcast(signer, &message{
+				Code: msgCommit,
+				Msg:  encodedSubject,
+			})
+			break
 		}
-		c.consensusConfirmGauge.Update(time.Since(c.confirmTimestamp).Milliseconds())
-		c.broadcast(&message{
-			Code: msgCommit,
-			Msg:  encodedSubject,
-		})
 	}
 }
 
@@ -63,10 +68,13 @@ func (c *core) broadcastCommit(sub *atlas.Subject) {
 		logger.Error("Failed to encode", "subject", sub)
 		return
 	}
-	c.broadcast(&message{
-		Code: msgCommit,
-		Msg:  encodedSubject,
-	})
+	signers := c.Signer()
+	for _, signer := range signers { // TODO(Z): every signer?
+		c.broadcast(signer, &message{
+			Code: msgCommit,
+			Msg:  encodedSubject,
+		})
+	}
 }
 
 func (c *core) handleCommit(msg *message, src atlas.Validator) error {

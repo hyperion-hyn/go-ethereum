@@ -78,7 +78,7 @@ type Config struct {
 	Annotation string `toml:"-"`
 
 	// SignerKey must be set to a valid bls secret key.
-	SignerKey *bls.SecretKey `toml:"-"`
+	SignerKeys []*bls.SecretKey `toml:"-"`
 
 	// MaxPeers is the maximum number of peers that can be
 	// connected. It must be greater than zero.

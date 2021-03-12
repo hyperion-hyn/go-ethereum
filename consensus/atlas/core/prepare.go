@@ -24,28 +24,29 @@ import (
 
 func (c *core) sendPrepare() {
 	logger := c.logger.New("state", c.state)
-
-	sub, err := c.SignSubject(c.current.Subject())
-	if err != nil {
-		logger.Error("Failed to sign", "view", c.currentView(), "err", err)
+	signers := c.Signer()
+	for _, signer := range signers {
+		sub, err := c.SignSubject(signer, c.current.Subject())
+		if err != nil {
+			logger.Error("Failed to sign", "view", c.currentView(), "err", err)
+			continue
+		}
+		encodedSubject, err := Encode(sub)
+		if err != nil {
+			logger.Error("Failed to encode", "subject", sub, "err", err)
+			continue
+		}
+		c.broadcast(signer, &message{
+			Code: msgPrepare,
+			Msg:  encodedSubject,
+		})
 	}
-
-	encodedSubject, err := Encode(sub)
-	if err != nil {
-		logger.Error("Failed to encode", "subject", sub, "err", err)
-		return
-	}
-
-	c.broadcast(&message{
-		Code: msgPrepare,
-		Msg:  encodedSubject,
-	})
 }
 
 func (c *core) handlePrepare(msg *message, src atlas.Validator) error {
 	logger := c.logger.New("from", src, "state", c.state)
 
-	if !c.IsProposer() {
+	if !c.ContainProposer() {
 		logger.Debug("only proposer can handle PREPARE message", "msg", msg, "leader", c.valSet.GetProposer())
 		return nil
 	}

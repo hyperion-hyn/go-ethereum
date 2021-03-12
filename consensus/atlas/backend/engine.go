@@ -20,6 +20,8 @@ import (
 	"bytes"
 	"errors"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/trie"
+
 	"io"
 	"math"
 
@@ -349,6 +351,7 @@ func verifySignature(valSet atlas.ValidatorSet, hash []byte, signature []byte, b
 	}
 
 	if ok := sign.VerifyHash(aggregatePublicKey, hash); !ok {
+		log.Error("verify hash error", "hash", common.Bytes2Hex(hash))
 		return errInvalidAggregatedSignature
 	}
 
@@ -402,17 +405,27 @@ func (sb *backend) _Prepare(chain consensus.ChainReader, header *types.Header) e
 	// use the same difficulty for all blocks
 	header.Difficulty = DefaultDifficulty
 
-	// Assemble the voting snapshot
-	snap, err := sb.snapshot(chain, number-1, header.ParentHash, nil)
+	var (
+		snap *Snapshot
+		err  error
+	)
+	if number == 1 {
+		snap, err = sb.snapshot(chain, number-1, header.ParentHash, nil)
+	} else {
+		// Assemble the voting snapshot
+		snap, err = sb.snapshot(chain, number-2, parent.ParentHash, nil)
+	}
 	if err != nil {
 		return err
 	}
 
 	lastCommits, err := rawdb.ReadLastCommits(chain.Database(), number-1)
 	if err != nil {
+		sb.logger.Error("last commit not found. ", "number", number-1)
 		return errInvalidLastCommits
 	}
 	if len(lastCommits) != types.AtlasExtraSignature+types.GetMaskByteCount(snap.ValSet.Size()) {
+		sb.logger.Error("last commit length error.", "signature", types.AtlasExtraSignature, "maskCount", types.GetMaskByteCount(snap.ValSet.Size()))
 		return errInvalidLastCommits
 	}
 
@@ -485,7 +498,7 @@ func (sb *backend) _FinalizeAndAssemble(chain consensus.ChainReader, header *typ
 	header.UncleHash = nilUncleHash
 
 	// Assemble and return the final block for sealing
-	return types.NewBlock(header, txs, nil, receipts), nil
+	return types.NewBlock(header, txs, nil, receipts, new(trie.Trie)), nil
 }
 
 // Seal generates a new block for the given input block with the local miner's
@@ -511,7 +524,15 @@ func (sb *backend) _Seal(chain consensus.ChainReader, block *types.Block, result
 		return err
 	}
 
-	if _, v := snap.ValSet.GetBySigner(sb.signer); v == nil {
+	containSigner := false
+	for _, signer := range sb.signers {
+		if _, v := snap.ValSet.GetBySigner(signer); v != nil {
+			containSigner = true
+			break
+		}
+	}
+
+	if !containSigner {
 		return errUnauthorized
 	}
 

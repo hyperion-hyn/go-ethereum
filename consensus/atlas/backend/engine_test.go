@@ -62,7 +62,7 @@ func newBlockChain(n int) (*core.BlockChain, *backend, []*bls.SecretKey) {
 
 		return sign.Serialize(), secrectKey.GetPublicKey().Serialize(), nil, nil
 	}
-	b.Authorize(signer, signHashFn)
+	b.Authorize([]common.Address{signer}, signHashFn)
 
 	genesis.MustCommit(memDB)
 	blockchain, err := core.NewBlockChain(memDB, nil, genesis.Config, b, vm.Config{}, nil, nil)

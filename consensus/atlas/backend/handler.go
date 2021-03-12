@@ -62,11 +62,6 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 		if err != nil {
 			return true, errDecodeFailed
 		}
-		if !sb.coreStarted {
-			err := sb.Gossip(nil, data)
-			return true, err
-			//return true, atlas.ErrStoppedEngine
-		}
 
 		// Mark peer's message
 		ms, ok := sb.recentMessages.Get(addr)
@@ -85,13 +80,18 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 		}
 		sb.knownMessages.Add(hash, true)
 
+		if !sb.coreStarted {
+			err := sb.Gossip(nil, data)
+			return true, err
+		}
+
 		go sb.atlasEventMux.Post(atlas.MessageEvent{
 			Payload: data,
 		})
 
 		return true, nil
 	}
-	if msg.Code == NewBlockMsg && sb.core.IsProposer() { // eth.NewBlockMsg: import cycle
+	if msg.Code == NewBlockMsg && sb.core.ContainProposer() { // eth.NewBlockMsg: import cycle
 		// this case is to safeguard the race of similar block which gets propagated from other node while this node is proposing
 		// as p2p.Msg can only be decoded once (get EOF for any subsequence read), we need to make sure the payload is restored after we decode it
 		log.Debug("Proposer received NewBlockMsg", "size", msg.Size, "payload.type", reflect.TypeOf(msg.Payload), "sender", addr)
@@ -103,8 +103,9 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 			reader.Reset(payload)       // ready to be decoded
 			defer reader.Reset(payload) // restore so main eth/handler can decode
 			var request struct {        // this has to be same as eth/protocol.go#newBlockData as we are reading NewBlockMsg
-				Block *types.Block
-				TD    *big.Int
+				Block       *types.Block
+				TD          *big.Int
+				LastCommits string //ATLAS
 			}
 			if err := msg.Decode(&request); err != nil {
 				log.Debug("Proposer was unable to decode the NewBlockMsg", "error", err)

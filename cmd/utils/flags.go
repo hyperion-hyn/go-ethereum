@@ -31,9 +31,7 @@ import (
 	"text/template"
 	"time"
 
-	pcsclite "github.com/gballet/go-libpcsclite"
 	"github.com/hyperion-hyn/bls/ffi/go/bls"
-	"gopkg.in/urfave/cli.v1"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -71,7 +69,8 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/nat"
 	"github.com/ethereum/go-ethereum/p2p/netutil"
 	"github.com/ethereum/go-ethereum/params"
-	whisper "github.com/ethereum/go-ethereum/whisper/whisperv6"
+	pcsclite "github.com/gballet/go-libpcsclite"
+	cli "gopkg.in/urfave/cli.v1"
 )
 
 func init() {
@@ -615,11 +614,11 @@ var (
 		Name:  "node.annotation",
 		Usage: "node annotation",
 	}
-	SignerKeyFileFlag = cli.StringFlag{
+	SignerKeyFileFlag = cli.StringSliceFlag{
 		Name:  "signerkey",
 		Usage: "signer key file",
 	}
-	SignerKeyHexFlag = cli.StringFlag{
+	SignerKeyHexFlag = cli.StringSliceFlag{
 		Name:  "signerkeyhex",
 		Usage: "signer key as hex (for testing)",
 	}
@@ -670,12 +669,12 @@ var (
 	WhisperMaxMessageSizeFlag = cli.IntFlag{
 		Name:  "shh.maxmessagesize",
 		Usage: "Max message size accepted",
-		Value: int(whisper.DefaultMaxMessageSize),
+		Value: 1024 * 1024,
 	}
 	WhisperMinPOWFlag = cli.Float64Flag{
 		Name:  "shh.pow",
 		Usage: "Minimum POW accepted",
-		Value: whisper.DefaultMinimumPoW,
+		Value: 0.2,
 	}
 	WhisperRestrictConnectionBetweenLightClientsFlag = cli.BoolFlag{
 		Name:  "shh.restrict-light",
@@ -840,24 +839,34 @@ func setNodeKey(ctx *cli.Context, cfg *p2p.Config) {
 // from a file or as a specified hex value.
 func setSignerKey(ctx *cli.Context, cfg *p2p.Config) {
 	var (
-		hex  = ctx.GlobalString(SignerKeyHexFlag.Name)
-		file = ctx.GlobalString(SignerKeyFileFlag.Name)
-		key  *bls.SecretKey
-		err  error
+		hexes = ctx.GlobalStringSlice(SignerKeyHexFlag.Name)
+		files = ctx.GlobalStringSlice(SignerKeyFileFlag.Name)
+		keys  = make([]*bls.SecretKey, 0, 10)
 	)
-	switch {
-	case file != "" && hex != "":
-		Fatalf("Options %q and %q are mutually exclusive", SignerKeyFileFlag.Name, SignerKeyHexFlag.Name)
-	case file != "":
-		if key, err = crypto.LoadBLS(file); err != nil {
-			Fatalf("Option %q: %v", SignerKeyFileFlag.Name, err)
+
+	for _, hex := range hexes {
+		if hex != "" {
+			if key, err := crypto.HexToBLS(hex); err != nil {
+				Fatalf("Option %q: %v", SignerKeyHexFlag.Name, err)
+			} else {
+				keys = append(keys, key)
+			}
 		}
-		cfg.SignerKey = key
-	case hex != "":
-		if key, err = crypto.HexToBLS(hex); err != nil {
-			Fatalf("Option %q: %v", SignerKeyHexFlag.Name, err)
+	}
+
+	for _, file := range files {
+		if file != "" {
+			if key, err := crypto.LoadBLS(file); err != nil {
+				Fatalf("Option %q: %v", SignerKeyFileFlag.Name, err)
+			} else {
+				keys = append(keys, key)
+			}
 		}
-		cfg.SignerKey = key
+	}
+
+	if len(keys) >= 0 {
+		cfg.SignerKeys = keys
+		//Fatalf("Options %q and %q are mutually exclusive", SignerKeyFileFlag.Name, SignerKeyHexFlag.Name)
 	}
 }
 
@@ -1569,15 +1578,12 @@ func CheckExclusive(ctx *cli.Context, args ...interface{}) {
 }
 
 // SetShhConfig applies shh-related command line flags to the config.
-func SetShhConfig(ctx *cli.Context, stack *node.Node, cfg *whisper.Config) {
-	if ctx.GlobalIsSet(WhisperMaxMessageSizeFlag.Name) {
-		cfg.MaxMessageSize = uint32(ctx.GlobalUint(WhisperMaxMessageSizeFlag.Name))
-	}
-	if ctx.GlobalIsSet(WhisperMinPOWFlag.Name) {
-		cfg.MinimumAcceptedPOW = ctx.GlobalFloat64(WhisperMinPOWFlag.Name)
-	}
-	if ctx.GlobalIsSet(WhisperRestrictConnectionBetweenLightClientsFlag.Name) {
-		cfg.RestrictConnectionBetweenLightClients = true
+func SetShhConfig(ctx *cli.Context, stack *node.Node) {
+	if ctx.GlobalIsSet(WhisperEnabledFlag.Name) ||
+		ctx.GlobalIsSet(WhisperMaxMessageSizeFlag.Name) ||
+		ctx.GlobalIsSet(WhisperMinPOWFlag.Name) ||
+		ctx.GlobalIsSet(WhisperRestrictConnectionBetweenLightClientsFlag.Name) {
+		log.Warn("Whisper support has been deprecated and the code has been moved to github.com/ethereum/whisper")
 	}
 }
 
@@ -1809,13 +1815,6 @@ func RegisterEthService(stack *node.Node, cfg *eth.Config) ethapi.Backend {
 			}
 		}
 		return backend.APIBackend
-	}
-}
-
-// RegisterShhService configures Whisper and adds it to the given node.
-func RegisterShhService(stack *node.Node, cfg *whisper.Config) {
-	if _, err := whisper.New(stack, cfg); err != nil {
-		Fatalf("Failed to register the Whisper service: %v", err)
 	}
 }
 

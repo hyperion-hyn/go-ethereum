@@ -39,7 +39,7 @@ func TestSign(t *testing.T) {
 	b, _ := newBackend(4)
 	data := []byte("Here is a string....")
 	hash := crypto.Keccak256Hash(data)
-	sig, key, _, err := b.SignHash(hash)
+	sig, key, _, err := b.SignHash(common.Address{}, hash)
 	if err != nil {
 		t.Errorf("error mismatch: have %v, want nil", err)
 	}
@@ -224,11 +224,11 @@ func TestCommit(t *testing.T) {
 		}()
 
 		backend.proposedBlockHash = expBlock.Hash()
-		signature, publicKey, bitmap, err := test.expectedSign(expBlock)
+		signature, _, bitmap, err := test.expectedSign(expBlock)
 		if err != nil {
 			t.Errorf("failed to sign block: %v", err)
 		}
-		if err := backend.Commit(expBlock, signature, publicKey, bitmap); err != nil {
+		if err := backend.Commit(expBlock, signature, bitmap); err != nil {
 			if err != test.expectedErr {
 				t.Errorf("error mismatch: have %v, want %v", err, test.expectedErr)
 			}
@@ -254,8 +254,8 @@ func TestGetProposer(t *testing.T) {
 	chain.InsertChain(types.Blocks{block})
 	expected := engine.GetProposer(1)
 	actual := engine.Signer()
-	if actual != expected {
-		t.Errorf("proposer mismatch: have %v, want %v", actual.Hex(), expected.Hex())
+	if actual[0] != expected {
+		t.Errorf("proposer mismatch: have %v, want %v", actual[0].Hex(), expected.Hex())
 	}
 }
 

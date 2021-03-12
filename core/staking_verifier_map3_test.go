@@ -1811,6 +1811,26 @@ func Test_map3VerifierForRestaking_VerifyForCollectingReward(t *testing.T) {
 		wantErr error
 	}{
 		{
+			name:    "collectReward successfully by operator",
+			stateDB: makeStateDBForMap3Verifier(t),
+			msg: restaking.CollectReward{
+				ValidatorAddress: validatorAddr,
+				DelegatorAddress: map3NodeAddr3,
+			},
+			signer:  map3OperatorAddr3,
+			wantErr: nil,
+		},
+		{
+			name:    "collectReward successfully by delegator",
+			stateDB: makeStateDBForMap3Verifier(t),
+			msg: restaking.CollectReward{
+				ValidatorAddress: validatorAddr,
+				DelegatorAddress: map3NodeAddr3,
+			},
+			signer:  map3OperatorAddr2,
+			wantErr: nil,
+		},
+		{
 			name:    "collectReward successfully",
 			stateDB: makeStateDBForMap3Verifier(t),
 			msg: restaking.CollectReward{
@@ -1877,20 +1897,25 @@ func makeStateDBForMap3Verifier(t *testing.T) vm.StateDB {
 	if err != nil {
 		t.Fatal(err)
 	}
-	buildMap3Node := func(map3Addr, operator common.Address, status microstaking.Map3Status) *microstaking.Map3NodeWrapper_ {
-		return microstaking.NewMap3NodeWrapperBuilder().
+	buildMap3Node := func(map3Addr, operator common.Address, status microstaking.Map3Status, microdelegations []microstaking.Microdelegation_) *microstaking.Map3NodeWrapper_ {
+		builder := microstaking.NewMap3NodeWrapperBuilder().
 			SetMap3Address(map3Addr).
 			SetOperatorAddress(operator).
-			SetStatus(status).Build()
+			SetStatus(status)
+		for _, microdelegation := range microdelegations {
+			builder.AddMicrodelegation(microdelegation)
+		}
+		return builder.Build()
 	}
-	node1 := buildMap3Node(map3NodeAddr, map3OperatorAddr, microstaking.Active)
-	node2 := buildMap3Node(map3NodeAddr2, map3OperatorAddr2, microstaking.Pending)
-	node3 := buildMap3Node(map3NodeAddr3, map3OperatorAddr3, microstaking.Active)
+	node1 := buildMap3Node(map3NodeAddr, map3OperatorAddr, microstaking.Active, []microstaking.Microdelegation_{microstaking.NewMicrodelegation(map3OperatorAddr, common.Big0, common.OneDec(), false)})
+	node2 := buildMap3Node(map3NodeAddr2, map3OperatorAddr2, microstaking.Pending, []microstaking.Microdelegation_{microstaking.NewMicrodelegation(map3OperatorAddr2, common.Big0, common.OneDec(), true)})
+	node3 := buildMap3Node(map3NodeAddr3, map3OperatorAddr3, microstaking.Active, []microstaking.Microdelegation_{
+		microstaking.NewMicrodelegation(map3OperatorAddr2, common.Big0, common.OneDec(), false),
+		microstaking.NewMicrodelegation(map3OperatorAddr3, common.Big0, common.OneDec(), false),
+	})
 	node3.RestakingReference.ValidatorAddress = validatorAddr
 	sdb.Map3NodePool().Map3Nodes().Put(map3NodeAddr, node1)
-	sdb.IncreaseMap3NonceIfZero()
 	sdb.Map3NodePool().Map3Nodes().Put(map3NodeAddr2, node2)
-	sdb.IncreaseMap3NonceIfZero()
 	sdb.Map3NodePool().Map3Nodes().Put(map3NodeAddr3, node3)
 	sdb.IncreaseMap3NonceIfZero()
 	sdb.Commit(true)

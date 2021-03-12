@@ -59,11 +59,13 @@ func (c *core) sendRoundChange(round *big.Int) {
 		logger.Error("Failed to encode ROUND CHANGE", "rc", rc, "err", err)
 		return
 	}
-
-	c.broadcast(&message{
-		Code: msgRoundChange,
-		Msg:  payload,
-	})
+	signers := c.Signer()
+	for _, signer := range signers {
+		c.broadcast(signer, &message{
+			Code: msgRoundChange,
+			Msg:  payload,
+		})
+	}
 }
 
 func (c *core) handleRoundChange(msg *message, src atlas.Validator) error {

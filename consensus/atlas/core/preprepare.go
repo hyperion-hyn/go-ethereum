@@ -28,32 +28,36 @@ import (
 func (c *core) sendPreprepare(request *atlas.Request) {
 	logger := c.logger.New("state", c.state)
 
-	// If I'm the proposer and I have the same sequence with the proposal
-	if c.current.Sequence().Cmp(request.Proposal.Number()) == 0 && c.IsProposer() {
-		curView := c.currentView()
+	signers := c.Signer()
+	for _, signer := range signers {
+		// If I'm the proposer and I have the same sequence with the proposal
+		if c.current.Sequence().Cmp(request.Proposal.Number()) == 0 && c.IsProposer(signer) {
+			curView := c.currentView()
 
-		hash := request.Proposal.Hash()
-		signature, _, _, err := c.backend.SignHash(hash)
-		if err != nil {
-			logger.Error("Failed to SignHash", "err", err)
-			return
-		}
+			hash := request.Proposal.Hash()
+			signature, _, _, err := c.backend.SignHash(signer, hash)
+			if err != nil {
+				logger.Error("Failed to SignHash", "err", err)
+				return
+			}
 
-		preprepare, err := Encode(&atlas.Preprepare{
-			View:      curView,
-			Proposal:  request.Proposal,
-			Signature: signature,
-		})
-		if err != nil {
-			logger.Error("Failed to encode", "view", curView)
-			return
+			preprepare, err := Encode(&atlas.Preprepare{
+				View:      curView,
+				Proposal:  request.Proposal,
+				Signature: signature,
+			})
+			if err != nil {
+				logger.Error("Failed to encode", "view", curView)
+				return
+			}
+			c.prePrepareTimestamp = time.Now()
+			c.consensusTimestamp = time.Now()
+			c.broadcast(signer, &message{
+				Code: msgPreprepare,
+				Msg:  preprepare,
+			})
+			break
 		}
-		c.prePrepareTimestamp = time.Now()
-		c.consensusTimestamp = time.Now()
-		c.broadcast(&message{
-			Code: msgPreprepare,
-			Msg:  preprepare,
-		})
 	}
 }
 

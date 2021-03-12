@@ -389,10 +389,10 @@ func (c *Config) NodeKey() *ecdsa.PrivateKey {
 // NodeKey retrieves the currently configured private key of the node, checking
 // first any manually set key, falling back to the one found in the configured
 // data folder. If no key can be found, a new one is generated.
-func (c *Config) SignerKey() *bls.SecretKey {
+func (c *Config) SignerKeys() []*bls.SecretKey {
 	// Use any specifically configured key.
-	if c.P2P.SignerKey != nil {
-		return c.P2P.SignerKey
+	if c.P2P.SignerKeys != nil {
+		return c.P2P.SignerKeys
 	}
 	// Generate ephemeral key if no datadir is being used.
 	if c.DataDir == "" {
@@ -400,12 +400,12 @@ func (c *Config) SignerKey() *bls.SecretKey {
 		if err != nil {
 			log.Crit(fmt.Sprintf("Failed to generate ephemeral signer key: %v", err))
 		}
-		return key
+		return []*bls.SecretKey{key}
 	}
 
 	keyfile := c.ResolvePath(datadirSignerKey)
 	if key, err := crypto.LoadBLS(keyfile); err == nil {
-		return key
+		return []*bls.SecretKey{key}
 	}
 	// No persistent key found, generate and store a new one.
 	key, err := crypto.GenerateBLSKey()
@@ -415,13 +415,13 @@ func (c *Config) SignerKey() *bls.SecretKey {
 	instanceDir := filepath.Join(c.DataDir, c.name())
 	if err := os.MkdirAll(instanceDir, 0700); err != nil {
 		log.Error(fmt.Sprintf("Failed to persist signer key: %v", err))
-		return key
+		return []*bls.SecretKey{key}
 	}
 	keyfile = filepath.Join(instanceDir, datadirSignerKey)
 	if err := crypto.SaveBLS(keyfile, key); err != nil {
 		log.Error(fmt.Sprintf("Failed to persist node key: %v", err))
 	}
-	return key
+	return []*bls.SecretKey{key}
 }
 
 // StaticNodes returns a list of node enode URLs configured as static nodes.

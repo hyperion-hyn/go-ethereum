@@ -81,9 +81,12 @@ func (c *core) checkMessage(msgCode uint64, view *atlas.View) error {
 func (c *core) storeBacklog(msg *message, src atlas.Validator) {
 	logger := c.logger.New("from", src, "state", c.state)
 
-	if src.Signer() == c.Signer() {
-		logger.Warn("Backlog from self")
-		return
+	signers := c.Signer()
+	for _, signer := range signers {
+		if src.Signer() == signer {
+			logger.Warn("Backlog from self")
+			return
+		}
 	}
 
 	logger.Trace("Store future message")

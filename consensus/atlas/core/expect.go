@@ -27,25 +27,29 @@ import (
 
 func (c *core) sendExpect() {
 	logger := c.logger.New("state", c.state)
+	signers := c.Signer()
+	for _, signer := range signers {
+		// If I'm the proposer and I have the same sequence with the proposal
+		if c.IsProposer(signer) {
+			sub, err := c.AssembleSignedSubject(signer, c.current.Subject())
+			if err != nil {
+				logger.Error("Failed to sign", "view", c.currentView(), "err", err)
+				return
+			}
 
-	// If I'm the proposer and I have the same sequence with the proposal
-	if c.IsProposer() {
-		sub, err := c.AssembleSignedSubject(c.current.Subject())
-		if err != nil {
-			logger.Error("Failed to sign", "view", c.currentView(), "err", err)
+			encodedSubject, err := Encode(sub)
+			if err != nil {
+				logger.Error("Failed to encode", "subject", sub, "err", err)
+				return
+			}
+			c.consensusPrepareGauge.Update(time.Since(c.prePrepareTimestamp).Milliseconds())
+			c.confirmTimestamp = time.Now()
+			c.broadcast(signer, &message{
+				Code: msgExpect,
+				Msg:  encodedSubject,
+			})
+			break
 		}
-
-		encodedSubject, err := Encode(sub)
-		if err != nil {
-			logger.Error("Failed to encode", "subject", sub, "err", err)
-			return
-		}
-		c.consensusPrepareGauge.Update(time.Since(c.prePrepareTimestamp).Milliseconds())
-		c.confirmTimestamp = time.Now()
-		c.broadcast(&message{
-			Code: msgExpect,
-			Msg:  encodedSubject,
-		})
 	}
 }
 

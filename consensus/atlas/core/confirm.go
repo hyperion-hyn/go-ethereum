@@ -27,28 +27,31 @@ import (
 func (c *core) sendConfirm() {
 	logger := c.logger.New("state", c.state)
 
-	sub, err := c.SignSubject(c.current.Subject())
-	if err != nil {
-		logger.Error("Failed to sign", "view", c.currentView(), "err", err)
-	}
+	signers := c.Signer()
+	for _, signer := range signers {
+		sub, err := c.SignSubject(signer, c.current.Subject())
+		if err != nil {
+			logger.Error("Failed to sign", "view", c.currentView(), "err", err)
+			continue
+		}
 
-	encodedSubject, err := Encode(sub)
-	if err != nil {
-		logger.Error("Failed to encode", "subject", sub, "err", err)
-		return
+		encodedSubject, err := Encode(sub)
+		if err != nil {
+			logger.Error("Failed to encode", "subject", sub, "err", err)
+			continue
+		}
+		c.broadcast(signer, &message{
+			Code: msgConfirm,
+			Msg:  encodedSubject,
+		})
 	}
-
-	c.broadcast(&message{
-		Code: msgConfirm,
-		Msg:  encodedSubject,
-	})
 }
 
 func (c *core) handleConfirm(msg *message, src atlas.Validator) error {
 	logger := c.logger.New("from", src, "state", c.state)
 
 	// only proposer can/need handle confirm
-	if !c.IsProposer() {
+	if !c.ContainProposer() {
 		return nil
 	}
 
@@ -84,11 +87,14 @@ func (c *core) handleConfirm(msg *message, src atlas.Validator) error {
 	// to pass by Prepared and Expected state
 	if c.current.GetConfirmSize() >= c.QuorumSize() && c.state.Cmp(StateExpected) == 0 {
 		duration := 2 * time.Second
+		estimateCommitElapsed := time.Duration(500) * time.Millisecond
 		blockPeriod := time.Duration(int64(c.config.BlockPeriod)) * time.Second
 		if !c.current.WaitConfirm() {
 			c.current.SetWaitConfirm(true)
-			if blockPeriod-time.Now().Sub(c.prePrepareTimestamp) < duration {
-				duration = blockPeriod - time.Now().Sub(c.prePrepareTimestamp)
+			//if blockPeriod-time.Now().Sub(c.prePrepareTimestamp) < duration+commitElapsed {
+			proposalTime := time.Unix(int64(c.current.Proposal().Header().Time), 0)
+			if blockPeriod-time.Now().Sub(proposalTime) < duration+estimateCommitElapsed {
+				duration = blockPeriod - time.Now().Sub(proposalTime) - estimateCommitElapsed
 			}
 			c.logger.Debug(fmt.Sprintf("sleep %v second to accept more message", duration))
 			time.AfterFunc(duration, func() {

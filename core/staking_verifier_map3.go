@@ -139,7 +139,7 @@ func (m map3VerifierForRestaking) VerifyForCollectingReward(stateDB vm.StateDB, 
 		return nil, err
 	}
 
-	if !node.IsOperator(signer) {
+	if !node.Microdelegations().Contain(signer) {
 		return nil, errInvalidSigner
 	}
 

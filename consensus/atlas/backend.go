@@ -34,7 +34,7 @@ type Backend interface {
 	Annotation() string
 
 	// Signer returns the signer's id (address format)
-	Signer() common.Address
+	Signer() []common.Address
 
 	// Validators returns the validator set
 	Validators(proposal Proposal) ValidatorSet
@@ -58,7 +58,7 @@ type Backend interface {
 
 	// Sign signs input data with the backend's private key
 	// NOTE: input data SHOULD be hash data.
-	SignHash(hash common.Hash) (signature []byte, publicKey []byte, mask []byte, err error)
+	SignHash(signer common.Address, hash common.Hash) (signature []byte, publicKey []byte, mask []byte, err error)
 
 	// CheckSignature verifies the signature by checking if it's signed by
 	// the given validator
@@ -81,5 +81,6 @@ type Backend interface {
 
 	// SealHash returns the hash of a block prior to it being sealed.
 	SealHash(header *types.Header) common.Hash
+
 	Close() error
 }
