@@ -25,19 +25,17 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
-//go:generate gencodec -type txdata -field-override txdataMarshaling -out gen_tx_json.go
-
 var (
-	ErrInvalidSig = errors.New("invalid transaction v, r, s values")
+	ErrInvalidSig           = errors.New("invalid transaction v, r, s values")
+	ErrUnexpectedProtection = errors.New("transaction type does not supported EIP-155 protected signatures")
 )
 
 type Transaction struct {
-	data txdata    // Consensus contents of a transaction
+	data TxData    // Consensus contents of a transaction
 	time time.Time // Time first seen locally (spam avoidance)
 
 	// caches
@@ -46,81 +44,40 @@ type Transaction struct {
 	from atomic.Value
 }
 
-type txdata struct {
-	AccountNonce uint64          `json:"nonce"    gencodec:"required"`
-	Price        *big.Int        `json:"gasPrice" gencodec:"required"`
-	GasLimit     uint64          `json:"gas"      gencodec:"required"`
-	Recipient    *common.Address `json:"to"       rlp:"nil"` // nil means contract creation
-	Amount       *big.Int        `json:"value"    gencodec:"required"`
-	Payload      []byte          `json:"input"    gencodec:"required"`
+type TxData interface {
+	txType() TransactionType // returns the type ID
+	copy() TxData            // creates a deep copy and initializes all fields
 
-	// Signature values
-	V *big.Int `json:"v" gencodec:"required"`
-	R *big.Int `json:"r" gencodec:"required"`
-	S *big.Int `json:"s" gencodec:"required"`
+	chainID() *big.Int
+	data() []byte
+	gas() uint64
+	gasPrice() *big.Int
+	value() *big.Int
+	nonce() uint64
+	to() *common.Address
 
-	// This is only used when marshaling to JSON.
-	Hash *common.Hash `json:"hash" rlp:"-"`
-
-	// ATLAS: staking tx
-	Type TransactionType `json:"type" gencodec:"required"` // Default: normal tx
+	rawSignatureValues() (v, r, s *big.Int)
+	setSignatureValues(chainID, v, r, s *big.Int)
 }
 
-type txdataMarshaling struct {
-	AccountNonce hexutil.Uint64
-	Price        *hexutil.Big
-	GasLimit     hexutil.Uint64
-	Amount       *hexutil.Big
-	Payload      hexutil.Bytes
-	V            *hexutil.Big
-	R            *hexutil.Big
-	S            *hexutil.Big
-	Type         TransactionType
+func (tx *Transaction) IsLegacy() bool {
+	switch tx.data.(type) {
+	case *LegacyTx:
+		return true
+	}
+	return false
 }
 
-func NewTransaction(nonce uint64, to common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *Transaction {
-	return newTransaction(nonce, &to, amount, gasLimit, gasPrice, data)
-}
-
-func NewContractCreation(nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *Transaction {
-	return newTransaction(nonce, nil, amount, gasLimit, gasPrice, data)
-}
-
-func newTransaction(nonce uint64, to *common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *Transaction {
-	if len(data) > 0 {
-		data = common.CopyBytes(data)
-	}
-	d := txdata{
-		AccountNonce: nonce,
-		Recipient:    to,
-		Payload:      data,
-		Amount:       new(big.Int),
-		GasLimit:     gasLimit,
-		Price:        new(big.Int),
-		V:            new(big.Int),
-		R:            new(big.Int),
-		S:            new(big.Int),
-	}
-	if amount != nil {
-		d.Amount.Set(amount)
-	}
-	if gasPrice != nil {
-		d.Price.Set(gasPrice)
-	}
-	return &Transaction{
-		data: d,
-		time: time.Now(),
-	}
-}
-
-// ChainId returns which chain id this transaction was signed for (if at all)
+// ChainId returns which chain id thistransaction was signed for (if at all)
 func (tx *Transaction) ChainId() *big.Int {
-	return deriveChainId(tx.data.V)
+	v, _, _ := tx.RawSignatureValues()
+	return deriveChainId(v)
 }
 
 // Protected returns whether the transaction is protected from replay protection.
 func (tx *Transaction) Protected() bool {
-	return isProtectedV(tx.data.V)
+	v, _, _ := tx.RawSignatureValues()
+	return isProtectedV(v)
 }
 
 func isProtectedV(V *big.Int) bool {
@@ -139,69 +96,86 @@ func (tx *Transaction) EncodeRLP(w io.Writer) error {
 
 // DecodeRLP implements rlp.Decoder
 func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
-	_, size, _ := s.Kind()
-	err := s.Decode(&tx.data)
-	if err == nil {
-		tx.size.Store(common.StorageSize(rlp.ListSize(size)))
-		tx.time = time.Now()
+	bytes, err := s.Raw()
+	if err != nil {
+		return err
+	}
+	content, _, err := rlp.SplitList(bytes)
+	if err != nil {
+		return err
+	}
+	count, err := rlp.CountValues(content)
+	if err != nil {
+		return err
+	}
+
+	switch count {
+	case 9:
+		// It's a tx compatible with ethereum
+		var data ETHTx
+		err = s.Decode(&data)
+		if err == nil {
+			tx.setDecoded(&data, len(bytes))
+		}
+	case 10:
+		// It's a legacy tx
+		var data LegacyTx
+		err = s.Decode(&data)
+		if err == nil {
+			tx.setDecoded(&data, len(bytes))
+		}
+	default:
+		return errors.New("invalid rlp data size")
 	}
 	return err
 }
 
-// MarshalJSON encodes the web3 RPC transaction format.
-func (tx *Transaction) MarshalJSON() ([]byte, error) {
-	hash := tx.Hash()
-	data := tx.data
-	data.Hash = &hash
-	return data.MarshalJSON()
-}
+func sanityCheckSignature(v *big.Int, r *big.Int, s *big.Int, maybeProtected bool) error {
+	if isProtectedV(v) && !maybeProtected {
+		return ErrUnexpectedProtection
+	}
 
-// UnmarshalJSON decodes the web3 RPC transaction format.
-func (tx *Transaction) UnmarshalJSON(input []byte) error {
-	var dec txdata
-	if err := dec.UnmarshalJSON(input); err != nil {
-		return err
+	var plainV byte
+	if isProtectedV(v) {
+		chainID := deriveChainId(v).Uint64()
+		plainV = byte(v.Uint64() - 35 - 2*chainID)
+	} else if maybeProtected {
+		// Only EIP-155 signatures can be optionally protected. Since
+		// we determined this v value is not protected, it must be a
+		// raw 27 or 28.
+		plainV = byte(v.Uint64() - 27)
+	} else {
+		// If the signature is not optionally protected, we assume it
+		// must already be equal to the recovery id.
+		plainV = byte(v.Uint64())
 	}
-	withSignature := dec.V.Sign() != 0 || dec.R.Sign() != 0 || dec.S.Sign() != 0
-	if withSignature {
-		var V byte
-		if isProtectedV(dec.V) {
-			chainID := deriveChainId(dec.V).Uint64()
-			V = byte(dec.V.Uint64() - 35 - 2*chainID)
-		} else {
-			V = byte(dec.V.Uint64() - 27)
-		}
-		if !crypto.ValidateSignatureValues(V, dec.R, dec.S, false) {
-			return ErrInvalidSig
-		}
+	if !crypto.ValidateSignatureValues(plainV, r, s, false) {
+		return ErrInvalidSig
 	}
-	*tx = Transaction{
-		data: dec,
-		time: time.Now(),
-	}
+
 	return nil
 }
 
-func (tx *Transaction) Data() []byte       { return common.CopyBytes(tx.data.Payload) }
-func (tx *Transaction) Gas() uint64        { return tx.data.GasLimit }
-func (tx *Transaction) GasPrice() *big.Int { return new(big.Int).Set(tx.data.Price) }
+func (tx *Transaction) Data() []byte       { return common.CopyBytes(tx.data.data()) }
+func (tx *Transaction) Gas() uint64        { return tx.data.gas() }
+func (tx *Transaction) GasPrice() *big.Int { return new(big.Int).Set(tx.data.gasPrice()) }
 func (tx *Transaction) GasPriceCmp(other *Transaction) int {
-	return tx.data.Price.Cmp(other.data.Price)
+	return tx.data.gasPrice().Cmp(other.data.gasPrice())
 }
 func (tx *Transaction) GasPriceIntCmp(other *big.Int) int {
-	return tx.data.Price.Cmp(other)
+	return tx.data.gasPrice().Cmp(other)
 }
-func (tx *Transaction) Value() *big.Int  { return new(big.Int).Set(tx.data.Amount) }
-func (tx *Transaction) Nonce() uint64    { return tx.data.AccountNonce }
+func (tx *Transaction) Value() *big.Int  { return new(big.Int).Set(tx.data.value()) }
+func (tx *Transaction) Nonce() uint64    { return tx.data.nonce() }
 func (tx *Transaction) CheckNonce() bool { return true }
 
 // To returns the recipient address of the transaction.
 // It returns nil if the transaction is a contract creation.
 func (tx *Transaction) To() *common.Address {
-	if tx.data.Recipient == nil {
+	if tx.data.to() == nil {
 		return nil
 	}
-	to := *tx.data.Recipient
+	to := *tx.data.to()
 	return &to
 }
 
@@ -234,15 +208,35 @@ func (tx *Transaction) Size() common.StorageSize {
 //
 // XXX Rename message to something less arbitrary?
 func (tx *Transaction) AsMessage(s Signer) (Message, error) {
-	msg := Message{
-		nonce:      tx.data.AccountNonce,
-		gasLimit:   tx.data.GasLimit,
-		gasPrice:   new(big.Int).Set(tx.data.Price),
-		to:         tx.data.Recipient,
-		amount:     tx.data.Amount,
-		data:       tx.data.Payload,
-		checkNonce: true,
-		txType:     tx.data.Type, // ATLAS
+	var msg Message
+	switch tx.data.(type) {
+	case *LegacyTx:
+		msg = Message{
+			nonce:      tx.Nonce(),
+			gasLimit:   tx.Gas(),
+			gasPrice:   new(big.Int).Set(tx.GasPrice()),
+			to:         tx.To(),
+			amount:     tx.Value(),
+			data:       tx.Data(),
+			checkNonce: true,
+			txType:     tx.Type(), // ATLAS
+		}
+	case *ETHTx:
+		msg = Message{
+			nonce:      tx.Nonce(),
+			gasLimit:   tx.Gas(),
+			gasPrice:   new(big.Int).Set(tx.GasPrice()),
+			to:         tx.To(),
+			amount:     tx.Value(),
+			data:       tx.Data(),
+			checkNonce: true,
+			txType:     tx.Type(), // ATLAS
+		}
+		if msg.Type() != Normal && len(msg.data) > 0 {
+			msg.data = msg.data[1:]
+		}
+	default:
+		return msg, errors.New("invalid tx type")
 	}
 
 	var err error
@@ -261,21 +255,30 @@ func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, e
 		data: tx.data,
 		time: tx.time,
 	}
-	cpy.data.R, cpy.data.S, cpy.data.V = r, s, v
+	cpy.data.setSignatureValues(signer.ChainID(), v, r, s)
 	return cpy, nil
 }
 
 // Cost returns amount + gasprice * gaslimit.
 func (tx *Transaction) Cost() *big.Int {
-	total := new(big.Int).Mul(tx.data.Price, new(big.Int).SetUint64(tx.data.GasLimit))
-	total.Add(total, tx.data.Amount)
+	total := new(big.Int).Mul(tx.data.gasPrice(), new(big.Int).SetUint64(tx.data.gas()))
+	total.Add(total, tx.data.value())
 	return total
 }
 
 // RawSignatureValues returns the V, R, S signature values of the transaction.
 // The return values should not be modified by the caller.
 func (tx *Transaction) RawSignatureValues() (v, r, s *big.Int) {
-	return tx.data.V, tx.data.R, tx.data.S
+	return tx.data.rawSignatureValues()
+}
+
+// setDecoded sets the inner transaction and size after decoding.
+func (tx *Transaction) setDecoded(data TxData, size int) {
+	tx.data = data
+	tx.time = time.Now()
+	if size > 0 {
+		tx.size.Store(common.StorageSize(size))
+	}
 }
 
 // Transactions is a Transaction slice type for basic sorting.
@@ -317,7 +320,7 @@ func TxDifference(a, b Transactions) Transactions {
 type TxByNonce Transactions
 
 func (s TxByNonce) Len() int           { return len(s) }
-func (s TxByNonce) Less(i, j int) bool { return s[i].data.AccountNonce < s[j].data.AccountNonce }
+func (s TxByNonce) Less(i, j int) bool { return s[i].data.nonce() < s[j].data.nonce() }
 func (s TxByNonce) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 
 // TxByPriceAndTime implements both the sort and the heap interface, making it useful
@@ -328,7 +331,7 @@ func (s TxByPriceAndTime) Len() int { return len(s) }
 func (s TxByPriceAndTime) Less(i, j int) bool {
 	// If the prices are equal, use the time the transaction was first seen for
 	// deterministic sorting
-	cmp := s[i].data.Price.Cmp(s[j].data.Price)
+	cmp := s[i].data.gasPrice().Cmp(s[j].data.gasPrice())
 	if cmp == 0 {
 		return s[i].time.Before(s[j].time)
 	}

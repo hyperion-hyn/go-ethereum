@@ -2,6 +2,7 @@ package state
 
 import (
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/staking/types/microstaking"
 	"github.com/pkg/errors"
@@ -12,15 +13,13 @@ var (
 	errMap3NodeNotExist         = errors.New("map3 node does not exist")
 	errMap3NodeSnapshotNotExist = errors.New("map3 node snapshot does not exist")
 	errMicrodelegationNotExist  = errors.New("microdelegation does not exist")
-
-	map3StorageAddress = common.HexToAddress("0x6a7ad21ff076440e39020e289debdcb309e12c23")
 )
 
 func (s *StateDB) Map3NodePool() *microstaking.Storage_Map3NodePool_ {
 	// singleton
 	s.map3Once.Do(func() {
 		var g microstaking.Global_t
-		globalSt := microstaking.New(&g, s, map3StorageAddress, common.Big0)
+		globalSt := microstaking.New(&g, s, types.Map3Account, common.Big0)
 		s.map3NodePool = globalSt.Map3NodePool()
 	})
 	return s.map3NodePool
@@ -107,7 +106,7 @@ func (s *StateDB) AddMicrostakingReward(snapshot *microstaking.Storage_Map3NodeW
  * IncreaseMap3NonceIfZero avoids account state of map3 nodes would be delete if its nonce and balance are zero
  */
 func (s *StateDB) IncreaseMap3NonceIfZero() {
-	if s.GetNonce(map3StorageAddress) == 0 {
-		s.SetNonce(map3StorageAddress, 1)
+	if s.GetNonce(types.Map3Account) == 0 {
+		s.SetNonce(types.Map3Account, 1)
 	}
 }

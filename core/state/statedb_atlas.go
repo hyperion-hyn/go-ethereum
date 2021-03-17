@@ -2,6 +2,7 @@ package state
 
 import (
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/staking/types/restaking"
 	"github.com/pkg/errors"
@@ -12,15 +13,13 @@ var (
 	errValidatorNotExist         = errors.New("validator does not exist")
 	errValidatorSnapshotNotExist = errors.New("validator snapshot does not exist")
 	errRedelegationNotExist      = errors.New("redelegation does not exist")
-
-	validatorStorageAddress = common.HexToAddress("0x69270f88069d56dc62bd62b0b9f2b302a2b820a8")
 )
 
 func (s *StateDB) ValidatorPool() *restaking.Storage_ValidatorPool_ {
 	// singleton
 	s.validatorOnce.Do(func() {
 		var g restaking.Global_t
-		globalSt := restaking.New(&g, s, validatorStorageAddress, common.Big0)
+		globalSt := restaking.New(&g, s, types.ValidatorAccount, common.Big0)
 		s.validatorPool = globalSt.ValidatorPool()
 	})
 	return s.validatorPool
@@ -161,7 +160,7 @@ func (s *StateDB) AddRestakingReward(snapshot *restaking.Storage_ValidatorWrappe
  * IncreaseValidatorNonceIfZero avoids account state of validators would be delete if its nonce and balance are zero
  */
 func (s *StateDB) IncreaseValidatorNonceIfZero() {
-	if s.GetNonce(validatorStorageAddress) == 0 {
-		s.SetNonce(validatorStorageAddress, 1)
+	if s.GetNonce(types.ValidatorAccount) == 0 {
+		s.SetNonce(types.ValidatorAccount, 1)
 	}
 }

@@ -39,6 +39,10 @@ func setSenderFromServer(tx *types.Transaction, addr common.Address, block commo
 	types.Sender(&senderFromServer{addr, block}, tx)
 }
 
+func (s *senderFromServer) ChainID() *big.Int {
+	panic("can't sign with senderFromServer")
+}
+
 func (s *senderFromServer) Equal(other types.Signer) bool {
 	os, ok := other.(*senderFromServer)
 	return ok && os.blockhash == s.blockhash

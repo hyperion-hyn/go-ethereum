@@ -552,6 +552,9 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	// Ensure the transaction has more gas than the basic tx fee.
 
 	// ATLAS
+	if pool.chainconfig.Atlas.IsAthens(pool.chain.CurrentBlock().Number()) && tx.IsLegacy() {
+		return errors.New("legacy transaction not support")
+	}
 	var intrGas uint64
 	if tx.Type() == types.Normal {
 		intrGas, err = IntrinsicGas(tx.Data(), tx.To() == nil, true, pool.istanbul)

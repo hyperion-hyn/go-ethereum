@@ -33,6 +33,9 @@ var (
 	// AtlasDigest represents a Keccak-256 hash of "Atlas"
 	// to identify whether the block is from Atlas consensus engine
 	AtlasDigest = common.HexToHash("0x3c2f3117cb7ce8fb13f9b40ae62eb87f02e1c4810729d073fc8f6520ebf84a25")
+
+	Map3Account      = common.HexToAddress("0x6a7ad21ff076440e39020e289debdcb309e12c23")
+	ValidatorAccount = common.HexToAddress("0x69270f88069d56dc62bd62b0b9f2b302a2b820a8")
 )
 
 func GetMaskByteCount(valSetSize int) int {

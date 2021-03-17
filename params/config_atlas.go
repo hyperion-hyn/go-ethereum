@@ -21,7 +21,8 @@ type AtlasConfig struct {
 	Map3NodeAgeDeadlineBlock        uint64 `json:"map3NodeAgeDeadlineBlock"`
 	MicrodelegationIndexRepairBlock uint64 `json:"microdelegationIndexRepairBlock"`
 	MicrostakingImproveBlock        uint64 `json:"microstakingImproveBlock"`
-	HYNBurningBlock					uint64 `json:"hynBurningBlock"`
+	HYNBurningBlock                 uint64 `json:"hynBurningBlock"`
+	Athens                          uint64 `json:"athens"`
 }
 
 func (c *AtlasConfig) IsLastBlock(blockNum uint64) bool {
@@ -80,4 +81,8 @@ func (c *AtlasConfig) IsMicrostakingImprove(num *big.Int) bool {
 
 func (c *AtlasConfig) IsHYNBurning(num *big.Int) bool {
 	return isForked(big.NewInt(int64(c.HYNBurningBlock)), num)
+}
+
+func (c *AtlasConfig) IsAthens(num *big.Int) bool {
+	return isForked(big.NewInt(int64(c.Athens)), num)
 }
