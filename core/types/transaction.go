@@ -96,11 +96,11 @@ func (tx *Transaction) EncodeRLP(w io.Writer) error {
 
 // DecodeRLP implements rlp.Decoder
 func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
-	bytes, err := s.Raw()
+	bs, err := s.Raw()
 	if err != nil {
 		return err
 	}
-	content, _, err := rlp.SplitList(bytes)
+	content, _, err := rlp.SplitList(bs)
 	if err != nil {
 		return err
 	}
@@ -108,21 +108,20 @@ func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
 	if err != nil {
 		return err
 	}
-
 	switch count {
 	case 9:
 		// It's a tx compatible with ethereum
 		var data ETHTx
-		err = s.Decode(&data)
+		err = rlp.DecodeBytes(bs, &data)
 		if err == nil {
-			tx.setDecoded(&data, len(bytes))
+			tx.setDecoded(&data, len(bs))
 		}
 	case 10:
 		// It's a legacy tx
 		var data LegacyTx
-		err = s.Decode(&data)
+		err = rlp.DecodeBytes(bs, &data)
 		if err == nil {
-			tx.setDecoded(&data, len(bytes))
+			tx.setDecoded(&data, len(bs))
 		}
 	default:
 		return errors.New("invalid rlp data size")
