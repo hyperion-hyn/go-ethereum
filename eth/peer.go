@@ -82,7 +82,7 @@ type PeerInfo struct {
 type propEvent struct {
 	block       *types.Block
 	td          *big.Int
-	lastCommits string
+	lastCommits []byte
 }
 
 type peer struct {
@@ -471,20 +471,24 @@ func (p *peer) AsyncSendNewBlockHash(block *types.Block) {
 }
 
 // SendNewBlock propagates an entire block to a remote peer.
-func (p *peer) SendNewBlock(block *types.Block, td *big.Int, lastCommits string) error {
+func (p *peer) SendNewBlock(block *types.Block, td *big.Int, lastCommits []byte) error {
 	// Mark all the block hash as known, but ensure we don't overflow our limits
 	for p.knownBlocks.Cardinality() >= maxKnownBlocks {
 		p.knownBlocks.Pop()
 	}
 	p.knownBlocks.Add(block.Hash())
+
 	//ATLAS  -- lastCommits
-	//return p2p.Send(p.rw, NewBlockMsg, []interface{}{block, td, lastCommits})
-	return p2p.Send(p.rw, NewBlockMsg, []interface{}{block, td})
+	if lastCommits != nil && len(lastCommits) > 0 {
+		return p2p.Send(p.rw, NewBlockMsg, []interface{}{block, td, common.Bytes2Hex(lastCommits)})
+	} else {
+		return p2p.Send(p.rw, NewBlockMsg, []interface{}{block, td})
+	}
 }
 
 // AsyncSendNewBlock queues an entire block for propagation to a remote peer. If
 // the peer's broadcast queue is full, the event is silently dropped.
-func (p *peer) AsyncSendNewBlock(block *types.Block, td *big.Int, lastCommits string) {
+func (p *peer) AsyncSendNewBlock(block *types.Block, td *big.Int, lastCommits []byte) {
 	select {
 	//ATLAS  -- lastCommits
 	case p.queuedBlocks <- &propEvent{block: block, td: td, lastCommits: lastCommits}:

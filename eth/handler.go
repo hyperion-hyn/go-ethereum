@@ -17,12 +17,14 @@
 package eth
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/consensus/clique"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
 	"github.com/ethereum/go-ethereum/core/rawdb"
+	"io/ioutil"
 	"math"
 	"math/big"
 	"sync"
@@ -729,11 +731,32 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 
 	case msg.Code == NewBlockMsg:
 		// Retrieve and decode the propagated block
-		var request newBlockData
-		if err := msg.Decode(&request); err != nil {
-			log.Error("decode msg error")
-			return errResp(ErrDecode, "%v: %v", msg, err)
+		var request newBlockDataWithLastCommits
+
+		//ATLAS
+		if reader, ok := msg.Payload.(*bytes.Reader); ok {
+			payload, err := ioutil.ReadAll(reader)
+			if err != nil {
+				log.Error("read payload error")
+				return errResp(ErrDecode, "%v: %v", msg, err)
+			}
+			reader.Reset(payload)
+			if err = msg.Decode(&request); err != nil {
+				var tmp newBlockData //compatible old data
+				reader.Reset(payload)
+				if err = msg.Decode(&tmp); err != nil {
+					log.Error("decode msg error")
+					return errResp(ErrDecode, "%v: %v", msg, err)
+				} else {
+					request.Block = tmp.Block
+					request.TD = tmp.TD
+				}
+			}
+		} else {
+			log.Error("read payload error")
+			return errResp(ErrDecode, "payload is not bytes.Reader")
 		}
+
 		if hash := types.CalcUncleHash(request.Block.Uncles()); hash != request.Block.UncleHash() {
 			log.Warn("Propagated block has invalid uncles", "have", hash, "exp", request.Block.UncleHash())
 			break // TODO(karalabe): return error eventually, but wait a few releases
@@ -753,13 +776,13 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		pm.blockFetcher.Enqueue(p.id, request.Block)
 
 		//ATLAS lastCommits
-		//if request.LastCommits != "" {
-		//	//TODO(ATLAS) verify lastCommits. if blockchain.go->insertChain verify lastCommit. this TODO can be skipped
-		//	rawdb.WriteLastCommits(pm.chaindb, request.Block.NumberU64(), common.Hex2Bytes(request.LastCommits))
-		//	log.Debug("NewBlockMsg write lastCommits", "number", request.Block.NumberU64())
-		//} else {
-		//	log.Debug("NewBlockMsg lastCommits empty", "number", request.Block.NumberU64())
-		//}
+		if request.LastCommits != "" {
+			//TODO(ATLAS) verify lastCommits. if blockchain.go->insertChain verify lastCommit. this TODO can be skipped
+			rawdb.WriteLastCommits(pm.chaindb, request.Block.NumberU64(), common.Hex2Bytes(request.LastCommits))
+			log.Debug("NewBlockMsg write lastCommits", "number", request.Block.NumberU64())
+		} else {
+			log.Debug("NewBlockMsg lastCommits empty", "number", request.Block.NumberU64())
+		}
 
 		// Assuming the block is importable by the peer, but possibly not yet done so,
 		// calculate the head hash and TD that the peer truly must have.
@@ -872,22 +895,23 @@ func (pm *ProtocolManager) BroadcastBlock(block *types.Block, propagate bool) {
 		}
 
 		//ATLAS  -- lastCommits
-		lastCommits, err := rawdb.ReadLastCommits(pm.chaindb, block.NumberU64())
-		if err != nil {
-			log.Trace("last commit not found. ", "number", block.Number())
+		var lastCommits []byte
+		if pm.blockchain.Config().Atlas.IsAthens(block.Number()) {
+			var err error
+			lastCommits, err = rawdb.ReadLastCommits(pm.chaindb, block.NumberU64())
+			if err != nil {
+				log.Trace("last commit not found. ", "number", block.Number())
+				lastCommits = nil
+			}
+		} else {
 			lastCommits = nil
 		}
 
 		// Send the block to a subset of our peers
 		transfer := peers[:int(math.Sqrt(float64(len(peers))))]
 		for _, peer := range transfer {
-			if lastCommits != nil {
-				log.Debug("send NewBlockMsg with lastCommits", "number", block.NumberU64())
-				peer.AsyncSendNewBlock(block, td, common.Bytes2Hex(lastCommits))
-			} else {
-				peer.AsyncSendNewBlock(block, td, "")
-			}
-
+			log.Debug("send NewBlockMsg with lastCommits", "number", block.NumberU64())
+			peer.AsyncSendNewBlock(block, td, lastCommits)
 		}
 		log.Trace("Propagated block", "hash", hash, "recipients", len(transfer), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
 		return

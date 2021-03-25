@@ -102,16 +102,29 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 			}
 			reader.Reset(payload)       // ready to be decoded
 			defer reader.Reset(payload) // restore so main eth/handler can decode
-			var request struct {        // this has to be same as eth/protocol.go#newBlockData as we are reading NewBlockMsg
+
+			var request struct { // this has to be same as eth/protocol.go#newBlockData as we are reading NewBlockMsg
+				Block *types.Block
+				TD    *big.Int
+			}
+			var requestV2 struct {
 				Block       *types.Block
 				TD          *big.Int
 				LastCommits string //ATLAS
 			}
-			if err := msg.Decode(&request); err != nil {
-				log.Debug("Proposer was unable to decode the NewBlockMsg", "error", err)
-				return false, nil
+
+			if err := msg.Decode(&requestV2); err != nil {
+				reader.Reset(payload)
+				if err := msg.Decode(&request); err != nil {
+					log.Debug("Proposer was unable to decode the NewBlockMsg", "error", err)
+					return false, nil
+				} else {
+					requestV2.Block = request.Block
+					requestV2.TD = request.TD
+				}
 			}
-			newRequestedBlock := request.Block
+
+			newRequestedBlock := requestV2.Block
 			if newRequestedBlock.Header().MixDigest == types.AtlasDigest && sb.core.IsCurrentProposal(newRequestedBlock.Hash()) {
 				log.Debug("Proposer already proposed this block", "hash", newRequestedBlock.Hash(), "sender", addr)
 				return true, nil
