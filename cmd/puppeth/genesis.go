@@ -135,8 +135,8 @@ func newAlethGenesisSpec(network string, genesis *core.Genesis) (*alethGenesisSp
 	if num := genesis.Config.IstanbulBlock; num != nil {
 		spec.Params.IstanbulForkBlock = (*hexutil.Big)(num)
 	}
-	spec.Params.NetworkID = (hexutil.Uint64)(genesis.Config.ChainID.Uint64())
-	spec.Params.ChainID = (hexutil.Uint64)(genesis.Config.ChainID.Uint64())
+	spec.Params.NetworkID = (hexutil.Uint64)(genesis.Config.ChainID().Uint64())
+	spec.Params.ChainID = (hexutil.Uint64)(genesis.Config.ChainID().Uint64())
 	spec.Params.MaximumExtraDataSize = (hexutil.Uint64)(params.MaximumExtraDataSize)
 	spec.Params.MinGasLimit = (hexutil.Uint64)(params.MinGasLimit)
 	spec.Params.MaxGasLimit = (hexutil.Uint64)(math.MaxInt64)
@@ -415,8 +415,8 @@ func newParityChainSpec(network string, genesis *core.Genesis, bootnodes []strin
 	spec.Params.MaximumExtraDataSize = (hexutil.Uint64)(params.MaximumExtraDataSize)
 	spec.Params.MinGasLimit = (hexutil.Uint64)(params.MinGasLimit)
 	spec.Params.GasLimitBoundDivisor = (math2.HexOrDecimal64)(params.GasLimitBoundDivisor)
-	spec.Params.NetworkID = (hexutil.Uint64)(genesis.Config.ChainID.Uint64())
-	spec.Params.ChainID = (hexutil.Uint64)(genesis.Config.ChainID.Uint64())
+	spec.Params.NetworkID = (hexutil.Uint64)(genesis.Config.ChainID().Uint64())
+	spec.Params.ChainID = (hexutil.Uint64)(genesis.Config.ChainID().Uint64())
 	spec.Params.MaxCodeSize = params.MaxCodeSize
 	// geth has it set from zero
 	spec.Params.MaxCodeSizeTransition = 0

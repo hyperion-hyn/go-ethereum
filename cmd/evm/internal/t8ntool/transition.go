@@ -198,7 +198,7 @@ func Main(ctx *cli.Context) error {
 		vmConfig.ExtraEips = extraEips
 	}
 	// Set the chain id
-	chainConfig.ChainID = big.NewInt(ctx.Int64(ChainIDFlag.Name))
+	chainConfig.ETHChainID = big.NewInt(ctx.Int64(ChainIDFlag.Name))
 
 	// Run the test and aggregate the result
 	state, result, err := prestate.Apply(vmConfig, chainConfig, txs, ctx.Int64(RewardFlag.Name), getTracer)

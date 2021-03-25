@@ -353,7 +353,7 @@ func (api *RetestethAPI) SetChainParams(ctx context.Context, chainParams ChainPa
 
 	genesis := &core.Genesis{
 		Config: &params.ChainConfig{
-			ChainID:             chainId,
+			ETHChainID:          chainId,
 			HomesteadBlock:      homesteadBlock,
 			DAOForkBlock:        daoForkBlock,
 			DAOForkSupport:      true,

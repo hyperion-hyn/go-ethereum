@@ -56,7 +56,7 @@ var CheckpointOracles = map[common.Hash]*CheckpointOracleConfig{
 var (
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
 	MainnetChainConfig = &ChainConfig{
-		ChainID:             big.NewInt(1),
+		ETHChainID:          big.NewInt(1),
 		HomesteadBlock:      big.NewInt(1150000),
 		DAOForkBlock:        big.NewInt(1920000),
 		DAOForkSupport:      true,
@@ -95,7 +95,7 @@ var (
 
 	// RopstenChainConfig contains the chain parameters to run a node on the Ropsten test network.
 	RopstenChainConfig = &ChainConfig{
-		ChainID:             big.NewInt(3),
+		ETHChainID:          big.NewInt(3),
 		HomesteadBlock:      big.NewInt(0),
 		DAOForkBlock:        nil,
 		DAOForkSupport:      true,
@@ -134,7 +134,7 @@ var (
 
 	// RinkebyChainConfig contains the chain parameters to run a node on the Rinkeby test network.
 	RinkebyChainConfig = &ChainConfig{
-		ChainID:             big.NewInt(4),
+		ETHChainID:          big.NewInt(4),
 		HomesteadBlock:      big.NewInt(1),
 		DAOForkBlock:        nil,
 		DAOForkSupport:      true,
@@ -175,7 +175,7 @@ var (
 
 	// GoerliChainConfig contains the chain parameters to run a node on the Görli test network.
 	GoerliChainConfig = &ChainConfig{
-		ChainID:             big.NewInt(5),
+		ETHChainID:          big.NewInt(5),
 		HomesteadBlock:      big.NewInt(0),
 		DAOForkBlock:        nil,
 		DAOForkSupport:      true,
@@ -216,7 +216,7 @@ var (
 
 	// YoloV1ChainConfig contains the chain parameters to run a node on the YOLOv1 test network.
 	YoloV1ChainConfig = &ChainConfig{
-		ChainID:             big.NewInt(133519467574833),
+		ETHChainID:          big.NewInt(133519467574833),
 		HomesteadBlock:      big.NewInt(0),
 		DAOForkBlock:        nil,
 		DAOForkSupport:      true,
@@ -237,7 +237,7 @@ var (
 
 	// OttomanChainConfig contains the chain parameters to run a node on the Ottoman test network.
 	OttomanChainConfig = &ChainConfig{
-		ChainID:             big.NewInt(1024),
+		ETHChainID:          big.NewInt(1024),
 		HomesteadBlock:      big.NewInt(1),
 		DAOForkBlock:        nil,
 		DAOForkSupport:      true,
@@ -258,7 +258,7 @@ var (
 	// ATLAS(zgx): AtlasChainConfig
 	// AtlasChainConfig contains the chain parameters to run a node on the Ottoman test network.
 	AtlasChainConfig = &ChainConfig{
-		ChainID:             big.NewInt(1024),
+		ETHChainID:          big.NewInt(1024),
 		HomesteadBlock:      big.NewInt(1),
 		DAOForkBlock:        nil,
 		DAOForkSupport:      true,
@@ -344,7 +344,7 @@ type CheckpointOracleConfig struct {
 // that any network, identified by its genesis block, can have its own
 // set of configuration options.
 type ChainConfig struct {
-	ChainID *big.Int `json:"chainId"` // chainId identifies the current chain and is used for replay protection
+	ETHChainID *big.Int `json:"chainId"` // chainId identifies the current chain and is used for replay protection
 
 	HomesteadBlock *big.Int `json:"homesteadBlock,omitempty"` // Homestead switch block (nil = no fork, 0 = already homestead)
 
@@ -407,6 +407,20 @@ func (c *IstanbulConfig) String() string {
 	return "istanbul"
 }
 
+func (c *ChainConfig) ChainID() *big.Int {
+	if c.Atlas == nil {
+		return c.ETHChainID
+	}
+	return c.Atlas.ChainID
+}
+
+func (c *ChainConfig) ChainIDFrom(num *big.Int) *big.Int {
+	if c.Atlas != nil && c.Atlas.IsAthens(num) {
+		return c.Atlas.ChainID
+	}
+	return c.ETHChainID
+}
+
 // String implements the fmt.Stringer interface.
 func (c *ChainConfig) String() string {
 	var engine interface{}
@@ -422,8 +436,8 @@ func (c *ChainConfig) String() string {
 	default:
 		engine = "unknown"
 	}
-	return fmt.Sprintf("{ChainID: %v Homestead: %v DAO: %v DAOSupport: %v EIP150: %v EIP155: %v EIP158: %v Byzantium: %v Constantinople: %v Petersburg: %v Istanbul: %v, Muir Glacier: %v, YOLO v1: %v, Engine: %v, IsQuorum: %v",
-		c.ChainID,
+	return fmt.Sprintf("{ChainID: %v, Homestead: %v DAO: %v DAOSupport: %v EIP150: %v EIP155: %v EIP158: %v Byzantium: %v Constantinople: %v Petersburg: %v Istanbul: %v, Muir Glacier: %v, YOLO v1: %v, Engine: %v, IsQuorum: %v",
+		c.ChainID(),
 		c.HomesteadBlock,
 		c.DAOForkBlock,
 		c.DAOForkSupport,
@@ -583,7 +597,7 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 	if isForkIncompatible(c.EIP158Block, newcfg.EIP158Block, head) {
 		return newCompatError("EIP158 fork block", c.EIP158Block, newcfg.EIP158Block)
 	}
-	if c.IsEIP158(head) && !configNumEqual(c.ChainID, newcfg.ChainID) {
+	if c.IsEIP158(head) && !configNumEqual(c.ChainID(), newcfg.ChainID()) {
 		return newCompatError("EIP158 chain ID", c.EIP158Block, newcfg.EIP158Block)
 	}
 	if isForkIncompatible(c.ByzantiumBlock, newcfg.ByzantiumBlock, head) {
@@ -684,7 +698,7 @@ type Rules struct {
 
 // Rules ensures c's ChainID is not nil.
 func (c *ChainConfig) Rules(num *big.Int) Rules {
-	chainID := c.ChainID
+	chainID := c.ChainIDFrom(num)
 	if chainID == nil {
 		chainID = new(big.Int)
 	}

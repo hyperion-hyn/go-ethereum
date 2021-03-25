@@ -196,7 +196,7 @@ func (hn *hashOrNumber) DecodeRLP(s *rlp.Stream) error {
 type newBlockData struct {
 	Block       *types.Block
 	TD          *big.Int
-	LastCommits string
+	//LastCommits string
 }
 
 // sanityCheck verifies that the values are reasonable, as a DoS protection

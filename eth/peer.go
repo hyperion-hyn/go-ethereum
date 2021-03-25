@@ -478,7 +478,8 @@ func (p *peer) SendNewBlock(block *types.Block, td *big.Int, lastCommits string)
 	}
 	p.knownBlocks.Add(block.Hash())
 	//ATLAS  -- lastCommits
-	return p2p.Send(p.rw, NewBlockMsg, []interface{}{block, td, lastCommits})
+	//return p2p.Send(p.rw, NewBlockMsg, []interface{}{block, td, lastCommits})
+	return p2p.Send(p.rw, NewBlockMsg, []interface{}{block, td})
 }
 
 // AsyncSendNewBlock queues an entire block for propagation to a remote peer. If

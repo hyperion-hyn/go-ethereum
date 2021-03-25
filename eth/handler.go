@@ -753,13 +753,13 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		pm.blockFetcher.Enqueue(p.id, request.Block)
 
 		//ATLAS lastCommits
-		if request.LastCommits != "" {
-			//TODO(ATLAS) verify lastCommits. if blockchain.go->insertChain verify lastCommit. this TODO can be skipped
-			rawdb.WriteLastCommits(pm.chaindb, request.Block.NumberU64(), common.Hex2Bytes(request.LastCommits))
-			log.Debug("NewBlockMsg write lastCommits", "number", request.Block.NumberU64())
-		} else {
-			log.Debug("NewBlockMsg lastCommits empty", "number", request.Block.NumberU64())
-		}
+		//if request.LastCommits != "" {
+		//	//TODO(ATLAS) verify lastCommits. if blockchain.go->insertChain verify lastCommit. this TODO can be skipped
+		//	rawdb.WriteLastCommits(pm.chaindb, request.Block.NumberU64(), common.Hex2Bytes(request.LastCommits))
+		//	log.Debug("NewBlockMsg write lastCommits", "number", request.Block.NumberU64())
+		//} else {
+		//	log.Debug("NewBlockMsg lastCommits empty", "number", request.Block.NumberU64())
+		//}
 
 		// Assuming the block is importable by the peer, but possibly not yet done so,
 		// calculate the head hash and TD that the peer truly must have.

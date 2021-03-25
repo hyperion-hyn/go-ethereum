@@ -17,12 +17,13 @@ type AtlasConfig struct {
 	Ceil2Nby3Block        *big.Int `json:"ceil2Nby3Block,omitempty"` // Number of confirmations required to move from one state to next [2F + 1 to Ceil(2N/3)]
 
 	// HIP config
-	Map3MigrationBlock              uint64 `json:"map3MigrationBlock"`
-	Map3NodeAgeDeadlineBlock        uint64 `json:"map3NodeAgeDeadlineBlock"`
-	MicrodelegationIndexRepairBlock uint64 `json:"microdelegationIndexRepairBlock"`
-	MicrostakingImproveBlock        uint64 `json:"microstakingImproveBlock"`
-	HYNBurningBlock                 uint64 `json:"hynBurningBlock"`
-	Athens                          uint64 `json:"athens"`
+	Map3MigrationBlock              uint64   `json:"map3MigrationBlock"`
+	Map3NodeAgeDeadlineBlock        uint64   `json:"map3NodeAgeDeadlineBlock"`
+	MicrodelegationIndexRepairBlock uint64   `json:"microdelegationIndexRepairBlock"`
+	MicrostakingImproveBlock        uint64   `json:"microstakingImproveBlock"`
+	HYNBurningBlock                 uint64   `json:"hynBurningBlock"`
+	Athens                          uint64   `json:"athens"`
+	ChainID                         *big.Int `json:"chainID"` // ATLAS: atlas chain id is used for replay protection in other chain compatible with Ethereum
 }
 
 func (c *AtlasConfig) IsLastBlock(blockNum uint64) bool {
