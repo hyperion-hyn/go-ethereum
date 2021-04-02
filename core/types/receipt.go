@@ -58,7 +58,7 @@ type Receipt struct {
 	// Implementation fields: These fields are added by geth when processing a transaction.
 	// They are stored in the chain database.
 	TxHash          common.Hash    `json:"transactionHash" gencodec:"required"`
-	ContractAddress common.Address `json:"contractAddress"`	// ATLAS: record validator address when creating new validator
+	ContractAddress common.Address `json:"contractAddress"` // ATLAS: record validator address when creating new validator
 	GasUsed         uint64         `json:"gasUsed" gencodec:"required"`
 
 	// Inclusion information: These fields provide information about the inclusion of the
@@ -311,7 +311,8 @@ func (r Receipts) DeriveFields(config *params.ChainConfig, hash common.Hash, num
 		r[i].TransactionIndex = uint(i)
 
 		// The contract address can be derived from the transaction itself
-		if txs[i].To() == nil {
+		if txs[i].To() == nil ||
+			txs[i].Type() == CreateValidator || txs[i].Type() == CreateMap3 { // ATLAS
 			// Deriving the signer is expensive, only do if it's actually needed
 			from, _ := Sender(signer, txs[i])
 			r[i].ContractAddress = crypto.CreateAddress(from, txs[i].Nonce())

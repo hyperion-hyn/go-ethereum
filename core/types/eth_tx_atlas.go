@@ -15,33 +15,23 @@ func NewContractCreation(nonce uint64, amount *big.Int, gasLimit uint64, gasPric
 	return newTransaction(nonce, nil, amount, gasLimit, gasPrice, data)
 }
 
-func NewStakingTransaction(nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, txType TransactionType) (*Transaction, error) {
+func NewStakingTransaction(nonce uint64, gasLimit uint64, gasPrice *big.Int, data []byte, txType TransactionType) (*Transaction, error) {
 	if txType == Normal {
 		return nil, errors.New("invalid transaction type")
 	}
 
 	var to common.Address
 	switch txType {
-	case CreateMap3:
-	case EditMap3:
-	case TerminateMap3:
-	case Microdelegate:
-	case Unmicrodelegate:
-	case CollectMicrostakingRewards:
-	case RenewMap3Node:
+	case CreateMap3, EditMap3, TerminateMap3, Microdelegate, Unmicrodelegate, CollectMicrostakingRewards, RenewMap3Node:
 		to = Map3Account
-	case CreateValidator:
-	case EditValidator:
-	case Redelegate:
-	case Unredelegate:
-	case CollectRestakingReward:
+	case CreateValidator, EditValidator, Redelegate, Unredelegate, CollectRestakingReward:
 		to = ValidatorAccount
 	default:
 		return nil, errors.New("invalid transaction type")
 	}
 
 	payload := append([]byte{byte(txType)}, data...)
-	return newTransaction(nonce, &to, amount, gasLimit, gasPrice, payload), nil
+	return newTransaction(nonce, &to, nil, gasLimit, gasPrice, payload), nil
 }
 
 func newTransaction(nonce uint64, to *common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *Transaction {
