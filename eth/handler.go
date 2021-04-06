@@ -740,17 +740,30 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 				log.Error("read payload error")
 				return errResp(ErrDecode, "%v: %v", msg, err)
 			}
-			reader.Reset(payload)
-			if err = msg.Decode(&request); err != nil {
-				var tmp newBlockData //compatible old data
-				reader.Reset(payload)
-				if err = msg.Decode(&tmp); err != nil {
-					log.Error("decode msg error")
+			content, _, err := rlp.SplitList(payload)
+			if err != nil {
+				log.Error("read payload error")
+				return errResp(ErrDecode, "split payload error.")
+			}
+			count, err := rlp.CountValues(content)
+			if err != nil {
+				log.Error("count payload error")
+				return errResp(ErrDecode, "count payload error.")
+			}
+			switch count {
+			case 3:
+				if err = rlp.DecodeBytes(payload, &request); err != nil {
 					return errResp(ErrDecode, "%v: %v", msg, err)
-				} else {
-					request.Block = tmp.Block
-					request.TD = tmp.TD
 				}
+			case 2:
+				var tmp newBlockData
+				if err = rlp.DecodeBytes(payload, &tmp); err != nil {
+					return errResp(ErrDecode, "%v: %v", msg, err)
+				}
+				request.Block = tmp.Block
+				request.TD = tmp.TD
+			default:
+				return errResp(ErrDecode, "unknown payload")
 			}
 		} else {
 			log.Error("read payload error")
