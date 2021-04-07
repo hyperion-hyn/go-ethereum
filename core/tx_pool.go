@@ -556,6 +556,9 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		return errors.New("legacy transaction not support")
 	}
 	var intrGas uint64
+	if (*tx.To() == types.Map3Account || *tx.To() == types.ValidatorAccount) && len(tx.Data()) == 0 {
+		return errors.New("transaction data is empty")
+	}
 	if tx.Type() == types.Normal {
 		intrGas, err = IntrinsicGas(tx.Data(), tx.To() == nil, true, pool.istanbul)
 	} else {
