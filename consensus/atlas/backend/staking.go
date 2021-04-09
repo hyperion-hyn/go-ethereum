@@ -43,6 +43,10 @@ func handleMap3AndAtlasStaking(chain consensus.ChainReader, header *types.Header
 
 	isNewEpoch := chain.Config().Atlas.IsFirstBlock(header.Number.Uint64())
 	isEnd := chain.Config().Atlas.IsLastBlock(header.Number.Uint64())
+	isAthens := header.Number.Cmp(big.NewInt(int64(chain.Config().Atlas.Athens))) == 0
+	if isAthens {
+		core.BurnRemainTokenFromFoundationAccount(stateDB)
+	}
 	if isEnd {
 		lastBlockNum := new(big.Int).Sub(header.Number, common.Big1)
 		curComm, err := lookupCommitteeAtBlock(lastBlockNum, chain)

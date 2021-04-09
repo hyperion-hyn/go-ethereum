@@ -68,6 +68,13 @@ func BurnTokenByEach30Epochs(chain ChainContext, stateDB vm.StateDB, blockNum *b
 	return nil
 }
 
+func BurnRemainTokenFromFoundationAccount(stateDB vm.StateDB) {
+	balance := stateDB.GetBalance(foundationAddress)
+	if balance.Cmp(big.NewInt(0)) > 0 {
+		stateDB.SubBalance(foundationAddress, balance)
+	}
+}
+
 func burnTokenFromFoundationAccount(stateDB vm.StateDB, foundationAddress common.Address, amount *big.Int) *big.Int {
 	balance := stateDB.GetBalance(foundationAddress)
 	if balance.Cmp(amount) < 0 {
